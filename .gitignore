@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Live server data — never in git
+**/Saved/
+*.log
+dino_garage.json*
+
+# Local scratch
+*.tmp
+*.bak
+.DS_Store
+
+# bridge service
+bridge/node_modules/
+bridge/dist/
+
+# lua bytecode
+luac.out
+.env.example
+docs

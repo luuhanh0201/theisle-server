@@ -1,0 +1,2126 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isle Server Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  /* ---- tokens --------------------------------------------------------- */
+  :root {
+    color-scheme: light;
+    --bg: #f4f6f9;
+    --bg-glow: radial-gradient(1200px 600px at 10% -10%, rgba(16, 185, 129, 0.10), transparent 60%),
+               radial-gradient(900px 500px at 110% 10%, rgba(99, 102, 241, 0.08), transparent 60%);
+    --surface: #ffffff;
+    --surface-2: #f7f8fb;
+    --surface-3: #eef1f5;
+    --border: rgba(15, 23, 42, 0.08);
+    --border-strong: rgba(15, 23, 42, 0.14);
+    --text: #0f172a;
+    --text-2: #334155;
+    --muted: #64748b;
+    --accent: #059669;
+    --accent-2: #10b981;
+    --accent-soft: rgba(16, 185, 129, 0.12);
+    --kill: #dc2626;     --kill-soft: rgba(220, 38, 38, 0.10);
+    --dmg: #d97706;      --dmg-soft: rgba(217, 119, 6, 0.12);
+    --chat: #2563eb;     --chat-soft: rgba(37, 99, 235, 0.10);
+    --grow: #7c3aed;     --grow-soft: rgba(124, 58, 237, 0.10);
+    --gar: #0891b2;      --gar-soft: rgba(8, 145, 178, 0.10);
+    --neutral-soft: rgba(100, 116, 139, 0.12);
+    --gold: #d4a017; --silver: #94a3b8; --bronze: #c2703d;
+    --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+    --map-bg: #e8efe9;
+    --map-grid: rgba(15, 23, 42, 0.07);
+    --map-ring: rgba(5, 150, 105, 0.18);
+    --radius: 14px;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #090b10;
+    --bg-glow: radial-gradient(1200px 600px at 10% -10%, rgba(16, 185, 129, 0.13), transparent 60%),
+               radial-gradient(900px 500px at 110% 10%, rgba(99, 102, 241, 0.10), transparent 60%);
+    --surface: #10141b;
+    --surface-2: #151a23;
+    --surface-3: #1b212c;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.11);
+    --text: #eef1f6;
+    --text-2: #c5ccd8;
+    --muted: #8590a3;
+    --accent: #34d399;
+    --accent-2: #10b981;
+    --accent-soft: rgba(52, 211, 153, 0.12);
+    --kill: #f87171;     --kill-soft: rgba(248, 113, 113, 0.12);
+    --dmg: #fbbf24;      --dmg-soft: rgba(251, 191, 36, 0.12);
+    --chat: #60a5fa;     --chat-soft: rgba(96, 165, 250, 0.12);
+    --grow: #a78bfa;     --grow-soft: rgba(167, 139, 250, 0.12);
+    --gar: #22d3ee;      --gar-soft: rgba(34, 211, 238, 0.12);
+    --neutral-soft: rgba(148, 163, 184, 0.12);
+    --gold: #facc15; --silver: #cbd5e1; --bronze: #f59e0b;
+    --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
+    --map-bg: #0b1210;
+    --map-grid: rgba(52, 211, 153, 0.07);
+    --map-ring: rgba(52, 211, 153, 0.14);
+  }
+
+  /* ---- base ----------------------------------------------------------- */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg-glow), var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font: 14px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  a { color: inherit; }
+  button { font: inherit; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 12px; }
+  .muted { color: var(--muted); }
+  [hidden] { display: none !important; }
+  svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---- shell ---------------------------------------------------------- */
+  .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
+  aside {
+    position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column; gap: 18px;
+    padding: 22px 16px;
+    border-right: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    backdrop-filter: blur(12px);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent-2), #6366f1); color: #fff;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+  }
+  .brand-mark svg.i { width: 20px; height: 20px; }
+  .brand b { display: block; font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+  .brand span { display: block; font-size: 11.5px; color: var(--muted); }
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  nav a {
+    display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 10px;
+    color: var(--muted); text-decoration: none; font-weight: 600; font-size: 13.5px;
+    transition: background .15s, color .15s;
+  }
+  nav a:hover { background: var(--surface-3); color: var(--text); }
+  nav a.active { background: var(--accent-soft); color: var(--accent); }
+  nav a .count {
+    margin-left: auto; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+    background: var(--surface-3); color: var(--text-2);
+  }
+  nav a.active .count { background: var(--accent); color: #fff; }
+  .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+  .server-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--surface);
+  }
+  .server-card .row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; }
+  .server-card .sub { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); position: relative; flex: none; }
+  .pulse.live { background: var(--accent-2); }
+  .pulse.live::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid var(--accent-2); opacity: 0; animation: ping 1.8s ease-out infinite;
+  }
+  .pulse.stale { background: var(--kill); }
+  @keyframes ping { 0% { transform: scale(.6); opacity: .7 } 100% { transform: scale(1.6); opacity: 0 } }
+  .theme-btn {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+    border-radius: 10px; padding: 8px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+  }
+  .theme-btn:hover { border-color: var(--border-strong); }
+
+  main { padding: 28px 32px 56px; min-width: 0; }
+  .page-head { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+  .page-head h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
+  .page-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .page-head .right { margin-left: auto; }
+
+  /* ---- mobile: sidebar becomes a top bar ------------------------------ */
+  @media (max-width: 880px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+    aside {
+      position: sticky; top: 0; z-index: 10; height: auto; flex-direction: row; align-items: center;
+      padding: 10px 16px; gap: 12px; border-right: 0; border-bottom: 1px solid var(--border);
+    }
+    .brand > div:last-child, .side-foot .server-card .sub, nav a .label, nav a .count { display: none; }
+    nav { flex-direction: row; overflow-x: auto; gap: 2px; scrollbar-width: none; }
+    nav a { padding: 8px 10px; }
+    .side-foot { margin: 0 0 0 auto; flex-direction: row; }
+    .server-card { padding: 7px 9px; }
+    .server-card .row span:last-child { display: none; }
+    .theme-btn span { display: none; }
+    main { padding: 20px 16px 48px; }
+  }
+
+  /* ---- cards ---------------------------------------------------------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); min-width: 0;
+  }
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 0; flex-wrap: wrap; }
+  .card-head h2 { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .card-head .sub { color: var(--muted); font-size: 12px; }
+  .card-body { padding: 14px 18px 18px; }
+  .grid { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1100px) { .grid.split { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } }
+  @media (min-width: 760px) { .grid.boards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1250px) { .grid.boards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+  /* KPI tiles */
+  .kpis { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 18px; }
+  .kpi { padding: 16px 18px; display: flex; gap: 14px; align-items: center; }
+  .kpi .ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex: none; }
+  .kpi .v { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .kpi .k { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+  .tone-accent { background: var(--accent-soft); color: var(--accent); }
+  .tone-kill { background: var(--kill-soft); color: var(--kill); }
+  .tone-dmg { background: var(--dmg-soft); color: var(--dmg); }
+  .tone-chat { background: var(--chat-soft); color: var(--chat); }
+  .tone-grow { background: var(--grow-soft); color: var(--grow); }
+  .tone-gar { background: var(--gar-soft); color: var(--gar); }
+  .tone-neutral { background: var(--neutral-soft); color: var(--muted); }
+
+  /* notice */
+  details.notice {
+    border: 1px solid var(--border); background: var(--surface-2); border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 18px; font-size: 12.5px; color: var(--text-2);
+  }
+  details.notice summary { cursor: pointer; font-weight: 600; display: flex; gap: 8px; align-items: center; list-style: none; }
+  details.notice summary::-webkit-details-marker { display: none; }
+  details.notice summary svg.i { width: 16px; height: 16px; color: var(--dmg); }
+  details.notice p { margin: 8px 0 2px; }
+
+  /* ---- avatar, chips, bars -------------------------------------------- */
+  .avatar {
+    width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center;
+    color: #fff; font-weight: 800; font-size: 13px; letter-spacing: -0.02em;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+  .avatar.lg { width: 64px; height: 64px; border-radius: 18px; font-size: 24px; }
+  .avatar.sm { width: 26px; height: 26px; border-radius: 8px; font-size: 11px; }
+  .who { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .who .meta { min-width: 0; }
+  .who .nm { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who .sp { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plink { text-decoration: none; font-weight: 650; }
+  .plink:hover { text-decoration: underline; text-underline-offset: 2px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .chip .d { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .meter { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+  .meter .track { flex: 1; height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+  .meter .fill { height: 100%; border-radius: 999px; background: var(--accent-2); transition: width .5s ease; }
+  .meter .fill.low { background: var(--kill); }
+  .meter .fill.mid { background: var(--dmg); }
+  .meter .fill.grow { background: linear-gradient(90deg, var(--grow), var(--chat)); }
+  .meter .n { font-size: 12px; font-weight: 600; color: var(--text-2); width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ---- tables --------------------------------------------------------- */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    font-weight: 700; text-align: right; padding: 0 10px 10px; white-space: nowrap;
+  }
+  td { padding: 10px; border-top: 1px solid var(--border); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; padding-left: 0; }
+  th:last-child, td:last-child { padding-right: 0; }
+  tr.row-link { cursor: pointer; }
+  tr.row-link:hover td { background: var(--surface-2); }
+  @media (max-width: 640px) { .hide-sm { display: none; } }
+
+  /* ---- feed ----------------------------------------------------------- */
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 620px; overflow-y: auto; }
+  .feed.tall { max-height: none; }
+  .feed li { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+  .feed li:first-child { border-top: 0; }
+  .feed .ev-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+  .feed .ev-ico svg.i { width: 15px; height: 15px; }
+  .feed .ev-body { flex: 1; min-width: 0; font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; }
+  .feed .ev-body b { color: var(--text); }
+  .feed .ev-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .feed .ev-time { font-size: 11.5px; color: var(--muted); flex: none; padding-top: 6px; font-variant-numeric: tabular-nums; }
+  .feed li.new { animation: slide-in .45s ease; }
+  @keyframes slide-in { from { opacity: 0; transform: translateY(-6px); background: var(--accent-soft); } to { opacity: 1; transform: none; } }
+  .kill { color: var(--kill); font-weight: 700; }
+  .empty { color: var(--muted); padding: 28px 0; text-align: center; font-size: 13px; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chips button {
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
+    padding: 4px 11px; font-size: 12px; font-weight: 600; border-radius: 999px; cursor: pointer;
+  }
+  .chips button:hover { color: var(--text); }
+  .chips button.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+  /* ---- player detail -------------------------------------------------- */
+  .hero { display: flex; gap: 18px; align-items: center; padding: 22px; flex-wrap: wrap; }
+  .hero h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hero .sub { color: var(--muted); font-size: 13px; margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .back {
+    display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--muted);
+    cursor: pointer; padding: 0; margin-bottom: 14px; font-weight: 600; font-size: 13px;
+  }
+  .back:hover { color: var(--text); }
+  .vitals { display: grid; gap: 14px 22px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .vitals .lbl { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .tile .k { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+  .tile .v { font-size: 19px; font-weight: 750; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+  /* ---- stored dinos + lives ------------------------------------------ */
+  .section-title { display: flex; align-items: center; gap: 10px; margin: 26px 0 12px; }
+  .section-title h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+  .section-title .sub { color: var(--muted); font-size: 12.5px; }
+  .dino-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+  .dino-card { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .dino-card .head { display: flex; gap: 12px; align-items: flex-start; }
+  .dino-card .glyph { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; flex: none; font-size: 20px; font-weight: 800; color: #fff; }
+  .dino-card .title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+  .dino-card .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
+  .kv .lbl { font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 3px; display: flex; justify-content: space-between; gap: 6px; }
+  .kv .val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kv .meter { min-width: 0; }
+  .group-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; margin-bottom: 8px; }
+  .muts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mut { font-size: 11.5px; font-weight: 650; padding: 3px 9px; border-radius: 8px; background: var(--grow-soft); color: var(--grow); }
+  .mut.parent { background: var(--chat-soft); color: var(--chat); }
+  .mut.elder { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
+  .mut.none { background: var(--surface-3); color: var(--muted); font-weight: 600; }
+  details.more { border-top: 1px solid var(--border); padding-top: 12px; }
+  details.more summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--accent); list-style: none; }
+  details.more summary::-webkit-details-marker { display: none; }
+  details.more summary::before { content: "▸ "; }
+  details.more[open] summary::before { content: "▾ "; }
+  details.more .inner { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+  .foot { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; }
+  .warnbox { font-size: 12.5px; color: var(--dmg); background: var(--dmg-soft); border-radius: 10px; padding: 8px 12px; }
+  .grow-arrow { color: var(--muted); font-size: 12px; }
+
+  /* ---- dino creator --------------------------------------------------- */
+  .creator { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1150px) { .creator { grid-template-columns: minmax(0, 1fr) 380px; } }
+  .creator .preview { position: sticky; top: 20px; align-self: start; display: flex; flex-direction: column; gap: 10px; }
+  .step { display: flex; flex-direction: column; gap: 10px; padding: 18px 0; border-top: 1px solid var(--border); }
+  .step:first-child { border-top: 0; padding-top: 0; }
+  .step-title { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 14px; }
+  .step-num { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11.5px; font-weight: 800; background: var(--accent-soft); color: var(--accent); }
+  .step-hint { font-size: 12px; color: var(--muted); }
+  .species-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .species-opt {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 11px; cursor: pointer; text-align: left;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 650; font-size: 13px;
+    transition: border-color .15s, background .15s;
+  }
+  .species-opt:hover { border-color: var(--border-strong); }
+  .species-opt.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .species-opt:disabled { opacity: .45; cursor: not-allowed; }
+  .species-opt .glyph { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 12px; flex: none; }
+  .species-opt small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+  .seg { display: inline-flex; align-self: flex-start; border: 1px solid var(--border-strong); border-radius: 10px; padding: 3px; gap: 3px; background: var(--surface-2); }
+  .seg button { border: 0; background: none; color: var(--muted); font-weight: 650; font-size: 13px; padding: 6px 14px; border-radius: 7px; cursor: pointer; }
+  .seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .range-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  input[type=range] { flex: 1; min-width: 180px; accent-color: var(--accent-2); padding: 0; border: 0; background: none; box-shadow: none; }
+  .growth-val { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; min-width: 64px; font-variant-numeric: tabular-nums; }
+  .mut-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .mut-field label { font-size: 11.5px; }
+  .mut-field .warn { font-size: 11px; color: var(--dmg); margin-top: 3px; min-height: 14px; }
+  select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
+    background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; cursor: pointer;
+  }
+  select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  select:disabled { opacity: .5; cursor: not-allowed; }
+  select.chosen { border-color: color-mix(in srgb, var(--grow) 55%, transparent); }
+  .mut-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .mut-head label { margin: 0; }
+  .info-btn {
+    width: 18px; height: 18px; border-radius: 50%; border: 0; cursor: help; flex: none; padding: 0;
+    display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; line-height: 1;
+    background: var(--chat-soft); color: var(--chat);
+  }
+  .info-btn:hover, .info-btn:focus-visible { background: var(--chat); color: #fff; outline: none; }
+  .info-btn.warn { background: var(--dmg-soft); color: var(--dmg); }
+  .info-btn.warn:hover, .info-btn.warn:focus-visible { background: var(--dmg); color: #fff; }
+  .edit-btn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 11.5px; font-weight: 650; padding: 0 2px; margin-left: auto; }
+  .edit-btn:hover { color: var(--accent); }
+  .mut-status { font-size: 11px; margin-top: 4px; min-height: 14px; font-weight: 600; }
+  .mut-status.ok { color: var(--accent); }
+  .mut-status.warn { color: var(--dmg); }
+  .mut[data-mut-tip] { cursor: help; }
+  .tip {
+    position: fixed; z-index: 70; width: min(320px, calc(100vw - 24px)); pointer-events: none;
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35); padding: 12px 14px; font-size: 12.5px; color: var(--text-2);
+  }
+  .tip .t-name { font-weight: 800; font-size: 14px; color: var(--text); }
+  .tip .t-id { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+  .tip .t-desc { margin: 8px 0; white-space: pre-line; color: var(--text); }
+  .tip .t-desc.none { color: var(--muted); font-style: italic; }
+  .tip .t-proof { border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+  .tip .ok { color: var(--accent); font-weight: 700; }
+  .tip .t-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; margin-top: 8px; }
+  .tip .t-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tip .t-chip { font-size: 11px; font-weight: 650; padding: 1px 7px; border-radius: 6px; background: var(--surface-3); color: var(--text-2); }
+  .tip .t-alert { margin-top: 6px; font-size: 12px; font-weight: 650; color: var(--dmg); }
+  .tip .t-src { margin-top: 6px; font-size: 11px; color: var(--muted); }
+  .tip .warn { color: var(--dmg); font-weight: 700; }
+  .toggle { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--text-2); cursor: pointer; margin: 0; font-weight: 600; }
+  .toggle input { width: 16px; height: 16px; accent-color: var(--dmg); }
+  textarea {
+    width: 100%; min-height: 110px; resize: vertical; padding: 9px 12px; border: 1px solid var(--border-strong);
+    border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .slot-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+  .slot-chip { display: inline-flex; gap: 6px; align-items: center; padding: 3px 9px; border-radius: 8px; background: var(--surface-3); color: var(--text-2); font-weight: 600; font-size: 12px; }
+  .slot-chip.hit { background: var(--kill-soft); color: var(--kill); }
+  .overwrite { border: 1px solid color-mix(in srgb, var(--kill) 45%, transparent); background: var(--kill-soft); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-2); }
+  .overwrite b.kill { color: var(--kill); }
+  .overwrite label.check { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 13px; color: var(--text); cursor: pointer; }
+  .overwrite input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--kill); }
+  .banner { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; border-radius: 10px; padding: 10px 12px; }
+  .banner svg.i { width: 16px; height: 16px; margin-top: 1px; }
+  .link-btn { border: 0; background: none; color: var(--accent); font-weight: 650; cursor: pointer; padding: 0; font-size: 12.5px; }
+
+  /* ---- admin actions: buttons, modal, toast --------------------------- */
+  .btn-danger {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 10px; cursor: pointer;
+    font-weight: 700; font-size: 12.5px; border: 1px solid color-mix(in srgb, var(--kill) 45%, transparent);
+    background: var(--kill-soft); color: var(--kill);
+  }
+  .btn-danger:hover { background: color-mix(in srgb, var(--kill) 20%, transparent); }
+  .btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-danger svg.i { width: 15px; height: 15px; }
+  .btn-danger.solid { background: var(--kill); color: #fff; border-color: transparent; }
+  .icon-btn {
+    border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; border-radius: 8px;
+    width: 30px; height: 30px; display: grid; place-items: center; flex: none;
+  }
+  .icon-btn:hover { color: var(--kill); background: var(--kill-soft); }
+  .icon-btn svg.i { width: 16px; height: 16px; }
+  .btn-ghost { border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); padding: 8px 14px; border-radius: 10px; font-weight: 650; cursor: pointer; }
+  .modal-back {
+    position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px;
+    background: rgba(5, 8, 12, 0.55); backdrop-filter: blur(3px);
+  }
+  .modal { width: min(460px, 100%); padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  .modal h3 { margin: 0; font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; gap: 10px; align-items: center; }
+  .modal .body { font-size: 13.5px; color: var(--text-2); }
+  .modal .actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .modal .err { font-size: 12.5px; color: var(--kill); min-height: 16px; font-weight: 600; }
+  .toast-wrap { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: flex; flex-direction: column; gap: 8px; max-width: min(420px, calc(100vw - 32px)); }
+  .toast { padding: 12px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow); border: 1px solid var(--border); background: var(--surface); animation: slide-in .3s ease; }
+  .toast.ok { border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
+  .toast.err { border-color: color-mix(in srgb, var(--kill) 40%, transparent); color: var(--kill); }
+  .hero .actions { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .hero .actions .status { font-size: 12px; max-width: 280px; text-align: right; }
+
+  /* ---- leaderboard ---------------------------------------------------- */
+  .rank-list { list-style: none; margin: 0; padding: 0; }
+  .rank-list li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+  .rank-list li:first-child { border-top: 0; }
+  .rank {
+    width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex: none;
+    font-size: 12px; font-weight: 800; background: var(--surface-3); color: var(--muted);
+  }
+  .rank.r1 { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); }
+  .rank.r2 { background: color-mix(in srgb, var(--silver) 22%, transparent); color: var(--silver); }
+  .rank.r3 { background: color-mix(in srgb, var(--bronze) 20%, transparent); color: var(--bronze); }
+  .rank-list .score { margin-left: auto; font-weight: 750; font-variant-numeric: tabular-nums; text-align: right; }
+  .rank-list .score small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+
+  /* ---- map ------------------------------------------------------------ */
+  .map-layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1100px) { .map-layout { grid-template-columns: minmax(0, 1fr) 300px; } }
+  canvas#map { width: 100%; aspect-ratio: 1 / 1; max-height: 76vh; display: block; border-radius: 12px; background: var(--map-bg); }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  /* ---- chat ----------------------------------------------------------- */
+  .chat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .chat-list li { display: flex; gap: 10px; align-items: flex-start; }
+  .bubble { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px 14px 14px 14px; padding: 8px 12px; max-width: min(640px, 100%); }
+  .bubble .top { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
+  .bubble .txt { font-size: 13.5px; color: var(--text); overflow-wrap: anywhere; margin-top: 1px; }
+  .bubble.cmd .txt { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; color: var(--gar); }
+
+  /* ---- garage + forms ------------------------------------------------- */
+  .slot-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .slot { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface-2); }
+  .slot .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .slot .species { font-size: 16px; font-weight: 750; letter-spacing: -0.02em; }
+  .slot .owner { margin-top: 10px; font-size: 12px; }
+  form.grid-form { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: end; }
+  /* classPath is long: give it a full row at every width. */
+  .wide { grid-column: 1 / -1; }
+  label { display: block; font-size: 12px; color: var(--text-2); font-weight: 600; margin-bottom: 6px; }
+  input {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
+    background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 16px; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13.5px;
+    color: #fff; background: linear-gradient(135deg, var(--accent-2), #0ea5e9);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.25); transition: transform .1s, filter .15s;
+  }
+  .btn:hover { filter: brightness(1.07); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+  .result { font-size: 13px; margin-top: 12px; min-height: 20px; font-weight: 600; }
+  .result.ok { color: var(--accent); }
+  .result.err { color: var(--kill); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-mark"><svg class="i" viewBox="0 0 24 24"><path d="M4 18c2-6 5-9 9-9 3 0 5 1.5 6 4l2 1-2 1c-.6 2-2.4 3-5 3H9l-2 3-1-3H4z"/><circle cx="16" cy="12" r=".6"/></svg></div>
+      <div><b>Isle Panel</b><span>Evrima server admin</span></div>
+    </div>
+    <nav id="tabs"></nav>
+    <div class="side-foot">
+      <div class="server-card">
+        <div class="row"><span class="pulse" id="dot"></span><span id="status-title">Đang kết nối…</span></div>
+        <div class="sub" id="status-sub">&nbsp;</div>
+      </div>
+      <button class="theme-btn" id="theme" type="button"></button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- Tổng quan -->
+    <div data-view="overview">
+      <div class="page-head">
+        <div><h1>Tổng quan</h1><p>Mọi thứ đang diễn ra trên server, cập nhật mỗi 2 giây.</p></div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <details class="notice">
+        <summary><svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          Giới hạn của game — số liệu nào có thể thiếu</summary>
+        <p>Chỉ đếm được damage do người chơi đánh trực tiếp người chơi. Ngã, chết đuối, chảy máu và damage
+          từ AI không sinh hook nào trong game nên <b>không thể ghi nhận</b>.</p>
+        <p>Chết, spawn, phiên chơi và mốc growth được suy ra từ trạng thái giữa hai lần chụp (mỗi 5 giây),
+          nên có thể trễ tới 5s và đôi khi không quy được ai là người giết.</p>
+      </details>
+      <div class="grid split">
+        <section class="card">
+          <div class="card-head"><h2>Người chơi</h2><span class="sub" id="players-sub"></span></div>
+          <div class="card-body table-wrap">
+            <table>
+              <thead><tr>
+                <th>Người chơi</th><th>HP</th><th class="hide-sm">Growth</th><th>K / D</th>
+                <th class="hide-sm">Damage</th><th class="hide-sm">Giờ chơi</th>
+              </tr></thead>
+              <tbody id="players"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>Diễn biến</h2></div>
+          <div class="card-body">
+            <div class="chips" id="feed-filter" style="margin-bottom:10px"></div>
+            <ul class="feed" id="feed"></ul>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Chi tiết người chơi -->
+    <div data-view="player" hidden>
+      <button class="back" id="back" type="button">
+        <svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Quay lại</button>
+      <section class="card" style="margin-bottom:18px"><div class="hero" id="player-hero"></div></section>
+      <div class="grid split">
+        <div style="display:grid;gap:18px;align-content:start">
+          <section class="card">
+            <div class="card-head"><h2 id="current-title">Dino hiện tại</h2><span class="sub">snapshot gần nhất</span></div>
+            <div class="card-body"><div class="vitals" id="player-vitals"></div></div>
+          </section>
+          <section class="card">
+            <div class="card-head"><h2>Thành tích</h2></div>
+            <div class="card-body"><div class="tiles" id="player-stats"></div></div>
+          </section>
+        </div>
+        <section class="card">
+          <div class="card-head"><h2>Nhật ký</h2><span class="sub">300 sự kiện gần nhất</span></div>
+          <div class="card-body"><ul class="feed" id="player-timeline"></ul></div>
+        </section>
+      </div>
+
+      <div class="section-title"><span class="ev-ico tone-gar" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center" id="garage-ico"></span>
+        <h2>Dino trong gara</h2><span class="sub" id="player-garage-sub"></span></div>
+      <div class="dino-grid" id="player-garage"></div>
+
+      <div class="section-title"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center" id="lives-ico"></span>
+        <h2>Các đời dino</h2><span class="sub">mọi dino người này đã chơi, mới nhất trước</span></div>
+      <section class="card"><div class="card-body table-wrap">
+        <table>
+          <thead><tr><th>Dino</th><th>Growth</th><th>Sống</th><th>Kill</th><th class="hide-sm">Gây / chịu dmg</th><th>Kết thúc</th><th class="hide-sm">Spawn lúc</th></tr></thead>
+          <tbody id="player-lives"></tbody>
+        </table>
+      </div></section>
+    </div>
+
+    <!-- Killfeed -->
+    <div data-view="killfeed" hidden>
+      <div class="page-head"><div><h1>Killfeed</h1><p>Mọi cái chết, kèm người giết, loài, growth và vị trí.</p></div></div>
+      <section class="card"><div class="card-body"><ul class="feed tall" id="killfeed"></ul></div></section>
+    </div>
+
+    <!-- Xếp hạng -->
+    <div data-view="leaderboard" hidden>
+      <div class="page-head"><div><h1>Xếp hạng</h1><p>Tính từ toàn bộ log hiện có trên server.</p></div></div>
+      <div class="grid boards" id="boards"></div>
+      <section class="card" style="margin-top:18px">
+        <div class="card-head"><h2>Con mồi lớn nhất theo loài</h2></div>
+        <div class="card-body table-wrap">
+          <table>
+            <thead><tr><th>Loài</th><th>Growth</th><th>Người giết</th><th class="hide-sm">Bằng</th><th class="hide-sm">Nạn nhân</th><th class="hide-sm">Lúc</th></tr></thead>
+            <tbody id="prey"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- Bản đồ -->
+    <div data-view="map" hidden>
+      <div class="page-head"><div><h1>Bản đồ trực tiếp</h1><p>Vị trí người chơi đang online và vệt 2 phút gần nhất.</p></div></div>
+      <div class="map-layout">
+        <section class="card"><div class="card-body">
+          <canvas id="map"></canvas>
+          <div class="legend" id="map-legend"></div>
+        </div></section>
+        <section class="card">
+          <div class="card-head"><h2>Trên bản đồ</h2></div>
+          <div class="card-body"><ul class="rank-list" id="map-list"></ul></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div data-view="chat" hidden>
+      <div class="page-head"><div><h1>Chat</h1><p>Toàn bộ chat trong game, kể cả lệnh <span class="mono">!store</span> / <span class="mono">!redeem</span>.</p></div></div>
+      <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
+    </div>
+
+    <!-- Gara -->
+    <div data-view="garage" hidden>
+      <div class="page-head"><div><h1>Gara</h1><p>Dino người chơi đã cất, và tạo dino thẳng vào gara của ai đó.</p></div></div>
+      <section class="card" style="margin-bottom:18px">
+        <div class="card-head"><h2>Dino đang cất</h2><span class="sub" id="garage-sub"></span></div>
+        <div class="card-body"><div class="slot-grid" id="garage"></div></div>
+      </section>
+      <section class="card" id="creator-card">
+        <div class="card-head"><h2>Tạo dino vào gara</h2><span class="sub">Người chơi gõ <span class="mono">!redeem &lt;slot&gt;</span> để nhận</span></div>
+        <div class="card-body">
+          <form class="creator" id="create" autocomplete="off">
+            <div>
+              <div class="step">
+                <div class="step-title"><span class="step-num">1</span>Người chơi</div>
+                <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+                  <div><label for="f-steam">SteamID64</label>
+                    <input id="f-steam" required pattern="\d{17}" placeholder="Gõ tên hoặc SteamID…" list="dl-players"></div>
+                  <div><label for="f-slot">Tên slot</label>
+                    <input id="f-slot" required pattern="[A-Za-z0-9_\-]{1,32}" value="admin"></div>
+                </div>
+                <datalist id="dl-players"></datalist>
+                <div class="step-hint" id="f-steam-hint"></div>
+                <div class="slot-chips" id="f-existing"></div>
+                <div class="overwrite" id="f-overwrite" hidden>
+                  <div id="f-overwrite-text"></div>
+                  <label class="check"><input type="checkbox" id="f-overwrite-ok">
+                    Tôi hiểu — ghi đè slot này (con cũ được sao lưu vào <span class="mono">deleted/</span>)</label>
+                  <div><button type="button" class="link-btn" id="f-free-slot"></button></div>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-title"><span class="step-num">2</span>Chọn dino</div>
+                <div class="step-hint">Chỉ những loài đã từng có người chơi trên server này — <span class="mono">!redeem</span> so khớp
+                  chính xác classPath, nên loài đoán sai sẽ không ai nhận được.</div>
+                <div class="species-grid" id="f-species"></div>
+                <div><button class="link-btn" type="button" id="f-manual-toggle">Nhập classPath thủ công…</button></div>
+                <div id="f-manual" hidden>
+                  <label for="f-class">classPath</label>
+                  <input id="f-class" placeholder="BlueprintGeneratedClass /Game/…/BP_X.BP_X_C">
+                  <div class="banner tone-dmg" style="margin-top:8px"><svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>classPath chưa thấy trên server. Sai một ký tự là
+                    người chơi sẽ nhận lỗi "Wrong species" khi redeem.</span></div>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-title"><span class="step-num">3</span>Tăng trưởng</div>
+                <div class="range-row">
+                  <span class="growth-val" id="f-growth-val">100%</span>
+                  <input id="f-growth" type="range" min="0" max="100" step="1" value="100" aria-label="Growth">
+                </div>
+                <div class="chips" id="f-presets">
+                  <button type="button" data-g="10">Sơ sinh 10%</button>
+                  <button type="button" data-g="25">Juvenile 25%</button>
+                  <button type="button" data-g="50">Sub-adult 50%</button>
+                  <button type="button" data-g="75">75%</button>
+                  <button type="button" data-g="100">Trưởng thành 100%</button>
+                </div>
+                <div class="step-hint">Giới tính không chọn được: người chơi chọn khi respawn, và restore không có cách đổi nó.</div>
+              </div>
+
+              <div class="step">
+                <div class="step-title"><span class="step-num">4</span>Mutation</div>
+                <div class="step-hint">Mỗi mutation phải <b>đã được game ghi nhận trên chính loài này</b> (từ người chơi thật
+                  hoặc dino họ đã cất). Rê chuột vào <span class="info-btn" style="cursor:default">!</span> để xem mô tả và bằng chứng.
+                  Để "trống" thì slot đó giữ nguyên khi redeem.</div>
+                <label class="toggle"><input type="checkbox" id="f-allow-unconfirmed">
+                  Cho phép cả mutation chưa xác nhận trên loài này (chỉ thấy trên loài khác)</label>
+                <div class="group-label">Đang dùng</div>
+                <div class="mut-grid" id="f-mut-active"></div>
+                <details class="more">
+                  <summary>Mutation từ cha mẹ và elder</summary>
+                  <div class="inner">
+                    <div><div class="group-label">Từ cha mẹ</div><div class="mut-grid" id="f-mut-parent"></div></div>
+                    <div><div class="group-label">Elder</div><div class="mut-grid" id="f-mut-elder"></div></div>
+                  </div>
+                </details>
+              </div>
+
+              <div class="step">
+                <div class="step-title"><span class="step-num">5</span>Xác nhận</div>
+                <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
+                  <div style="flex:1;min-width:200px"><label for="f-token">Admin token</label>
+                    <input id="f-token" type="password" placeholder="x-admin-token"></div>
+                  <button class="btn" type="submit" id="f-submit">
+                    <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tạo dino</button>
+                </div>
+                <div class="result" id="create-result"></div>
+              </div>
+            </div>
+
+            <div class="preview">
+              <div class="group-label">Xem trước</div>
+              <div id="f-preview"></div>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="modal-back" id="modal" hidden>
+  <form class="card modal" id="modal-form" autocomplete="off">
+    <h3 id="modal-title"></h3>
+    <div class="body" id="modal-body"></div>
+    <div id="modal-reason-wrap"><label for="modal-reason">Lý do <span class="muted">(người chơi sẽ thấy trong chat)</span></label>
+      <input id="modal-reason" maxlength="200" placeholder="vd: vi phạm luật server"></div>
+    <div id="modal-text-wrap" hidden><label for="modal-text" id="modal-text-label"></label>
+      <textarea id="modal-text" maxlength="500"></textarea></div>
+    <div><label for="modal-token">Admin token</label>
+      <input id="modal-token" type="password" required placeholder="x-admin-token"></div>
+    <div class="err" id="modal-err"></div>
+    <div class="actions">
+      <button type="button" class="btn-ghost" id="modal-cancel">Huỷ</button>
+      <button type="submit" class="btn-danger solid" id="modal-ok"></button>
+    </div>
+  </form>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+
+// Names, chat and species all come from players or the game: escape everything
+// that goes into innerHTML.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = (v) => (v === null || v === undefined ? '–' : Math.round(v).toLocaleString('vi-VN'));
+const pct = (v) => (v === null || v === undefined ? '–' : `${Math.round(v * 100)}%`);
+const shortId = (id) => (id === 'ai' ? 'AI' : id.length > 8 ? '…' + id.slice(-8) : id);
+const clock = (t) => new Date(t * 1000).toLocaleTimeString('vi-VN', { hour12: false });
+const dateTime = (t) => new Date(t * 1000).toLocaleString('vi-VN', { hour12: false });
+
+/** BP_Carnotaurus_C, or a full classPath, -> Carnotaurus */
+function dino(s) {
+  if (!s) return '–';
+  const tail = String(s).split('.').pop();
+  return tail.replace(/^BP_/, '').replace(/_C$/, '');
+}
+
+function dur(sec) {
+  if (sec === null || sec === undefined) return '–';
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  if (h > 0) return `${h}g ${m}p`;
+  if (m > 0) return `${m}p ${s}s`;
+  return `${s}s`;
+}
+
+function ago(t) {
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - t);
+  if (s < 5) return 'vừa xong';
+  if (s < 60) return `${s}s trước`;
+  if (s < 3600) return `${Math.floor(s / 60)} phút trước`;
+  return `${Math.floor(s / 3600)} giờ trước`;
+}
+
+// --- icons ------------------------------------------------------------------
+
+const PATHS = {
+  overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  killfeed: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+  leaderboard: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  map: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
+  garage: '<path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8M7 17h10"/>',
+  damage: '<path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/>',
+  death: '<path d="M12 3a8 8 0 0 0-5 14.2V20h10v-2.8A8 8 0 0 0 12 3z"/><path d="M10 20v-2M14 20v-2"/><circle cx="9" cy="11" r="1.4"/><circle cx="15" cy="11" r="1.4"/>',
+  spawn: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+  in: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
+  out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  growth: '<path d="M3 17l6-6 4 4 8-8M14 7h7v7"/>',
+  warn: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+};
+const icon = (name) => `<svg class="i" viewBox="0 0 24 24">${PATHS[name] ?? ''}</svg>`;
+PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>';
+
+// --- admin actions ------------------------------------------------------------
+// The token lives only in this page's memory: typed once per visit, never
+// written to storage, gone when the tab closes.
+let adminToken = '';
+
+function toast(text, kind = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast ${kind}`;
+  el.textContent = text;
+  $('toasts').append(el);
+  setTimeout(() => el.remove(), 6000);
+}
+
+/**
+ * Ask for confirmation (and the token) before a destructive action.
+ * run(token, reason) performs it; a thrown error stays in the dialog.
+ */
+function confirmAction({ title, body, okLabel, withReason, run, text = null, danger = true }) {
+  $('modal-title').innerHTML = `${danger ? icon('warn') : ''}${esc(title)}`;
+  $('modal-body').innerHTML = body;
+  $('modal-ok').textContent = okLabel;
+  $('modal-ok').className = danger ? 'btn-danger solid' : 'btn';
+  $('modal-reason-wrap').hidden = !withReason;
+  $('modal-reason').value = '';
+  $('modal-text-wrap').hidden = text === null;
+  $('modal-text-label').textContent = text?.label ?? '';
+  $('modal-text').value = text?.value ?? '';
+  $('modal-token').value = adminToken;
+  $('modal-err').textContent = '';
+  $('modal').hidden = false;
+  (text !== null ? $('modal-text') : withReason ? $('modal-reason') : adminToken ? $('modal-ok') : $('modal-token')).focus();
+
+  $('modal-form').onsubmit = async (ev) => {
+    ev.preventDefault();
+    $('modal-ok').disabled = true;
+    $('modal-err').textContent = '';
+    try {
+      await run($('modal-token').value, $('modal-reason').value.trim(), $('modal-text').value);
+      adminToken = $('modal-token').value;
+      $('modal').hidden = true;
+    } catch (err) {
+      $('modal-err').textContent = err.message;
+    } finally {
+      $('modal-ok').disabled = false;
+    }
+  };
+}
+const closeModal = () => { $('modal').hidden = true; };
+$('modal-cancel').addEventListener('click', closeModal);
+$('modal').addEventListener('click', (ev) => { if (ev.target === $('modal')) closeModal(); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('modal').hidden) closeModal(); });
+
+async function adminFetch(url, method, token, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'content-type': 'application/json', 'x-admin-token': token },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  return data;
+}
+
+function askDeleteSlot(steamId, slot, label) {
+  confirmAction({
+    title: 'Xoá dino khỏi gara?',
+    body: `Xoá <b>${esc(label)}</b> ở slot <span class="mono">${esc(slot)}</span> của
+      <span class="mono">${esc(steamId)}</span>. File được chuyển vào thư mục <span class="mono">deleted/</span>
+      trên server, nên vẫn khôi phục được nếu xoá nhầm.`,
+    okLabel: 'Xoá khỏi gara',
+    withReason: false,
+    run: async (token) => {
+      await adminFetch(`/api/garage/${encodeURIComponent(steamId)}/${encodeURIComponent(slot)}`, 'DELETE', token);
+      toast(`Đã xoá ${label} (slot ${slot}) khỏi gara.`);
+      refresh();
+    },
+  });
+}
+
+// Commands sent to the game, by player, until the mod reports back.
+const pendingKills = new Map();   // steamId -> { id, at }
+
+const KILL_ERRORS = {
+  offline: 'người chơi đã offline',
+  no_dino: 'người chơi không có dino lúc lệnh chạy',
+  expired: 'server không nhận lệnh trong 60 giây',
+  no_game_thread: 'UE4SS thiếu ExecuteInGameThread — lệnh bị từ chối để an toàn',
+  set_health_failed: 'game từ chối SetHealth',
+  unknown_command: 'mod không hiểu lệnh',
+};
+
+function askKill(p) {
+  confirmAction({
+    title: 'Xoá dino đang chơi?',
+    body: `Dino <b>${esc(dino(p.species))} ${pct(p.growth)}</b> của <b>${esc(p.name ?? p.steamId)}</b> sẽ chết ngay
+      (như khi <span class="mono">!store</span>) và người chơi phải respawn. <b>Không hoàn tác được.</b>
+      Cái chết này không bị tính vào thống kê.`,
+    okLabel: 'Xoá dino',
+    withReason: true,
+    run: async (token, reason) => {
+      const { command } = await adminFetch(`/api/player/${encodeURIComponent(p.steamId)}/kill`, 'POST', token, { reason });
+      pendingKills.set(p.steamId, { id: command.id, at: Date.now() });
+      toast(`Đã gửi lệnh #${command.id} — chờ server thực hiện (vài giây).`);
+      refresh();
+    },
+  });
+}
+
+// --- player identity: a stable colour and initials per SteamID ---------------
+
+// FNV-1a: SteamIDs share their first 15 digits, so a weak hash (h*31+c) puts
+// neighbouring IDs one degree apart — every avatar the same colour.
+function hue(id) {
+  let h = 0x811c9dc5;
+  for (const c of String(id)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193);
+  return (h >>> 0) % 360;
+}
+const playerColor = (id) => `hsl(${hue(id)} 70% 55%)`;
+function initials(name, id) {
+  const s = (name ?? '').trim();
+  if (s) return [...s][0].toUpperCase();
+  return String(id).slice(-2);
+}
+function avatar(id, name, size = '') {
+  const h = hue(id);
+  return `<span class="avatar ${size}" style="background:linear-gradient(135deg,hsl(${h} 70% 52%),hsl(${(h + 40) % 360} 70% 42%))">${esc(initials(name, id))}</span>`;
+}
+
+/** A player reference: name if we know it, a link to their log. */
+function who(id, name) {
+  if (!id || id === 'ai') return '<span class="muted">AI</span>';
+  const label = name ? esc(name) : `<span class="mono">${esc(shortId(id))}</span>`;
+  return `<a href="#player/${esc(id)}" class="plink">${label}</a>`;
+}
+
+function meter(value, max, kind = 'hp') {
+  if (value === null || value === undefined) return '<span class="muted">–</span>';
+  const w = Math.max(0, Math.min(100, (value / max) * 100));
+  const cls = kind === 'grow' ? 'grow' : w < 30 ? 'low' : w < 60 ? 'mid' : '';
+  const label = kind === 'grow' ? pct(value) : num(value);
+  return `<div class="meter"><div class="track"><div class="fill ${cls}" style="width:${w}%"></div></div><span class="n">${label}</span></div>`;
+}
+
+const locText = (l) => (l ? ` · @ ${num(l.x)}, ${num(l.y)}` : '');
+
+// --- event -> one feed line ---------------------------------------------------
+
+const EV = {
+  damage: ['damage', 'tone-dmg'], death: ['death', 'tone-kill'], spawn: ['spawn', 'tone-accent'],
+  session_start: ['in', 'tone-neutral'], session_end: ['out', 'tone-neutral'], chat: ['chat', 'tone-chat'],
+  growth: ['growth', 'tone-grow'], growth_set: ['warn', 'tone-dmg'], mutation: ['spawn', 'tone-grow'],
+  admin_kill: ['warn', 'tone-kill'],
+  garage_store: ['garage', 'tone-gar'], garage_redeem: ['garage', 'tone-gar'],
+};
+
+/** [main line, meta line] for one event. */
+function describe(e) {
+  switch (e.type) {
+    case 'damage': {
+      const amt = e.amount === null || e.amount === undefined ? '' : ` <b>−${num(e.amount)}</b>`;
+      return [`${who(e.attacker, e.attackerName)} cắn ${who(e.victim, e.victimName)}${amt}`,
+        `${esc(dino(e.attackerSpecies))} → ${esc(dino(e.victimSpecies))}${locText(e.loc)}`];
+    }
+    case 'death': {
+      if (e.cause === 'garage') {
+        return [`${who(e.steamId, e.name)} cất dino vào gara`, 'cái chết này không được tính'];
+      }
+      if (e.cause === 'admin') {
+        return [`${who(e.steamId, e.name)} — dino bị admin xoá`, 'cái chết này không được tính'];
+      }
+      const life = e.lifeSeconds !== undefined ? ` · sống ${dur(e.lifeSeconds)}` : '';
+      if (e.attributed && e.killer) {
+        const hit = e.lastHit !== undefined ? ` · đòn cuối ${num(e.lastHit)}` : '';
+        return [`<span class="kill">${who(e.killer, e.killerName)}</span> đã giết ${who(e.steamId, e.name)}`,
+          `${esc(dino(e.killerSpecies))} giết ${esc(dino(e.species))} ${pct(e.growth)}${hit}${life}${locText(e.loc)}`];
+      }
+      return [`${who(e.steamId, e.name)} đã chết`,
+        `${esc(dino(e.species))} ${pct(e.growth)} · không rõ nguyên nhân${life}${locText(e.loc)}`];
+    }
+    case 'spawn':
+      return [`${who(e.steamId, e.name)} spawn <b>${esc(dino(e.species))}</b>`, `growth ${pct(e.growth)}${locText(e.loc)}`];
+    case 'session_start':
+      return [`${who(e.steamId, e.name)} vào server`, ''];
+    case 'session_end':
+      return [`${who(e.steamId, e.name)} rời server`, `online ${dur(e.duration)}`];
+    case 'chat':
+      return [`${who(e.steamId, e.name)}: ${esc(e.message)}`, ''];
+    case 'growth':
+      return [`${who(e.steamId, e.name)} đạt <b>${pct(e.milestone)}</b> growth`,
+        `${esc(dino(e.species))}${e.lifeSeconds !== undefined ? ' · sau ' + dur(e.lifeSeconds) : ''}`];
+    case 'growth_set':
+      return [`${who(e.steamId, e.name)} growth nhảy ${pct(e.from)} → <b>${pct(e.to)}</b>`,
+        `${esc(dino(e.species))} · redeem, admin hoặc bất thường`];
+    case 'admin_kill':
+      return e.ok
+        ? [`Admin xoá dino của ${who(e.steamId, e.name)}${e.species ? ` <b>${esc(dino(e.species))}</b>` : ''}`,
+           `lệnh #${e.id}${e.growth !== undefined ? ` · growth ${pct(e.growth)}` : ''}${e.reason ? ` · lý do: ${esc(e.reason)}` : ''}`]
+        : [`Lệnh xoá dino của ${who(e.steamId, e.name)} thất bại`,
+           `lệnh #${e.id} · ${esc(KILL_ERRORS[e.error] ?? e.error ?? 'không rõ')}`];
+    case 'mutation':
+      return e.to
+        ? [`${who(e.steamId, e.name)} chọn mutation <b>${esc(mutName(e.to))}</b>`,
+           `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}${e.from ? ` · thay ${esc(mutName(e.from))}` : ''}${e.growth !== undefined ? ` · growth ${pct(e.growth)}` : ''}`]
+        : [`${who(e.steamId, e.name)} bỏ mutation <b>${esc(mutName(e.from ?? ''))}</b>`, `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}`];
+    case 'garage_store':
+      return [`${who(e.steamId, e.name)} cất <b>${esc(dino(e.species))}</b>`, `slot ${esc(e.slot)} · growth ${pct(e.growth)}`];
+    case 'garage_redeem':
+      return [`${who(e.steamId, e.name)} lấy <b>${esc(dino(e.species))}</b>${e.ok ? '' : ' <span class="kill">thất bại</span>'}`,
+        `slot ${esc(e.slot)}`];
+    default:
+      return [esc(e.type), ''];
+  }
+}
+
+// Highest id already on screen per list, so only genuinely new rows animate.
+const seen = new Map();
+
+function renderFeed(el, events, emptyText = 'Chưa có sự kiện') {
+  if (events.length === 0) {
+    el.innerHTML = `<li class="empty">${emptyText}</li>`;
+    return;
+  }
+  const prev = seen.get(el.id);
+  seen.set(el.id, Math.max(...events.map((e) => e.id)));
+  el.innerHTML = events.map((e) => {
+    const [ic, tone] = EV[e.type] ?? ['warn', 'tone-neutral'];
+    const [main, meta] = describe(e);
+    const fresh = prev !== undefined && e.id > prev ? ' class="new"' : '';
+    return `<li${fresh}>
+      <span class="ev-ico ${tone}">${icon(ic)}</span>
+      <div class="ev-body">${main}${meta ? `<div class="ev-meta">${meta}</div>` : ''}</div>
+      <span class="ev-time" title="${esc(dateTime(e.t))}">${clock(e.t)}</span></li>`;
+  }).join('');
+}
+
+// --- navigation ---------------------------------------------------------------
+
+const TABS = [
+  ['overview', 'Tổng quan'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'],
+  ['map', 'Bản đồ'], ['chat', 'Chat'], ['garage', 'Gara'],
+];
+$('tabs').innerHTML = TABS.map(([id, label]) =>
+  `<a href="#${id}" data-tab="${id}">${icon(id)}<span class="label">${label}</span><span class="count" id="count-${id}" hidden></span></a>`).join('');
+
+function setCount(tab, n) {
+  const el = $(`count-${tab}`);
+  if (!el) return;
+  el.hidden = !n;
+  el.textContent = n;
+}
+
+// --- theme --------------------------------------------------------------------
+
+function storedTheme() {
+  try { return localStorage.getItem('theme'); } catch { return null; }
+}
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $('theme').innerHTML = t === 'dark' ? `${icon('sun')}<span>Giao diện sáng</span>` : `${icon('moon')}<span>Giao diện tối</span>`;
+}
+applyTheme(storedTheme() ?? 'dark');
+$('theme').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('theme', next); } catch { /* private window: not remembered */ }
+  applyTheme(next);
+  if (currentTab() === 'map') refresh();
+});
+
+// --- overview -----------------------------------------------------------------
+
+const FILTERS = [
+  ['Tất cả', null], ['Chiến đấu', 'damage,death'], ['Chết', 'death'],
+  ['Ra / vào', 'session_start,session_end,spawn'], ['Growth', 'growth,growth_set,mutation'],
+  ['Gara', 'garage_store,garage_redeem'], ['Chat', 'chat'],
+];
+let feedFilter = null;
+
+function renderFilters() {
+  $('feed-filter').innerHTML = FILTERS.map(([label, types]) =>
+    `<button type="button" data-types="${types ?? ''}" class="${types === feedFilter ? 'on' : ''}">${label}</button>`).join('');
+}
+$('feed-filter').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  feedFilter = b.dataset.types || null;
+  seen.delete('feed');
+  renderFilters();
+  refresh();
+});
+
+function renderKpis(players) {
+  const online = players.filter((p) => p.online).length;
+  const sum = (k) => players.reduce((a, p) => a + (p[k] ?? 0), 0);
+  const tile = (ic, tone, v, k) => `<div class="card kpi"><span class="ico ${tone}">${icon(ic)}</span>
+    <div><div class="v">${v}</div><div class="k">${k}</div></div></div>`;
+  $('kpis').innerHTML = [
+    tile('users', 'tone-accent', `${online}<span class="muted" style="font-size:15px;font-weight:600"> / ${players.length}</span>`, 'Đang online / đã thấy'),
+    tile('death', 'tone-kill', num(sum('kills')), 'Kill được quy người'),
+    tile('damage', 'tone-dmg', num(sum('damageDealt')), 'Damage PvP'),
+    tile('chat', 'tone-chat', num(sum('chats')), 'Tin chat'),
+    tile('garage', 'tone-gar', num(sum('stored')), 'Lượt cất gara'),
+  ].join('');
+}
+
+function renderPlayers(players) {
+  $('players-sub').textContent = `${players.filter((p) => p.online).length} online`;
+  const tbody = $('players');
+  if (players.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Chưa có người chơi nào</td></tr>';
+    return;
+  }
+  tbody.innerHTML = players.map((p) => `
+    <tr class="row-link" data-id="${esc(p.steamId)}">
+      <td><div class="who">${avatar(p.steamId, p.name)}
+        <div class="meta"><div class="nm">${esc(p.name ?? shortId(p.steamId))}
+          ${p.online ? '<span class="chip tone-accent"><span class="d"></span>online</span>' : ''}</div>
+          <div class="sp">${esc(dino(p.species))}</div></div></div></td>
+      <td>${meter(p.health, 100)}</td>
+      <td class="hide-sm">${meter(p.growth, 1, 'grow')}</td>
+      <td><b>${p.kills}</b> <span class="muted">/ ${p.deaths}</span></td>
+      <td class="hide-sm">${num(p.damageDealt)}</td>
+      <td class="hide-sm muted">${dur(p.playtime)}</td>
+    </tr>`).join('');
+}
+$('players').addEventListener('click', (ev) => {
+  const row = ev.target.closest('tr[data-id]');
+  if (row && !ev.target.closest('a')) location.hash = `player/${row.dataset.id}`;
+});
+
+// --- player detail ------------------------------------------------------------
+
+let currentPlayerId = null;
+
+function renderPlayer(d) {
+  const p = d.player;
+  const id = d.steamId;
+  currentPlayerId = id;
+  if (p === null) {
+    // Known only from the garage: an admin parked a dino for someone who has
+    // not joined since the logs began.
+    $('player-hero').innerHTML = `${avatar(id, null, 'lg')}
+      <div style="min-width:0"><h1>Chưa từng thấy online <span class="chip tone-neutral">chỉ có gara</span></h1>
+        <div class="sub"><span class="mono">${esc(id)}</span></div></div>`;
+    $('current-title').textContent = 'Dino hiện tại';
+    $('player-vitals').innerHTML = '<div class="empty">Chưa có snapshot nào</div>';
+    $('player-stats').innerHTML = '<div class="empty">Chưa có dữ liệu</div>';
+  } else {
+    $('player-hero').innerHTML = `${avatar(p.steamId, p.name, 'lg')}
+      <div style="min-width:0">
+        <h1>${esc(p.name ?? 'Không rõ tên')}
+          ${p.online ? '<span class="chip tone-accent"><span class="d"></span>online</span>'
+                     : '<span class="chip tone-neutral">offline</span>'}</h1>
+        <div class="sub"><span class="mono">${esc(p.steamId)}</span>
+          <span class="chip tone-grow">${esc(dino(p.species))} · ${pct(p.growth)}</span>
+          ${p.loc ? `<span>@ ${num(p.loc.x)}, ${num(p.loc.y)}, ${num(p.loc.z)}</span>` : ''}
+          <span>thấy lần cuối ${ago(p.lastSeen)}</span></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn-danger" id="kill-btn" ${p.online && p.species ? '' : 'disabled title="Chỉ xoá được khi người chơi đang online và có dino"'}>
+          ${icon('trash')}Xoá dino hiện tại</button>
+        <div class="status" id="kill-status"></div>
+      </div>`;
+    $('kill-btn').onclick = () => askKill(p);
+    renderKillStatus(p.steamId, d.timeline);
+    $('current-title').textContent = p.species ? `Dino hiện tại · ${dino(p.species)}` : 'Dino hiện tại';
+    const vital = (label, v, max = 100, kind = 'hp') =>
+      `<div><div class="lbl"><span>${label}</span></div>${meter(v, max, kind)}</div>`;
+    $('player-vitals').innerHTML = [
+      vital('HP', p.health), vital('Stamina', p.stamina), vital('Đói', p.hunger),
+      vital('Khát', p.thirst), vital('Oxy', p.oxygen), vital('Máu', p.blood),
+      vital('Growth', p.growth, 1, 'grow'),
+    ].join('');
+    const tile = (k, v) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+    $('player-stats').innerHTML = [
+      tile('Kill', p.kills), tile('Chết', p.deaths), tile('K/D', (p.kills / Math.max(1, p.deaths)).toFixed(2)),
+      tile('Gây damage', num(p.damageDealt)), tile('Chịu damage', num(p.damageTaken)), tile('Số đòn', p.hits),
+      tile('Giờ chơi', dur(p.playtime)), tile('Số phiên', p.sessions), tile('Spawn', p.spawns),
+      tile('Sống lâu nhất', dur(p.longestLife)),
+      tile('Mồi lớn nhất', p.biggestKill ? `${esc(dino(p.biggestKill.species))} <span class="muted" style="font-size:13px">${pct(p.biggestKill.growth)}</span>` : '–'),
+      tile('Cất / lấy', `${p.stored} / ${p.redeemed}`), tile('Tin chat', p.chats),
+    ].join('');
+  }
+  renderFeed($('player-timeline'), d.timeline);
+  renderStoredDinos(d.garage);
+  $('player-garage-sub').innerHTML += ` · <a class="plink" style="color:var(--accent)" href="#garage/${esc(id)}">+ tạo dino cho người này</a>`;
+  renderLives(d.lives, p?.online ?? false);
+}
+
+/** What happened to the last kill command sent for this player. */
+function renderKillStatus(steamId, timeline) {
+  const pending = pendingKills.get(steamId);
+  if (!pending) return;
+  const done = timeline.find((e) => e.type === 'admin_kill' && e.id === pending.id);
+  const el = $('kill-status');
+  if (done) {
+    el.innerHTML = done.ok
+      ? `<span class="chip tone-accent">lệnh #${done.id}: đã xoá dino</span>`
+      : `<span class="chip tone-kill">lệnh #${done.id} thất bại: ${esc(KILL_ERRORS[done.error] ?? done.error)}</span>`;
+    return;
+  }
+  const waited = Math.floor((Date.now() - pending.at) / 1000);
+  el.innerHTML = waited < 70
+    ? `<span class="muted">lệnh #${pending.id} đang chờ server… ${waited}s</span>`
+    : `<span class="chip tone-dmg">lệnh #${pending.id} chưa có phản hồi — DinoGarage có đang chạy không?</span>`;
+}
+
+// --- a stored dino: everything in its slot file ---------------------------------
+
+const NUTRIENTS = [
+  ['carbValue', 'Carb'], ['proteinValue', 'Protein'], ['lipidValue', 'Lipid'],
+  ['bonesValue', 'Xương'], ['mushroomsValue', 'Nấm'], ['rottenFleshValue', 'Thịt thối'],
+  ['cannibalValue', 'Đồng loại'], ['magyValue', 'Magy'],
+];
+const MUT_GROUPS = [
+  ['Đang dùng', '', ['Slot1', 'Slot2', 'Slot3', 'Slot4']],
+  ['Từ cha mẹ', 'parent', ['ParentSlot1', 'ParentSlot2', 'ParentSlot3', 'ParentSlot4']],
+  ['Elder', 'elder', ['ElderSlot1A', 'ElderSlot1B', 'ElderSlot2A', 'ElderSlot2B',
+                      'ElderSlot3A', 'ElderSlot3B', 'ElderSlot4A', 'ElderSlot4B']],
+];
+const mutName = (m) => String(m).replace(/^MUT_/, '').replace(/_/g, ' ');
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+
+/** A value against its max when the slot knows the max; the raw number otherwise. */
+function kvItem(label, v, max) {
+  if (!isNum(v)) return `<div><div class="lbl"><span>${label}</span></div><div class="val muted">–</div></div>`;
+  if (isNum(max) && max > 0) {
+    return `<div><div class="lbl"><span>${label}</span><span>${num(v)} / ${num(max)}</span></div>
+      <div class="meter"><div class="track"><div class="fill ${v / max < 0.3 ? 'low' : v / max < 0.6 ? 'mid' : ''}" style="width:${Math.min(100, (v / max) * 100)}%"></div></div></div></div>`;
+  }
+  return `<div><div class="lbl"><span>${label}</span></div><div class="val">${num(v)}</div></div>`;
+}
+
+function mutationBlock(muts, species) {
+  return MUT_GROUPS.map(([label, cls, keys]) => {
+    const present = keys.map((k) => muts?.[k]).filter((v) => typeof v === 'string' && v !== '');
+    const chips = present.length === 0
+      ? '<span class="mut none">trống</span>'
+      : present.map((m) => `<span class="mut ${cls}" tabindex="0" data-mut-tip="${esc(m)}" data-species="${esc(species)}">${esc(mutName(m))}</span>`).join('');
+    return `<div><div class="group-label">${label}</div><div class="muts">${chips}</div></div>`;
+  }).join('');
+}
+
+function storedDinoCard({ slot, meta, state }, { owner = null } = {}) {
+  const s = state ?? {};
+  const species = dino(s.classPath ?? meta.classPath);
+  const h = hue(species);
+  const tags = [
+    `<span class="chip tone-gar">slot ${esc(slot)}</span>`,
+    s.isFemale === true ? '<span class="chip tone-grow">♀ cái</span>' : s.isFemale === false ? '<span class="chip tone-chat">♂ đực</span>' : '',
+    s.isPrime === true ? '<span class="chip tone-dmg">Prime</span>' : '',
+    s.createdBy === 'admin' ? '<span class="chip tone-kill">admin tạo</span>' : '',
+  ].join('');
+  const nutrients = s.nutrients ?? {};
+  const hasNutrients = NUTRIENTS.some(([k]) => isNum(nutrients[k]));
+  const loc = s.location;
+
+  return `<section class="card dino-card">
+    <div class="head">
+      <span class="glyph" style="background:linear-gradient(135deg,hsl(${h} 60% 45%),hsl(${(h + 50) % 360} 60% 35%))">${esc(species[0] ?? '?')}</span>
+      <div style="min-width:0;flex:1">
+        <div class="title">${esc(species)}</div>
+        <div class="tags">${tags}</div>
+      </div>
+      ${owner ? `<button type="button" class="icon-btn" title="Xoá khỏi gara" data-del-steam="${esc(owner)}"
+          data-del-slot="${esc(slot)}" data-del-label="${esc(species)}">${icon('trash')}</button>` : ''}
+    </div>
+    ${state === null ? '<div class="warnbox">Không đọc được file slot — chỉ còn thông tin trong index.</div>' : ''}
+    ${s.createdBy === 'admin' ? '<div class="muted" style="font-size:12px">Chỉ số để trống sẽ giữ nguyên giá trị của dino lúc người chơi <span class="mono">!redeem</span>.</div>' : ''}
+    <div><div class="lbl" style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px">
+      <span>Growth</span></div>${meter(s.growth ?? meta.growth ?? null, 1, 'grow')}</div>
+    <div class="kv">
+      ${kvItem('HP', s.health)}
+      ${kvItem('Stamina', s.stamina, s.maxStamina)}
+      ${kvItem('Đói', s.hunger, s.maxHunger)}
+      ${kvItem('Khát', s.thirst, s.maxThirst)}
+      ${kvItem('Thức ăn trong bụng', s.food, s.maxFoodValue)}
+      ${kvItem('Nước', s.waterLevel)}
+      ${kvItem('Oxy', s.oxygen)}
+      ${kvItem('Máu', s.blood)}
+    </div>
+    <details class="more" data-slot="${esc(slot)}"${openSlots.has(slot) ? ' open' : ''}>
+      <summary>Mutation, dinh dưỡng và chi tiết khác</summary>
+      <div class="inner">
+        ${mutationBlock(s.mutations, String(s.classPath ?? meta.classPath ?? '').split('.').pop())}
+        <div><div class="group-label">Dinh dưỡng</div>
+          ${hasNutrients ? `<div class="kv">${NUTRIENTS.map(([k, label]) => kvItem(label, nutrients[k], 100)).join('')}</div>`
+                         : '<span class="muted" style="font-size:12.5px">không có dữ liệu</span>'}
+          ${nutrients.bMalnutrition === true ? '<div class="warnbox" style="margin-top:8px">Đang suy dinh dưỡng</div>' : ''}</div>
+        <div class="kv">
+          ${kvItem('Elder stacks', s.elderStacks)}
+          ${kvItem('Damage khoá', s.lockedDamage)}
+          ${kvItem('Độ thối', s.rottenValue)}
+          ${kvItem('Schema', s.version)}
+        </div>
+        <div style="font-size:12px" class="muted">classPath: <span class="mono" style="overflow-wrap:anywhere">${esc(s.classPath ?? meta.classPath)}</span></div>
+      </div>
+    </details>
+    <div class="foot">
+      <span>Cất ${meta.capturedAt ? `${esc(ago(meta.capturedAt))} · ${esc(dateTime(meta.capturedAt))}` : 'không rõ lúc nào'}</span>
+      ${loc && isNum(loc.x) ? `<span>@ ${num(loc.x)}, ${num(loc.y)}, ${num(loc.z)}</span>` : ''}
+      <span>lấy ra: <span class="mono">!redeem ${esc(slot)}</span></span>
+    </div>
+  </section>`;
+}
+
+// The page re-renders every 2s; remember which cards the admin expanded.
+let openSlots = new Set();
+
+function renderStoredDinos(garage) {
+  openSlots = new Set([...document.querySelectorAll('#player-garage details[open]')].map((d) => d.dataset.slot));
+  $('garage-ico').innerHTML = icon('garage');
+  $('player-garage-sub').innerHTML = garage.length === 0 ? 'trống' : `${garage.length} dino`;
+  $('player-garage').innerHTML = garage.length === 0
+    ? '<section class="card"><div class="empty">Người chơi này chưa cất dino nào</div></section>'
+    : garage.map((g) => storedDinoCard(g, { owner: currentPlayerId })).join('');
+}
+
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-del-slot]');
+  if (b) askDeleteSlot(b.dataset.delSteam, b.dataset.delSlot, b.dataset.delLabel);
+});
+
+// --- lives ----------------------------------------------------------------------
+
+function lifeEnd(l, online, isCurrent) {
+  if (l.end === 'garage') return '<span class="chip tone-gar">cất vào gara</span>';
+  if (l.end === 'admin') return '<span class="chip tone-kill">admin xoá</span>';
+  if (l.end === 'death' && l.killer) {
+    return `<span class="kill">bị ${who(l.killer, l.killerName)} giết</span>
+      <div class="sp muted" style="font-size:11.5px">${esc(dino(l.killerSpecies))}</div>`;
+  }
+  if (l.end === 'death') return '<span class="chip tone-kill">chết · không rõ</span>';
+  if (l.endedAt === null && isCurrent) {
+    return online ? '<span class="chip tone-accent"><span class="d"></span>đang chơi</span>'
+                  : '<span class="chip tone-neutral">còn sống · offline</span>';
+  }
+  return '<span class="chip tone-neutral">không rõ</span>';
+}
+
+function renderLives(lives, online) {
+  $('lives-ico').innerHTML = icon('growth');
+  const tbody = $('player-lives');
+  if (lives.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Chưa thấy người này spawn dino nào</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lives.map((l, i) => {
+    const alive = l.endedAt === null;
+    const length = (alive ? l.lastAt : l.endedAt) - l.spawnedAt;
+    return `<tr>
+      <td><div class="who"><span class="avatar sm" style="background:hsl(${hue(dino(l.species))} 60% 45%)">${esc(dino(l.species)[0] ?? '?')}</span>
+        <div class="meta"><div class="nm">${esc(dino(l.species))}</div>
+          ${l.redeemedFrom ? `<div class="sp">lấy từ gara · ${esc(l.redeemedFrom)}</div>` : ''}</div></div></td>
+      <td>${pct(l.growthStart)} <span class="grow-arrow">→</span> <b>${pct(l.growth)}</b></td>
+      <td>${dur(length)}${alive ? '<span class="muted">+</span>' : ''}</td>
+      <td><b>${l.kills}</b></td>
+      <td class="hide-sm">${num(l.damageDealt)} <span class="muted">/ ${num(l.damageTaken)}</span></td>
+      <td>${lifeEnd(l, online, i === 0)}</td>
+      <td class="hide-sm muted">${esc(dateTime(l.spawnedAt))}</td>
+    </tr>`;
+  }).join('');
+}
+
+// --- leaderboard --------------------------------------------------------------
+
+function board(title, ic, tone, rows, value) {
+  const body = rows.length === 0
+    ? '<li class="empty">Chưa có dữ liệu</li>'
+    : rows.map((p, i) => `<li><span class="rank ${i < 3 ? 'r' + (i + 1) : ''}">${i + 1}</span>
+        ${avatar(p.steamId, p.name, 'sm')}
+        <div class="who"><div class="meta"><div class="nm">${who(p.steamId, p.name)}</div>
+          <div class="sp">${esc(dino(p.species))}</div></div></div>
+        <div class="score">${value(p)}</div></li>`).join('');
+  return `<section class="card"><div class="card-head"><span class="ev-ico ${tone}" style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center">${icon(ic)}</span><h2>${title}</h2></div>
+    <div class="card-body"><ul class="rank-list">${body}</ul></div></section>`;
+}
+
+function renderLeaderboard(b) {
+  $('boards').innerHTML = [
+    board('Nhiều kill nhất', 'death', 'tone-kill', b.kills, (p) => p.kills),
+    board('K/D (≥ 3 kill)', 'killfeed', 'tone-accent', b.kd, (p) => `${p.kd.toFixed(2)}<small>${p.kills} / ${p.deaths}</small>`),
+    board('Gây damage', 'damage', 'tone-dmg', b.damage, (p) => num(p.damageDealt)),
+    board('Giờ chơi', 'in', 'tone-chat', b.playtime, (p) => dur(p.playtime)),
+    board('Sống lâu nhất', 'growth', 'tone-grow', b.longestLife, (p) => dur(p.longestLife)),
+  ].join('');
+  $('prey').innerHTML = b.biggestPrey.length === 0
+    ? '<tr><td colspan="6" class="empty">Chưa có kill nào được quy cho người chơi</td></tr>'
+    : b.biggestPrey.map((k) => `<tr>
+        <td><b>${esc(dino(k.species))}</b></td><td>${meter(k.growth, 1, 'grow')}</td>
+        <td>${who(k.killer, k.killerName)}</td><td class="hide-sm muted">${esc(dino(k.killerSpecies))}</td>
+        <td class="hide-sm">${who(k.victim, k.victimName)}</td><td class="hide-sm muted">${esc(dateTime(k.t))}</td></tr>`).join('');
+}
+
+// --- live map -----------------------------------------------------------------
+
+// Bounds only ever grow, so the view does not jump every time someone moves.
+let bounds = null;
+
+function renderMap(players) {
+  const canvas = $('map');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth, Hh = canvas.clientHeight;
+  if (W === 0) return;
+  canvas.width = W * dpr;
+  canvas.height = Hh * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement);
+  const color = (v) => css.getPropertyValue(v).trim();
+
+  for (const p of players) {
+    for (const l of [p.loc, ...p.trail]) {
+      if (bounds === null) bounds = { x0: l.x, x1: l.x, y0: l.y, y1: l.y };
+      bounds.x0 = Math.min(bounds.x0, l.x); bounds.x1 = Math.max(bounds.x1, l.x);
+      bounds.y0 = Math.min(bounds.y0, l.y); bounds.y1 = Math.max(bounds.y1, l.y);
+    }
+  }
+
+  // Tactical grid with range rings.
+  ctx.strokeStyle = color('--map-grid');
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 12; i++) {
+    ctx.beginPath(); ctx.moveTo((W / 12) * i, 0); ctx.lineTo((W / 12) * i, Hh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, (Hh / 12) * i); ctx.lineTo(W, (Hh / 12) * i); ctx.stroke();
+  }
+  ctx.strokeStyle = color('--map-ring');
+  for (let r = 1; r <= 3; r++) {
+    ctx.beginPath(); ctx.arc(W / 2, Hh / 2, (Math.min(W, Hh) / 6.5) * r, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  const list = $('map-list');
+  if (bounds === null) {
+    $('map-legend').textContent = 'Chưa có vị trí nào — cần ít nhất một người chơi đang điều khiển dino.';
+    list.innerHTML = '<li class="empty">Không có ai trên bản đồ</li>';
+    return;
+  }
+
+  // Square scale with a margin, so distances read the same on both axes.
+  const span = Math.max(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0, 20000) * 1.15;
+  const cx = (bounds.x0 + bounds.x1) / 2, cy = (bounds.y0 + bounds.y1) / 2;
+  const sx = (x) => W / 2 + ((x - cx) / span) * Math.min(W, Hh);
+  const sy = (y) => Hh / 2 + ((y - cy) / span) * Math.min(W, Hh);
+
+  const text = color('--text');
+  ctx.font = '600 12px Inter, ui-sans-serif, system-ui, sans-serif';
+  for (const p of players) {
+    const c = playerColor(p.steamId);
+    if (p.trail.length > 1) {
+      ctx.strokeStyle = c; ctx.globalAlpha = 0.45; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      p.trail.forEach((l, i) => (i === 0 ? ctx.moveTo(sx(l.x), sy(l.y)) : ctx.lineTo(sx(l.x), sy(l.y))));
+      ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    const x = sx(p.loc.x), y = sy(p.loc.y);
+    const low = p.health !== null && p.health < 30;
+    ctx.fillStyle = c; ctx.globalAlpha = 0.18;
+    ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = low ? color('--kill') : 'rgba(255,255,255,0.85)';
+    ctx.stroke();
+    ctx.fillStyle = text;
+    ctx.fillText(p.name ?? shortId(p.steamId), x + 12, y - 2);
+    ctx.fillStyle = color('--muted');
+    ctx.fillText(dino(p.species), x + 12, y + 12);
+  }
+  $('map-legend').textContent =
+    `Tọa độ thô của game, chưa khớp ảnh bản đồ · 1 ô lưới ≈ ${num(span / 12 / 100)} m · viền đỏ: HP < 30`;
+  list.innerHTML = players.length === 0 ? '<li class="empty">Không có ai trên bản đồ</li>'
+    : players.map((p) => `<li><span class="avatar sm" style="background:${playerColor(p.steamId)}">${esc(initials(p.name, p.steamId))}</span>
+        <div class="who"><div class="meta"><div class="nm">${who(p.steamId, p.name)}</div>
+          <div class="sp">${esc(dino(p.species))} · ${pct(p.growth)}</div></div></div>
+        <div class="score" style="min-width:90px">${meter(p.health, 100)}</div></li>`).join('');
+}
+window.addEventListener('resize', () => { if (currentTab() === 'map') refresh(); });
+
+// --- chat ---------------------------------------------------------------------
+
+function renderChat(events) {
+  const el = $('chat');
+  if (events.length === 0) {
+    el.innerHTML = '<li class="empty">Chưa có tin chat</li>';
+    return;
+  }
+  el.innerHTML = events.map((e) => `<li>${avatar(e.steamId, e.name)}
+    <div class="bubble ${/^\s*!/.test(e.message) ? 'cmd' : ''}">
+      <div class="top">${who(e.steamId, e.name)}<span class="muted" title="${esc(dateTime(e.t))}">${clock(e.t)}</span></div>
+      <div class="txt">${esc(e.message)}</div></div></li>`).join('');
+}
+
+// --- garage -------------------------------------------------------------------
+
+function renderGarage(index) {
+  const el = $('garage');
+  const slots = [];
+  for (const [steamId, byName] of Object.entries(index.players ?? {})) {
+    for (const [name, m] of Object.entries(byName ?? {})) slots.push({ steamId, name, m });
+  }
+  $('garage-sub').textContent = `${slots.length} slot`;
+  if (slots.length === 0) {
+    el.innerHTML = '<div class="empty">Chưa có ai cất dino</div>';
+    return;
+  }
+  el.innerHTML = slots.map(({ steamId, name, m }) => `<div class="slot">
+      <div class="top"><span class="chip tone-gar">${esc(name)}</span>
+        <span style="display:flex;align-items:center;gap:4px"><span class="muted" style="font-size:11.5px">${m.capturedAt ? esc(ago(m.capturedAt)) : ''}</span>
+        <button type="button" class="icon-btn" title="Xoá khỏi gara" data-del-steam="${esc(steamId)}"
+          data-del-slot="${esc(name)}" data-del-label="${esc(dino(m.classPath))}">${icon('trash')}</button></span></div>
+      <div class="species">${esc(dino(m.classPath))}</div>
+      <div style="margin-top:8px">${meter(m.growth ?? null, 1, 'grow')}</div>
+      <div class="owner who">${avatar(steamId, null, 'sm')}
+        <div class="meta">${who(steamId, null)}</div></div>
+    </div>`).join('');
+}
+
+// --- dino creator --------------------------------------------------------------
+
+const creator = {
+  catalog: [],          // [{ species, classPath, mutations: { active, parent, elder } }]
+  catalogKey: '',
+  species: null,        // selected species (short name), or null
+  manual: false,
+  growth: 100,
+};
+const MUT_SLOTS = {
+  active: ['Slot1', 'Slot2', 'Slot3', 'Slot4'],
+  parent: ['ParentSlot1', 'ParentSlot2', 'ParentSlot3', 'ParentSlot4'],
+  elder: ['ElderSlot1A', 'ElderSlot1B', 'ElderSlot2A', 'ElderSlot2B',
+          'ElderSlot3A', 'ElderSlot3B', 'ElderSlot4A', 'ElderSlot4B'],
+};
+const SLOT_LABEL = (k) => k.replace('ParentSlot', 'Cha mẹ ').replace('ElderSlot', 'Elder ').replace(/^Slot/, 'Slot ');
+const MUT_NAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9 _-]{0,62}[A-Za-z0-9])?$/;   // same as bridge/src/catalog.ts
+let knownPlayers = [];
+let garageWritesEnabled = true;
+
+// The 16 selects are built once; only their options are re-rendered, so a
+// refresh never loses what the admin picked.
+for (const [group, keys] of Object.entries(MUT_SLOTS)) {
+  $(`f-mut-${group}`).innerHTML = keys.map((k) => `<div class="mut-field">
+      <div class="mut-head"><label for="f-mut-${k}">${SLOT_LABEL(k)}</label>
+        <button type="button" class="info-btn" id="f-mut-info-${k}" aria-label="Mô tả mutation" hidden>!</button>
+        <button type="button" class="edit-btn" id="f-mut-edit-${k}" data-edit-slot="${k}" title="Sửa mô tả" hidden>✎ mô tả</button></div>
+      <select id="f-mut-${k}" data-slot="${k}" data-group="${group}"></select>
+      <div class="mut-status" id="f-mut-warn-${k}"></div></div>`).join('');
+}
+
+const selectedEntry = () => creator.catalog.find((c) => c.species === creator.species) ?? null;
+
+function selectedClassPath() {
+  if (creator.manual) return $('f-class').value.trim();
+  return selectedEntry()?.classPath ?? '';
+}
+
+function chosenMutations() {
+  const out = {};
+  for (const sel of document.querySelectorAll('#create select[data-slot]')) {
+    if (sel.value) out[sel.dataset.slot] = sel.value;
+  }
+  return out;
+}
+
+function renderSpeciesOptions() {
+  const el = $('f-species');
+  if (creator.catalog.length === 0) {
+    el.innerHTML = `<div class="banner tone-neutral" style="grid-column:1/-1">${icon('warn')}
+      <span>Chưa thấy loài nào. Danh sách tự đầy lên khi người chơi spawn trên server
+      (hoặc từ các dino họ đã cất). Tạm thời có thể nhập classPath thủ công.</span></div>`;
+    return;
+  }
+  el.innerHTML = creator.catalog.map((c) => {
+    const name = dino(c.species);
+    const ready = c.classPath !== null;
+    const seen = c.mutations.active.length + c.mutations.parent.length + c.mutations.elder.length;
+    return `<button type="button" class="species-opt ${c.species === creator.species && !creator.manual ? 'on' : ''}"
+        data-species="${esc(c.species)}" ${ready ? '' : 'disabled title="Mới thấy tên loài, chưa biết classPath đầy đủ"'}>
+      <span class="glyph" style="background:hsl(${hue(name)} 60% 45%)">${esc(name[0] ?? '?')}</span>
+      <span>${esc(name)}<small>${ready ? `${seen} mutation đã thấy` : 'chưa có classPath'}</small></span>
+    </button>`;
+  }).join('');
+}
+
+// --- mutation descriptions + confirmation ----------------------------------------
+
+let mutationNotes = {};   // name -> { description, updatedAt }, written by admins
+let mutationRef = { byName: new Map(), matches: {}, sources: {}, checked: '' };
+
+async function loadMutationNotes() {
+  try {
+    const data = await getJson('/api/mutations');
+    mutationNotes = data.notes ?? {};
+    mutationRef = {
+      byName: new Map((data.reference ?? []).map((r) => [r.name, r])),
+      matches: data.matches ?? {},
+      sources: data.sources ?? {},
+      checked: data.referenceChecked ?? '',
+    };
+  } catch { /* keep the last copy */ }
+}
+
+const normMut = (n) => String(n).replace(/^MUT_/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** Community reference entry for an in-game name (the bridge does the matching). */
+function refFor(name) {
+  const matched = mutationRef.matches[name];
+  if (matched) return mutationRef.byName.get(matched) ?? null;
+  // Not reported by the game yet (e.g. only in a stored slot): exact name only.
+  for (const r of mutationRef.byName.values()) {
+    if ([r.name, ...(r.aliases ?? [])].some((n) => normMut(n) === normMut(name))) return r;
+  }
+  return null;
+}
+
+const DIET_VN = { all: 'Mọi loài', carnivore: 'Chỉ ăn thịt', herbivore: 'Chỉ ăn cỏ', herbivore_omnivore: 'Ăn cỏ / ăn tạp' };
+const STATUS_VN = {
+  removed: '⚠ Theo wiki: đã bị gỡ khỏi game',
+  test: '⚠ Theo wiki: chỉ có trên bản thử nghiệm',
+  disputed: '⚠ Các nguồn không thống nhất',
+};
+
+/** Short warning for the picker when the reference flags the mutation. */
+function refAlert(name) {
+  const r = refFor(name);
+  return r && r.status !== 'active' ? STATUS_VN[r.status] : '';
+}
+
+function referenceHtml(r) {
+  const chips = [
+    DIET_VN[r.diet],
+    r.femaleOnly ? 'Chỉ con cái' : '',
+    r.groupLeaderOnly ? 'Chỉ trưởng nhóm' : '',
+    r.kind === 'slot2' ? 'Chỉ slot 2 / 4' : '',
+    r.kind === 'unlock' ? `Mở khoá: ${r.unlock ?? 'nhiệm vụ trong game'}` : '',
+    r.slots ? `Slot: ${r.slots}` : '',
+    r.tiers ? `Theo cấp entomb: ${r.tiers}` : '',
+  ].filter(Boolean);
+  const hosts = r.sources.map((k) => {
+    try { return new URL(mutationRef.sources[k]).hostname.replace(/^www\./, ''); } catch { return k; }
+  });
+  return `<div class="t-meta">${chips.map((c) => `<span class="t-chip">${esc(c)}</span>`).join('')}</div>
+    ${r.status !== 'active' ? `<div class="t-alert">${esc(STATUS_VN[r.status])}${r.statusNote ? ` — ${esc(r.statusNote)}` : ''}</div>` : ''}
+    <div class="t-src">Nguồn: ${esc(hosts.join(', '))}${mutationRef.checked ? ` · kiểm tra ${esc(mutationRef.checked)}` : ''}</div>`;
+}
+
+/** Catalog entry for a short species name (BP_X_C), or null. */
+const catalogEntry = (species) => creator.catalog.find((c) => c.species === species) ?? null;
+
+/** Species (short) the creator form is currently targeting, even in manual mode. */
+function creatorSpecies() {
+  const cp = selectedClassPath();
+  return cp ? cp.split('.').pop() : null;
+}
+
+/** HTML for the hover card: description, then the evidence for this species. */
+function mutationTipHtml(name, species) {
+  const note = mutationNotes[name];
+  const entry = species ? catalogEntry(species) : null;
+  const ev = entry?.evidence?.[name];
+  const elsewhere = creator.catalog.filter((c) => c.species !== species && c.evidence?.[name]).map((c) => dino(c.species));
+  const GROUP_VN = { active: 'đang dùng', parent: 'cha mẹ', elder: 'elder' };
+  const proof = !species
+    ? ''
+    : ev
+      ? `<span class="ok">✓ Đã xác nhận trên ${esc(dino(species))}</span>
+         <span>Thấy ${ev.count} lần · ${ev.players} người chơi${ev.lastSeen ? ` · gần nhất ${esc(ago(ev.lastSeen))}` : ''}</span>
+         <span>Trong slot: ${ev.groups.map((g) => GROUP_VN[g] ?? g).join(', ')}</span>`
+      : `<span class="warn">⚠ Chưa từng thấy trên ${esc(dino(species))}</span>
+         <span>${elsewhere.length ? `Chỉ thấy trên: ${esc(elsewhere.join(', '))}` : 'Chưa thấy trên loài nào'}</span>`;
+  const ref = refFor(name);
+  const body = note
+    ? `<div class="t-label">Mô tả của admin</div><div class="t-desc">${esc(note.description)}</div>
+       ${ref ? `<div class="t-label">Theo wiki cộng đồng</div><div class="t-desc">${esc(ref.description)}</div>${referenceHtml(ref)}` : ''}`
+    : ref
+      ? `<div class="t-label">Theo wiki cộng đồng</div><div class="t-desc">${esc(ref.description)}</div>${referenceHtml(ref)}`
+      : '<div class="t-desc none">Chưa có mô tả — tên này không có trong bảng tham chiếu. Admin bấm ✎ cạnh ô chọn để thêm.</div>';
+  return `<div class="t-name">${esc(ref ? ref.name : mutName(name))}</div><div class="t-id">${esc(name)}</div>
+    ${body}
+    ${proof ? `<div class="t-label">Trên server này</div><div class="t-proof">${proof}</div>` : ''}`;
+}
+
+// One tooltip for every [data-mut-tip]: hover, keyboard focus, or a tap.
+let tipAnchor = null;
+function showTip(el) {
+  tipAnchor = el;
+  const tip = $('tip');
+  tip.innerHTML = mutationTipHtml(el.dataset.mutTip, el.dataset.species || null);
+  tip.hidden = false;
+  const r = el.getBoundingClientRect();
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+  const top = r.bottom + 8 + h < window.innerHeight ? r.bottom + 8 : Math.max(8, r.top - h - 8);
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+}
+const hideTip = () => { $('tip').hidden = true; tipAnchor = null; };
+
+/** The picker behind an open tooltip changed: redraw it, or close it if gone. */
+function refreshTip() {
+  if (tipAnchor === null || $('tip').hidden) return;
+  if (!tipAnchor.isConnected || !tipAnchor.dataset.mutTip || tipAnchor.hidden) hideTip();
+  else showTip(tipAnchor);
+}
+document.addEventListener('mouseover', (ev) => {
+  const el = ev.target.closest('[data-mut-tip]');
+  if (el && el.dataset.mutTip) showTip(el);
+});
+document.addEventListener('mouseout', (ev) => {
+  if (ev.target.closest('[data-mut-tip]') && !ev.relatedTarget?.closest?.('[data-mut-tip]')) hideTip();
+});
+document.addEventListener('focusin', (ev) => {
+  const el = ev.target.closest?.('[data-mut-tip]');
+  if (el && el.dataset.mutTip) showTip(el); else hideTip();
+});
+document.addEventListener('click', (ev) => {
+  const el = ev.target.closest('[data-mut-tip]');
+  if (el && el.dataset.mutTip) { showTip(el); return; }   // touch: tap to show
+  hideTip();
+});
+window.addEventListener('scroll', hideTip, { passive: true });
+
+function editMutationNote(name) {
+  confirmAction({
+    title: `Mô tả mutation ${mutName(name)}`,
+    body: `<span class="mono">${esc(name)}</span> — hiện khi rê chuột vào <b>!</b>, ưu tiên hơn mô tả theo wiki.
+      Để trống để xoá và quay về mô tả theo wiki. Chỉ admin thấy, người chơi không thấy.`,
+    okLabel: 'Lưu mô tả',
+    withReason: false,
+    danger: false,
+    text: { label: 'Mô tả (tối đa 500 ký tự)', value: mutationNotes[name]?.description ?? refFor(name)?.description ?? '' },
+    run: async (token, _reason, text) => {
+      const { note } = await adminFetch(`/api/mutations/${encodeURIComponent(name)}`, 'PUT', token, { description: text });
+      if (note) mutationNotes[name] = note; else delete mutationNotes[name];
+      toast(note ? `Đã lưu mô tả ${mutName(name)}.` : `Đã xoá mô tả ${mutName(name)}.`);
+      renderMutationOptions();
+    },
+  });
+}
+
+/**
+ * Options for one group. Confirmed = seen on THIS species (in any slot). The
+ * rest of the catalog is offered only when the admin allows unconfirmed ones.
+ */
+function mutationChoices() {
+  const species = creatorSpecies();
+  const entry = species ? catalogEntry(species) : null;
+  const own = entry ? Object.keys(entry.evidence ?? {}).sort() : [];
+  const others = new Set();
+  if ($('f-allow-unconfirmed').checked) {
+    for (const c of creator.catalog) {
+      if (c === entry) continue;
+      for (const n of Object.keys(c.evidence ?? {})) if (!own.includes(n)) others.add(n);
+    }
+  }
+  return { own, others: [...others].sort(), speciesName: species ? dino(species) : null, species };
+}
+
+/**
+ * (Re)build every select's options, keeping each current choice. Within a
+ * group, a mutation already picked in one slot is disabled in the others.
+ */
+function renderMutationOptions() {
+  for (const group of Object.keys(MUT_SLOTS)) {
+    const { own, others, speciesName, species } = mutationChoices();
+    const selects = [...document.querySelectorAll(`#create select[data-group="${group}"]`)];
+    const picked = selects.map((sel) => sel.value);
+
+    selects.forEach((sel, i) => {
+      const current = picked[i];
+      const takenElsewhere = new Set(picked.filter((v, j) => j !== i && v));
+      const label = (n) => refFor(n)?.name ?? mutName(n);
+      const opt = (n, prefix = '') => `<option value="${esc(n)}"${takenElsewhere.has(n) ? ' disabled' : ''}${n === current ? ' selected' : ''}>${prefix}${esc(label(n))}${refAlert(n) ? ' ⚠' : ''}${takenElsewhere.has(n) ? ' (đã chọn)' : ''}</option>`;
+      const none = own.length === 0 && others.length === 0;
+      const emptyLabel = !species ? 'chọn loài trước'
+        : none ? `chưa có mutation nào được xác nhận trên ${speciesName}` : '— trống —';
+      const warnOpt = (n) => opt(n, '⚠ ');
+      sel.innerHTML = `<option value="">${esc(emptyLabel)}</option>`
+        + (own.length ? `<optgroup label="${esc(`✓ Đã xác nhận trên ${speciesName}`)}">${own.map((n) => opt(n)).join('')}</optgroup>` : '')
+        + (others.length ? `<optgroup label="⚠ Chưa xác nhận — chỉ thấy trên loài khác">${others.map(warnOpt).join('')}</optgroup>` : '');
+      sel.disabled = none;
+      // A choice no longer offered (species changed, toggle off) falls back to empty.
+      if (current && ![...own, ...others].includes(current)) sel.value = '';
+      sel.classList.toggle('chosen', sel.value !== '');
+
+      const key = sel.dataset.slot;
+      const confirmed = sel.value !== '' && own.includes(sel.value);
+      const info = $(`f-mut-info-${key}`);
+      info.hidden = sel.value === '';
+      info.dataset.mutTip = sel.value;
+      info.dataset.species = species ?? '';
+      info.classList.toggle('warn', sel.value !== '' && !confirmed);
+      $(`f-mut-edit-${key}`).hidden = sel.value === '';
+      const status = $(`f-mut-warn-${key}`);
+      status.className = `mut-status ${sel.value === '' ? '' : confirmed ? 'ok' : 'warn'}`;
+      const alert = sel.value ? refAlert(sel.value) : '';
+      status.textContent = sel.value === '' ? ''
+        : (confirmed ? `✓ đã xác nhận trên ${speciesName}` : `⚠ chưa xác nhận trên ${speciesName}`)
+          + (alert ? ` · ${alert.replace(/^⚠ /, '')}` : '');
+      if (alert) status.className = 'mut-status warn';
+    });
+  }
+  refreshTip();
+}
+
+function renderPreview() {
+  $('f-growth-val').textContent = `${creator.growth}%`;
+  for (const b of document.querySelectorAll('#f-presets button')) {
+    b.classList.toggle('on', Number(b.dataset.g) === creator.growth);
+  }
+
+  const steamId = $('f-steam').value.trim();
+  const known = knownPlayers.find((p) => p.steamId === steamId);
+  $('f-steam-hint').innerHTML = known
+    ? `Gửi cho <b>${esc(known.name ?? shortId(known.steamId))}</b>${known.online ? ' · đang online' : ''}`
+    : /^\d{17}$/.test(steamId) ? 'Người này chưa từng xuất hiện trong log — vẫn tạo được.' : '';
+
+  const classPath = selectedClassPath();
+  if (!classPath) {
+    $('f-preview').innerHTML = '<section class="card"><div class="empty">Chọn một loài để xem trước</div></section>';
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  $('f-preview').innerHTML = storedDinoCard({
+    slot: $('f-slot').value.trim() || 'admin',
+    meta: { classPath, growth: creator.growth / 100, capturedAt: now },
+    state: { classPath, growth: creator.growth / 100,
+             mutations: chosenMutations(), createdBy: 'admin', version: 1 },
+  });
+  // The mutations are the point of the preview: show them without a click.
+  $('f-preview').querySelector('details')?.setAttribute('open', '');
+}
+
+/** Fetch the species/mutation catalog; re-render the form only if it changed. */
+async function refreshCatalog() {
+  const catalog = await getJson('/api/catalog');
+  // Re-render the species tiles only when the catalog changed, so a refresh
+  // never moves a button under the admin's cursor.
+  const key = JSON.stringify(catalog.species);
+  if (key !== creator.catalogKey) {
+    creator.catalogKey = key;
+    creator.catalog = catalog.species;
+    renderSpeciesOptions();
+    renderMutationOptions();
+  }
+}
+
+async function refreshCreator() {
+  if (!$('f-token').value && adminToken) $('f-token').value = adminToken;
+  // Someone may store or delete while the form is open.
+  await Promise.all([loadExisting(), loadMutationNotes()]);
+  const [, players] = await Promise.all([refreshCatalog(), getJson('/api/players')]);
+  knownPlayers = players.players;
+  $('dl-players').innerHTML = knownPlayers.map((p) =>
+    `<option value="${esc(p.steamId)}">${esc(p.name ?? '')} · ${esc(dino(p.species))}</option>`).join('');
+  renderPreview();
+}
+
+function setManual(on) {
+  creator.manual = on;
+  $('f-manual').hidden = !on;
+  $('f-manual-toggle').textContent = on ? 'Quay lại chọn từ danh sách' : 'Nhập classPath thủ công…';
+  renderSpeciesOptions();
+  renderMutationOptions();
+  renderPreview();
+}
+
+$('f-species').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-species]');
+  if (!b || b.disabled) return;
+  creator.species = b.dataset.species;
+  setManual(false);
+});
+$('f-manual-toggle').addEventListener('click', () => setManual(!creator.manual));
+$('f-growth').addEventListener('input', (ev) => {
+  creator.growth = Number(ev.target.value);
+  renderPreview();
+});
+$('f-presets').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-g]');
+  if (!b) return;
+  creator.growth = Number(b.dataset.g);
+  $('f-growth').value = String(creator.growth);
+  renderPreview();
+});
+$('create').addEventListener('change', (ev) => {
+  if (ev.target.matches('select[data-slot]')) {
+    renderMutationOptions();
+    renderPreview();
+  }
+});
+$('create').addEventListener('input', (ev) => {
+  if (ev.target.id === 'f-steam' || ev.target.id === 'f-slot') {
+    $('f-overwrite-ok').checked = false;
+    loadExistingSoon();
+  }
+  if (ev.target.id === 'f-class') renderMutationOptions();
+  if (ev.target.id !== 'f-growth' && !ev.target.matches('select, #f-overwrite-ok, #f-allow-unconfirmed')) renderPreview();
+});
+$('f-overwrite-ok').addEventListener('change', renderOverwrite);
+$('f-allow-unconfirmed').addEventListener('change', () => { renderMutationOptions(); renderPreview(); });
+$('create').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-edit-slot]');
+  if (b) editMutationNote($(`f-mut-${b.dataset.editSlot}`).value);
+});
+$('f-free-slot').addEventListener('click', () => {
+  $('f-slot').value = $('f-free-slot').dataset.slot;
+  $('f-overwrite-ok').checked = false;
+  renderOverwrite();
+  renderPreview();
+});
+
+// --- the target player's garage, for the overwrite check -----------------------
+
+let existing = { steamId: null, slots: {} };
+let existingTimer = null;
+
+function loadExistingSoon() {
+  clearTimeout(existingTimer);
+  existingTimer = setTimeout(loadExisting, 250);
+}
+
+async function loadExisting() {
+  const steamId = $('f-steam').value.trim();
+  if (!/^\d{17}$/.test(steamId)) {
+    existing = { steamId: null, slots: {} };
+  } else {
+    try {
+      existing = { steamId, slots: (await getJson(`/api/garage/${steamId}`)).slots ?? {} };
+    } catch {
+      existing = { steamId: null, slots: {} };
+    }
+  }
+  renderOverwrite();
+}
+
+function freeSlotName(base) {
+  const root = base.replace(/_\d+$/, '') || 'admin';
+  for (let i = 2; i < 100; i++) {
+    const name = `${root}_${i}`.slice(0, 32);
+    if (!existing.slots[name]) return name;
+  }
+  return `${root}_${Date.now() % 100000}`;
+}
+
+/** Existing slots as chips, and the red box when the chosen name is taken. */
+function renderOverwrite() {
+  const slot = $('f-slot').value.trim();
+  const names = Object.keys(existing.slots);
+  $('f-existing').innerHTML = existing.steamId === null ? ''
+    : names.length === 0 ? '<span class="muted">Gara người này đang trống.</span>'
+    : `<span class="muted">Gara hiện có (${names.length}/5):</span>` + names.map((n) =>
+        `<span class="slot-chip ${n === slot ? 'hit' : ''}"><b>${esc(n)}</b> ${esc(dino(existing.slots[n].classPath))} ${pct(existing.slots[n].growth)}</span>`).join('');
+
+  const hit = existing.steamId !== null ? existing.slots[slot] : undefined;
+  $('f-overwrite').hidden = hit === undefined;
+  if (hit !== undefined) {
+    $('f-overwrite-text').innerHTML = `Slot <span class="mono">${esc(slot)}</span> đang chứa
+      <b class="kill">${esc(dino(hit.classPath))} ${pct(hit.growth)}</b>${hit.capturedAt ? ` (cất ${esc(ago(hit.capturedAt))})` : ''}.
+      Tạo dino mới sẽ <b class="kill">thay thế con này</b> trong gara của người chơi.`;
+    const free = freeSlotName(slot);
+    $('f-free-slot').dataset.slot = free;
+    $('f-free-slot').textContent = `Hoặc dùng tên trống: ${free}`;
+  }
+  const blocked = hit !== undefined && !$('f-overwrite-ok').checked;
+  $('f-submit').disabled = blocked || !garageWritesEnabled;
+  $('f-submit').lastChild.textContent = hit !== undefined ? 'Ghi đè dino' : 'Tạo dino';
+  $('f-submit').classList.toggle('btn-danger', hit !== undefined);
+  $('f-submit').classList.toggle('solid', hit !== undefined);
+}
+
+$('create').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const out = $('create-result');
+  const btn = $('f-submit');
+  const steamId = $('f-steam').value.trim();
+  const slot = $('f-slot').value.trim();
+  const classPath = selectedClassPath();
+  const mutations = chosenMutations();
+
+  const bad = Object.entries(mutations).find(([, v]) => !MUT_NAME_RE.test(v));
+  if (!classPath || bad) {
+    out.className = 'result err';
+    out.textContent = !classPath ? 'Chọn một loài dino trước.'
+      : `Tên mutation ở ${SLOT_LABEL(bad[0])} không hợp lệ.`;
+    return;
+  }
+  btn.disabled = true;
+  out.className = 'result';
+  out.textContent = 'Đang gửi…';
+  try {
+    const res = await fetch(`/api/garage/${encodeURIComponent(steamId)}/${encodeURIComponent(slot)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-admin-token': $('f-token').value },
+      body: JSON.stringify({
+        classPath, growth: creator.growth / 100, mutations,
+        allowUnconfirmedMutations: $('f-allow-unconfirmed').checked,
+        overwrite: existing.slots[slot] !== undefined && $('f-overwrite-ok').checked,
+      }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+    adminToken = $('f-token').value;
+    $('f-overwrite-ok').checked = false;
+    loadExisting();
+    out.className = 'result ok';
+    out.textContent = `✓ Đã tạo ${dino(classPath)} ${creator.growth}% vào ${steamId} / ${slot}. `
+      + `Người chơi spawn đúng loài này rồi gõ !redeem ${slot}.`
+      + (body.meta?.replaced ? ` Con cũ đã sao lưu: deleted/${body.meta.replaced}` : '');
+    refresh();
+  } catch (err) {
+    out.className = 'result err';
+    out.textContent = 'Lỗi: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// --- routing + refresh --------------------------------------------------------
+
+const getJson = (url) => fetch(url).then((r) => {
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+});
+
+function currentTab() {
+  const h = location.hash.slice(1);
+  if (h.startsWith('player/')) return 'player';
+  if (h.startsWith('garage/')) return 'garage';
+  return document.querySelector(`[data-view="${CSS.escape(h)}"]`) ? h : 'overview';
+}
+
+function showTab() {
+  const tab = currentTab();
+  for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== tab;
+  for (const a of document.querySelectorAll('#tabs a')) {
+    a.classList.toggle('active', a.dataset.tab === tab || (tab === 'player' && a.dataset.tab === 'overview'));
+  }
+  window.scrollTo(0, 0);
+  const h = location.hash.slice(1);
+  if (h.startsWith('garage/')) {
+    $('f-steam').value = decodeURIComponent(h.slice('garage/'.length));
+    requestAnimationFrame(() => $('creator-card').scrollIntoView({ behavior: 'smooth' }));
+  }
+  refresh();
+}
+window.addEventListener('hashchange', showTab);
+$('back').addEventListener('click', () => (history.length > 1 ? history.back() : (location.hash = 'overview')));
+
+async function refreshTab(tab) {
+  switch (tab) {
+    case 'overview': {
+      const q = feedFilter ? `&type=${encodeURIComponent(feedFilter)}` : '';
+      const [players, feed] = await Promise.all([getJson('/api/players'), getJson(`/api/feed?limit=150${q}`)]);
+      renderKpis(players.players);
+      renderPlayers(players.players);
+      renderFeed($('feed'), feed.events);
+      break;
+    }
+    case 'player': {
+      const id = decodeURIComponent(location.hash.slice('#player/'.length));
+      try {
+        // The catalog and notes feed the mutation tooltips on the garage cards.
+        const [detail] = await Promise.all([
+          getJson(`/api/player/${encodeURIComponent(id)}`), refreshCatalog(), loadMutationNotes()]);
+        renderPlayer(detail);
+      } catch {
+        $('player-hero').innerHTML = `<div><h1>Chưa thấy người chơi này</h1><div class="sub mono">${esc(id)}</div></div>`;
+        for (const el of ['player-vitals', 'player-stats', 'player-timeline', 'player-garage', 'player-lives']) {
+          $(el).innerHTML = '';
+        }
+      }
+      break;
+    }
+    case 'killfeed':
+      renderFeed($('killfeed'), (await getJson('/api/killfeed?limit=200')).events, 'Chưa có ai chết');
+      break;
+    case 'leaderboard':
+      renderLeaderboard(await getJson('/api/leaderboard'));
+      break;
+    case 'map':
+      renderMap((await getJson('/api/map')).players);
+      break;
+    case 'chat':
+      renderChat((await getJson('/api/chat?limit=300')).events);
+      break;
+    case 'garage': {
+      const [garage, health] = await Promise.all([getJson('/api/garage'), getJson('/api/health'), refreshCreator()]);
+      renderGarage(garage);
+      garageWritesEnabled = health.writesEnabled;
+      renderOverwrite();
+      $('f-token').placeholder = health.writesEnabled ? 'x-admin-token' : 'ADMIN_TOKEN chưa bật — ghi bị khoá';
+      break;
+    }
+  }
+}
+
+async function refresh() {
+  try {
+    const [health] = await Promise.all([getJson('/api/health'), refreshTab(currentTab())]);
+    const last = health.lastEventAt;
+    const age = last === null ? null : Math.floor(Date.now() / 1000) - last;
+    const live = age !== null && age < 30;
+    $('dot').className = 'pulse ' + (last === null ? '' : live ? 'live' : 'stale');
+    $('status-title').textContent = last === null ? 'Chưa có dữ liệu' : live ? 'Server đang chạy' : 'Server im lặng';
+    $('status-sub').textContent = last === null
+      ? 'chưa nhận được event nào'
+      : live ? `${health.online} online · event ${ago(last)}` : `không có event ${dur(age)} — có thể đã dừng`;
+    setCount('overview', health.online);
+  } catch {
+    $('dot').className = 'pulse stale';
+    $('status-title').textContent = 'Mất kết nối';
+    $('status-sub').textContent = 'không gọi được bridge';
+  }
+}
+
+renderFilters();
+showTab();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

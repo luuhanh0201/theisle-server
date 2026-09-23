@@ -1,0 +1,46 @@
+; mods.txt — which Lua mods UE4SS loads, and in what order.
+; Format: <ModName> : <1 = enabled, 0 = disabled>
+; The name must match a directory under $BIN_DIR/ue4ss/Mods/ exactly.
+;
+; To disable a crashing mod: set it to 0 and redeploy with --mods-only.
+;
+; NOTE: UE4SS 3.0+ ships both mods.txt and mods.json with the same list.
+; We deploy mods.txt only; if the server ever ignores this file, check whether
+; a stale mods.json is taking precedence.
+
+; --- our mods -----------------------------------------------------------
+; Read-only. Hooks ApplyDamage and polls vitals; never mutates game state.
+StatsLogger : 1
+
+HelloIsle : 1
+
+; Mutates game state — the riskiest mod here. Its store step calls SetHealth(0),
+; which StatsLogger sees as a death; the bridge correlates the garage_store
+; event and labels it, so the stat is not inflated.
+DinoGarage : 1
+
+; Diagnostics, strictly read-only: checks the property names, class paths,
+; mutation names, hook parameters and UE4SS functions the mods above rely on,
+; and prints a PROBE SUMMARY to UE4SS.log. See docs/first-run.md.
+; Set to 0 once the summary is clean.
+IsleProbe : 1
+
+; --- UE4SS built-ins ----------------------------------------------------
+; All of these are client/debug tooling. On a dedicated server they are at best
+; useless and at worst a way for a player to open a console, so keep them off.
+; (Upstream defaults, for reference: ConsoleEnabler/ConsoleCommands/
+;  CheatManagerEnabler/LineTrace/BPModLoader/BPML_GenericFunctions = 1.)
+CheatManagerEnablerMod : 0
+ConsoleCommandsMod : 0
+ConsoleEnablerMod : 0
+ActorDumperMod : 0
+SplitScreenMod : 0
+LineTraceMod : 0
+jsbLuaProfilerMod : 0
+
+; Blueprint mod loading — enable only if we actually ship a .pak blueprint mod.
+BPML_GenericFunctions : 0
+BPModLoaderMod : 0
+
+; Built-in keybinds, do not move up!
+Keybinds : 1

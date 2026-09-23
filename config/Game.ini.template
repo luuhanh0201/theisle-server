@@ -1,0 +1,31 @@
+; Game.ini — rendered by scripts/deploy.sh from .env. Never edit the rendered
+; copy on the VPS; edit this template and redeploy.
+;
+; Only keys confirmed by at least two server-hosting sources are set here
+; (theisle.info, xgamingserver.com, the Steam hosting guide 2952501611).
+; Anything else: verify the exact name first — a misspelt key is silently
+; ignored by the game. Growth speed can be changed live over RCON
+; (SetGrowthMultiplier) instead.
+
+[/Script/TheIsle.TIGameSession]
+ServerName=${SERVER_NAME}
+MapName=Gateway
+MaxPlayerCount=${MAX_PLAYERS}
+bEnableHumans=false
+
+; Empty SERVER_PASSWORD in .env = public server.
+bServerPassword=${SERVER_PASSWORD_ENABLED}
+ServerPassword=${SERVER_PASSWORD}
+
+; Join queue. Players connect to this TCP port while waiting — open it.
+bQueueEnabled=true
+QueuePort=${QUEUE_PORT}
+
+; RCON. Firewall this port to your admin IPs only.
+bRconEnabled=true
+RconPort=${RCON_PORT}
+RconPassword=${RCON_PASSWORD}
+
+[/Script/TheIsle.TIGameStateBase]
+; One line per admin, generated from ADMIN_STEAM_IDS (comma-separated) in .env.
+${ADMIN_STEAM_IDS_LINES}

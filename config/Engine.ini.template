@@ -1,0 +1,30 @@
+; Engine.ini — rendered by scripts/deploy.sh from .env.
+; Network and log tuning for a dedicated server, plus the Epic Online Services
+; credentials the Evrima server needs to register (without them it may not
+; start, or may run but never show in the server browser).
+
+[EpicOnlineServices]
+DedicatedServerClientId=${EOS_CLIENT_ID}
+DedicatedServerClientSecret=${EOS_CLIENT_SECRET}
+
+[/Script/OnlineSubsystemUtils.IpNetDriver]
+NetServerMaxTickRate=60
+MaxClientRate=100000
+MaxInternetClientRate=100000
+InitialConnectTimeout=120.0
+ConnectionTimeout=120.0
+
+[/Script/Engine.Player]
+ConfiguredInternetSpeed=100000
+ConfiguredLanSpeed=100000
+
+[/Script/Engine.GameNetworkManager]
+TotalNetBandwidth=800000
+MaxDynamicBandwidth=100000
+MinDynamicBandwidth=10000
+
+[Core.Log]
+; Keep the log readable — UE4SS output is what we actually care about.
+LogNet=Warning
+LogNetTraffic=Error
+LogPhysics=Warning
