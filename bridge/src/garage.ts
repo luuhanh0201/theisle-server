@@ -47,6 +47,11 @@ export interface NewSlotSpec {
   maxStamina?: number;
   maxFoodValue?: number;
   isFemale?: boolean;
+  /** Fill the stomach to the game's max for this dino on redeem (default true). */
+  stomachFull?: boolean;
+  /** Nutrient level to give, % of the dino's max (default 50). Applied once
+   * the nutrient maxima are confirmed on the live server. */
+  nutrientPct?: number;
   /** Slot key -> mutation FName, e.g. { Slot1: "MUT_Hematophagy" }. */
   mutations?: Record<string, string>;
   /**
@@ -204,6 +209,13 @@ export async function createSlot(
     throw new ValidationError('isFemale must be true or false');
   }
   const mutations = validateMutations(spec.mutations);
+  if (spec.stomachFull !== undefined && typeof spec.stomachFull !== 'boolean') {
+    throw new ValidationError('stomachFull must be true or false');
+  }
+  const nutrientPct = spec.nutrientPct ?? 50;
+  if (!Number.isInteger(nutrientPct) || nutrientPct < 0 || nutrientPct > 100) {
+    throw new ValidationError('nutrientPct must be a whole number 0–100');
+  }
 
   const capturedAt = Math.floor(Date.now() / 1000);
   const state = {
@@ -239,6 +251,8 @@ export async function createSlot(
     mutations,
     nutrients: {},
     elderStacks: null,
+    // Read by restore.lua: an admin gift comes out fed (see NewSlotSpec).
+    fill: { stomachFull: spec.stomachFull ?? true, nutrientPct },
 
     createdBy: 'admin',
   };
@@ -374,4 +388,59 @@ export async function listAll(): Promise<GarageIndex> {
     // No stored/ directory yet — nothing has been parked.
   }
   return index;
+}
+
+// --- settings the mod reads (garage/settings.lua) --------------------------
+
+/** Where a redeemed dino appears. The mod treats anything else as 'current'. */
+export const REDEEM_AT = ['current', 'stored', 'choice'] as const;
+export type RedeemAt = (typeof REDEEM_AT)[number];
+export interface GarageSettings {
+  redeemAt: RedeemAt;
+  /** Slots a player may fill with !store. */
+  maxSlots: number;
+  /** Seconds from "!store" to the dino going in; nothing is saved before. */
+  storeCountdown: number;
+  /** Seconds between two garage uses (!store or !redeem) by one player. */
+  cooldown: number;
+}
+export const GARAGE_SETTINGS_DEFAULTS: GarageSettings = { redeemAt: 'current', maxSlots: 2, storeCountdown: 30, cooldown: 60 };
+/** Same ranges as mods/DinoGarage/Scripts/garage/settings.lua. */
+const RANGES = { maxSlots: [1, 20], storeCountdown: [0, 300], cooldown: [0, 86400] } as const;
+
+const settingsPath = (): string => join(config.garageRoot, 'garage-settings.json');
+
+function wholeIn(v: unknown, [lo, hi]: readonly [number, number]): number | null {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isInteger(n) && n >= lo && n <= hi ? n : null;
+}
+
+export async function readGarageSettings(): Promise<GarageSettings> {
+  const out = { ...GARAGE_SETTINGS_DEFAULTS };
+  try {
+    const raw = JSON.parse(await readFile(settingsPath(), 'utf8')) as Record<string, unknown>;
+    if (REDEEM_AT.includes(raw['redeemAt'] as RedeemAt)) out.redeemAt = raw['redeemAt'] as RedeemAt;
+    for (const key of Object.keys(RANGES) as (keyof typeof RANGES)[]) {
+      out[key] = wholeIn(raw[key], RANGES[key]) ?? out[key];
+    }
+  } catch {
+    // Missing or unreadable: the mod falls back to the defaults too.
+  }
+  return out;
+}
+
+/** Validated (every field), then written atomically. Takes effect on the next command. */
+export async function saveGarageSettings(raw: unknown): Promise<GarageSettings> {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  if (!REDEEM_AT.includes(r['redeemAt'] as RedeemAt)) {
+    throw new ValidationError(`redeemAt must be one of: ${REDEEM_AT.join(', ')}`);
+  }
+  const settings = { redeemAt: r['redeemAt'] as RedeemAt } as GarageSettings;
+  for (const key of Object.keys(RANGES) as (keyof typeof RANGES)[]) {
+    const v = r[key] === undefined ? GARAGE_SETTINGS_DEFAULTS[key] : wholeIn(r[key], RANGES[key]);
+    if (v === null) throw new ValidationError(`${key} must be a whole number ${RANGES[key][0]}–${RANGES[key][1]}`);
+    settings[key] = v;
+  }
+  await writeJsonAtomic(settingsPath(), settings);
+  return settings;
 }

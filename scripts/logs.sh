@@ -15,7 +15,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f "$ROOT/.env" ]] && set -a && . "$ROOT/.env" && set +a
 
 GAME_ROOT="${GAME_ROOT:-/home/isle/server}"
-UE4SS_LOG="$GAME_ROOT/TheIsle/Binaries/Win64/ue4ss/UE4SS.log"
+UE4SS_LOG="$GAME_ROOT/TheIsle/Binaries/Win64/UE4SS.log"
 GAME_LOG="$GAME_ROOT/TheIsle/Saved/Logs/TheIsle.log"
 LINES="${LINES:-100}"
 

@@ -30,3 +30,8 @@ prints its PROBE SUMMARY (docs/first-run.md).
 ## Known facts about this server
 - Game version, known class names (BP_PlayerController_C, BP_Dilophosaurus_C...)
 - Working hooks: ServerAcknowledgePossession, NotifyOnNewObject(PlayerController)
+- Engine: Unreal Engine 5.6 (UE4SS log: "Found EngineVersion: 5.6", 2026-09-23).
+- UE4SS: experimental build (scripts/install-ue4ss.sh), unpacked FLAT in
+  Binaries/Win64 — no ue4ss/ subfolder. Stable v3.0.1 fails its scan
+  ("PS scan timed out") and loads no mods.
+- Wine: WineHQ stable 11.0 on the VPS (no `wine64` command; start.sh uses `wine`).

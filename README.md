@@ -8,6 +8,9 @@ directly on the server is overwritten on the next deploy.
 
 **Cài đặt từ đầu (tiếng Việt):** [docs/HUONG-DAN-CAI-DAT.md](docs/HUONG-DAN-CAI-DAT.md)
 — từ VPS Ubuntu trống, SteamCMD, tới server + mod + admin panel.
+Wine (chạy bản server Windows trên Linux): [docs/HUONG-DAN-WINE.md](docs/HUONG-DAN-WINE.md).
+Nhật ký thay đổi trên VPS: [docs/NHAT-KY-VAN-HANH.md](docs/NHAT-KY-VAN-HANH.md).
+Cổng người chơi (web public, đăng nhập Steam): [docs/portal.md](docs/portal.md).
 
 ## Layout
 
@@ -72,26 +75,19 @@ Each deploy keeps a timestamped backup of the previous config on the VPS — see
 
 ## Admin panel
 
-Just to look at it, with generated data and no game server:
+Runs on the VPS as `theisle-bridge.service` (set up by `scripts/install.sh`,
+shipped by `scripts/deploy.sh`). Reach it through an SSH tunnel:
 
 ```bash
-./bridge/demo.sh                 # http://127.0.0.1:8080
-PORT=8181 ./bridge/demo.sh       # if 8080 is taken
-```
-
-It generates a live event stream and two stored dinos into a temp directory,
-removed on exit. The admin token is `demo-token`.
-
-Against the real server:
-
-```bash
-cd bridge && npm install && npm run build && npm start
+ssh -N -L 8181:127.0.0.1:8080 isle@<vps>     # then http://127.0.0.1:8181
 ```
 
 It binds to localhost. **Put it behind a reverse proxy with authentication** —
 it serves player data, chat and live positions, and has no auth of its own.
 
-Tabs: overview (players + filterable event feed), killfeed, leaderboards
+Tabs: server (start/stop/restart with player countdown, daily restarts, live
+RCON settings, panel-managed Game.ini keys, admin audit log), overview
+(players + filterable event feed), killfeed, leaderboards
 (kills, K/D, damage, playtime, longest life, largest prey per species), live
 map (raw game coordinates, no map image yet), chat, garage. Click any player
 for their full stats and personal log.

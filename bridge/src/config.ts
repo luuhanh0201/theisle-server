@@ -16,12 +16,12 @@ function envInt(key: string, fallback: number): number {
 
 const garageRoot = env(
   'GARAGE_ROOT',
-  '/home/isle/server/TheIsle/Binaries/Win64/ue4ss/Mods/DinoGarage/Saved',
+  '/home/isle/server/TheIsle/Binaries/Win64/Mods/DinoGarage/Saved',
 );
 
 const eventsPath = env(
   'EVENTS_PATH',
-  '/home/isle/server/TheIsle/Binaries/Win64/ue4ss/Mods/StatsLogger/Saved/events.ndjson',
+  '/home/isle/server/TheIsle/Binaries/Win64/Mods/StatsLogger/Saved/events.ndjson',
 );
 
 export const config = {
@@ -31,8 +31,14 @@ export const config = {
   /** The vitals + position stream. Lives next to events.ndjson by default. */
   snapshotsPath: env('SNAPSHOTS_PATH', join(dirname(eventsPath), 'snapshots.ndjson')),
 
+  /** The live state StatsLogger replaces every second: players' position/vitals + AI (live.ts). */
+  livePath: env('LIVE_PATH', join(dirname(eventsPath), 'live.json')),
+
   /** DinoGarage's Saved/ directory on the server. */
   garageRoot,
+
+  /** PlayerCommands' Saved/ directory: the panel writes its settings.json there. */
+  commandsRoot: env('PLAYER_COMMANDS_ROOT', join(garageRoot, '..', '..', 'PlayerCommands', 'Saved')),
 
   /**
    * Admin-written mutation descriptions (bridge-owned). Next to the garage by
@@ -47,6 +53,13 @@ export const config = {
    */
   adminToken: process.env['ADMIN_TOKEN'] ?? null,
 
+  /**
+   * Shared secret of the player portal (portal/), sent as x-portal-token to
+   * the read-only /player-api routes. Unset = those routes do not exist.
+   * Deliberately NOT the admin token: the portal faces the internet.
+   */
+  portalToken: process.env['PORTAL_TOKEN'] || null,
+
   /** How often we check the file for new bytes. */
   pollMs: envInt('POLL_MS', 1000),
 
@@ -60,8 +73,17 @@ export const config = {
   /** Per-player history kept for the player detail view. */
   timelineSize: envInt('TIMELINE_SIZE', 300),
 
-  /** Position trail length per player on the live map (one point per snapshot). */
-  trailSize: envInt('TRAIL_SIZE', 24),
+  /**
+   * Position trail per player on the live map: a point per snapshot (5 s) in
+   * which the dino moved at least TRAIL_MIN_MOVE cm, so 180 = about 15 minutes
+   * of actual movement.
+   */
+  trailSize: envInt('TRAIL_SIZE', 180),
+  trailMinMove: envInt('TRAIL_MIN_MOVE', 200),
+
+  /** Whole-life paths ("xem đường đi" on the player page): lives kept per player, points per life. */
+  pathLives: envInt('PATH_LIVES', 5),
+  pathMaxPoints: envInt('PATH_MAX_POINTS', 4000),
 
   /** A player with no snapshot for this long is considered offline. */
   offlineAfterSeconds: envInt('OFFLINE_AFTER_SECONDS', 30),
@@ -78,7 +100,8 @@ export const config = {
     systemctl: env('SYSTEMCTL', 'systemctl'),
     /**
      * Prefix for start/stop/restart. The bridge user may run exactly those
-     * three via sudoers (install.sh). "none" runs systemctl directly (demo).
+     * three via sudoers (install.sh). "none" runs systemctl directly, for a
+     * bridge that runs as a user with its own right to manage the unit.
      */
     sudo: env('SUDO', 'sudo'),
     /** Where the live Game.ini is — the panel's config edits land here. */
@@ -86,6 +109,13 @@ export const config = {
       'GAME_CONFIG_DIR',
       '/home/isle/server/TheIsle/Saved/Config/WindowsServer',
     ),
+    /** The game's own log (Saved/Logs next to Saved/Config) — read for the readiness checklist. */
+    logPath: env(
+      'GAME_LOG_PATH',
+      join(env('GAME_CONFIG_DIR', '/home/isle/server/TheIsle/Saved/Config/WindowsServer'), '..', '..', 'Logs', 'TheIsle.log'),
+    ),
+    /** UDP game port (start.sh GAME_PORT). */
+    port: envInt('GAME_PORT', 7777),
   },
 
   /**

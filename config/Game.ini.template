@@ -10,8 +10,6 @@
 [/Script/TheIsle.TIGameSession]
 ServerName=${SERVER_NAME}
 MapName=Gateway
-MaxPlayerCount=${MAX_PLAYERS}
-bEnableHumans=false
 
 ; Empty SERVER_PASSWORD in .env = public server.
 bServerPassword=${SERVER_PASSWORD_ENABLED}
@@ -26,6 +24,25 @@ bRconEnabled=true
 RconPort=${RCON_PORT}
 RconPassword=${RCON_PASSWORD}
 
+; AI critters (food for carnivores). Game defaults, written out so a config
+; deploy keeps them: bSpawnAI=true, AIDensity=1 (XGamingServer server-config).
+; AIDensity can also be changed live over RCON (adjustAiDensity) — the game
+; then saves the new value into this file itself.
+bSpawnAI=true
+AIDensity=1
+
+; Owned by the admin panel (Server tab), by key name: MaxPlayerCount and
+; bEnableHumans here; AllowedClasses, WhitelistIDs and VIPs in TIGameStateBase.
+; The values below are defaults — the panel's saved values replace them when it
+; saves, on every deploy and before every server start. (No comment markers:
+; the game rewrites this file itself and drops every comment.)
+MaxPlayerCount=${MAX_PLAYERS}
+bEnableHumans=false
+
 [/Script/TheIsle.TIGameStateBase]
 ; One line per admin, generated from ADMIN_STEAM_IDS (comma-separated) in .env.
+; This only seeds the list: once the panel saves admins, the panel's list wins.
 ${ADMIN_STEAM_IDS_LINES}
+
+; AllowedClasses, WhitelistIDs, VIPs — set in the panel. To allow every species,
+; list them all: with no AllowedClasses line the dino picker can come up empty.

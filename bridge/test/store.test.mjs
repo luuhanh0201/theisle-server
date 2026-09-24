@@ -89,14 +89,14 @@ test('online needs an open session and recent activity; map lists positions', ()
     { t, type: 'snapshot', steamId: A, species: 'X', health: 50, stamina: 1, hunger: 1,
       thirst: 1, growth: 0.5, loc: { x: 10, y: 20, z: 0 } },
     { t: t + 1, type: 'snapshot', steamId: A, species: 'X', health: 50, stamina: 1,
-      hunger: 1, thirst: 1, growth: 0.5, loc: { x: 15, y: 25, z: 0 } },
+      hunger: 1, thirst: 1, growth: 0.5, loc: { x: 1500, y: 25, z: 0 } },
     // B: open session but last heard long ago (replayed from an old file)
     { t: t - 5000, type: 'session_start', steamId: B },
   ]);
   assert.deepEqual(s.online().map((p) => p.steamId), [A]);
   const map = s.map();
   assert.equal(map.length, 1);
-  assert.deepEqual(map[0].loc, { x: 15, y: 25, z: 0 });
+  assert.deepEqual(map[0].loc, { x: 1500, y: 25, z: 0 });
   assert.equal(map[0].trail.length, 2);
 
   feed(s, [{ t: t + 2, type: 'spawn', steamId: A, species: 'Y', growth: 0.1 }]);
@@ -137,9 +137,80 @@ test('replay order: a snapshot from a past life does not join the new trail', ()
   feed(s, [
     { t, type: 'session_start', steamId: A, name: 'Alpha' },
     { t: t + 10, type: 'spawn', steamId: A, species: 'X', growth: 0.1, loc: { x: 900, y: 0 } },
-    snap(0, 1), snap(5, 2), snap(10, 900), snap(15, 901),
+    snap(0, 1), snap(5, 2000), snap(10, 900), snap(15, 1300),
   ]);
-  assert.deepEqual(s.map()[0].trail.map((l) => l.x), [900, 901]);
+  assert.deepEqual(s.map()[0].trail.map((l) => l.x), [900, 1300]);
+});
+
+test('trail: only real movement (>= 2 m) is recorded, each point with its time', () => {
+  const s = new Store();
+  const t = now();
+  const snap = (dt, x, y = 0) => ({ t: t + dt, type: 'snapshot', steamId: A, species: 'X', health: 50,
+    stamina: 1, hunger: 1, thirst: 1, growth: 1, loc: { x, y, z: 0 } });
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'spawn', steamId: A, species: 'X', growth: 0.1, loc: { x: 0, y: 0 } },
+    snap(5, 0), snap(10, 50), snap(15, 120, 90), snap(20, 150, 160), snap(25, 500, 160),
+  ]);
+  const trail = s.map()[0].trail;
+  assert.deepEqual(trail.map((l) => [l.x, l.y]), [[0, 0], [150, 160], [500, 160]],
+    'standing still and small shuffles are not new points');
+  assert.deepEqual(trail.map((l) => l.t), [t + 5, t + 20, t + 25]);
+  assert.equal(s.map()[0].loc.x, 500, 'the dot itself still follows every snapshot');
+});
+
+test('whole-life path: kept per life, apart from the live trail', () => {
+  const s = new Store();
+  const t = now();
+  const snap = (dt, x) => ({ t: t + dt, type: 'snapshot', steamId: A, species: 'X', health: 50,
+    stamina: 1, hunger: 1, thirst: 1, growth: 1, loc: { x, y: 0, z: 0 } });
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'spawn', steamId: A, species: 'X', growth: 0.1 },
+    snap(5, 0), snap(10, 1000), snap(15, 2000),
+    { t: t + 20, type: 'death', steamId: A, species: 'X', growth: 0.1 },
+    { t: t + 30, type: 'spawn', steamId: A, species: 'Y', growth: 0.1 },
+    snap(35, 9000), snap(40, 9500),
+  ]);
+  assert.deepEqual(s.path(A, t).map((p) => p.x), [0, 1000, 2000], 'the first life, whole');
+  assert.deepEqual(s.path(A, t + 30).map((p) => p.x), [9000, 9500]);
+  assert.equal(s.path(A, t + 999), null, 'unknown life');
+  assert.deepEqual(s.map()[0].trail.map((p) => p.x), [9000, 9500], 'the live trail is the current life only');
+});
+
+test('whole-life path: a long life halves its resolution, it does not lose the start', () => {
+  const s = new Store();
+  const t = now();
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'spawn', steamId: A, species: 'X', growth: 0.1 },
+  ]);
+  const n = 4100; // PATH_MAX_POINTS defaults to 4000
+  for (let i = 0; i < n; i++) {
+    s.apply({ t: t + 1 + i, type: 'snapshot', steamId: A, species: 'X', health: 50, stamina: 1,
+      hunger: 1, thirst: 1, growth: 1, loc: { x: i * 300, y: 0, z: 0 } });
+  }
+  const path = s.path(A, t);
+  assert.ok(path.length <= 4000 && path.length > 2000, `halved once: ${path.length}`);
+  assert.equal(path[0].x, 0, 'the start is kept');
+  assert.equal(path[path.length - 1].x, (n - 1) * 300, 'the latest point is kept');
+});
+
+test('whole-life path: only the last 5 lives are kept', () => {
+  const s = new Store();
+  const t = now();
+  const events = [{ t, type: 'session_start', steamId: A, name: 'Alpha' }];
+  for (let life = 0; life < 7; life++) {
+    const at = t + life * 100;
+    events.push({ t: at, type: 'spawn', steamId: A, species: 'X', growth: 0.1 },
+      { t: at + 1, type: 'snapshot', steamId: A, species: 'X', health: 50, stamina: 1, hunger: 1,
+        thirst: 1, growth: 1, loc: { x: life, y: 0, z: 0 } });
+  }
+  feed(s, events);
+  assert.equal(s.path(A, t), null, 'oldest dropped');
+  assert.equal(s.path(A, t + 100), null);
+  assert.equal(s.path(A, t + 200).length, 1);
+  assert.equal(s.path(A, t + 600).length, 1);
 });
 
 test('garage events get the display name the bridge already knows', () => {

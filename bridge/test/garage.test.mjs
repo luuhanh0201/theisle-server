@@ -151,3 +151,30 @@ test('mutation notes: set, clear, and reject bad input', async () => {
   await assert.rejects(() => setNote('MUT_A', 5), /text/);
   await assert.rejects(() => setNote('MUT_A', 'x'.repeat(501)), /500/);
 });
+
+test('garage settings: defaults, validated save, the file the mod reads', async () => {
+  const { readGarageSettings, saveGarageSettings } = await import('../dist/garage.js');
+  const D = { redeemAt: 'current', maxSlots: 2, storeCountdown: 30, cooldown: 60 };
+  assert.deepEqual(await readGarageSettings(), D, 'no file = the mod\'s defaults (2 slots, 30 s, 60 s)');
+  const want = { redeemAt: 'choice', maxSlots: 3, storeCountdown: 10, cooldown: 0 };
+  assert.deepEqual(await saveGarageSettings(want), want);
+  assert.deepEqual(JSON.parse(readFileSync(join(root, 'garage-settings.json'), 'utf8')), want);
+  assert.deepEqual(await readGarageSettings(), want);
+  await assert.rejects(() => saveGarageSettings({ ...want, redeemAt: 'sideways' }), /current, stored, choice/);
+  await assert.rejects(() => saveGarageSettings({ ...want, maxSlots: 0 }), /maxSlots.*1–20/);
+  await assert.rejects(() => saveGarageSettings({ ...want, storeCountdown: 301 }), /storeCountdown.*0–300/);
+  await assert.rejects(() => saveGarageSettings({ ...want, cooldown: 1.5 }), /cooldown/);
+  assert.deepEqual(await readGarageSettings(), want, 'a rejected save changes nothing');
+  writeFileSync(join(root, 'garage-settings.json'), '{broken');
+  assert.deepEqual(await readGarageSettings(), D, 'a broken file = defaults, like the mod');
+});
+
+test('admin-made slots carry the fill the mod applies on redeem', async () => {
+  await createSlot('76561198000000055', 'gift', { classPath: 'BlueprintGeneratedClass /Game/X.X_C', growth: 1 });
+  const state = JSON.parse(readFileSync(join(root, 'stored', '76561198000000055__gift.json'), 'utf8'));
+  assert.deepEqual(state.fill, { stomachFull: true, nutrientPct: 50 }, 'defaults: full stomach, 50 %');
+  await createSlot('76561198000000055', 'lean', { classPath: 'BlueprintGeneratedClass /Game/X.X_C', growth: 1, stomachFull: false, nutrientPct: 80 });
+  const lean = JSON.parse(readFileSync(join(root, 'stored', '76561198000000055__lean.json'), 'utf8'));
+  assert.deepEqual(lean.fill, { stomachFull: false, nutrientPct: 80 });
+  await assert.rejects(() => createSlot('76561198000000055', 'bad', { classPath: 'C', growth: 1, nutrientPct: 101 }), /0–100/);
+});

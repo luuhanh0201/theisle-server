@@ -6,6 +6,13 @@
     and the chat hook all came up correctly after a deploy.
 ]]
 
+-- Resolve require("shared.isle.*") to Mods/shared/isle/ whatever UE4SS itself
+-- puts on package.path. Relative to the server's working directory
+-- (Binaries/Win64), like every path the mods use.
+if not package.path:find("Mods/?.lua", 1, true) then
+    package.path = "Mods/?.lua;" .. package.path
+end
+
 local H = require("shared.isle.helpers")
 
 local MOD = "HelloIsle"

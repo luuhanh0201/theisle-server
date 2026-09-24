@@ -6,7 +6,7 @@ Common Lua helpers used by every mod. **Not a mod** — it is never listed in
 UE4SS already has `Mods/shared/` on its Lua `package.path`, but **it owns that
 directory** — it ships `Types.lua` and `UEHelpers/UEHelpers.lua` there, and
 `BPModLoaderMod` depends on them. So `deploy.sh` copies this directory to
-`$BIN_DIR/ue4ss/Mods/shared/isle/` and syncs it **without `--delete`**.
+`$BIN_DIR/Mods/shared/isle/` and syncs it **without `--delete`**.
 
 It is `_shared/` in the repo (sorts first, the underscore marks it as "not a
 mod") and required as `shared.isle`:

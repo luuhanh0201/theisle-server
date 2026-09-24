@@ -31,6 +31,13 @@
                                             up to SNAPSHOT_SECONDS late
 ]]
 
+-- Resolve require("shared.isle.*") to Mods/shared/isle/ whatever UE4SS itself
+-- puts on package.path. Relative to the server's working directory
+-- (Binaries/Win64), like every path the mods use.
+if not package.path:find("Mods/?.lua", 1, true) then
+    package.path = "Mods/?.lua;" .. package.path
+end
+
 local H      = require("shared.isle.helpers")
 local Events = require("shared.isle.events")
 
@@ -47,7 +54,7 @@ local MAX_NATURAL_GROWTH_STEP = 0.05
 -- Property names that still need verifying on the real server
 --------------------------------------------------------------------------
 -- Every name below is read defensively: a miss yields nil and is reported
--- once in ue4ss/UE4SS.log, never a crash. Confirm them with the UE4SS Live
+-- once in UE4SS.log, never a crash. Confirm them with the UE4SS Live
 -- View against a live pawn, then delete the ones that turn out wrong.
 -- Same candidates as DinoGarage's capture.lua, so both mods agree.
 
@@ -60,6 +67,74 @@ local VITALS = {
     blood   = { "Blood", "CurrentBlood" },
     growth  = { "Growth", "GrowthPercent" },
 }
+
+-- Tried first. Evrima keeps vitals in GAS attribute sets, so on the live
+-- server (0.21.784) `pawn.Health` is nil — the pawn's getters are the way in.
+-- The names are the UFunctions found in the server binary next to the
+-- SetHealth/SetGrowth setters the garage uses.
+local GETTERS = {
+    health = "GetHealth", stamina = "GetStamina", hunger = "GetHunger",
+    thirst = "GetThirst", oxygen = "GetOxygen", blood = "GetBlood",
+    growth = "GetGrowth",
+}
+
+local function vital(pawn, key)
+    return H.readVital(pawn, GETTERS[key], VITALS[key], key)
+end
+
+-- Maxima, for the portal's bars. The game recomputes them with growth, so
+-- they are read every poll. Missing getter = no bar for that vital.
+local MAX_GETTERS = {
+    health = "GetMaxHealth", stamina = "GetMaxStamina", hunger = "GetMaxHunger",
+    thirst = "GetMaxThirst", blood = "GetMaxBlood", oxygen = "GetMaxOxygen",
+}
+
+local function maxima(pawn)
+    local out, any = {}, false
+    for key, fn in pairs(MAX_GETTERS) do
+        local ok, v = pcall(function() return pawn[fn](pawn) end)
+        if ok and type(v) == "number" and v > 0 then
+            out[key] = math.floor(v * 100 + 0.5) / 100
+            any = true
+        end
+    end
+    return any and out or nil
+end
+
+--- Prime / elder status as the game's own getters answer it.
+local function primeState(pawn)
+    local function bool(fn)
+        local ok, v = pcall(function() return pawn[fn](pawn) end)
+        if ok and type(v) == "boolean" then return v end
+        return nil
+    end
+    local okS, stacks = pcall(function() return pawn:GetElderReplicationStacks() end)
+    -- The ten prime conditions (pawn.EligiblePrimeElderData.bPrimeCondition1..10,
+    -- found by IsleProbe on 0.21.784). Keyed "1".."10": a JSON array cannot hold
+    -- a condition that failed to read.
+    local conditions = {}
+    local okD, data = pcall(function() return pawn.EligiblePrimeElderData end)
+    if okD and data ~= nil then
+        for i = 1, 10 do
+            local okC, v = pcall(function() return data["bPrimeCondition" .. i] end)
+            if okC and type(v) == "boolean" then conditions[tostring(i)] = v end
+        end
+    end
+    return {
+        elder    = bool("IsElder"),
+        prime    = bool("IsPrimeElder"),
+        eligible = bool("GetIsEligiblePrimeElder"),
+        elderStacks = okS and tonumber(stacks) or nil,
+        conditions = next(conditions) ~= nil and conditions or nil,
+    }
+end
+
+local function primeKey(p)
+    local c = {}
+    for i = 1, 10 do c[i] = tostring(p.conditions and p.conditions[tostring(i)]) end
+    return string.format("%s|%s|%s|%s|%s", tostring(p.elder), tostring(p.prime), tostring(p.eligible),
+        tostring(p.elderStacks), table.concat(c, ","))
+end
 
 --------------------------------------------------------------------------
 -- Reads (all pcall-guarded, all return nil on failure)
@@ -214,7 +289,7 @@ function(selfParam, targetParam, amountParam)
             recentHits[victimId] = {
                 by      = attackerId,
                 species = attackerSpecies,
-                growth  = tonumber(H.readField(attacker, VITALS.growth, "growth")),
+                growth  = vital(attacker, "growth"),
                 at      = os.time(),
                 amount  = amount,
             }
@@ -274,13 +349,22 @@ local function checkLife(id, name, pawn, snap)
             mutations = muts,
             loc       = snap.loc,
         })
+        local skin = H.readSkin(pawn)
+        local prime = primeState(pawn)
         life[id] = {
             species   = snap.species,
             health    = health,
             growth    = snap.growth,
+            loc       = snap.loc,
             spawnedAt = now,
             mutations = muts,
+            skinKey   = H.skinKey(skin),
+            primeKey  = primeKey(prime),
         }
+        if skin then queue({ type = "skin", steamId = id, name = name, species = snap.species, skin = skin }) end
+        queue({ type = "prime", steamId = id, name = name, species = snap.species,
+                elder = prime.elder, prime = prime.prime, eligible = prime.eligible,
+                elderStacks = prime.elderStacks, conditions = prime.conditions, growth = snap.growth })
         return
     end
     if prev == nil then
@@ -346,6 +430,25 @@ local function checkLife(id, name, pawn, snap)
         end
     end
 
+    -- Skin: its own event, only when it changes (a spawn sends the first).
+    -- Not in every snapshot: ten colours per player every 5 s would bloat the file.
+    local skin = H.readSkin(pawn)
+    local key = H.skinKey(skin)
+    if skin and key ~= prev.skinKey then
+        queue({ type = "skin", steamId = id, name = name, species = snap.species, skin = skin })
+        prev.skinKey = key
+    end
+
+    -- Prime / elder: an event when it changes (and once per life).
+    local prime = primeState(pawn)
+    local pk = primeKey(prime)
+    if pk ~= prev.primeKey then
+        prev.primeKey = pk
+        queue({ type = "prime", steamId = id, name = name, species = snap.species,
+                elder = prime.elder, prime = prime.prime, eligible = prime.eligible,
+                elderStacks = prime.elderStacks, conditions = prime.conditions, growth = snap.growth })
+    end
+
     -- Mutation picks: one event per slot that changed within this life.
     local muts = mutationsOf(pawn)
     if muts ~= nil and prev.mutations ~= nil then
@@ -368,6 +471,130 @@ local function checkLife(id, name, pawn, snap)
 
     prev.health = health
     if g1 ~= nil then prev.growth = g1 end
+    prev.loc = snap.loc                   -- where a pawn_lost death happened
+end
+
+--- The player is still connected but has no pawn. A dino that was alive at
+-- the last poll has died: in Evrima the controller lets go of the pawn at
+-- death and the player lands in the spawn menu, usually before the next
+-- 5-second poll could see HP reach zero (a fall kills in one frame). Store and
+-- admin kills end the same way; the bridge tells those apart.
+local function lostPawn(id, name)
+    local prev = life[id]
+    if prev == nil or prev.dead then return end
+    local now = os.time()
+    local hit = recentHits[id]
+    local attributable = hit ~= nil and (now - hit.at) <= ATTRIB_WINDOW
+    queue({
+        type          = "death",
+        steamId       = id,
+        name          = name,
+        species       = prev.species,
+        growth        = prev.growth,
+        loc           = prev.loc,
+        lifeSeconds   = prev.spawnedAt and (now - prev.spawnedAt) or nil,
+        detectedBy    = "pawn_lost",
+        attributed    = attributable or false,
+        killer        = attributable and hit.by or nil,
+        killerName    = attributable and names[hit.by] or nil,
+        killerSpecies = attributable and hit.species or nil,
+        killerGrowth  = attributable and hit.growth or nil,
+        lastHit       = attributable and hit.amount or nil,
+    })
+    recentHits[id] = nil
+    prev.dead = true
+end
+
+--------------------------------------------------------------------------
+-- Live state: players every second, AI every other second
+--------------------------------------------------------------------------
+-- The snapshot stream (5 s) is the record; this is the "now" the map and the
+-- player portal show, as fresh as it can be. One small file replaced each
+-- time (not appended): nobody needs its history, and a stream at 1 s with
+-- hundreds of AI would bloat.
+--
+-- AI = every pawn nobody plays: Evrima spawns AI around players and despawns
+-- it, so only a live read is true. Uses nothing new against the engine —
+-- FindAllOf, IsValid, GetAddress, the class name, K2_GetActorLocation and the
+-- vital getters are what this mod already calls on player pawns. No
+-- reflection walk (reading arbitrary properties crashed the server,
+-- 2026-09-24).
+
+local LIVE_FILE      = "live.json"
+local LIVE_EVERY_MS  = 1000
+local AI_EVERY_LIVES = 2      -- AI list every 2nd live read (2 s)
+local AI_MAX         = 500
+local readyLive = nil         -- the latest state, written by the async tick
+local lastAi    = nil         -- the last AI scan, repeated between scans
+local liveCount = 0
+
+local function health(pawn)
+    local ok, v = pcall(function() return pawn:GetHealth() end)
+    if ok and type(v) == "number" then return v end
+    return nil
+end
+
+local function aiAliveCounter()
+    local ok, n = pcall(function()
+        local gs = FindFirstOf("TIGameStateBase")
+        if not H.isValid(gs) then return nil end
+        return gs.AIAlive
+    end)
+    return ok and type(n) == "number" and n or nil
+end
+
+local function scanAi(now, playerPawns)
+    local ok, pawns = pcall(function() return FindAllOf("Pawn") or {} end)
+    if not ok then
+        H.logError(MOD .. ": FindAllOf(Pawn) failed")
+        return nil
+    end
+    local list, total, dead = {}, 0, 0
+    for _, pawn in ipairs(pawns) do
+        if H.isValid(pawn) then
+            local okA, addr = pcall(function() return pawn:GetAddress() end)
+            if okA and addr ~= 0 and not playerPawns[addr] then
+                local hp = health(pawn)
+                if hp ~= nil and hp <= 0 then
+                    dead = dead + 1           -- a corpse is not AI you can meet
+                else
+                    total = total + 1
+                    local loc = locationOf(pawn)
+                    if loc and #list < AI_MAX then
+                        list[#list + 1] = { c = speciesOf(pawn), x = loc.x, y = loc.y, z = loc.z, hp = hp }
+                    end
+                end
+            end
+        end
+    end
+    return { t = now, count = total, dead = dead, aiAlive = aiAliveCounter(), list = list }
+end
+
+local function liveOnce()
+    local now = os.time()
+    local players, playerPawns = {}, {}
+    H.forEachPlayer(function(ctrl)
+        local id = H.safeSteamId(ctrl)
+        if not id then return end
+        local pawn = H.livePawnFromCtrl(ctrl)
+        if not pawn then return end
+        local okAddr, addr = pcall(function() return pawn:GetAddress() end)
+        if okAddr then playerPawns[addr] = true end
+        local loc = locationOf(pawn)
+        if not loc then return end
+        players[#players + 1] = {
+            id = id, x = loc.x, y = loc.y, z = loc.z, yaw = yawOf(pawn),
+            health = vital(pawn, "health"), stamina = vital(pawn, "stamina"),
+            hunger = vital(pawn, "hunger"), thirst = vital(pawn, "thirst"),
+            oxygen = vital(pawn, "oxygen"), blood = vital(pawn, "blood"),
+            growth = vital(pawn, "growth"),
+        }
+    end)
+    liveCount = liveCount + 1
+    if lastAi == nil or liveCount % AI_EVERY_LIVES == 0 then
+        lastAi = scanAi(now, playerPawns) or lastAi
+    end
+    readyLive = { t = now, players = players, ai = lastAi }
 end
 
 local function snapshotOnce()
@@ -392,20 +619,23 @@ local function snapshotOnce()
 
         -- No pawn: in the spawn menu, or between death and respawn.
         local pawn = H.livePawnFromCtrl(ctrl)
-        if not pawn then return end
-
+        if not pawn then
+            lostPawn(id, name)
+            return
+        end
         local snap = {
             type    = "snapshot",
             steamId = id,
             name    = name,
             species = speciesOf(pawn),
-            health  = tonumber(H.readField(pawn, VITALS.health,  "health")),
-            stamina = tonumber(H.readField(pawn, VITALS.stamina, "stamina")),
-            hunger  = tonumber(H.readField(pawn, VITALS.hunger,  "hunger")),
-            thirst  = tonumber(H.readField(pawn, VITALS.thirst,  "thirst")),
-            oxygen  = tonumber(H.readField(pawn, VITALS.oxygen,  "oxygen")),
-            blood   = tonumber(H.readField(pawn, VITALS.blood,   "blood")),
-            growth  = tonumber(H.readField(pawn, VITALS.growth,  "growth")),
+            health  = vital(pawn, "health"),
+            stamina = vital(pawn, "stamina"),
+            hunger  = vital(pawn, "hunger"),
+            thirst  = vital(pawn, "thirst"),
+            oxygen  = vital(pawn, "oxygen"),
+            blood   = vital(pawn, "blood"),
+            growth  = vital(pawn, "growth"),
+            max     = maxima(pawn),
             loc     = locationOf(pawn),
             yaw     = yawOf(pawn),
         }
@@ -443,13 +673,16 @@ end
 --------------------------------------------------------------------------
 -- LoopAsync runs on UE4SS's async thread, where touching a UObject can crash
 -- the server (AGENTS.md, docs/lua-safety-rules.md). So the async tick never
--- reads the game: every TICK_MS it writes whatever is queued, and every
--- SNAPSHOT_SECONDS it asks the game thread to take one snapshot.
+-- reads the game: every TICK_MS it writes whatever is queued, every
+-- LIVE_EVERY_MS it asks the game thread for the live state, and every
+-- SNAPSHOT_SECONDS for one snapshot.
 
-local TICK_MS = 1000
+local TICK_MS = 500
 local READ_EVERY_TICKS = math.floor(SNAPSHOT_SECONDS * 1000 / TICK_MS)
-local ticks = 0
+local LIVE_EVERY_TICKS = math.floor(LIVE_EVERY_MS / TICK_MS)
+local ticks, liveTicks = 0, 0
 local readQueued = false   -- a snapshot is waiting on the game thread
+local liveQueued = false   -- a live read is waiting on the game thread
 
 local function writeQueued()
     -- Events first: a death and the snapshot that revealed it carry the same
@@ -459,6 +692,11 @@ local function writeQueued()
         local batch = readySnaps
         readySnaps = {}
         Events.emitManyTo("snapshots", batch)
+    end
+    if readyLive then
+        local live = readyLive
+        readyLive = nil
+        Events.writeLatest(LIVE_FILE, live)
     end
 end
 
@@ -473,6 +711,14 @@ LoopAsync(TICK_MS, function()
         readQueued = H.onGameThread(MOD .. ": snapshot", function()
             readQueued = false
             snapshotOnce()
+        end)
+    end
+    liveTicks = liveTicks + 1
+    if liveTicks >= LIVE_EVERY_TICKS and not liveQueued then
+        liveTicks = 0
+        liveQueued = H.onGameThread(MOD .. ": live", function()
+            liveQueued = false
+            liveOnce()
         end)
     end
     return false   -- keep looping

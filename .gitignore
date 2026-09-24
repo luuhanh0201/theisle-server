@@ -16,8 +16,15 @@ dino_garage.json*
 # bridge service
 bridge/node_modules/
 bridge/dist/
+portal/node_modules/
+portal/dist/
 
 # lua bytecode
 luac.out
 .env.example
 docs
+# bridge runtime state (panel settings, restart schedule, audit log)
+bridge/data/
+
+# the map is copied from bridge/public/map at deploy
+portal/public/map/

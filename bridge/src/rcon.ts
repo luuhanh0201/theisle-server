@@ -140,6 +140,21 @@ export class Rcon {
     return this.exec(cmd.opcode, args, cmd.terminator ?? '\n');
   }
 
+  /**
+   * RCON DirectMessage (0x11, "SteamID64,message"): shown to that one player.
+   * Commas split the arguments, so the message's are replaced, like announce.
+   */
+  directMessage(steamId: string, message: string): Promise<string> {
+    if (!STEAM_RE.test(steamId)) return Promise.reject(new ValidationError(`invalid SteamID64: ${steamId}`));
+    let text: string;
+    try {
+      text = encodeArgs('text', message);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return this.exec(0x11, `${steamId},${text}`);
+  }
+
   /** Raw opcode call, queued behind any command already in flight. */
   exec(opcode: number, args = '', terminator = '\n'): Promise<string> {
     if (!this.enabled) return Promise.reject(new RconError('RCON is not configured (RCON_PASSWORD is empty)'));

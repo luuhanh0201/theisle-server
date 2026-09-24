@@ -29,7 +29,7 @@ local E = {}
 
 -- The directory belongs to StatsLogger because that mod produces nearly all
 -- of the volume; the paths live here so nobody hard-codes them twice.
-local ROOT = "ue4ss/Mods/StatsLogger/Saved"
+local ROOT = "Mods/StatsLogger/Saved"
 
 E.STREAMS = {
     events    = { path = ROOT .. "/events.ndjson",    rotate = 50 * 1024 * 1024 },
@@ -97,5 +97,34 @@ end
 -- Convenience wrappers for the common stream.
 function E.emitMany(events) E.emitManyTo("events", events) end
 function E.emit(event)      E.emitTo("events", event) end
+
+--- Replace a small "latest state" file (not a stream): e.g. the live AI list,
+-- which is only ever wanted as of now. Written to a temp file first; on Wine
+-- rename does not overwrite, so the old file goes just before the rename and
+-- a reader may briefly find no file (the bridge keeps its last good copy).
+E.LATEST_ROOT = ROOT
+function E.writeLatest(name, value)
+    local ok, text = pcall(json.encode, value)
+    if not ok then
+        H.logError("events: encode " .. tostring(name) .. " failed: " .. tostring(text))
+        return false
+    end
+    local path = ROOT .. "/" .. name
+    local tmp = path .. ".tmp"
+    local f = io.open(tmp, "w")
+    if not f then
+        H.logError("events: cannot open " .. tmp)
+        return false
+    end
+    f:write(text, "\n")
+    f:close()
+    os.remove(path)
+    local renamed, err = os.rename(tmp, path)
+    if not renamed then
+        H.logError("events: rename " .. tmp .. " failed: " .. tostring(err))
+        return false
+    end
+    return true
+end
 
 return E

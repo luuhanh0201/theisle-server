@@ -14,8 +14,9 @@
 #                       both processes can read and write the same files.
 #   --bridge-dir DIR    where deploy.sh puts the bridge. Default: ~USER/bridge
 #   --deploy-user NAME  the ssh user in DEPLOY_HOST. Default: --user
-#   --with-sudoers      let --deploy-user restart the two services without a
-#                       password (deploy.sh needs that). Off by default.
+#   --with-sudoers      let --deploy-user start/stop/restart the game and
+#                       restart the bridge without a password (deploy.sh and
+#                       the panel's Server tab need that). Off by default.
 #   --dry-run           print what would change; change nothing (no root needed)
 #
 # What it does NOT do, on purpose:
@@ -73,7 +74,7 @@ done
 GAME_ROOT="$(cd "$GAME_ROOT" 2>/dev/null && pwd)" || die "--game-root does not exist"
 
 BIN_DIR="$GAME_ROOT/TheIsle/Binaries/Win64"
-MODS_DIR="$BIN_DIR/ue4ss/Mods"
+MODS_DIR="$BIN_DIR/Mods"
 
 # Run a command as the service user.
 as_user() {
@@ -98,10 +99,10 @@ as_user_clean() {
 say "checking the game install at $GAME_ROOT"
 [[ -d "$BIN_DIR" ]] || die "$BIN_DIR not found — is --game-root the SteamCMD install dir?"
 ok "$BIN_DIR"
-if [[ -f "$BIN_DIR/UE4SS.dll" && -d "$BIN_DIR/ue4ss" ]]; then
+if [[ -f "$BIN_DIR/UE4SS.dll" && -f "$BIN_DIR/dwmapi.dll" && ! -d "$BIN_DIR/ue4ss" ]]; then
     ok "UE4SS present"
 else
-    warn "UE4SS not found in $BIN_DIR — the mods (and so the bridge's data) need it"
+    warn "UE4SS missing from $BIN_DIR, or installed in a ue4ss/ subfolder — run scripts/install-ue4ss.sh (the mods, and so the bridge's data, need it)"
 fi
 
 # --- 2. which user ------------------------------------------------------
@@ -141,8 +142,12 @@ ok "node $NODE_VERSION at $NODE_BIN"
 # Lua cannot mkdir. Create what is missing; never chown or modify what exists.
 
 say "mod data directories"
+# Every level listed, parents first: `install -d -o` only chowns the last
+# component, so a missing parent would otherwise be created owned by root.
 for dir in \
+    "$MODS_DIR/StatsLogger" \
     "$MODS_DIR/StatsLogger/Saved" \
+    "$MODS_DIR/DinoGarage" \
     "$MODS_DIR/DinoGarage/Saved" \
     "$MODS_DIR/DinoGarage/Saved/stored"
 do
@@ -188,8 +193,9 @@ EnvironmentFile=$BRIDGE_DIR/.env
 ExecStart=$NODE_BIN $BRIDGE_DIR/dist/index.js
 Restart=on-failure
 RestartSec=5
-# The bridge only reads the event files and writes into DinoGarage/Saved.
-NoNewPrivileges=true
+# No NoNewPrivileges: the panel's Server tab runs sudo -n systemctl
+# start/stop/restart theisle.service (sudoers allows exactly that), and
+# NoNewPrivileges would block sudo.
 PrivateTmp=true
 ProtectSystem=full
 
@@ -240,7 +246,7 @@ else
 fi
 
 if (( ! CAN_RESTART )); then
-    SUDOERS_LINE="$DEPLOY_USER ALL=(root) NOPASSWD: $SYSTEMCTL restart $UNIT_NAME, $SYSTEMCTL restart theisle.service"
+    SUDOERS_LINE="$DEPLOY_USER ALL=(root) NOPASSWD: $SYSTEMCTL start theisle.service, $SYSTEMCTL stop theisle.service, $SYSTEMCTL restart theisle.service, $SYSTEMCTL restart $UNIT_NAME"
     if (( WITH_SUDOERS && DRY_RUN )); then
         echo "    would install $SUDOERS_PATH (0440, checked with visudo -c):"
         echo "      $SUDOERS_LINE"

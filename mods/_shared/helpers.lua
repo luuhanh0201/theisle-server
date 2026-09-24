@@ -74,6 +74,97 @@ function M.readField(obj, candidates, label)
     return nil
 end
 
+local reportedVital = {}
+
+--- Read a number vital: the pawn's UFunction getter first, then property names.
+-- Evrima keeps vitals in GAS attribute sets (UTIAttributeSetDinosaur), not as
+-- pawn properties, so `pawn.Health` is nil; the pawn exposes GetHealth(),
+-- GetStamina()… (the same family as the SetHealth() the garage calls). Which
+-- path worked is logged once per label, so UE4SS.log shows what the live game
+-- answered.
+function M.readVital(obj, getter, candidates, label)
+    if obj == nil then return nil end
+    if getter then
+        local ok, v = pcall(function() return obj[getter](obj) end)
+        if ok and type(v) == "number" then
+            if not reportedVital[label] then
+                reportedVital[label] = true
+                M.log(string.format("vital '%s' read via %s()", label, getter))
+            end
+            return v
+        end
+    end
+    return tonumber(M.readField(obj, candidates, label))
+end
+
+--- The real field names of a struct VALUE (e.g. pawn.NutrientsStruct), read
+--- from the engine's reflection data: value:GetProperty():GetStruct() is the
+--- UScriptStruct, whose ForEachProperty lists its fields. Lets a mod copy a
+--- whole struct without guessing names. Empty list on any failure.
+function M.structFields(value)
+    local names = {}
+    pcall(function()
+        value:GetProperty():GetStruct():ForEachProperty(function(prop)
+            names[#names + 1] = prop:GetFName():ToString()
+        end)
+    end)
+    return names
+end
+
+local loggedSkinFields = false
+
+--- The dino's skin as the game holds it: pawn.CustomizerData (read-only here).
+-- Every *Color field (FLinearColor, linear 0..1 per channel) under its real
+-- name, plus PatternIndex / ThemeIndex / SkinVariation / bIsFemale. Names come
+-- from reflection, so a renamed or added region shows up without a code change
+-- (evrima-dev-knowledge EVRIMA_Customizer_Field_Map: reads are reliable; the
+-- GetCustomizerData() wrapper is not what to read). nil when unreadable.
+function M.readSkin(pawn)
+    local ok, data = pcall(function() return pawn.CustomizerData end)
+    if not ok or data == nil then return nil end
+    local names = M.structFields(data)
+    if #names == 0 then return nil end
+    if not loggedSkinFields then
+        loggedSkinFields = true
+        M.log("skin: CustomizerData fields: " .. table.concat(names, ", "))
+    end
+    local skin = { colors = {} }
+    local function round(v) return math.floor(v * 1000 + 0.5) / 1000 end
+    for _, name in ipairs(names) do
+        local got, v = pcall(function() return data[name] end)
+        if got and v ~= nil then
+            if name:match("Color$") then
+                local okC, c = pcall(function() return { r = v.R, g = v.G, b = v.B } end)
+                if okC and type(c.r) == "number" and type(c.g) == "number" and type(c.b) == "number" then
+                    skin.colors[name:gsub("Color$", "")] = { r = round(c.r), g = round(c.g), b = round(c.b) }
+                end
+            elseif name == "PatternIndex" or name == "ThemeIndex" then
+                if type(v) == "number" then skin[name:sub(1, 1):lower() .. name:sub(2)] = v end
+            elseif name == "SkinVariation" then
+                if type(v) == "number" then skin.variation = round(v) end
+            elseif name == "bIsFemale" then
+                if type(v) == "boolean" then skin.female = v end
+            end
+        end
+    end
+    if next(skin.colors) == nil then return nil end
+    return skin
+end
+
+--- A stable text form of a skin, to notice a change between two reads.
+function M.skinKey(skin)
+    if skin == nil then return "" end
+    local parts = { tostring(skin.patternIndex), tostring(skin.themeIndex), tostring(skin.variation) }
+    local regions = {}
+    for k in pairs(skin.colors) do regions[#regions + 1] = k end
+    table.sort(regions)
+    for _, k in ipairs(regions) do
+        local c = skin.colors[k]
+        parts[#parts + 1] = string.format("%s=%.3f,%.3f,%.3f", k, c.r, c.g, c.b)
+    end
+    return table.concat(parts, ";")
+end
+
 --------------------------------------------------------------------------
 -- Player / pawn resolution
 --------------------------------------------------------------------------
@@ -136,11 +227,19 @@ end
 --------------------------------------------------------------------------
 
 --- Send a message to one player. Silently does nothing if they left.
+--
+-- Lua does NOT talk to the player directly: sending chat from Lua (UpdateChat)
+-- crashes the server below pcall (evrima-dev-knowledge EVRIMA_Chat_System),
+-- and ClientMessage is not shown by Evrima's UI. Instead a "notify" event is
+-- written; the bridge tails it and delivers it with RCON DirectMessage (0x11),
+-- which the game shows to that one player.
 function M.safeNotify(ctrl, msg)
     if not M.isValid(ctrl) then return false end
-
+    local id = M.safeSteamId(ctrl)
+    if not id then return false end
+    -- Required here, not at the top: events.lua requires this module.
     local ok = M.try("safeNotify", function()
-        ctrl:ClientMessage(tostring(msg))
+        require("shared.isle.events").emit({ type = "notify", steamId = id, message = tostring(msg) })
     end)
     return ok
 end
@@ -206,10 +305,25 @@ function M.deferWithPlayer(ctrl, ms, fn)
 end
 
 --- Same, but only runs when the player also has a live pawn.
-function M.deferWithPawn(ctrl, ms, fn)
-    M.deferWithPlayer(ctrl, ms, function(c)
-        local pawn = M.livePawnFromCtrl(c)
-        if pawn then fn(c, pawn) end
+-- onGone (optional) runs instead when, after the wait, the player has left or
+-- has no dino — for callers that must undo something (a taken garage slot).
+function M.deferWithPawn(ctrl, ms, fn, onGone)
+    local id = M.safeSteamId(ctrl)
+    if not id then
+        if onGone then M.try("deferWithPawn onGone", onGone) end
+        return
+    end
+    M.defer(ms, function()
+        local ran = false
+        M.forEachPlayer(function(c)
+            if ran or M.safeSteamId(c) ~= id then return end
+            local pawn = M.livePawnFromCtrl(c)
+            if pawn then
+                ran = true
+                fn(c, pawn)
+            end
+        end)
+        if not ran and onGone then M.try("deferWithPawn onGone", onGone) end
     end)
 end
 
@@ -236,6 +350,17 @@ local function pruneSeen(now)
     end
 end
 
+--- The text of an FText / FString / FName hook value, or nil.
+-- tostring() on an FText gives "FText: 0000733DB33B7B08" — an address, not
+-- the words — so every chat command silently failed to match.
+function M.textOf(v)
+    if type(v) == "string" then return v end
+    if v == nil then return nil end
+    local ok, s = pcall(function() return v:ToString() end)
+    if ok and type(s) == "string" then return s end
+    return nil
+end
+
 --- Register a chat handler: fn(ctrl, steamId, message).
 -- Handlers run outside the hook (rule 4) and are pcall-wrapped individually,
 -- so one bad handler cannot take down the others or the server.
@@ -244,15 +369,18 @@ function M.onChat(fn)
     if chatHooked then return end
     chatHooked = true
 
-    RegisterHook(CHAT_HOOK, function(ctrlParam, msgParam)
+    -- GetChatMessage(NewText, ChatPlayerController, ChatMode, NoFilterMsg) runs
+    -- on the RECEIVING controller (self); the SENDER is ChatPlayerController.
+    -- Taking self as the sender would run a command as whoever received it.
+    RegisterHook(CHAT_HOOK, function(selfParam, textParam, senderParam)
         M.try("chat hook", function()
-            local ctrl = ctrlParam and ctrlParam:get()
+            local ctrl = senderParam and senderParam:get()
             if not M.isValid(ctrl) then return end
 
             local id = M.safeSteamId(ctrl)
             if not id then return end
 
-            local gotMsg, msg = pcall(function() return tostring(msgParam:get()) end)
+            local gotMsg, msg = pcall(function() return M.textOf(textParam:get()) end)
             if not gotMsg or msg == nil or msg == "" then return end
 
             local now = os.time()

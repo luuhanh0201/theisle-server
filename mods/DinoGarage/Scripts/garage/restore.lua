@@ -122,16 +122,50 @@ local function applyNutrients(pawn, state)
         return
     end
 
-    for _, n in ipairs(NUTRIENTS) do
-        local v = state.nutrients[n.key]
-        if v ~= nil then
-            H.try("restore: nutrient " .. n.field, function() struct[n.field] = v end)
+    if type(state.nutrients.fields) == "table" then
+        -- Captured by real field name: write every one back as it was.
+        for field, v in pairs(state.nutrients.fields) do
+            if type(v) == "number" or type(v) == "boolean" then
+                H.try("restore: nutrient " .. field, function() struct[field] = v end)
+            end
+        end
+    else
+        -- Slots stored before 2026-09-24: the guessed names.
+        for _, n in ipairs(NUTRIENTS) do
+            local v = state.nutrients[n.key]
+            if v ~= nil then
+                H.try("restore: nutrient " .. n.field, function() struct[n.field] = v end)
+            end
         end
     end
 
     H.try("restore: SetNutrientsStruct", function()
         pawn:SetNutrientsStruct(struct, true)
     end)
+end
+
+-- Put the dino a little above the stored point, so terrain that streamed in
+-- slightly higher does not swallow its feet.
+local TELEPORT_LIFT = 30
+
+--- Move the pawn back to where it was stored. bTeleport = true: no sweep, no
+--- physics impulse; the server's move replicates to every client.
+-- @return true if the engine accepted the move
+function R.teleport(pawn, location, rotation)
+    if not H.isValid(pawn) or type(location) ~= "table"
+        or type(location.x) ~= "number" or type(location.y) ~= "number" or type(location.z) ~= "number" then
+        return false
+    end
+    local ok, moved = H.try("restore: K2_SetActorLocation", function()
+        return pawn:K2_SetActorLocation(
+            { X = location.x, Y = location.y, Z = location.z + TELEPORT_LIFT }, false, {}, true)
+    end)
+    if ok and type(rotation) == "table" and type(rotation.yaw) == "number" then
+        H.try("restore: K2_SetActorRotation", function()
+            pawn:K2_SetActorRotation({ Pitch = 0, Yaw = rotation.yaw, Roll = 0 }, true)
+        end)
+    end
+    return ok and moved ~= false
 end
 
 --- Apply a stored state to a live pawn.
@@ -172,6 +206,17 @@ function R.apply(pawn, state, onDone)
 
         -- Step 5 — re-apply vitals. Rule 1: SetGrowth above wiped them.
         applyVitals(pawn, state)
+
+        -- Admin-made slots carry no captured stomach: fill it to the max the
+        -- game reports for this dino at this growth (read after SetGrowth).
+        if type(state.fill) == "table" and state.fill.stomachFull then
+            local okMax, max = pcall(function() return pawn:GetMaxHunger() end)
+            if okMax and type(max) == "number" and max > 0 then
+                set(pawn, "SetHunger", max)
+            else
+                H.logError("restore: GetMaxHunger unavailable — stomach not filled")
+            end
+        end
 
         -- Step 6 — elder replication stacks, the lineage-tier counter.
         if state.elderStacks ~= nil and state.elderStacks > 0 then

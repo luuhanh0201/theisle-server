@@ -36,9 +36,21 @@ for dll in dwmapi.dll UE4SS.dll; do
         echo "start.sh: warning — $dll missing, UE4SS will NOT load" >&2
 done
 
+# The Wine launcher. `wine` runs a 64-bit .exe with the 64-bit loader on every
+# packaging we know of. `wine64` is NOT on PATH with Ubuntu 24.04's own wine
+# (it lives in /usr/lib/wine/), and calling it made every start exit 127.
+WINE_BIN="${WINE_BIN:-}"
+if [[ -z "$WINE_BIN" ]]; then
+    for candidate in wine wine64 /usr/lib/wine/wine64; do
+        if command -v "$candidate" >/dev/null 2>&1; then WINE_BIN="$candidate"; break; fi
+    done
+fi
+[[ -n "$WINE_BIN" ]] || { echo "start.sh: no Wine found (tried wine, wine64, /usr/lib/wine/wine64)" >&2; exit 1; }
+echo "start.sh: launching $EXE with $(command -v "$WINE_BIN") ($("$WINE_BIN" --version 2>/dev/null || echo 'version unknown'))"
+
 cd "$BIN_DIR"
 
-exec wine64 "$EXE" \
+exec "$WINE_BIN" "$EXE" \
     "${MAP}?Port=${GAME_PORT}" \
     -log \
     -nosound \

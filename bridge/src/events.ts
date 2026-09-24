@@ -53,6 +53,25 @@ export interface SnapshotEvent extends BaseEvent {
   growth: number | null;
   loc?: Loc;
   yaw?: number;
+  /** The game's current maxima (GetMaxHealth…), for bars. Absent from older mods. */
+  max?: Partial<Record<VitalName, number>>;
+}
+
+export type VitalName = 'health' | 'stamina' | 'hunger' | 'thirst' | 'blood' | 'oxygen';
+
+/** Prime / elder status, from the game's own getters. Sent at spawn and on change. */
+export interface PrimeEvent extends BaseEvent {
+  type: 'prime';
+  steamId: string;
+  name?: string;
+  species?: string;
+  elder?: boolean;
+  prime?: boolean;
+  eligible?: boolean;
+  elderStacks?: number;
+  /** pawn.EligiblePrimeElderData.bPrimeCondition1..10, keyed "1".."10". */
+  conditions?: Record<string, boolean>;
+  growth?: number | null;
 }
 
 export interface DeathEvent extends BaseEvent {
@@ -72,6 +91,8 @@ export interface DeathEvent extends BaseEvent {
   /** Amount of the hit that explains the death. */
   lastHit?: number;
   attributed: boolean;
+  /** "pawn_lost": the dino vanished between two polls (e.g. a fall) — no final HP seen. */
+  detectedBy?: 'pawn_lost';
 }
 
 /** Filled mutation slots, keyed like a garage slot file: Slot1, ParentSlot2, ElderSlot3A… */
@@ -115,6 +136,37 @@ export interface SessionEndEvent extends BaseEvent {
   species?: string;
   /** Seconds online. */
   duration: number;
+}
+
+/**
+ * A message a mod wants shown to one player. Lua cannot send it (UpdateChat
+ * crashes the server; ClientMessage is not displayed), so the bridge delivers
+ * it with RCON DirectMessage. Not shown in the panel's feed.
+ */
+export interface NotifyEvent extends BaseEvent {
+  type: 'notify';
+  steamId: string;
+  message: string;
+}
+
+/** One colour region of a skin: Unreal FLinearColor channels, linear 0..1. */
+export interface SkinColor { r: number; g: number; b: number }
+/** pawn.CustomizerData as the mod reads it. Region names are the game's, minus "Color". */
+export interface Skin {
+  colors: Record<string, SkinColor>;
+  patternIndex?: number;
+  themeIndex?: number;
+  variation?: number;
+  female?: boolean;
+}
+
+/** Sent on spawn and whenever the skin changes (not in every snapshot). */
+export interface SkinEvent extends BaseEvent {
+  type: 'skin';
+  steamId: string;
+  name?: string;
+  species?: string;
+  skin: Skin;
 }
 
 export interface ChatEvent extends BaseEvent {
@@ -190,6 +242,9 @@ export type GameEvent =
   | SessionStartEvent
   | SessionEndEvent
   | ChatEvent
+  | NotifyEvent
+  | SkinEvent
+  | PrimeEvent
   | GrowthEvent
   | GrowthSetEvent
   | MutationEvent
@@ -213,6 +268,10 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   session_start: (e) => isString(e['steamId']),
   session_end: (e) => isString(e['steamId']) && isNumber(e['duration']),
   chat: (e) => isString(e['steamId']) && isString(e['message']),
+  notify: (e) => isString(e['steamId']) && isString(e['message']),
+  prime: (e) => isString(e['steamId']),
+  skin: (e) => isString(e['steamId']) && typeof e['skin'] === 'object' && e['skin'] !== null
+    && typeof (e['skin'] as Record<string, unknown>)['colors'] === 'object',
   growth: (e) => isString(e['steamId']) && isNumber(e['milestone']),
   growth_set: (e) => isString(e['steamId']) && isNumber(e['from']) && isNumber(e['to']),
   mutation: (e) => isString(e['steamId']) && isString(e['slot']),

@@ -33,8 +33,8 @@ local json   = require("shared.isle.json")
 
 local I = {}
 
-I.INBOX_PATH = "ue4ss/Mods/DinoGarage/Saved/inbox.json"
-I.ACK_PATH   = "ue4ss/Mods/DinoGarage/Saved/inbox.ack.json"
+I.INBOX_PATH = "Mods/DinoGarage/Saved/inbox.json"
+I.ACK_PATH   = "Mods/DinoGarage/Saved/inbox.ack.json"
 
 local lastId = nil   -- loaded lazily from the ack file
 

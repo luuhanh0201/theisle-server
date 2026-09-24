@@ -26,15 +26,17 @@ done < <(find "$ROOT/mods" -name '*.lua' | sort)
 RUN="$(mktemp -d)"
 trap 'rm -rf "$RUN"' EXIT
 
-mkdir -p "$RUN/ue4ss/Mods/shared/isle" \
-         "$RUN/ue4ss/Mods/DinoGarage/Saved/stored" \
-         "$RUN/ue4ss/Mods/StatsLogger/Saved"
-cp "$ROOT"/mods/_shared/*.lua "$RUN/ue4ss/Mods/shared/isle/"
+mkdir -p "$RUN/Mods/shared/isle" \
+         "$RUN/Mods/DinoGarage/Saved/stored" \
+         "$RUN/Mods/DinoGarage/Saved/deleted" \
+         "$RUN/Mods/StatsLogger/Saved" \
+         "$RUN/Mods/PlayerCommands/Saved"
+cp "$ROOT"/mods/_shared/*.lua "$RUN/Mods/shared/isle/"
 for dir in "$ROOT"/mods/*/; do
     mod="$(basename "$dir")"
     [[ "$mod" == _* ]] && continue          # _shared is copied above
-    mkdir -p "$RUN/ue4ss/Mods/$mod/Scripts"
-    cp -r "$ROOT/mods/$mod/Scripts/." "$RUN/ue4ss/Mods/$mod/Scripts/"
+    mkdir -p "$RUN/Mods/$mod/Scripts"
+    cp -r "$ROOT/mods/$mod/Scripts/." "$RUN/Mods/$mod/Scripts/"
 done
 
 failed=0
@@ -45,11 +47,11 @@ for test in "$ROOT"/tests/test_*.lua; do
     # register global hooks, so they must not share an interpreter.
     ( cd "$RUN" && "$LUA" \
         -e "ROOT='$ROOT' RUN='$RUN'" \
-        -e "package.path='$ROOT/tests/?.lua;'..'$RUN/ue4ss/Mods/?.lua;'..'$RUN/ue4ss/Mods/DinoGarage/Scripts/?.lua;'..package.path" \
+        -e "package.path='$ROOT/tests/?.lua;'..'$RUN/Mods/?.lua;'..'$RUN/Mods/DinoGarage/Scripts/?.lua;'..package.path" \
         "$test" ) || failed=1
     # DinoGarage state must not leak into the next test run.
-    rm -rf "$RUN/ue4ss/Mods/DinoGarage/Saved"
-    mkdir -p "$RUN/ue4ss/Mods/DinoGarage/Saved/stored"
+    rm -rf "$RUN/Mods/DinoGarage/Saved" "$RUN/Mods/PlayerCommands/Saved"
+    mkdir -p "$RUN/Mods/DinoGarage/Saved/stored" "$RUN/Mods/DinoGarage/Saved/deleted" "$RUN/Mods/PlayerCommands/Saved"
 done
 
 echo

@@ -1,4 +1,4 @@
-import type { GameEvent, DeathEvent, Loc, SnapshotEvent } from './events.js';
+import type { GameEvent, DeathEvent, Loc, SnapshotEvent, Skin, VitalName } from './events.js';
 import { config } from './config.js';
 import { Catalog } from './catalog.js';
 
@@ -71,6 +71,15 @@ export interface PlayerStats {
   /** Largest dino (by growth) this player has killed. */
   biggestKill: KillRecord | null;
   online: boolean;
+  /** The skin of the dino they play now (last "skin" event), null before one. */
+  skin: Skin | null;
+  /** Vital maxima from the last snapshot that had them. */
+  max: Partial<Record<VitalName, number>> | null;
+  /** Prime / elder status of the dino they play now (last "prime" event). */
+  prime: {
+    elder: boolean | null; prime: boolean | null; eligible: boolean | null; elderStacks: number | null;
+    conditions: Record<string, boolean> | null;
+  } | null;
 }
 
 /** What goes into the feeds, before we stamp an id on it. */
@@ -90,15 +99,22 @@ export interface Leaderboard {
   biggestPrey: KillRecord[];
 }
 
+/** A position on a trail or a life's path, with when it was there (unix seconds). */
+export interface TrailPoint extends Loc {
+  t: number;
+}
+
 export interface MapPlayer {
   steamId: string;
   name: string | null;
   species: string | null;
   growth: number | null;
   health: number | null;
+  /** The game's max health for this dino, for a real health bar (null until read). */
+  maxHealth: number | null;
   loc: Loc;
   yaw: number | null;
-  trail: Loc[];
+  trail: TrailPoint[];
 }
 
 /**
@@ -118,6 +134,13 @@ const BOARD_SIZE = 20;
 /** K/D over fewer kills than this is noise, not skill. */
 const KD_MIN_KILLS = 3;
 
+/** Far enough from the last point to count as movement (horizontal distance). */
+function moved(points: readonly TrailPoint[], next: TrailPoint): boolean {
+  const last = points[points.length - 1];
+  if (last === undefined) return true;
+  return Math.hypot(next.x - last.x, next.y - last.y) >= config.trailMinMove;
+}
+
 function pushBounded<T>(list: T[], item: T, max: number): void {
   list.push(item);
   if (list.length > max) list.splice(0, list.length - max);
@@ -136,7 +159,9 @@ export class Store {
   readonly #kills: FeedEntry[] = [];
   readonly #chat: FeedEntry[] = [];
   readonly #timelines = new Map<string, FeedEntry[]>();
-  readonly #trails = new Map<string, Loc[]>();
+  readonly #trails = new Map<string, TrailPoint[]>();
+  /** steamId -> life spawnedAt -> the whole path of that life (last few lives only). */
+  readonly #paths = new Map<string, Map<number, TrailPoint[]>>();
   /** steamId -> t of their latest spawn; older positions belong to a past life. */
   readonly #lifeStart = new Map<string, number>();
   readonly #biggestPrey = new Map<string, KillRecord>();
@@ -147,6 +172,7 @@ export class Store {
   readonly #recentRemoval = new Map<string, { t: number; cause: 'garage' | 'admin' }>();
   #nextId = 1;
   #lastEventAt: number | null = null;
+  #modsLoadedAt: number | null = null;
 
   apply(event: GameEvent): void {
     // The two streams are tailed separately, so an older line can arrive
@@ -156,6 +182,19 @@ export class Store {
     }
 
     switch (event.type) {
+      case 'notify':
+        // Delivered by the notifier (index.ts); not part of the game's story.
+        break;
+      case 'skin':
+        this.#player(event.steamId, event.t, event.name).skin = event.skin;
+        break;
+      case 'prime':
+        this.#player(event.steamId, event.t, event.name).prime = {
+          elder: event.elder ?? null, prime: event.prime ?? null,
+          eligible: event.eligible ?? null, elderStacks: event.elderStacks ?? null,
+          conditions: event.conditions ?? null,
+        };
+        break;
       case 'snapshot': {
         const p = this.#player(event.steamId, event.t, event.name);
         this.catalog.addSpecies(event.species);
@@ -168,6 +207,7 @@ export class Store {
         p.blood = event.blood ?? null;
         p.growth = event.growth;
         p.yaw = event.yaw ?? null;
+        if (event.max !== undefined) p.max = event.max;
         const life = this.#openLife(event.steamId);
         if (life !== null && event.t >= life.spawnedAt) {
           life.growth = event.growth ?? life.growth;
@@ -179,12 +219,15 @@ export class Store {
         const current = event.t >= (this.#lifeStart.get(event.steamId) ?? 0);
         if (event.loc !== undefined && current) {
           p.loc = event.loc;
+          const point: TrailPoint = { ...event.loc, t: event.t };
           let trail = this.#trails.get(event.steamId);
           if (trail === undefined) {
             trail = [];
             this.#trails.set(event.steamId, trail);
           }
-          pushBounded(trail, event.loc, config.trailSize);
+          // Only real movement: standing still would fill the trail with one spot.
+          if (moved(trail, point)) pushBounded(trail, point, config.trailSize);
+          if (life !== null && event.t >= life.spawnedAt) this.#addToPath(event.steamId, life.spawnedAt, point);
         }
         break;
       }
@@ -302,6 +345,11 @@ export class Store {
 
       case 'mod_loaded':
         console.info(`[store] ${event.mod} loaded on the server`);
+        // StatsLogger is the mod the whole panel depends on; its "loaded" is
+        // the signal that a (re)started server is really up.
+        if (event.mod === 'StatsLogger' && (this.#modsLoadedAt === null || event.t > this.#modsLoadedAt)) {
+          this.#modsLoadedAt = event.t;
+        }
         break;
     }
   }
@@ -383,12 +431,18 @@ export class Store {
         species: p.species,
         growth: p.growth,
         health: p.health,
+        maxHealth: p.max?.health ?? null,
         loc: p.loc,
         yaw: p.yaw,
         trail: this.#trails.get(p.steamId) ?? [],
       });
     }
     return out;
+  }
+
+  /** Unix seconds StatsLogger last announced itself, or null. */
+  modsLoadedAt(): number | null {
+    return this.#modsLoadedAt;
   }
 
   health(): { lastEventAt: number | null; players: number; online: number; feed: number } {
@@ -461,6 +515,37 @@ export class Store {
 
     const entry = this.#push(event, involved);
     pushBounded(this.#kills, entry, config.killfeedSize);
+  }
+
+  /** The path one life took, or null (unknown life, or too old to be kept). */
+  path(steamId: string, spawnedAt: number): TrailPoint[] | null {
+    const points = this.#paths.get(steamId)?.get(spawnedAt);
+    return points === undefined ? null : points.map((pt) => ({ ...pt }));
+  }
+
+  #addToPath(steamId: string, spawnedAt: number, point: TrailPoint): void {
+    let byLife = this.#paths.get(steamId);
+    if (byLife === undefined) {
+      byLife = new Map();
+      this.#paths.set(steamId, byLife);
+    }
+    let points = byLife.get(spawnedAt);
+    if (points === undefined) {
+      points = [];
+      byLife.set(spawnedAt, points);
+      // Keep the newest few lives: a path is a few thousand points each.
+      const keys = [...byLife.keys()].sort((a, b) => b - a);
+      for (const old of keys.slice(config.pathLives)) byLife.delete(old);
+    }
+    if (!moved(points, point)) return;
+    points.push(point);
+    // A long life: halve the resolution rather than lose its beginning.
+    if (points.length > config.pathMaxPoints) {
+      const last = points[points.length - 1] as TrailPoint;
+      const kept = points.filter((_, i) => i % 2 === 0);
+      if (kept[kept.length - 1] !== last) kept.push(last);
+      points.splice(0, points.length, ...kept);
+    }
   }
 
   /** The life still in progress, or null if the last one ended. */
@@ -548,6 +633,9 @@ export class Store {
         playtime: 0,
         longestLife: 0,
         biggestKill: null,
+        skin: null,
+        max: null,
+        prime: null,
         online: false,
       };
       this.#players.set(steamId, p);

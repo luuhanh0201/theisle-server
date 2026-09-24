@@ -6,6 +6,16 @@ import { config } from './config.js';
 import type { Store } from './store.js';
 import { queueKill } from './commands.js';
 import { readNotes, setNote } from './notes.js';
+import { audit, readAudit } from './audit.js';
+import type { Power } from './power.js';
+import { readSchedule, writeSchedule, validateSchedule, occurrences } from './power.js';
+import type { Rcon } from './rcon.js';
+import { RCON_COMMANDS } from './rcon.js';
+import { MANAGED, GROUPS, KNOWN_PLAYABLES, readLive, saveSettings, type ManagedKey } from './gameini.js';
+import { readReadiness } from './readiness.js';
+import { readLiveState, livePlayer } from './live.js';
+import { handlePlayerApi } from './player-api.js';
+import { readCommandsSettings, saveCommandsSettings } from './commands-settings.js';
 import { speciesOfClassPath } from './catalog.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
@@ -21,6 +31,8 @@ import {
   NotFoundError,
   ConflictError,
   type NewSlotSpec,
+  readGarageSettings,
+  saveGarageSettings,
 } from './garage.js';
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -29,6 +41,8 @@ const contentTypes: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.webp': 'image/webp',
 };
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -53,8 +67,9 @@ async function sendFile(res: ServerResponse, name: string): Promise<void> {
     res.writeHead(200, {
       'content-type': contentTypes[ext] ?? 'application/octet-stream',
       // Revalidate every time: otherwise a browser keeps showing the old panel
-      // after a deploy until someone thinks to hard-reload.
-      'cache-control': 'no-cache',
+      // after a deploy until someone thinks to hard-reload. The map (2.5 MB)
+      // is the exception: the panel asks for it with ?v=<map version>.
+      'cache-control': name.startsWith('map/') ? 'public, max-age=604800' : 'no-cache',
     });
     res.end(body);
   } catch {
@@ -141,27 +156,67 @@ async function assertMutationsFor(store: Store, body: NewSlotSpec & { allowUncon
   }
 }
 
+export interface Ctx {
+  store: Store;
+  power: Power;
+  rcon: Rcon;
+}
+
+/** Everything the Server tab shows, in one call. */
+async function serverStatus(ctx: Ctx): Promise<unknown> {
+  const [status, schedule] = await Promise.all([ctx.power.status(), readSchedule()]);
+  const next = occurrences(schedule, Date.now()).find((d) => d.getTime() > Date.now());
+  return {
+    ...status,
+    operation: ctx.power.current,
+    lastOperation: ctx.power.last,
+    schedule: { daily: schedule.daily, countdownMinutes: schedule.countdownMinutes, next: next ? Math.floor(next.getTime() / 1000) : null },
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    rconEnabled: ctx.rcon.enabled,
+    writesEnabled: config.adminToken !== null,
+    unitName: config.game.unit,
+    /** Server clock (ms), so the panel's countdown is right even if the browser's is off. */
+    now: Date.now(),
+  };
+}
+
 async function handle(
   req: IncomingMessage,
   res: ServerResponse,
-  store: Store,
+  ctx: Ctx,
 ): Promise<void> {
+  const { store, power, rcon } = ctx;
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   const path = url.pathname;
+
+  // The player portal's read-only routes, behind their own token.
+  if (await handlePlayerApi(req, res, path, { store, serverPhase: async () => (await power.status()).phase, live: readLiveState })) return;
 
   // --- writes ---------------------------------------------------------
   // POST   /api/garage/<steamId>/<slot>   put a dino straight into a garage
   // DELETE /api/garage/<steamId>/<slot>   remove one (soft: moved to deleted/)
   // POST   /api/player/<steamId>/kill     remove the dino they are playing now
   // PUT    /api/mutations/<name>          { description } — "" clears it
+  // POST   /api/server/<start|stop|restart|cancel>   { countdownSeconds, reason }
+  // PUT    /api/server/schedule           { daily: ["04:00"], countdownMinutes }
+  // POST   /api/rcon/<command>            { args }
+  // PUT    /api/game-config               { settings, restart?: { countdownSeconds, reason } }
   if (req.method === 'POST' || req.method === 'DELETE' || req.method === 'PUT') {
     const garage = /^\/api\/garage\/([^/]+)\/([^/]+)$/.exec(path);
     const kill = /^\/api\/player\/([^/]+)\/kill$/.exec(path);
     const note = /^\/api\/mutations\/([^/]+)$/.exec(path);
+    const power_ = /^\/api\/server\/(start|stop|restart|cancel)$/.exec(path);
+    const rconCmd = /^\/api\/rcon\/([A-Za-z]+)$/.exec(path);
     const allowed =
       (garage !== null && req.method !== 'PUT') ||
       (kill !== null && req.method === 'POST') ||
-      (note !== null && req.method === 'PUT');
+      (note !== null && req.method === 'PUT') ||
+      (power_ !== null && req.method === 'POST') ||
+      (rconCmd !== null && req.method === 'POST') ||
+      (path === '/api/server/schedule' && req.method === 'PUT') ||
+      (path === '/api/game-config' && req.method === 'PUT') ||
+      (path === '/api/garage-settings' && req.method === 'PUT') ||
+      (path === '/api/commands-settings' && req.method === 'PUT');
     if (!allowed) {
       sendJson(res, 404, { error: 'not found' });
       return;
@@ -172,11 +227,89 @@ async function handle(
       return;
     }
 
+    if (power_ !== null) {
+      const verb = power_[1] as 'start' | 'stop' | 'restart' | 'cancel';
+      if (verb === 'cancel') {
+        const ok = power.cancel();
+        sendJson(res, ok ? 200 : 409, ok ? { cancelled: true } : { error: 'nothing to cancel (only a countdown can be)' });
+        return;
+      }
+      const body = (await readJsonBody(req)) as { countdownSeconds?: unknown; reason?: unknown };
+      const op = power.request(verb, {
+        countdownSeconds: Number(body.countdownSeconds ?? 0),
+        reason: typeof body.reason === 'string' ? body.reason : '',
+      });
+      await audit({ action: `server ${verb} requested`, detail: [`countdown ${Math.round((op.runAt - op.startedAt) / 1000)}s`, op.reason].filter(Boolean).join(' · '), ok: true });
+      sendJson(res, 202, { operation: op });
+      return;
+    }
+
+    if (path === '/api/server/schedule') {
+      const next = validateSchedule(await readJsonBody(req));
+      const current = await readSchedule();
+      await writeSchedule({ ...current, ...next });
+      await audit({ action: 'restart schedule set', detail: `${next.daily.join(', ') || '(none)'} · countdown ${next.countdownMinutes}m`, ok: true });
+      sendJson(res, 200, { schedule: next });
+      return;
+    }
+
+    if (rconCmd !== null) {
+      const name = rconCmd[1] as string;
+      const spec = RCON_COMMANDS[name];
+      if (spec === undefined) {
+        sendJson(res, 404, { error: `unknown RCON command: ${name}` });
+        return;
+      }
+      const body = (await readJsonBody(req)) as { args?: unknown };
+      try {
+        const response = await rcon.run(name, body.args);
+        if (!spec.read) await audit({ action: `rcon ${name}`, detail: body.args === undefined ? '' : String(body.args).slice(0, 120), ok: true });
+        sendJson(res, 200, { command: name, response });
+      } catch (error) {
+        if (error instanceof ValidationError) throw error;
+        if (!spec.read) await audit({ action: `rcon ${name}`, ok: false, error: (error as Error).message });
+        sendJson(res, 502, { error: (error as Error).message });
+      }
+      return;
+    }
+
+    if (path === '/api/commands-settings') {
+      const saved = await saveCommandsSettings(await readJsonBody(req));
+      await audit({ action: 'player command settings saved',
+        detail: `slay ${saved.slayCooldown}s · unstuck ${saved.unstuckCooldown}s · off: ${Object.entries(saved.enabled).filter(([, on]) => !on).map(([n]) => n).join(', ') || '-'}`, ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/garage-settings') {
+      const saved = await saveGarageSettings(await readJsonBody(req));
+      await audit({ action: 'garage settings saved',
+        detail: `redeemAt=${saved.redeemAt} · slots ${saved.maxSlots} · countdown ${saved.storeCountdown}s · cooldown ${saved.cooldown}s`, ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/game-config') {
+      const body = (await readJsonBody(req)) as { settings?: unknown; restart?: { countdownSeconds?: unknown; reason?: unknown } };
+      const settings = await saveSettings(body.settings ?? {});
+      await audit({ action: 'game config saved', detail: Object.keys(settings).join(', ') || '(defaults)', ok: true });
+      let operation = null;
+      if (body.restart) {
+        operation = power.request('restart', {
+          countdownSeconds: Number(body.restart.countdownSeconds ?? 0),
+          reason: typeof body.restart.reason === 'string' && body.restart.reason ? body.restart.reason : 'Áp dụng cấu hình mới',
+          source: 'config',
+        });
+      }
+      sendJson(res, 200, { settings, operation });
+      return;
+    }
+
     if (note !== null) {
       const name = decodeURIComponent(note[1] as string);
       const body = (await readJsonBody(req)) as { description?: unknown };
       const saved = await setNote(name, body.description ?? '');
-      console.info(`[admin] mutation note ${saved ? 'set' : 'cleared'} for ${name}`);
+      await audit({ action: `mutation note ${saved ? 'set' : 'cleared'}`, detail: name, ok: true });
       sendJson(res, 200, { name, note: saved });
       return;
     }
@@ -185,7 +318,7 @@ async function handle(
       const steamId = kill[1] as string;
       const body = (await readJsonBody(req)) as { reason?: unknown };
       const command = await queueKill(steamId, body.reason);
-      console.info(`[admin] kill queued for ${steamId} (command ${command.id}) reason="${command.reason}"`);
+      await audit({ action: 'kill current dino queued', detail: `${steamId} · command ${command.id}${command.reason ? ' · ' + command.reason : ''}`, ok: true });
       sendJson(res, 202, { command });
       return;
     }
@@ -193,17 +326,19 @@ async function handle(
     const [, steamId, slot] = garage as unknown as [string, string, string];
     if (req.method === 'DELETE') {
       const { trashedAs } = await deleteSlot(steamId, slot);
-      console.info(`[garage] admin deleted ${steamId}/${slot} -> deleted/${trashedAs ?? '(index only)'}`);
+      await audit({ action: 'garage slot deleted', detail: `${steamId}/${slot} → deleted/${trashedAs ?? '(index only)'}`, ok: true });
       sendJson(res, 200, { steamId, slot, trashedAs });
       return;
     }
     const body = (await readJsonBody(req)) as NewSlotSpec;
     await assertMutationsFor(store, body);
     const meta = await createSlot(steamId, slot, body);
-    console.info(
-      `[garage] admin wrote ${steamId}/${slot} (${meta.classPath})` +
-        (meta.replaced ? `, previous dino kept as deleted/${meta.replaced}` : ''),
-    );
+    await audit({
+      action: 'garage slot created',
+      detail: `${steamId}/${slot} · ${meta.classPath.split('.').pop()} ${Math.round((meta.growth ?? 0) * 100)}%`
+        + (meta.replaced ? ` · replaced (backup deleted/${meta.replaced})` : ''),
+      ok: true,
+    });
     sendJson(res, 201, { steamId, slot, meta });
     return;
   }
@@ -230,6 +365,21 @@ async function handle(
   if (playerMatch !== null) {
     const steamId = playerMatch[1] as string;
     sendJson(res, 200, { steamId, slots: await listPlayer(steamId) });
+    return;
+  }
+
+  // The whole path of one life (spawnedAt from the lives list), for the map.
+  const pathMatch = /^\/api\/player\/([^/]+)\/path\/(\d{1,12})$/.exec(path);
+  if (pathMatch !== null) {
+    const steamId = pathMatch[1] as string;
+    const spawnedAt = Number(pathMatch[2]);
+    const points = store.path(steamId, spawnedAt);
+    if (points === null) {
+      sendJson(res, 404, { error: 'no path for that life (only the last few lives are kept)' });
+      return;
+    }
+    const life = store.player(steamId)?.lives.find((l) => l.spawnedAt === spawnedAt) ?? null;
+    sendJson(res, 200, { steamId, spawnedAt, species: life?.species ?? null, endedAt: life?.endedAt ?? null, end: life?.end ?? null, points });
     return;
   }
 
@@ -273,6 +423,49 @@ async function handle(
     case '/api/leaderboard':
       sendJson(res, 200, store.leaderboard());
       return;
+    case '/api/server/status':
+      sendJson(res, 200, await serverStatus(ctx));
+      return;
+    case '/api/server/readiness': {
+      const status = await power.status();
+      const join = store.feed(1, new Set(['session_start']))[0];
+      sendJson(res, 200, await readReadiness({
+        unit: status.unit ? { activeState: status.unit.activeState, since: status.unit.since } : null,
+        phase: status.phase,
+        modsLoadedAt: status.modsLoadedAt,
+        lastJoin: join?.type === 'session_start'
+          ? { t: join.t, ...(join.name !== undefined ? { name: join.name } : {}) } : null,
+      }));
+      return;
+    }
+    case '/api/server/audit':
+      sendJson(res, 200, { entries: await readAudit(parseLimit(url, 50, 500)) });
+      return;
+    case '/api/rcon/commands':
+      sendJson(res, 200, {
+        enabled: rcon.enabled,
+        commands: Object.fromEntries(Object.entries(RCON_COMMANDS).map(([k, c]) =>
+          [k, { label: c.label, args: c.args, read: c.read, toggle: c.toggle === true }])),
+      });
+      return;
+    case '/api/game-config': {
+      const live = await readLive();
+      // Everything but the list item RegExp, which does not survive JSON.
+      const schema = Object.fromEntries(Object.entries(MANAGED).map(([k, m]) => {
+        const { item: _item, ...rest } = m as ManagedKey & { item?: RegExp };
+        return [k, rest];
+      }));
+      const status = await power.status();
+      sendJson(res, 200, {
+        ...live,
+        schema,
+        knownPlayables: KNOWN_PLAYABLES,
+        groups: GROUPS,
+        // Saved after the server last started = waiting for a restart.
+        pendingRestart: live.iniWrittenAt !== null && status.unit?.since != null && live.iniWrittenAt > status.unit.since,
+      });
+      return;
+    }
     case '/api/mutations': {
       // Map every mutation the game has reported to its reference entry, so
       // the panel does not need its own copy of the matching rules.
@@ -298,8 +491,31 @@ async function handle(
       sendJson(res, 200, { species: catalog.list() });
       return;
     }
-    case '/api/map':
-      sendJson(res, 200, { players: store.map() });
+    case '/api/map': {
+      // Positions from the live file (1 s) over the snapshot's (5 s).
+      const live = await readLiveState();
+      const players = store.map().map((p) => {
+        const lp = livePlayer(live, p.steamId);
+        return lp === null ? p : { ...p, loc: lp.loc, yaw: lp.yaw ?? p.yaw, health: lp.vitals.health ?? p.health };
+      });
+      sendJson(res, 200, { players, ai: live?.ai ?? null });
+      return;
+    }
+    case '/api/map/live': {
+      // Small and cheap: the map polls this every second between full refreshes.
+      const live = await readLiveState();
+      sendJson(res, 200, live === null ? { t: null, players: [], ai: null } : {
+        t: live.t, stale: live.stale,
+        players: live.stale ? [] : live.players.map((p) => ({ steamId: p.steamId, loc: p.loc, yaw: p.yaw, health: p.vitals.health })),
+        ai: live.ai,
+      });
+      return;
+    }
+    case '/api/commands-settings':
+      sendJson(res, 200, await readCommandsSettings());
+      return;
+    case '/api/garage-settings':
+      sendJson(res, 200, await readGarageSettings());
       return;
     case '/api/garage':
       sendJson(res, 200, await listAll());
@@ -316,9 +532,9 @@ async function handle(
   }
 }
 
-export function startServer(store: Store): void {
+export function startServer(ctx: Ctx): void {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    void handle(req, res, store).catch((error: unknown) => {
+    void handle(req, res, ctx).catch((error: unknown) => {
       if (error instanceof ValidationError) {
         sendJson(res, 400, { error: error.message });
         return;

@@ -59,8 +59,19 @@ local INHERITED_SLOTS = {
     ElderSlot4A = "ElderMutationSlot4A", ElderSlot4B = "ElderMutationSlot4B",
 }
 
+-- UFunction getters, tried before the property names: Evrima keeps vitals in
+-- GAS attribute sets, so `pawn.Health` is nil on the live server (0.21.784)
+-- while GetHealth() etc. — the counterparts of the SetHealth/SetMaxHunger the
+-- restore calls — answer. Same list as StatsLogger's.
+local GETTERS = {
+    health = "GetHealth", stamina = "GetStamina", hunger = "GetHunger",
+    thirst = "GetThirst", oxygen = "GetOxygen", blood = "GetBlood",
+    maxHunger = "GetMaxHunger", maxThirst = "GetMaxThirst",
+    maxStamina = "GetMaxStamina", growth = "GetGrowth",
+}
+
 local function num(pawn, key)
-    return tonumber(H.readField(pawn, F[key], key))
+    return H.readVital(pawn, GETTERS[key], F[key], key)
 end
 
 --- FName field as a plain string, or nil when empty/None.
@@ -83,6 +94,8 @@ local function captureMutations(pawn)
     return out
 end
 
+local loggedNutrientFields = false
+
 local function captureNutrients(pawn)
     local ok, struct = pcall(function() return pawn.NutrientsStruct end)
     if not ok or struct == nil then
@@ -90,12 +103,34 @@ local function captureNutrients(pawn)
         return {}
     end
 
-    local out = {}
+    -- Every number / bool field under its real name, straight from the
+    -- struct's reflection data: the old hard-coded list guessed "CarbValue",
+    -- which this build does not have, so carbs were never stored.
+    local fields = {}
+    local names = H.structFields(struct)
+    for _, name in ipairs(names) do
+        local got, v = pcall(function() return struct[name] end)
+        if got and (type(v) == "number" or type(v) == "boolean") then fields[name] = v end
+    end
+    if #names > 0 and not loggedNutrientFields then
+        loggedNutrientFields = true
+        H.log("capture: NutrientsStruct fields: " .. table.concat(names, ", "))
+    end
+
+    local out = { fields = fields }
+    -- Legacy keys too, so an older bridge/panel still shows something.
     for _, field in ipairs(NUTRIENT_FIELDS) do
-        local got, v = pcall(function() return struct[field] end)
-        -- Schema keys are lowerCamel; struct fields are UpperCamel.
         local key = field:sub(1, 1):lower() .. field:sub(2)
-        if got then out[key] = v end
+        if fields[field] ~= nil then out[key] = fields[field] end
+    end
+    if #names == 0 then
+        -- Reflection unavailable: fall back to the known names.
+        for _, field in ipairs(NUTRIENT_FIELDS) do
+            local got, v = pcall(function() return struct[field] end)
+            if got and v ~= nil then
+                out[field:sub(1, 1):lower() .. field:sub(2)] = v
+            end
+        end
     end
     return out
 end
@@ -155,6 +190,9 @@ function C.capture(pawn)
     state.elderStacks = okElder and tonumber(stacks) or nil
 
     state.location, state.rotation = captureTransform(pawn)
+    -- The skin as the game had it, for the player portal. Not applied on
+    -- restore yet (restore.lua R.APPLY_SKIN).
+    state.skin = H.readSkin(pawn)
 
     -- Refuse to store a snapshot we cannot put back. Growth drives the whole
     -- restore order; without it the dino would come back as a juvenile.

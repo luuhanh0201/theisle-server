@@ -16,7 +16,7 @@ local json = require("shared.isle.json")
 
 local S = {}
 
-S.ROOT        = "ue4ss/Mods/DinoGarage/Saved"
+S.ROOT        = "Mods/DinoGarage/Saved"
 S.INDEX_PATH  = S.ROOT .. "/storage.json"
 S.SCHEMA      = 4    -- index format version, upstream
 S.SLOT_VERSION = 1   -- per-slot file version, upstream
@@ -174,6 +174,65 @@ function S.mostRecent(steamId)
         if at > bestAt then best, bestAt = slot, at end
     end
     return best
+end
+
+--- Where taken / cancelled slots go: history, never a silent delete. The
+--- directory is created by install.sh (Lua cannot mkdir).
+local function historyPath(steamId, slot, why)
+    return S.ROOT .. "/deleted/" .. steamId .. "__" .. slot .. "__" .. why .. "-" .. os.time() .. ".json"
+end
+
+--- Take a slot OUT of the garage for a redeem. A slot is used once: this is
+--- what stops "admin gives a dino, player redeems it, stores it again, redeems
+--- the original again". The file moves to deleted/ and the index entry goes,
+--- BEFORE the restore starts, so a second !redeem in the same seconds finds
+--- nothing. Hand the token to S.putBack if the restore fails.
+-- @return state, token   or nil, reason
+function S.take(steamId, slot)
+    local state = S.get(steamId, slot)
+    if state == nil then return nil, "empty or unreadable" end
+    local from = S.slotPath(steamId, slot)
+    local to = historyPath(steamId, slot, "redeemed")
+    local moved, err = os.rename(from, to)
+    if not moved then
+        H.logError("storage: could not take " .. from .. ": " .. tostring(err))
+        return nil, "could not take the slot"
+    end
+    S.loadIndex()
+    local entry = index.players[steamId]
+    local meta = entry and entry[slot] or nil
+    if entry ~= nil then
+        entry[slot] = nil
+        saveIndex()
+    end
+    return state, { steamId = steamId, slot = slot, from = from, to = to, meta = meta }
+end
+
+--- Undo S.take after a failed restore: the slot is back as it was.
+function S.putBack(token)
+    local moved, err = os.rename(token.to, token.from)
+    if not moved then
+        H.logError("storage: could not put back " .. token.to .. ": " .. tostring(err))
+        return false
+    end
+    S.loadIndex()
+    index.players[token.steamId] = index.players[token.steamId] or {}
+    index.players[token.steamId][token.slot] = token.meta or { capturedAt = os.time() }
+    saveIndex()
+    return true
+end
+
+--- Cancel a store whose dino could not be removed: keeping both the live dino
+--- and the slot would be a duplicate. Moved to deleted/, not destroyed.
+function S.discard(steamId, slot)
+    local moved = os.rename(S.slotPath(steamId, slot), historyPath(steamId, slot, "cancelled"))
+    S.loadIndex()
+    local entry = index.players[steamId]
+    if entry ~= nil then
+        entry[slot] = nil
+        saveIndex()
+    end
+    return moved ~= nil
 end
 
 --- Forget a slot. The file is left on disk on purpose: dropping a player's

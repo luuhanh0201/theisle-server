@@ -1,6 +1,6 @@
 ; mods.txt — which Lua mods UE4SS loads, and in what order.
 ; Format: <ModName> : <1 = enabled, 0 = disabled>
-; The name must match a directory under $BIN_DIR/ue4ss/Mods/ exactly.
+; The name must match a directory under $BIN_DIR/Mods/ exactly.
 ;
 ; To disable a crashing mod: set it to 0 and redeploy with --mods-only.
 ;
@@ -19,11 +19,15 @@ HelloIsle : 1
 ; event and labels it, so the stat is not inflated.
 DinoGarage : 1
 
+; !slay, !unstuck, !prime, !status. !slay kills and !unstuck teleports the
+; player's own dino (cooldowns from the panel); the other two only read.
+PlayerCommands : 1
+
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,
 ; and prints a PROBE SUMMARY to UE4SS.log. See docs/first-run.md.
 ; Set to 0 once the summary is clean.
-IsleProbe : 1
+IsleProbe : 0
 
 ; --- UE4SS built-ins ----------------------------------------------------
 ; All of these are client/debug tooling. On a dedicated server they are at best

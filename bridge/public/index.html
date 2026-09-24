@@ -33,9 +33,7 @@
     --neutral-soft: rgba(100, 116, 139, 0.12);
     --gold: #d4a017; --silver: #94a3b8; --bronze: #c2703d;
     --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
-    --map-bg: #e8efe9;
-    --map-grid: rgba(15, 23, 42, 0.07);
-    --map-ring: rgba(5, 150, 105, 0.18);
+    --map-bg: #0d2350;
     --radius: 14px;
   }
   :root[data-theme="dark"] {
@@ -62,9 +60,7 @@
     --neutral-soft: rgba(148, 163, 184, 0.12);
     --gold: #facc15; --silver: #cbd5e1; --bronze: #f59e0b;
     --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
-    --map-bg: #0b1210;
-    --map-grid: rgba(52, 211, 153, 0.07);
-    --map-ring: rgba(52, 211, 153, 0.14);
+    --map-bg: #0d2350;
   }
 
   /* ---- base ----------------------------------------------------------- */
@@ -432,6 +428,92 @@
   .hero .actions { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
   .hero .actions .status { font-size: 12px; max-width: 280px; text-align: right; }
 
+  /* ---- server tab ---------------------------------------------------- */
+  .phase { display: inline-flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .phase .led { width: 14px; height: 14px; border-radius: 50%; background: var(--muted); position: relative; }
+  .phase.running .led { background: var(--accent-2); }
+  .phase.running .led::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--accent-2); opacity: 0; animation: ping 1.8s ease-out infinite; }
+  .phase.starting .led, .phase.stopping .led { background: var(--dmg); animation: blink 1s steps(2) infinite; }
+  .phase.stopped .led { background: var(--muted); }
+  .phase.failed .led, .phase.unknown .led { background: var(--kill); }
+  @keyframes blink { 50% { opacity: .35; } }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+  .facts .tile .v { font-size: 15px; }
+  .power-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-soft {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px; border-radius: 10px; cursor: pointer;
+    font-weight: 700; font-size: 13.5px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text);
+  }
+  .btn-soft:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-soft:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-soft.sm { padding: 5px 10px; font-size: 12.5px; border-radius: 8px; }
+  a.btn-soft { text-decoration: none; }
+  .btn-soft svg.i { width: 16px; height: 16px; }
+  .op-box { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
+  .op-box .big { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .op-steps { display: flex; gap: 6px; flex-wrap: wrap; }
+  .op-steps span { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--surface-3); color: var(--muted); }
+  .op-steps span.on { background: var(--accent-soft); color: var(--accent); }
+  .op-steps span.done { color: var(--text-2); }
+  .rcon-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .rcon-grid h3 { color: var(--text); font-size: 13px; margin: 0 0 8px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row input, .row select { flex: 1; min-width: 120px; }
+  pre.out { margin: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; font-family: "JetBrains Mono", ui-monospace, monospace; color: var(--text-2); }
+  .check-grid { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .check-grid label { display: flex; align-items: center; gap: 8px; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text); font-weight: 600; cursor: pointer; font-size: 13px; }
+  .check-grid input { width: 15px; height: 15px; accent-color: var(--accent-2); }
+  .cfg-group { padding: 2px 0; }
+  .subtabs { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 0 0 18px; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--surface); }
+  .subtab-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .subtab-label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+  .subtabs a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none; background: var(--surface-2); }
+  .subtabs a:hover { color: var(--text); }
+  .subtabs a.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .subtabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dmg); }
+  .rd-verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
+  .rd-verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .rd-verdict.ready .led { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .rd-verdict.starting .led { background: var(--dmg); box-shadow: 0 0 0 4px var(--dmg-soft); }
+  .rd-verdict.down .led, .rd-verdict.problem .led { background: var(--kill); box-shadow: 0 0 0 4px var(--kill-soft); }
+  .rd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .rd-list li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+  .rd-list .ic { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 800; flex: none; }
+  .rd-list .ok .ic { background: var(--accent-soft); color: var(--accent); }
+  .rd-list .wait .ic { background: var(--dmg-soft); color: var(--dmg); }
+  .rd-list .fail .ic { background: var(--kill-soft); color: var(--kill); }
+  .rd-list b { display: block; font-size: 13px; }
+  .rd-list small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  @media (max-width: 640px) { .subtabs { padding: 8px; } .subtab-group { width: 100%; } }
+  .cfg-group input[type="number"], .cfg-group input[type="text"], .cfg-group select { width: 100%; }
+  /* Label / input / hint on shared rows: a label that wraps to two lines moves
+     its whole row down, so every input in the row stays level. */
+  .cfg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); column-gap: 14px; row-gap: 16px; }
+  .cfg-field { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 6px; min-width: 0; }
+  /* Label text top-aligned, key name always on its own second line: every
+     label reads "name / key" and starts at the same height. */
+  .cfg-field > label { align-self: start; margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+  .cfg-field > label > .mono { display: block; margin-top: 2px; font-size: 11px; }
+  .cfg-field > label > .cfg-unverified { margin: 4px 0 0; }
+  .cfg-field > input, .cfg-field > select { align-self: start; height: 38px; box-sizing: border-box; }
+  .cfg-field > .step-hint { margin-top: 0 !important; align-self: start; }
+  @supports not (grid-template-rows: subgrid) {
+    .cfg-field { grid-row: auto; grid-template-rows: auto auto 1fr; }
+    .cfg-field > label { min-height: 3.2em; }
+  }
+  .cfg-unverified { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600;
+    color: var(--dmg); background: var(--dmg-soft); vertical-align: middle; }
+  .audit-list { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow-y: auto; }
+  .audit-list li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 12.5px; }
+  .audit-list li:first-child { border-top: 0; }
+  .audit-list .a { font-weight: 700; color: var(--text); }
+  .audit-list .d { color: var(--muted); overflow-wrap: anywhere; }
+  .time-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .time-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px; }
+  .time-chip button { border: 0; background: none; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
+
   /* ---- leaderboard ---------------------------------------------------- */
   .rank-list { list-style: none; margin: 0; padding: 0; }
   .rank-list li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
@@ -448,9 +530,40 @@
 
   /* ---- map ------------------------------------------------------------ */
   .map-layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
-  @media (min-width: 1100px) { .map-layout { grid-template-columns: minmax(0, 1fr) 300px; } }
-  canvas#map { width: 100%; aspect-ratio: 1 / 1; max-height: 76vh; display: block; border-radius: 12px; background: var(--map-bg); }
+  @media (min-width: 1100px) { .map-layout { grid-template-columns: minmax(0, 1fr) 320px; } }
+  .map-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .map-wrap { position: relative; border-radius: 12px; overflow: hidden; background: var(--map-bg); }
+  .map-wrap:fullscreen { border-radius: 0; }
+  canvas#map { width: 100%; aspect-ratio: 1 / 1; max-height: 80vh; display: block; cursor: grab; touch-action: none; }
+  .map-wrap:fullscreen canvas#map { height: 100vh; max-height: none; aspect-ratio: auto; }
+  canvas#map.dragging { cursor: grabbing; }
+  .map-tools { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .map-tools button { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18); background: rgba(10,14,22,.72); color: #fff; font: 700 16px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+  .map-tools button:hover { background: rgba(10,14,22,.9); }
+  .map-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: #e2e8f0; font-size: 13px; }
+  .map-msg[hidden], .map-coord[hidden], .map-tip[hidden], .map-path[hidden] { display: none; }
+  .map-path { position: absolute; left: 10px; top: 10px; right: 56px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: 10px; background: rgba(10,14,22,.85); color: #f1f5f9; font-size: 12.5px; }
+  .map-path b { font-size: 13px; }
+  .map-path .m { color: #94a3b8; }
+  .map-path button { margin-left: auto; border: 1px solid rgba(255,255,255,.25); background: none; color: #fff; border-radius: 8px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  .trail-clear { border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+  .trail-clear:hover { color: var(--kill); background: var(--kill-soft); }
+  .map-coord { position: absolute; left: 10px; bottom: 10px; padding: 4px 8px; border-radius: 7px; background: rgba(10,14,22,.72); color: #e2e8f0; font: 600 11.5px/1.4 "JetBrains Mono", ui-monospace, monospace; pointer-events: none; }
+  .map-tip { position: absolute; z-index: 2; max-width: 260px; padding: 8px 10px; border-radius: 9px; background: rgba(10,14,22,.92); color: #f1f5f9; font-size: 12px; line-height: 1.45; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+  .map-tip b { font-size: 12.5px; }
+  .map-tip .m { color: #94a3b8; }
   .legend { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .layer-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .layer-list label { display: flex; align-items: center; gap: 9px; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .layer-list label:hover { background: var(--surface-2); }
+  .layer-list input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); box-shadow: none; }
+  .layer-list .sw { width: 12px; height: 12px; border-radius: 4px; flex: none; border: 1px solid rgba(0,0,0,.25); }
+  .layer-list .n { margin-left: auto; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .map-results { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
+  .map-results button { width: 100%; display: flex; gap: 8px; align-items: baseline; text-align: left; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+  .map-results button:hover { background: var(--surface-2); }
+  .map-results small { color: var(--muted); margin-left: auto; white-space: nowrap; }
+  #map-list li { cursor: pointer; }
 
   /* ---- chat ----------------------------------------------------------- */
   .chat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -574,7 +687,7 @@
         <h2>Các đời dino</h2><span class="sub">mọi dino người này đã chơi, mới nhất trước</span></div>
       <section class="card"><div class="card-body table-wrap">
         <table>
-          <thead><tr><th>Dino</th><th>Growth</th><th>Sống</th><th>Kill</th><th class="hide-sm">Gây / chịu dmg</th><th>Kết thúc</th><th class="hide-sm">Spawn lúc</th></tr></thead>
+          <thead><tr><th>Dino</th><th>Growth</th><th>Sống</th><th>Kill</th><th class="hide-sm">Gây / chịu dmg</th><th>Kết thúc</th><th class="hide-sm">Spawn lúc</th><th></th></tr></thead>
           <tbody id="player-lives"></tbody>
         </table>
       </div></section>
@@ -603,16 +716,42 @@
 
     <!-- Bản đồ -->
     <div data-view="map" hidden>
-      <div class="page-head"><div><h1>Bản đồ trực tiếp</h1><p>Vị trí người chơi đang online và vệt 2 phút gần nhất.</p></div></div>
+      <div class="page-head"><div><h1>Bản đồ trực tiếp</h1><p>Gateway: người chơi đang online, vệt di chuyển gần nhất, vùng di cư, tuần tra, sanctuary, nước, hang và nguồn thức ăn.</p></div></div>
       <div class="map-layout">
         <section class="card"><div class="card-body">
-          <canvas id="map"></canvas>
+          <div class="map-wrap" id="map-wrap">
+            <canvas id="map"></canvas>
+            <div class="map-tools">
+              <button type="button" id="map-zin" title="Phóng to">+</button>
+              <button type="button" id="map-zout" title="Thu nhỏ">−</button>
+              <button type="button" id="map-reset" title="Xem toàn đảo">⤢</button>
+              <button type="button" id="map-full" title="Toàn màn hình">⛶</button>
+            </div>
+            <div class="map-coord" id="map-coord" hidden></div>
+            <div class="map-tip" id="map-tip" hidden></div>
+            <div class="map-msg" id="map-msg">Đang tải bản đồ…</div>
+            <div class="map-path" id="map-path" hidden></div>
+          </div>
           <div class="legend" id="map-legend"></div>
         </div></section>
-        <section class="card">
-          <div class="card-head"><h2>Trên bản đồ</h2></div>
-          <div class="card-body"><ul class="rank-list" id="map-list"></ul></div>
-        </section>
+        <div class="map-side">
+          <section class="card">
+            <div class="card-head"><h2>Trên bản đồ</h2><span class="sub">bấm để tới vị trí</span>
+              <button type="button" class="btn-soft sm" id="map-clear-all" style="margin-left:auto" title="Chỉ ẩn trên trình duyệt này; vệt mới vẫn vẽ tiếp">Xóa mọi vệt</button></div>
+            <div class="card-body"><ul class="rank-list" id="map-list"></ul></div>
+          </section>
+          <section class="card">
+            <div class="card-head"><h2>Tìm địa điểm</h2></div>
+            <div class="card-body">
+              <input type="search" id="map-search" placeholder="Hồ, hang, MZ 05, salt lick, Boar…" autocomplete="off" style="width:100%">
+              <ul class="map-results" id="map-results"></ul>
+            </div>
+          </section>
+          <section class="card">
+            <div class="card-head"><h2>Lớp hiển thị</h2></div>
+            <div class="card-body"><ul class="layer-list" id="map-layers"></ul></div>
+          </section>
+        </div>
       </div>
     </div>
 
@@ -620,6 +759,182 @@
     <div data-view="chat" hidden>
       <div class="page-head"><div><h1>Chat</h1><p>Toàn bộ chat trong game, kể cả lệnh <span class="mono">!store</span> / <span class="mono">!redeem</span>.</p></div></div>
       <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
+    </div>
+
+    <!-- Server -->
+    <div data-view="server" hidden>
+      <div class="page-head"><div><h1>Server</h1><p id="srv-sub">Bật, tắt, khởi động lại, thiết lập và cấu hình game server.</p></div></div>
+      <nav class="subtabs" id="srv-subtabs" aria-label="Mục của trang Server"></nav>
+
+      <div data-sub-panel="status">
+          <section class="card"><div class="card-body">
+            <div id="srv-phase"></div>
+            <div class="facts" id="srv-facts"></div>
+            <div class="power-buttons">
+              <button type="button" class="btn-soft" id="srv-start">▶ Bật server</button>
+              <button type="button" class="btn-soft" id="srv-restart">↻ Khởi động lại</button>
+              <button type="button" class="btn-danger" id="srv-stop">■ Tắt server</button>
+            </div>
+            <div id="srv-op"></div>
+          </div></section>
+          <section class="card" style="margin-top:18px">
+            <div class="card-head"><h2>Sẵn sàng trên game</h2><span class="sub" id="rd-sub"></span></div>
+            <div class="card-body">
+              <div id="rd-verdict" class="rd-verdict"></div>
+              <ul class="rd-list" id="rd-checks"></ul>
+              <div class="step-hint" id="rd-join" style="margin-top:10px"></div>
+              <div class="step-hint" style="margin-top:6px">Danh sách server trong game do máy chủ của Warp Hosting (<span class="mono">api.warphosting.com.au</span>) cung cấp và chỉ trả cho game client có vé Steam — panel không đọc được danh sách đó. Thay vào đó panel kiểm tra mọi điều kiện để server được liệt kê và vào được: tiến trình, mod, map, đăng nhập EOS, các cổng, và máy chủ danh sách còn hoạt động. Đủ hết = server hiện trong game (sau khi khởi động có thể mất 2–5 phút để danh sách cập nhật). Người chơi vào được là bằng chứng chắc chắn nhất.</div>
+            </div>
+          </section>
+      </div>
+
+      <div data-sub-panel="schedule" hidden>
+          <section class="card">
+            <div class="card-head"><h2>Khởi động lại định kỳ</h2><span class="sub" id="sch-next"></span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="time-chips" id="sch-times"></div>
+              <div class="row">
+                <input type="time" id="sch-add-time" aria-label="Giờ">
+                <button type="button" class="btn-soft" id="sch-add">+ Thêm giờ</button>
+              </div>
+              <div class="row">
+                <label for="sch-countdown" style="margin:0;flex:none">Báo trước</label>
+                <select id="sch-countdown">
+                  <option value="0">không báo</option><option value="1">1 phút</option><option value="5">5 phút</option>
+                  <option value="10">10 phút</option><option value="15">15 phút</option><option value="30">30 phút</option>
+                </select>
+                <button type="button" class="btn" id="sch-save">Lưu lịch</button>
+              </div>
+              <div class="step-hint">Giờ theo múi giờ của VPS (<span id="sch-tz"></span>). Người chơi được báo đếm ngược qua RCON.</div>
+            </div>
+          </section>
+      </div>
+
+      <div data-sub-panel="rcon" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚡</span>
+        <h2>RCON trực tiếp</h2><span class="sub">có hiệu lực ngay, không cần khởi động lại — mất khi server khởi động lại</span></div>
+      <section class="card"><div class="card-body">
+        <div id="rcon-off" class="banner tone-dmg" hidden style="margin-bottom:14px">RCON chưa được cấu hình trên bridge (RCON_PASSWORD trống) — các thao tác dưới đây sẽ không chạy.</div>
+        <div class="rcon-grid">
+          <div>
+            <h3>Thông báo toàn server</h3>
+            <div class="row"><input id="rc-announce" maxlength="200" placeholder="vd: Sự kiện săn Rex lúc 21h!"><button type="button" class="btn-soft" data-rcon="announce" data-arg="rc-announce">Gửi</button></div>
+          </div>
+          <div>
+            <h3>Thao tác nhanh</h3>
+            <div class="row"><button type="button" class="btn-soft" data-rcon="save">💾 Lưu game</button>
+              <button type="button" class="btn-soft" data-rcon="wipeCorpses" data-confirm="Dọn toàn bộ xác trên map?">🧹 Dọn xác</button></div>
+          </div>
+          <div>
+            <h3>Bật / tắt</h3>
+            <div class="step-hint" style="margin-bottom:8px">Game không báo trạng thái hiện tại — mỗi lần bấm là <b>đảo</b> trạng thái. Kiểm tra lại bằng "Thông tin server".</div>
+            <div class="row" id="rc-toggles"></div>
+          </div>
+          <div>
+            <h3>AI</h3>
+            <div class="row"><input id="rc-density" type="number" min="0" max="100" step="0.1" placeholder="mật độ, vd 1"><button type="button" class="btn-soft" data-rcon="adjustAiDensity" data-arg="rc-density">Đặt mật độ</button></div>
+            <div class="row" style="margin-top:8px"><input id="rc-ai-classes" placeholder="loài AI cần tắt, cách nhau dấu phẩy"><button type="button" class="btn-soft" data-rcon="disableAiClasses" data-arg="rc-ai-classes">Tắt AI loài</button></div>
+          </div>
+          <div>
+            <h3>Loài được chơi (tạm thời)</h3>
+            <div class="row"><input id="rc-class" placeholder="vd: Carnotaurus"><button type="button" class="btn-soft" data-rcon="addPlayable" data-arg="rc-class">Cho phép</button>
+              <button type="button" class="btn-soft" data-rcon="removePlayable" data-arg="rc-class">Cấm</button></div>
+            <div class="step-hint" style="margin-top:6px">Mất khi server khởi động lại — muốn giữ lâu dài thì đặt ở <a href="#server/cfg%3Aspawn">Cấu hình game → Loài &amp; điểm spawn</a>.</div>
+          </div>
+          <div>
+            <h3>Whitelist</h3>
+            <div class="row"><input id="rc-wl" placeholder="SteamID64, cách nhau dấu phẩy"><button type="button" class="btn-soft" data-rcon="addWhitelistIds" data-arg="rc-wl">Thêm</button>
+              <button type="button" class="btn-soft" data-rcon="removeWhitelistIds" data-arg="rc-wl">Bỏ</button></div>
+          </div>
+        </div>
+        <h3 style="color:var(--text);font-size:13px;margin:20px 0 8px">Xem</h3>
+        <div class="row" style="margin-bottom:10px">
+          <button type="button" class="btn-soft" data-rcon="serverDetails">Thông tin server</button>
+          <button type="button" class="btn-soft" data-rcon="getPlayerList">Người chơi</button>
+          <button type="button" class="btn-soft" data-rcon="getPlayables">Loài được chơi</button>
+          <button type="button" class="btn-soft" data-rcon="getQueueStatus">Hàng chờ</button>
+        </div>
+        <pre class="out" id="rc-out">Kết quả RCON hiện ở đây.</pre>
+      </div></section>
+      </div>
+
+      <div data-sub-panel="cfg" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚙</span>
+        <h2 id="cfg-title">Cấu hình</h2><span class="sub">ghi vào Game.ini — có hiệu lực từ lần khởi động sau</span></div>
+      <section class="card"><div class="card-body">
+        <div id="cfg-pending" class="banner tone-dmg" hidden style="margin-bottom:14px">Cấu hình đã đổi sau lần khởi động gần nhất — cần <b>khởi động lại</b> để có hiệu lực.</div>
+        <div id="cfg-error" class="warnbox" hidden style="margin-bottom:14px"></div>
+        <form id="cfg-form" autocomplete="off" style="display:flex;flex-direction:column;gap:16px">
+          <div id="cfg-fields" style="display:flex;flex-direction:column;gap:12px"></div>
+          <div class="row">
+            <button type="submit" class="btn">Lưu cấu hình</button>
+            <button type="button" class="btn-soft" id="cfg-save-restart">Lưu &amp; khởi động lại…</button>
+            <button type="button" class="link-btn" id="cfg-reset">Bỏ thay đổi</button>
+          </div>
+          <div class="step-hint">Nút Lưu ghi <b>mọi nhóm</b> cấu hình cùng lúc (nhóm có chấm cam là nhóm đang có thay đổi chưa lưu). Mật khẩu server, RCON, các cổng, map, EOS và danh sách admin vẫn do file <span class="mono">.env</span> quản lý (deploy) — sửa sai những mục đó có thể khoá mất panel. Mọi mục trong các nhóm do panel quản lý: deploy và mỗi lần server khởi động đều giữ đúng giá trị panel đã lưu.
+            Danh sách key lấy từ chính server (bản 0.21.784). Nhãn <span class="cfg-unverified">chưa xác minh</span> = game đọc key này theo tên nhưng panel chưa đọc ngược được giá trị để kiểm chứng.</div>
+        </form>
+      </div></section>
+      </div>
+
+      <div data-sub-panel="garage-settings" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-gar" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🦖</span>
+        <h2>Cấu hình · Gara</h2><span class="sub">lưu riêng, không nằm trong Game.ini</span></div>
+      <section class="card">
+        <div class="card-head"><h2>Cài đặt gara</h2><span class="sub">có hiệu lực ngay ở lần <span class="mono">!redeem</span> kế tiếp — không cần khởi động lại</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+          <div class="row" style="align-items:end">
+            <div style="flex:1;min-width:260px"><label for="gs-redeem-at">Khi lấy dino ra (<span class="mono">!redeem</span>), dino xuất hiện ở</label>
+              <select id="gs-redeem-at">
+                <option value="current">Chỗ người chơi đang đứng</option>
+                <option value="stored">Điểm đã cất (vị trí lúc gõ !store)</option>
+                <option value="choice">Người chơi tự chọn khi gõ lệnh</option>
+              </select></div>
+          </div>
+          <div class="cfg-grid">
+            <div class="cfg-field"><label for="gs-max-slots">Số slot mỗi người chơi<span class="mono">maxSlots</span></label>
+              <input id="gs-max-slots" type="number" min="1" max="20" step="1">
+              <div class="step-hint">Tối đa bao nhiêu dino được cất bằng !store (slot admin tạo cũng tính). Mặc định 2.</div></div>
+            <div class="cfg-field"><label for="gs-countdown">Đếm ngược khi cất (giây)<span class="mono">storeCountdown</span></label>
+              <input id="gs-countdown" type="number" min="0" max="300" step="1">
+              <div class="step-hint">Từ lúc gõ !store tới khi dino vào gara. Chưa lưu gì trong lúc đếm; thoát game = huỷ. Mặc định 30.</div></div>
+            <div class="cfg-field"><label for="gs-cooldown">Chờ giữa hai lần dùng gara (giây)<span class="mono">cooldown</span></label>
+              <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
+              <div class="step-hint">Áp cho cả !store và !redeem, tính riêng từng người. Mặc định 60.</div></div>
+          </div>
+          <div class="row"><button type="button" class="btn" id="gs-save">Lưu cài đặt</button></div>
+          <div class="step-hint" id="gs-help"></div>
+        </div>
+      </section>
+      </div>
+
+      <div data-sub-panel="commands-settings" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⌨</span>
+        <h2>Cấu hình · Lệnh người chơi</h2><span class="sub">lưu riêng, có hiệu lực ngay — không cần khởi động lại</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="cfg-grid">
+          <div class="cfg-field"><label for="pc-slay-cd">Chờ giữa hai lần !slay (giây)<span class="mono">slayCooldown</span></label>
+            <input id="pc-slay-cd" type="number" min="0" max="86400" step="1">
+            <div class="step-hint"><span class="mono">!slay</span> — chết ngay dino đang chơi. Mặc định 300.</div></div>
+          <div class="cfg-field"><label for="pc-unstuck-cd">Chờ giữa hai lần !unstuck (giây)<span class="mono">unstuckCooldown</span></label>
+            <input id="pc-unstuck-cd" type="number" min="0" max="86400" step="1">
+            <div class="step-hint"><span class="mono">!unstuck</span> — về điểm gần nhất dino vừa đứng trên mặt đất (cách ≥ 3 m, nâng 0,5 m — không thả từ trên cao). Mặc định 600.</div></div>
+        </div>
+        <div>
+          <label>Lệnh đang bật</label>
+          <div class="check-grid" id="pc-enabled"></div>
+          <div class="step-hint" style="margin-top:6px"><span class="mono">!prime</span> — dino có phải prime elder / đủ điều kiện prime không · <span class="mono">!status</span> — loài, growth, máu, stamina, đói, khát, huyết, oxy.</div>
+        </div>
+        <div class="row"><button type="button" class="btn" id="pc-save">Lưu cài đặt</button></div>
+      </div></section>
+      </div>
+
+      <div data-sub-panel="audit" hidden>
+        <section class="card">
+          <div class="card-head"><h2>Lịch sử thao tác</h2><span class="sub">mọi thao tác admin trên panel</span></div>
+          <div class="card-body"><ul class="audit-list" id="srv-audit"></ul></div>
+        </section>
+      </div>
     </div>
 
     <!-- Gara -->
@@ -681,6 +996,12 @@
                   <button type="button" data-g="100">Trưởng thành 100%</button>
                 </div>
                 <div class="step-hint">Giới tính không chọn được: người chơi chọn khi respawn, và restore không có cách đổi nó.</div>
+                <div class="row" style="margin-top:10px;align-items:center">
+                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" id="f-stomach" checked style="width:auto"> Dạ dày đầy khi lấy ra</label>
+                  <label for="f-nutrient" style="margin:0 0 0 12px;flex:none">Dinh dưỡng</label>
+                  <input id="f-nutrient" type="number" min="0" max="100" step="5" value="50" style="width:90px"> <span class="muted">%</span>
+                </div>
+                <div class="step-hint">Dạ dày được lấp đầy đúng mức tối đa game báo cho dino đó. Mức dinh dưỡng % áp dụng khi đã đo được giá trị tối đa của từng chất trên server (đang kiểm tra).</div>
               </div>
 
               <div class="step">
@@ -802,6 +1123,7 @@ const PATHS = {
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
 };
 const icon = (name) => `<svg class="i" viewBox="0 0 24 24">${PATHS[name] ?? ''}</svg>`;
+PATHS.server = '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>';
 PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>';
 
 // --- admin actions ------------------------------------------------------------
@@ -1043,7 +1365,7 @@ function renderFeed(el, events, emptyText = 'Chưa có sự kiện') {
 
 const TABS = [
   ['overview', 'Tổng quan'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'],
-  ['map', 'Bản đồ'], ['chat', 'Chat'], ['garage', 'Gara'],
+  ['map', 'Bản đồ'], ['chat', 'Chat'], ['garage', 'Gara'], ['server', 'Server'],
 ];
 $('tabs').innerHTML = TABS.map(([id, label]) =>
   `<a href="#${id}" data-tab="${id}">${icon(id)}<span class="label">${label}</span><span class="count" id="count-${id}" hidden></span></a>`).join('');
@@ -1189,7 +1511,7 @@ function renderPlayer(d) {
   renderFeed($('player-timeline'), d.timeline);
   renderStoredDinos(d.garage);
   $('player-garage-sub').innerHTML += ` · <a class="plink" style="color:var(--accent)" href="#garage/${esc(id)}">+ tạo dino cho người này</a>`;
-  renderLives(d.lives, p?.online ?? false);
+  renderLives(d.lives, p?.online ?? false, d.steamId);
 }
 
 /** What happened to the last kill command sent for this player. */
@@ -1343,11 +1665,13 @@ function lifeEnd(l, online, isCurrent) {
   return '<span class="chip tone-neutral">không rõ</span>';
 }
 
-function renderLives(lives, online) {
+// The bridge keeps the whole path of the last PATH_LIVES (5) lives.
+const PATH_LIVES = 5;
+function renderLives(lives, online, steamId) {
   $('lives-ico').innerHTML = icon('growth');
   const tbody = $('player-lives');
   if (lives.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">Chưa thấy người này spawn dino nào</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">Chưa thấy người này spawn dino nào</td></tr>';
     return;
   }
   tbody.innerHTML = lives.map((l, i) => {
@@ -1363,6 +1687,7 @@ function renderLives(lives, online) {
       <td class="hide-sm">${num(l.damageDealt)} <span class="muted">/ ${num(l.damageTaken)}</span></td>
       <td>${lifeEnd(l, online, i === 0)}</td>
       <td class="hide-sm muted">${esc(dateTime(l.spawnedAt))}</td>
+      <td>${i < PATH_LIVES ? `<a class="btn-soft sm" style="white-space:nowrap" href="#map/path/${esc(encodeURIComponent(steamId))}/${l.spawnedAt}">Đường đi</a>` : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -1398,88 +1723,765 @@ function renderLeaderboard(b) {
 }
 
 // --- live map -----------------------------------------------------------------
+// Base image, places and zones: VulnonaMAP (src/vulnona.ts; `node
+// dist/cli-fetch-map.js` puts them in public/map/). Players: /api/map on every
+// refresh. Map units = game world units / 1000, in the order the game SHOWS a
+// location ("349,211.187, 148,696.686, 21,345.568" = world Y, X, Z): map X
+// (down the image) is world Y, map Y (to the right) is world X.
 
-// Bounds only ever grow, so the view does not jump every time someone moves.
-let bounds = null;
+const LAYERS = [
+  ['ai', 'AI đang có (live)', '#ef4444', true],
+  ['trails', 'Vệt di chuyển', '#f8fafc', true],
+  ['migration', 'Vùng di cư (MZ)', '#22c55e', true],
+  ['sanctuary', 'Sanctuary', '#e879f9', true],
+  ['patrol', 'Vùng tuần tra (PZ)', '#f97316', false],
+  ['area', 'Khu vực', '#f8fafc', true],
+  ['water', 'Nguồn nước', '#38bdf8', true],
+  ['landmark', 'Địa danh & căn cứ', '#fbbf24', true],
+  ['cave', 'Hang & đường hầm', '#c4b5fd', false],
+  ['mud', 'Bãi bùn (wallow)', '#d97706', false],
+  ['air', 'Luồng khí (loài bay)', '#7dd3fc', false],
+  ['road', 'Đường mòn', '#e7e5e4', false],
+  ['plant', 'Thực vật & quả (tham khảo)', '#84cc16', false],
+  ['mineral', 'Đá muối, gastro, nghêu (tham khảo)', '#e2e8f0', false],
+];
+// VulnonaMAP's "animal" spots are where players once saw AI. Evrima spawns AI
+// around players and despawns it, so those spots are not AI you can meet: the
+// map shows only the live list (layer "ai", from the server). Not drawn.
+const STATIC_AI_LAYER = 'animal';
+const LAYER = Object.fromEntries(LAYERS.map(([id, label, color, on]) => [id, { label, color, on }]));
+const ZONE_VN = { migration: 'Vùng di cư', patrol: 'Vùng tuần tra', sanctuary: 'Sanctuary', mud: 'Bãi bùn' };
+const FOOD_VN = {
+  Boar: 'Lợn rừng', Chicken: 'Gà', Deer: 'Hươu', Goat: 'Dê', Rabbit: 'Thỏ', Fish: 'Cá', Crab: 'Cua', Frog: 'Ếch',
+  Turtle: 'Rùa', Banana: 'Chuối', Coconut: 'Dừa', Jackfruit: 'Mít', Mango: 'Xoài', Melon: 'Dưa', Orange: 'Cam',
+  Papaya: 'Đu đủ', Pumpkin: 'Bí ngô', Cashew: 'Hạt điều', Potato: 'Khoai tây', Radish: 'Củ cải',
+  SaltRock: 'Đá muối (salt lick)', ClamRock: 'Đá nghêu',
+};
+const foodName = (n) => (FOOD_VN[n] ? `${FOOD_VN[n]} · ${n}` : n);
 
-function renderMap(players) {
-  const canvas = $('map');
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.clientWidth, Hh = canvas.clientHeight;
-  if (W === 0) return;
-  canvas.width = W * dpr;
-  canvas.height = Hh * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  const css = getComputedStyle(document.documentElement);
-  const color = (v) => css.getPropertyValue(v).trim();
+const lm = {
+  loading: null, data: null, img: null, failed: null,
+  players: [],
+  ai: null,            // /api/map .ai: the AI pawns alive on the server now
+  // steamId -> { from, to, t0 } in map units: the dot glides to each new
+  // position (live file, 1 s) instead of jumping.
+  pos: new Map(),
+  view: null, fit: 1, size: '', touched: false,   // view = { s, ox, oy }: screen px per image px, image origin
+  on: new Set(LAYERS.filter((l) => l[3]).map((l) => l[0])),
+  hover: null, flash: null, raf: 0,
+  pointers: new Map(), drag: null, pinch: null,
+  // steamId -> trail points up to this time (unix s, the bridge's clock) are hidden: "xóa vệt".
+  cleared: {},
+  path: null, pathKey: null,   // whole-life path shown from the player page (#map/path/<id>/<spawnedAt>)
+};
+try {
+  const saved = JSON.parse(localStorage.getItem('mapTrailCleared') ?? 'null');
+  if (saved && typeof saved === 'object') lm.cleared = saved;
+} catch { /* nothing saved */ }
+function saveCleared() {
+  try { localStorage.setItem('mapTrailCleared', JSON.stringify(lm.cleared)); } catch { /* not remembered */ }
+}
+const visibleTrail = (p) => p.trail.filter((pt) => pt.t > (lm.cleared[p.steamId] ?? 0));
+/** Hide what the trail has so far; new movement keeps drawing. */
+function clearTrail(p) {
+  const last = p.trail[p.trail.length - 1];
+  if (last) lm.cleared[p.steamId] = last.t;
+  saveCleared();
+  requestDraw();
+}
+try {
+  const saved = JSON.parse(localStorage.getItem('mapLayers.v3') ?? 'null');
+  if (Array.isArray(saved)) lm.on = new Set(saved.filter((id) => LAYER[id]));
+} catch { /* nothing saved, or storage blocked: defaults */ }
+function saveLayers() {
+  try { localStorage.setItem('mapLayers.v3', JSON.stringify([...lm.on])); } catch { /* not remembered */ }
+}
 
-  for (const p of players) {
-    for (const l of [p.loc, ...p.trail]) {
-      if (bounds === null) bounds = { x0: l.x, x1: l.x, y0: l.y, y1: l.y };
-      bounds.x0 = Math.min(bounds.x0, l.x); bounds.x1 = Math.max(bounds.x1, l.x);
-      bounds.y0 = Math.min(bounds.y0, l.y); bounds.y1 = Math.max(bounds.y1, l.y);
+function loadMapData() {
+  lm.loading ??= (async () => {
+    try {
+      const data = await getJson('map/gateway.json');
+      data.features = data.features.filter((f) => f.layer !== STATIC_AI_LAYER);
+      const img = new Image();
+      img.src = `map/${encodeURIComponent(data.image)}?v=${encodeURIComponent(data.updated)}`;
+      await img.decode();
+      lm.data = data;
+      lm.img = img;
+      $('map-msg').hidden = true;
+      renderLayerList();
+      $('map-legend').innerHTML = `Bản đồ &amp; dữ liệu địa điểm: <a href="${esc(data.source.url)}" target="_blank" rel="noopener">${esc(data.source.name)}</a> (${esc(data.source.author)}) · ${esc(data.name)}, cập nhật ${esc(data.updated)} · ảnh nền chụp trong game, bản quyền thuộc nhà phát triển game · kéo để di chuyển, cuộn để phóng to`;
+      requestDraw();
+    } catch (e) {
+      lm.failed = e.message ?? String(e);
+      $('map-msg').innerHTML = `Chưa có dữ liệu bản đồ (${esc(lm.failed)}).<br>Trên máy deploy: <span class="mono">cd bridge &amp;&amp; npm run build &amp;&amp; node dist/cli-fetch-map.js</span>, rồi deploy lại bridge.`;
     }
-  }
+  })();
+  return lm.loading;
+}
 
-  // Tactical grid with range rings.
-  ctx.strokeStyle = color('--map-grid');
-  ctx.lineWidth = 1;
-  for (let i = 1; i < 12; i++) {
-    ctx.beginPath(); ctx.moveTo((W / 12) * i, 0); ctx.lineTo((W / 12) * i, Hh); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, (Hh / 12) * i); ctx.lineTo(W, (Hh / 12) * i); ctx.stroke();
-  }
-  ctx.strokeStyle = color('--map-ring');
-  for (let r = 1; r <= 3; r++) {
-    ctx.beginPath(); ctx.arc(W / 2, Hh / 2, (Math.min(W, Hh) / 6.5) * r, 0, Math.PI * 2); ctx.stroke();
-  }
+// Map units <-> image px <-> screen px.
+function toImg([x, y]) {
+  const b = lm.data.bounds;
+  return [(y - b.minY) / (b.maxY - b.minY) * lm.img.naturalWidth, (x - b.minX) / (b.maxX - b.minX) * lm.img.naturalHeight];
+}
+function scr(p) {
+  const [ix, iy] = toImg(p);
+  return [lm.view.ox + ix * lm.view.s, lm.view.oy + iy * lm.view.s];
+}
+function fromScr(sx, sy) {
+  const b = lm.data.bounds;
+  const ix = (sx - lm.view.ox) / lm.view.s, iy = (sy - lm.view.oy) / lm.view.s;
+  return [iy / lm.img.naturalHeight * (b.maxX - b.minX) + b.minX, ix / lm.img.naturalWidth * (b.maxY - b.minY) + b.minY];
+}
+// Checked against a live player (2026-09-24): pawn (x 148697, y 349211) is the
+// in-game location "349,211.187, 148,696.686" — the game lists Y first.
+const unitsOf = (loc) => [loc.y / 1000, loc.x / 1000];
 
-  const list = $('map-list');
-  if (bounds === null) {
-    $('map-legend').textContent = 'Chưa có vị trí nào — cần ít nhất một người chơi đang điều khiển dino.';
-    list.innerHTML = '<li class="empty">Không có ai trên bản đồ</li>';
+const TWEEN_MS = 900;
+/** Where a player's dot is drawn now (between its last two known positions). */
+function shownPos(p) {
+  const e = lm.pos.get(p.steamId);
+  if (!e) return unitsOf(p.loc);
+  const k = Math.min(1, (performance.now() - e.t0) / TWEEN_MS);
+  return [e.from[0] + (e.to[0] - e.from[0]) * k, e.from[1] + (e.to[1] - e.from[1]) * k];
+}
+function moveTo(p) {
+  const to = unitsOf(p.loc);
+  const e = lm.pos.get(p.steamId);
+  if (e && e.to[0] === to[0] && e.to[1] === to[1]) return;
+  // A jump (teleport, respawn) is not glided across the map.
+  const from = e ? shownPos(p) : to;
+  const far = Math.hypot(to[0] - from[0], to[1] - from[1]) > 60;   // 60 map units = 600 m
+  lm.pos.set(p.steamId, { from: far ? to : from, to, t0: performance.now() });
+}
+const tweening = () => [...lm.pos.values()].some((e) => performance.now() - e.t0 < TWEEN_MS);
+/** Radius in map units along X / Y → screen px. */
+const rX = (r) => r / (lm.data.bounds.maxX - lm.data.bounds.minX) * lm.img.naturalHeight * lm.view.s;
+const rY = (r) => r / (lm.data.bounds.maxY - lm.data.bounds.minY) * lm.img.naturalWidth * lm.view.s;
+
+function centerOf(f) {
+  if (f.at) return f.at;
+  const all = f.pts.flat();
+  const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+  return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+}
+
+function fitView(cw, ch) {
+  lm.fit = Math.min(cw / lm.img.naturalWidth, ch / lm.img.naturalHeight);
+  lm.view = { s: lm.fit, ox: (cw - lm.img.naturalWidth * lm.fit) / 2, oy: (ch - lm.img.naturalHeight * lm.fit) / 2 };
+}
+function zoomAt(sx, sy, k) {
+  const v = lm.view;
+  const s = Math.min(lm.fit * 24, Math.max(lm.fit * 0.8, v.s * k));
+  v.ox = sx - (sx - v.ox) * (s / v.s);
+  v.oy = sy - (sy - v.oy) * (s / v.s);
+  v.s = s;
+  lm.touched = true;
+  requestDraw();
+}
+function flyTo(pt, zoom = 4) {
+  if (!lm.view) return;
+  const canvas = $('map');
+  lm.view.s = Math.max(lm.view.s, lm.fit * zoom);
+  const [ix, iy] = toImg(pt);
+  lm.view.ox = canvas.clientWidth / 2 - ix * lm.view.s;
+  lm.view.oy = canvas.clientHeight / 2 - iy * lm.view.s;
+  lm.touched = true;
+  requestDraw();
+}
+
+function requestDraw() {
+  if (!lm.raf) lm.raf = requestAnimationFrame(drawMap);
+}
+
+const hexA = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, '0');
+
+function traceShape(ctx, f) {
+  ctx.beginPath();
+  if (f.kind === 'circle') {
+    const [cx, cy] = scr(f.at);
+    // The game's X is vertical on screen: r[0] (along X) is the vertical radius.
+    ctx.ellipse(cx, cy, Math.max(1, rY(f.r[1])), Math.max(1, rX(f.r[0])), (f.rot ?? 0) * Math.PI / 180, 0, Math.PI * 2);
     return;
   }
-
-  // Square scale with a margin, so distances read the same on both axes.
-  const span = Math.max(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0, 20000) * 1.15;
-  const cx = (bounds.x0 + bounds.x1) / 2, cy = (bounds.y0 + bounds.y1) / 2;
-  const sx = (x) => W / 2 + ((x - cx) / span) * Math.min(W, Hh);
-  const sy = (y) => Hh / 2 + ((y - cy) / span) * Math.min(W, Hh);
-
-  const text = color('--text');
-  ctx.font = '600 12px Inter, ui-sans-serif, system-ui, sans-serif';
-  for (const p of players) {
-    const c = playerColor(p.steamId);
-    if (p.trail.length > 1) {
-      ctx.strokeStyle = c; ctx.globalAlpha = 0.45; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      p.trail.forEach((l, i) => (i === 0 ? ctx.moveTo(sx(l.x), sy(l.y)) : ctx.lineTo(sx(l.x), sy(l.y))));
-      ctx.stroke();
-      ctx.setLineDash([]); ctx.globalAlpha = 1;
-    }
-    const x = sx(p.loc.x), y = sy(p.loc.y);
-    const low = p.health !== null && p.health < 30;
-    ctx.fillStyle = c; ctx.globalAlpha = 0.18;
-    ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = low ? color('--kill') : 'rgba(255,255,255,0.85)';
-    ctx.stroke();
-    ctx.fillStyle = text;
-    ctx.fillText(p.name ?? shortId(p.steamId), x + 12, y - 2);
-    ctx.fillStyle = color('--muted');
-    ctx.fillText(dino(p.species), x + 12, y + 12);
+  for (const ring of f.pts) {
+    ring.forEach((p, i) => { const [x, y] = scr(p); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+    if (f.kind === 'poly') ctx.closePath();
   }
-  $('map-legend').textContent =
-    `Tọa độ thô của game, chưa khớp ảnh bản đồ · 1 ô lưới ≈ ${num(span / 12 / 100)} m · viền đỏ: HP < 30`;
-  list.innerHTML = players.length === 0 ? '<li class="empty">Không có ai trên bản đồ</li>'
-    : players.map((p) => `<li><span class="avatar sm" style="background:${playerColor(p.steamId)}">${esc(initials(p.name, p.steamId))}</span>
+}
+
+function drawText(ctx, text, x, y, { font, color, align = 'center' }) {
+  ctx.font = font;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  const lines = String(text).split('\n');
+  const lh = parseInt(font.match(/(\d+)px/)[1], 10) * 1.15;
+  lines.forEach((line, i) => {
+    const ly = y + (i - (lines.length - 1) / 2) * lh;
+    ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(2,6,23,.78)'; ctx.strokeText(line, x, ly);
+    ctx.fillStyle = color; ctx.fillText(line, x, ly);
+  });
+}
+
+/** Which features are drawn at this zoom (z = 1: whole island). */
+function visible(f, z) {
+  if (!lm.on.has(f.layer)) return false;
+  if (f.kind === 'label') {
+    if (f.size === 'small') return z >= 2.2;
+    if (f.layer === 'landmark') return z >= 1.5;
+    if (f.layer === 'water') return z >= 1.3 || f.size === 'large';
+  }
+  return true;
+}
+
+function flashing(f) {
+  const fl = lm.flash;
+  if (!fl || fl.until < performance.now()) return false;
+  return fl.feature === f || (fl.food !== undefined && f.kind === 'point' && f.name === fl.food);
+}
+
+function drawMap() {
+  lm.raf = 0;
+  const canvas = $('map');
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  if (!cw || !ch || !lm.data || currentTab() !== 'map') return;
+  const dpr = window.devicePixelRatio || 1;
+  const size = `${cw}x${ch}x${dpr}`;
+  if (size !== lm.size) {
+    const old = lm.view && lm.size ? lm.size.split('x').map(Number) : null;
+    lm.size = size;
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+    if (!lm.touched || !old) fitView(cw, ch);
+    else {
+      // Keep what was in the middle in the middle.
+      lm.fit = Math.min(cw / lm.img.naturalWidth, ch / lm.img.naturalHeight);
+      lm.view.ox += (cw - old[0]) / 2;
+      lm.view.oy += (ch - old[1]) / 2;
+    }
+  }
+  if (lm.pendingFit) {
+    const pts = lm.pendingFit;
+    lm.pendingFit = null;
+    fitToPoints(pts);
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  const { s, ox, oy } = lm.view;
+  const z = s / lm.fit;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(lm.img, ox, oy, lm.img.naturalWidth * s, lm.img.naturalHeight * s);
+
+  const feats = lm.data.features.filter((f) => visible(f, z));
+  const now = performance.now();
+  const pulse = 0.5 + 0.5 * Math.sin(now / 180);
+
+  // 1. zones
+  for (const f of feats) {
+    if (!['migration', 'patrol', 'sanctuary', 'mud'].includes(f.layer) || f.kind === 'path' && f.layer !== 'mud') continue;
+    const c = LAYER[f.layer].color;
+    traceShape(ctx, f);
+    if (f.kind !== 'path') { ctx.fillStyle = hexA(c, lm.hover?.f === f ? 0.3 : 0.14); ctx.fill(); }
+    ctx.setLineDash(f.mass ? [7, 5] : []);
+    ctx.lineWidth = flashing(f) ? 3 + 3 * pulse : lm.hover?.f === f ? 2.5 : 1.5;
+    ctx.strokeStyle = hexA(c, 0.9);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (f.layer !== 'mud' && (f.layer === 'migration' || z >= 1.6)) {
+      const [x, y] = scr(centerOf(f));
+      drawText(ctx, f.name, x, y, { font: '700 11px Inter, system-ui, sans-serif', color: c });
+    }
+  }
+  // 2. lines: roads, air currents, caves
+  for (const f of feats) {
+    if (f.kind !== 'path' || !['road', 'air', 'cave'].includes(f.layer)) continue;
+    const c = LAYER[f.layer].color;
+    traceShape(ctx, f);
+    ctx.setLineDash(f.layer === 'road' ? [4, 4] : []);
+    ctx.lineWidth = (f.layer === 'road' ? 1.3 : 2.2) * (flashing(f) ? 2 : 1);
+    ctx.strokeStyle = hexA(c, f.layer === 'road' ? 0.6 : 0.9);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const m of f.marks ?? []) {
+      const [x, y] = scr(m.at);
+      if (m.what === 'exit') {
+        ctx.fillStyle = c; ctx.strokeStyle = '#1e1b4b'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.rect(x - 4, y - 4, 8, 8); ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillStyle = hexA(c, 0.25); ctx.strokeStyle = c; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        drawText(ctx, '↑', x, y, { font: '800 11px Inter, system-ui, sans-serif', color: '#fff' });
+      }
+    }
+    if (z >= 2 && f.layer !== 'road') {
+      const [x, y] = scr(centerOf(f));
+      drawText(ctx, f.name, x, y - 12, { font: '600 10.5px Inter, system-ui, sans-serif', color: c });
+    }
+  }
+  // 3. food and minerals
+  const pr = Math.max(2.2, Math.min(5, 1.6 * Math.sqrt(z)));
+  for (const f of feats) {
+    if (f.kind !== 'point') continue;
+    const [x, y] = scr(f.at);
+    if (x < -10 || y < -10 || x > cw + 10 || y > ch + 10) continue;
+    const fl = flashing(f);
+    ctx.beginPath(); ctx.arc(x, y, fl ? pr + 2 + 4 * pulse : pr, 0, Math.PI * 2);
+    ctx.fillStyle = LAYER[f.layer].color; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
+    if (z >= 5) drawText(ctx, FOOD_VN[f.name] ?? f.name, x, y - pr - 7, { font: '600 10px Inter, system-ui, sans-serif', color: '#f1f5f9' });
+  }
+  // 4. labels
+  for (const f of feats) {
+    if (f.kind !== 'label') continue;
+    const [x, y] = scr(f.at);
+    const c = LAYER[f.layer].color;
+    const big = f.size === 'large';
+    if (f.layer === 'landmark') {
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill();
+      drawText(ctx, f.text, x + 7, y, { font: `600 ${big ? 12 : 11}px Inter, system-ui, sans-serif`, color: c, align: 'left' });
+    } else if (f.layer === 'water') {
+      drawText(ctx, f.text, x, y, { font: `italic 600 ${big ? 12.5 : 11}px Inter, system-ui, sans-serif`, color: c });
+    } else {
+      drawText(ctx, f.text.toUpperCase(), x, y, { font: `800 ${big ? 13 : 11}px Inter, system-ui, sans-serif`, color: hexA(c, 0.92) });
+    }
+    if (flashing(f)) {
+      ctx.beginPath(); ctx.arc(x, y, 10 + 8 * pulse, 0, Math.PI * 2);
+      ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2.5; ctx.stroke();
+    }
+  }
+  // 5. a whole-life path opened from the player page
+  if (lm.path && lm.path.points.length > 0) {
+    const c = playerColor(lm.path.steamId);
+    const pts = lm.path.points.map((pt) => scr(unitsOf(pt)));
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(2,6,23,.75)'; ctx.lineWidth = 6; ctx.stroke();
+    ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.stroke();
+    const [sx, sy] = pts[0], [ex, ey] = pts[pts.length - 1];
+    ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fillStyle = '#22c55e'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+    drawText(ctx, 'Spawn', sx, sy - 14, { font: '700 11px Inter, system-ui, sans-serif', color: '#bbf7d0' });
+    ctx.beginPath(); ctx.rect(ex - 6, ey - 6, 12, 12); ctx.fillStyle = lm.path.end === null ? c : '#ef4444'; ctx.fill(); ctx.stroke();
+    drawText(ctx, lm.path.end === null ? 'Mới nhất' : 'Kết thúc', ex, ey - 15, { font: '700 11px Inter, system-ui, sans-serif', color: '#fecaca' });
+  }
+
+  // 6. AI alive on the server now
+  if (lm.on.has('ai') && lm.ai && !lm.ai.stale) {
+    const r = Math.max(3, Math.min(6, 2.4 * Math.sqrt(z)));
+    for (const a of lm.ai.list) {
+      const [x, y] = scr(unitsOf(a));
+      if (x < -10 || y < -10 || x > cw + 10 || y > ch + 10) continue;
+      ctx.beginPath(); ctx.arc(x, y, lm.hover?.ai === a ? r + 2 : r, 0, Math.PI * 2);
+      ctx.fillStyle = LAYER.ai.color; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
+      if (z >= 3) drawText(ctx, dino(a.c), x, y - r - 8, { font: '600 10.5px Inter, system-ui, sans-serif', color: '#fecaca' });
+    }
+  }
+
+  // 7. players on top
+  ctx.font = '700 12px Inter, system-ui, sans-serif';
+  for (const p of lm.players) {
+    const c = playerColor(p.steamId);
+    const trail = lm.on.has('trails') ? visibleTrail(p) : [];
+    if (trail.length > 1) {
+      ctx.beginPath();
+      trail.forEach((l, i) => { const [x, y] = scr(unitsOf(l)); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+      // Last trail point -> the dot, so the line reaches the dino.
+      const [dx, dy] = scr(shownPos(p)); ctx.lineTo(dx, dy);
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(2,6,23,.6)'; ctx.lineWidth = 5; ctx.stroke();
+      ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    const [x, y] = scr(shownPos(p));
+    if (typeof p.yaw === 'number') {
+      // Heading arrow. World forward is (cos yaw, sin yaw) in (X, Y); world X
+      // is right and world Y down on screen. Dark outline so it reads on any terrain.
+      const a = p.yaw * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a);
+      const nx = -dy, ny = dx;                       // perpendicular
+      const tip = 34, base = 20, half = 9;
+      const arrow = () => {
+        ctx.beginPath();
+        ctx.moveTo(x + dx * 8, y + dy * 8);
+        ctx.lineTo(x + dx * base, y + dy * base);
+        ctx.moveTo(x + dx * tip, y + dy * tip);
+        ctx.lineTo(x + dx * base + nx * half, y + dy * base + ny * half);
+        ctx.lineTo(x + dx * (base + 4), y + dy * (base + 4));
+        ctx.lineTo(x + dx * base - nx * half, y + dy * base - ny * half);
+        ctx.closePath();
+      };
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      arrow(); ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
+      arrow(); ctx.lineWidth = 3.5; ctx.strokeStyle = c; ctx.stroke(); ctx.fillStyle = c; ctx.fill();
+      ctx.lineCap = 'butt';
+    }
+    const hp = p.maxHealth > 0 && typeof p.health === 'number' ? p.health / p.maxHealth : null;
+    ctx.beginPath(); ctx.arc(x, y, 7.5, 0, Math.PI * 2);
+    ctx.fillStyle = c; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = hp !== null && hp < 0.3 ? '#ef4444' : '#fff'; ctx.stroke();
+    drawText(ctx, p.name ?? shortId(p.steamId), x + 13, y - 6, { font: '700 12px Inter, system-ui, sans-serif', color: '#fff', align: 'left' });
+    drawText(ctx, `${dino(p.species)} · ${pct(p.growth)}`, x + 13, y + 8, { font: '600 10.5px Inter, system-ui, sans-serif', color: '#cbd5e1', align: 'left' });
+  }
+
+  if ((lm.flash && lm.flash.until > now) || tweening()) requestDraw();
+}
+
+// --- hover and tooltips ---
+
+function inPoly(pt, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function inShape(pt, f) {
+  if (f.kind === 'circle') {
+    const a = -(f.rot ?? 0) * Math.PI / 180;
+    const dx = pt[0] - f.at[0], dy = pt[1] - f.at[1];
+    const u = dx * Math.cos(a) - dy * Math.sin(a), v = dx * Math.sin(a) + dy * Math.cos(a);
+    return (u / f.r[0]) ** 2 + (v / f.r[1]) ** 2 <= 1;
+  }
+  return f.kind === 'poly' && f.pts.some((ring) => inPoly(pt, ring));
+}
+
+function hitTest(sx, sy) {
+  const z = lm.view.s / lm.fit;
+  const near = (p, r) => { const [x, y] = scr(p); return Math.hypot(x - sx, y - sy) <= r; };
+  for (const p of lm.players) if (near(shownPos(p), 12)) return { player: p };
+  if (lm.on.has('ai') && lm.ai && !lm.ai.stale) {
+    for (const a of lm.ai.list) if (near(unitsOf(a), 8)) return { ai: a };
+  }
+  const feats = lm.data.features.filter((f) => visible(f, z));
+  for (const f of feats) {
+    for (const m of f.marks ?? []) if (near(m.at, 9)) return { f, mark: m };
+  }
+  for (const f of feats) if ((f.kind === 'point' || f.kind === 'label') && near(f.at, 9)) return { f };
+  const pt = fromScr(sx, sy);
+  for (const f of feats) if ((f.kind === 'poly' || f.kind === 'circle') && inShape(pt, f)) return { f };
+  return null;
+}
+
+function tipHtml(h) {
+  if (h.ai) {
+    const a = h.ai;
+    const age = Math.max(0, Math.round(Date.now() / 1000 - lm.ai.t));
+    return `<b>${esc(dino(a.c))}</b><br>AI trên server${typeof a.hp === 'number' ? ` · máu ${Math.round(a.hp)}` : ''}<br><span class="m">vị trí đọc ${age} s trước</span>`;
+  }
+  if (h.player) {
+    const p = h.player;
+    const hp = p.maxHealth > 0 && typeof p.health === 'number' ? ` · máu ${Math.round(p.health / p.maxHealth * 100)}%` : '';
+    return `<b>${esc(p.name ?? shortId(p.steamId))}</b><br>${esc(dino(p.species))} · ${pct(p.growth)}${hp}<br><span class="m">bấm để mở trang người chơi</span>`;
+  }
+  const f = h.f;
+  if (h.mark) {
+    return h.mark.what === 'exit' ? `<b>Cửa hang</b><br>${esc(f.name)}`
+      : `<b>Luồng khí bốc lên</b><br>${esc(f.name)}${h.mark.hours ? `<br><span class="m">Hoạt động ${esc(h.mark.hours)} (giờ trong game)</span>` : ''}`;
+  }
+  if (f.kind === 'point') {
+    return `<b>${esc(foodName(f.name))}</b><br><span class="m">${esc(f.group ?? '')}${f.checked ? ` · kiểm tra ${esc(f.checked)}` : ''}</span>`;
+  }
+  if (f.kind === 'label') return `<b>${esc(f.text.replace(/\n/g, ' '))}</b><br><span class="m">${esc(LAYER[f.layer].label)}</span>`;
+  return `<b>${esc(f.name)}</b><br><span class="m">${esc(ZONE_VN[f.layer] ?? LAYER[f.layer].label)}${f.mass ? ' · di cư lớn (mass migration)' : ''}</span>`;
+}
+
+function showHover(sx, sy) {
+  const h = hitTest(sx, sy);
+  const same = (a, b) => (a?.player?.steamId ?? a?.ai ?? a?.mark ?? a?.f) === (b?.player?.steamId ?? b?.ai ?? b?.mark ?? b?.f);
+  const changed = !same(h, lm.hover);
+  lm.hover = h;
+  const tip = $('map-tip');
+  if (h === null) tip.hidden = true;
+  else {
+    tip.innerHTML = tipHtml(h);
+    tip.hidden = false;
+    const wrap = $('map-wrap');
+    const left = Math.min(sx + 14, wrap.clientWidth - tip.offsetWidth - 8);
+    const top = sy + 14 + tip.offsetHeight > wrap.clientHeight ? sy - tip.offsetHeight - 10 : sy + 14;
+    tip.style.left = `${Math.max(8, left)}px`;
+    tip.style.top = `${Math.max(8, top)}px`;
+  }
+  const [x, y] = fromScr(sx, sy);
+  $('map-coord').hidden = false;
+  // Same order and format as the game's own location, so the two compare directly.
+  const g = (v) => Math.round(v * 1000).toLocaleString('en-US');
+  $('map-coord').textContent = `${g(x)}, ${g(y)}`;
+  $('map').style.cursor = h?.player ? 'pointer' : '';
+  if (changed) requestDraw();
+}
+
+// --- pointer, wheel, buttons ---
+
+function localXY(e) {
+  const r = $('map').getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
+$('map').addEventListener('pointerdown', (e) => {
+  if (!lm.view) return;
+  $('map').setPointerCapture(e.pointerId);
+  lm.pointers.set(e.pointerId, localXY(e));
+  if (lm.pointers.size === 1) {
+    const [x, y] = localXY(e);
+    lm.drag = { x, y, ox: lm.view.ox, oy: lm.view.oy, moved: false };
+  } else if (lm.pointers.size === 2) {
+    const [a, b] = [...lm.pointers.values()];
+    lm.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: lm.view.s };
+    lm.drag = null;
+  }
+});
+$('map').addEventListener('pointermove', (e) => {
+  if (!lm.view) return;
+  const [x, y] = localXY(e);
+  if (lm.pointers.has(e.pointerId)) lm.pointers.set(e.pointerId, [x, y]);
+  if (lm.pinch && lm.pointers.size === 2) {
+    const [a, b] = [...lm.pointers.values()];
+    const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (lm.pinch.s * d / lm.pinch.d) / lm.view.s);
+    return;
+  }
+  if (lm.drag) {
+    const dx = x - lm.drag.x, dy = y - lm.drag.y;
+    if (!lm.drag.moved && Math.hypot(dx, dy) > 4) { lm.drag.moved = true; $('map').classList.add('dragging'); $('map-tip').hidden = true; }
+    if (lm.drag.moved) {
+      lm.view.ox = lm.drag.ox + dx; lm.view.oy = lm.drag.oy + dy;
+      lm.touched = true;
+      requestDraw();
+      return;
+    }
+  }
+  showHover(x, y);
+});
+function endPointer(e) {
+  const click = lm.drag && !lm.drag.moved && lm.pointers.size === 1;
+  lm.pointers.delete(e.pointerId);
+  if (lm.pointers.size < 2) lm.pinch = null;
+  $('map').classList.remove('dragging');
+  if (click && e.type === 'pointerup') {
+    const [x, y] = localXY(e);
+    const h = hitTest(x, y);
+    if (h?.player) location.hash = `player/${encodeURIComponent(h.player.steamId)}`;
+  }
+  lm.drag = null;
+}
+$('map').addEventListener('pointerup', endPointer);
+$('map').addEventListener('pointercancel', endPointer);
+$('map').addEventListener('pointerleave', () => {
+  if (lm.drag) return;
+  $('map-tip').hidden = true; $('map-coord').hidden = true;
+  if (lm.hover) { lm.hover = null; requestDraw(); }
+});
+$('map').addEventListener('wheel', (e) => {
+  if (!lm.view) return;
+  e.preventDefault();
+  const [x, y] = localXY(e);
+  zoomAt(x, y, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0018)));
+}, { passive: false });
+$('map').addEventListener('dblclick', (e) => { if (lm.view) { const [x, y] = localXY(e); zoomAt(x, y, 2); } });
+const zoomCenter = (k) => { if (lm.view) zoomAt($('map').clientWidth / 2, $('map').clientHeight / 2, k); };
+$('map-zin').addEventListener('click', () => zoomCenter(1.6));
+$('map-zout').addEventListener('click', () => zoomCenter(1 / 1.6));
+$('map-reset').addEventListener('click', () => { if (lm.view) { fitView($('map').clientWidth, $('map').clientHeight); lm.touched = false; requestDraw(); } });
+$('map-full').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else $('map-wrap').requestFullscreen?.();
+});
+document.addEventListener('fullscreenchange', () => requestAnimationFrame(requestDraw));
+window.addEventListener('resize', requestDraw);
+
+// --- side panels ---
+
+function renderLayerList() {
+  const count = {};
+  for (const f of lm.data.features) count[f.layer] = (count[f.layer] ?? 0) + 1;
+  count.trails = '';
+  count.ai = '';
+  $('map-layers').innerHTML = LAYERS.filter(([id]) => count[id] !== undefined).map(([id, label, color]) => `<li><label>
+      <input type="checkbox" data-layer="${id}" ${lm.on.has(id) ? 'checked' : ''}>
+      <span class="sw" style="background:${color}"></span>${esc(label)}<span class="n"${id === 'ai' ? ' id="ai-count"' : ''}>${count[id]}</span></label></li>`).join('')
+    + '<li class="muted" id="ai-status" style="font-size:11.5px;padding:6px 6px 0"></li>';
+  renderAiStatus();
+}
+$('map-layers').addEventListener('change', (e) => {
+  const id = e.target.dataset?.layer;
+  if (!id) return;
+  if (e.target.checked) lm.on.add(id); else lm.on.delete(id);
+  saveLayers();
+  requestDraw();
+});
+
+function turnOn(layer) {
+  if (lm.on.has(layer)) return;
+  lm.on.add(layer);
+  saveLayers();
+  const box = document.querySelector(`#map-layers input[data-layer="${layer}"]`);
+  if (box) box.checked = true;
+}
+
+let searchHits = [];
+$('map-search').addEventListener('input', () => {
+  const q = $('map-search').value.trim().toLowerCase();
+  if (!lm.data || q.length < 2) { $('map-results').innerHTML = ''; searchHits = []; return; }
+  const foods = new Map();
+  const places = [];
+  for (const f of lm.data.features) {
+    if (f.kind === 'point') {
+      if (`${f.name} ${FOOD_VN[f.name] ?? ''}`.toLowerCase().includes(q)) {
+        const e = foods.get(f.name) ?? { food: f.name, layer: f.layer, n: 0 };
+        e.n += 1; foods.set(f.name, e);
+      }
+    } else if (`${f.name} ${f.text ?? ''}`.toLowerCase().includes(q)) places.push({ f });
+  }
+  searchHits = [...foods.values(), ...places].slice(0, 12);
+  $('map-results').innerHTML = searchHits.length === 0 ? '<li class="muted" style="font-size:12.5px;padding:6px 8px">Không thấy.</li>'
+    : searchHits.map((h, i) => `<li><button type="button" data-hit="${i}">${h.food !== undefined
+      ? `${esc(foodName(h.food))}<small>${h.n} điểm</small>`
+      : `${esc((h.f.text ?? h.f.name).replace(/\n/g, ' '))}<small>${esc(ZONE_VN[h.f.layer] ?? LAYER[h.f.layer].label)}</small>`}</button></li>`).join('');
+});
+$('map-results').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-hit]');
+  const h = btn && searchHits[Number(btn.dataset.hit)];
+  if (!h) return;
+  const until = performance.now() + 6000;
+  if (h.food !== undefined) {
+    turnOn(h.layer);
+    lm.flash = { food: h.food, until };
+    requestDraw();
+  } else {
+    turnOn(h.f.layer);
+    lm.flash = { feature: h.f, until };
+    flyTo(centerOf(h.f), h.f.kind === 'label' ? 4 : 2.5);
+  }
+});
+
+$('map-list').addEventListener('click', (e) => {
+  if (e.target.closest('a')) return;   // the name links to the player page
+  const clear = e.target.closest('button[data-clear]');
+  if (clear) {
+    const p = lm.players.find((x) => x.steamId === clear.dataset.clear);
+    if (p) { clearTrail(p); clear.remove(); }
+    return;
+  }
+  const li = e.target.closest('li[data-id]');
+  const p = li && lm.players.find((x) => x.steamId === li.dataset.id);
+  if (p && lm.data) flyTo(shownPos(p), 5);
+});
+
+$('map-clear-all').addEventListener('click', () => {
+  for (const p of lm.players) clearTrail(p);
+  for (const b of document.querySelectorAll('#map-list button[data-clear]')) b.remove();
+});
+
+/** #map/path/<steamId>/<spawnedAt>: fetch that life's path once, fit the view to it. */
+async function syncPathFromHash() {
+  const m = /^#map\/path\/([^/]+)\/(\d+)$/.exec(location.hash);
+  const key = m ? `${m[1]}/${m[2]}` : null;
+  if (key === lm.pathKey) return;
+  lm.pathKey = key;
+  lm.path = null;
+  $('map-path').hidden = true;
+  requestDraw();
+  if (key === null) return;
+  const steamId = decodeURIComponent(m[1]);
+  let data, name = null;
+  try {
+    [data, name] = await Promise.all([
+      getJson(`/api/player/${encodeURIComponent(steamId)}/path/${m[2]}`),
+      getJson(`/api/player/${encodeURIComponent(steamId)}`).then((d) => d.player?.name ?? null).catch(() => null),
+    ]);
+  } catch {
+    if (lm.pathKey !== key) return;
+    $('map-path').innerHTML = `<span>Không còn đường đi của đời dino này (bridge chỉ giữ ${PATH_LIVES} đời gần nhất).</span><button type="button" data-close-path>Đóng</button>`;
+    $('map-path').hidden = false;
+    return;
+  }
+  if (lm.pathKey !== key) return;   // the user moved on meanwhile
+  lm.path = { ...data, steamId };
+  const last = data.points[data.points.length - 1];
+  $('map-path').innerHTML = `<b>Đường đi · ${esc(name ?? shortId(steamId))}</b>
+    <span>${esc(dino(data.species))}</span>
+    <span class="m">spawn ${esc(dateTime(data.spawnedAt))}${last ? ` → ${esc(dateTime(last.t))}` : ''} · ${data.points.length} điểm</span>
+    <button type="button" data-close-path>Đóng</button>`;
+  $('map-path').hidden = false;
+  await loadMapData();
+  if (lm.pathKey === key && data.points.length > 0 && lm.data) fitToPoints(data.points.map(unitsOf));
+}
+$('map-path').addEventListener('click', (e) => {
+  if (e.target.closest('[data-close-path]')) location.hash = 'map';
+});
+
+function fitToPoints(pts) {
+  const canvas = $('map');
+  // Not drawn yet (canvas unsized): the first draw sizes it, then fits.
+  if (!canvas.clientWidth || !lm.img || !lm.view || lm.size === '') { lm.pendingFit = pts; requestDraw(); return; }
+  const img = pts.map(toImg);
+  const xs = img.map((p) => p[0]), ys = img.map((p) => p[1]);
+  const w = Math.max(40, Math.max(...xs) - Math.min(...xs)), h = Math.max(40, Math.max(...ys) - Math.min(...ys));
+  const s = Math.min(lm.fit * 12, Math.max(lm.fit, Math.min(canvas.clientWidth / (w * 1.3), canvas.clientHeight / (h * 1.3))));
+  lm.view.s = s;
+  lm.view.ox = canvas.clientWidth / 2 - (Math.min(...xs) + Math.max(...xs)) / 2 * s;
+  lm.view.oy = canvas.clientHeight / 2 - (Math.min(...ys) + Math.max(...ys)) / 2 * s;
+  lm.touched = true;
+  requestDraw();
+}
+
+function renderAiStatus() {
+  const el = $('ai-status');
+  if (!el) return;
+  const ai = lm.ai;
+  if ($('ai-count')) $('ai-count').textContent = ai && !ai.stale ? String(ai.count) : '';
+  el.textContent = ai === null ? 'AI live: chưa có dữ liệu — StatsLogger mới ghi sau lần khởi động tới.'
+    : ai.stale ? `AI live: không có dữ liệu mới từ ${dateTime(ai.t)} (server tắt hoặc mod không chạy).`
+    : `AI live: ${ai.count} con${ai.aiAlive !== null ? ` (game đếm ${ai.aiAlive})` : ''}${ai.dead ? ` · ${ai.dead} xác` : ''} · đọc lúc ${new Date(ai.t * 1000).toLocaleTimeString('vi-VN', { hour12: false })}. Các lớp "(tham khảo)" và vùng/địa danh lấy từ VulnonaMAP, không phải dữ liệu live.`;
+}
+
+// Between full refreshes (2 s): positions, heading and AI every second from
+// the live file, so the map lags the game by about a second.
+let livePolling = false;
+setInterval(async () => {
+  if (livePolling || currentTab() !== 'map' || document.hidden || !lm.data) return;
+  livePolling = true;
+  try {
+    const live = await getJson('/api/map/live');
+    for (const lp of live.players ?? []) {
+      const p = lm.players.find((x) => x.steamId === lp.steamId);
+      if (!p) continue;
+      p.loc = lp.loc;
+      if (typeof lp.yaw === 'number') p.yaw = lp.yaw;
+      if (typeof lp.health === 'number') p.health = lp.health;
+      moveTo(p);
+    }
+    if (live.ai) { lm.ai = live.ai; renderAiStatus(); }
+    requestDraw();
+  } catch {
+    // The next second tries again.
+  } finally {
+    livePolling = false;
+  }
+}, 1000);
+
+function renderMap(players, ai = null) {
+  lm.players = players;
+  for (const p of players) moveTo(p);
+  lm.ai = ai;
+  renderAiStatus();
+  loadMapData();
+  syncPathFromHash();
+  requestDraw();
+  const list = $('map-list');
+  list.innerHTML = players.length === 0 ? '<li class="empty">Chưa có ai đang điều khiển dino</li>'
+    : players.map((p) => {
+      const hpMax = p.maxHealth > 0 ? p.maxHealth : null;
+      return `<li data-id="${esc(p.steamId)}"><span class="avatar sm" style="background:${playerColor(p.steamId)}">${esc(initials(p.name, p.steamId))}</span>
         <div class="who"><div class="meta"><div class="nm">${who(p.steamId, p.name)}</div>
           <div class="sp">${esc(dino(p.species))} · ${pct(p.growth)}</div></div></div>
-        <div class="score" style="min-width:90px">${meter(p.health, 100)}</div></li>`).join('');
+        <div class="score" style="min-width:90px">${hpMax ? meter(p.health, hpMax) : '<span class="muted">–</span>'}
+          ${visibleTrail(p).length > 0 ? `<button type="button" class="trail-clear" data-clear="${esc(p.steamId)}">xóa vệt</button>` : ''}</div></li>`;
+    }).join('');
 }
-window.addEventListener('resize', () => { if (currentTab() === 'map') refresh(); });
 
 // --- chat ---------------------------------------------------------------------
 
@@ -1998,6 +3000,8 @@ $('create').addEventListener('submit', async (ev) => {
       headers: { 'content-type': 'application/json', 'x-admin-token': $('f-token').value },
       body: JSON.stringify({
         classPath, growth: creator.growth / 100, mutations,
+        stomachFull: $('f-stomach').checked,
+        nutrientPct: Math.max(0, Math.min(100, Math.round(Number($('f-nutrient').value) || 0))),
         allowUnconfirmedMutations: $('f-allow-unconfirmed').checked,
         overwrite: existing.slots[slot] !== undefined && $('f-overwrite-ok').checked,
       }),
@@ -2020,6 +3024,515 @@ $('create').addEventListener('submit', async (ev) => {
   }
 });
 
+// --- server tab: power, schedule, RCON, config, audit --------------------------
+
+const PHASE_VN = {
+  running: 'Đang chạy', starting: 'Đang khởi động', stopping: 'Đang tắt',
+  stopped: 'Đã tắt', failed: 'Lỗi — unit failed', unknown: 'Không rõ trạng thái',
+};
+const STEP_VN = {
+  countdown: 'Đếm ngược', saving: 'Lưu game', stopping: 'Đang tắt', restarting: 'Khởi động lại',
+  starting: 'Đang bật', waiting: 'Chờ mod nạp', done: 'Xong', failed: 'Thất bại', cancelled: 'Đã huỷ',
+};
+const KIND_VN = { start: 'Bật server', stop: 'Tắt server', restart: 'Khởi động lại' };
+
+let srv = { status: null, offset: 0 };   // offset = server clock − browser clock (ms)
+let schDraft = null;                     // times being edited; null = not touched
+let cfgDirty = false;
+let playablesCache = [];
+
+/** Run fn(token); ask for the token first when this tab has none yet. */
+function withToken(label, fn) {
+  const go = async (token) => {
+    try {
+      await fn(token);
+      adminToken = token;
+    } catch (err) {
+      if (/token/i.test(err.message)) adminToken = '';
+      throw err;
+    }
+  };
+  if (adminToken) {
+    go(adminToken).catch((err) => {
+      toast(`${label}: ${err.message}`, 'err');
+      if (!adminToken) withToken(label, fn);
+    });
+    return;
+  }
+  confirmAction({
+    title: 'Admin token', body: `Nhập admin token để <b>${esc(label)}</b>. Token chỉ được nhớ trong tab này.`,
+    okLabel: 'Tiếp tục', withReason: false, danger: false, run: (token) => go(token),
+  });
+}
+
+const countdownSelect = (id, preset = 300) => `<label for="${id}" style="margin-top:12px">Báo trước cho người chơi</label>
+  <select id="${id}">${[[0, 'Ngay lập tức'], [60, '1 phút'], [300, '5 phút'], [600, '10 phút'], [900, '15 phút'], [1800, '30 phút']]
+    .map(([v, l]) => `<option value="${v}"${v === preset ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+
+function askPower(kind) {
+  if (kind === 'start') {
+    withToken('bật server', async (token) => {
+      await adminFetch('/api/server/start', 'POST', token, {});
+      toast('Đang bật server…');
+      refresh();
+    });
+    return;
+  }
+  const stop = kind === 'stop';
+  confirmAction({
+    title: stop ? 'Tắt server?' : 'Khởi động lại server?',
+    body: `${stop ? 'Server sẽ <b>tắt hẳn</b> — không ai vào được cho tới khi bật lại.'
+                  : 'Mọi người chơi sẽ bị ngắt kết nối trong lúc server khởi động lại.'}
+      Nếu có RCON: người chơi được báo đếm ngược và game được <b>lưu</b> trước khi tắt.
+      ${countdownSelect('pw-cd', stop ? 300 : 300)}`,
+    okLabel: stop ? 'Tắt server' : 'Khởi động lại',
+    withReason: true,
+    run: async (token, reason) => {
+      await adminFetch(`/api/server/${kind}`, 'POST', token, { countdownSeconds: Number($('pw-cd').value), reason });
+      toast(stop ? 'Đã lên lịch tắt server.' : 'Đã lên lịch khởi động lại.');
+      refresh();
+    },
+  });
+}
+$('srv-start').addEventListener('click', () => askPower('start'));
+$('srv-stop').addEventListener('click', () => askPower('stop'));
+$('srv-restart').addEventListener('click', () => askPower('restart'));
+
+function fmtClock(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function renderOp(status) {
+  const el = $('srv-op');
+  const op = status.operation;
+  if (!op) {
+    const last = status.lastOperation;
+    el.innerHTML = last ? `<div class="op-box"><div class="step-hint">Lần gần nhất: <b>${KIND_VN[last.kind]}</b>
+        · ${esc(STEP_VN[last.step] ?? last.step)} · ${esc(ago(Math.floor(last.finishedAt / 1000)))}
+        ${last.message ? `<div class="${last.step === 'failed' ? 'warnbox' : 'muted'}" style="margin-top:6px">${esc(last.message)}</div>` : ''}</div></div>` : '';
+    return;
+  }
+  const flow = op.kind === 'start' ? ['starting', 'waiting', 'done']
+    : op.kind === 'stop' ? ['countdown', 'saving', 'stopping', 'done']
+    : ['countdown', 'saving', 'restarting', 'waiting', 'done'];
+  const at = flow.indexOf(op.step);
+  el.innerHTML = `<div class="op-box">
+    <div class="row" style="justify-content:space-between">
+      <div><div class="step-hint">${KIND_VN[op.kind]}${op.reason ? ` · ${esc(op.reason)}` : ''}${op.source !== 'admin' ? ` · <span class="chip tone-grow">${op.source === 'schedule' ? 'định kỳ' : 'áp dụng cấu hình'}</span>` : ''}</div>
+        <div class="big" id="op-remaining">${op.step === 'countdown' ? fmtClock(op.runAt - (Date.now() + srv.offset)) : esc(STEP_VN[op.step])}</div></div>
+      ${op.step === 'countdown' ? '<button type="button" class="btn-soft" id="op-cancel">Huỷ</button>' : ''}
+    </div>
+    <div class="op-steps">${flow.map((s, i) => `<span class="${i === at ? 'on' : i < at ? 'done' : ''}">${i < at ? '✓ ' : ''}${STEP_VN[s]}</span>`).join('')}</div>
+  </div>`;
+  $('op-cancel')?.addEventListener('click', () => withToken('huỷ', async (token) => {
+    await adminFetch('/api/server/cancel', 'POST', token, {});
+    toast('Đã huỷ.');
+    refresh();
+  }));
+}
+
+// The countdown ticks between refreshes.
+setInterval(() => {
+  const op = srv.status?.operation;
+  const el = $('op-remaining');
+  if (op && op.step === 'countdown' && el) el.textContent = fmtClock(op.runAt - (Date.now() + srv.offset));
+}, 500);
+
+function renderServer(status) {
+  // Older bridges do not send their clock: fall back to the browser's.
+  srv = { status, offset: Number.isFinite(status.now) ? status.now - Date.now() : 0 };
+  const phase = status.phase;
+  $('srv-phase').innerHTML = `<div class="phase ${phase}"><span class="led"></span>${PHASE_VN[phase] ?? phase}</div>
+    ${status.error ? `<div class="warnbox" style="margin-top:10px">${esc(status.error)}</div>` : ''}`;
+  const u = status.unit;
+  const tile = (k, v) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  $('srv-facts').innerHTML = [
+    tile('Chạy từ', u?.since ? `${dur(Math.floor(Date.now() / 1000) - u.since)} trước` : '–'),
+    tile('Mod nạp lần cuối', status.modsLoadedAt ? esc(ago(status.modsLoadedAt)) : '–'),
+    tile('systemd', u ? `${esc(u.activeState)}${u.pid ? ` · PID ${u.pid}` : ''}` : '–'),
+    tile('RCON', status.rconEnabled ? '<span class="chip tone-accent">bật</span>' : '<span class="chip tone-kill">chưa cấu hình</span>'),
+  ].join('');
+  const busy = status.operation !== null;
+  $('srv-start').disabled = busy || phase === 'running' || phase === 'starting';
+  $('srv-restart').disabled = busy || phase === 'stopped';
+  $('srv-stop').disabled = busy || phase === 'stopped';
+  $('srv-sub').textContent = `${status.unitName} · múi giờ VPS ${status.timeZone}`;
+  $('rcon-off').hidden = status.rconEnabled;
+  renderOp(status);
+
+  // Schedule: show the saved one unless the admin is editing it.
+  if (schDraft === null) {
+    renderSchedule(status.schedule.daily);
+    $('sch-countdown').value = String(status.schedule.countdownMinutes);
+  }
+  $('sch-tz').textContent = status.timeZone;
+  $('sch-next').textContent = status.schedule.next
+    ? `lần tới: ${new Date(status.schedule.next * 1000).toLocaleString('vi-VN', { hour12: false })}` : 'chưa có lịch';
+}
+
+function renderSchedule(times) {
+  $('sch-times').innerHTML = times.length === 0 ? '<span class="muted" style="font-size:12.5px">Chưa có giờ nào.</span>'
+    : times.map((t) => `<span class="time-chip">${esc(t)}<button type="button" data-del-time="${esc(t)}" aria-label="Bỏ ${esc(t)}">×</button></span>`).join('');
+}
+$('sch-times').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-del-time]');
+  if (!b) return;
+  schDraft = (schDraft ?? srv.status.schedule.daily).filter((t) => t !== b.dataset.delTime);
+  renderSchedule(schDraft);
+});
+$('sch-add').addEventListener('click', () => {
+  const t = $('sch-add-time').value;
+  if (!/^\d{2}:\d{2}$/.test(t)) return toast('Chọn giờ trước.', 'err');
+  schDraft = [...new Set([...(schDraft ?? srv.status.schedule.daily), t])].sort();
+  renderSchedule(schDraft);
+});
+$('sch-countdown').addEventListener('change', () => { schDraft = schDraft ?? [...srv.status.schedule.daily]; });
+$('sch-save').addEventListener('click', () => withToken('lưu lịch', async (token) => {
+  await adminFetch('/api/server/schedule', 'PUT', token, {
+    daily: schDraft ?? srv.status.schedule.daily, countdownMinutes: Number($('sch-countdown').value),
+  });
+  schDraft = null;
+  toast('Đã lưu lịch khởi động lại.');
+  refresh();
+}));
+
+function renderAudit(entries) {
+  $('srv-audit').innerHTML = entries.length === 0 ? '<li class="empty">Chưa có thao tác nào</li>'
+    : entries.map((e) => `<li><span class="ev-time" title="${esc(dateTime(e.t))}">${clock(e.t)}</span>
+        <div style="min-width:0"><div class="a">${e.ok ? '' : '<span class="kill">✗ </span>'}${esc(e.action)}</div>
+        ${e.detail ? `<div class="d">${esc(e.detail)}</div>` : ''}${e.error ? `<div class="d kill">${esc(e.error)}</div>` : ''}</div></li>`).join('');
+}
+
+// --- RCON -------------------------------------------------------------------
+
+let rconToggles = null;
+async function buildToggles() {
+  if (rconToggles) return;
+  const { commands } = await getJson('/api/rcon/commands');
+  rconToggles = Object.entries(commands).filter(([, c]) => c.toggle);
+  $('rc-toggles').innerHTML = rconToggles.map(([name, c]) =>
+    `<button type="button" class="btn-soft" data-rcon="${name}" data-confirm="Đảo trạng thái: ${esc(c.label)}?">⇄ ${esc(c.label)}</button>`).join('');
+}
+
+async function rconCall(name, args, token) {
+  const res = await adminFetch(`/api/rcon/${name}`, 'POST', token, args === undefined ? {} : { args });
+  $('rc-out').textContent = `> ${name}${args !== undefined ? ' ' + args : ''}\n${res.response || '(server không trả lời gì — với lệnh này là bình thường)'}`;
+  return res.response;
+}
+
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-rcon]');
+  if (!b) return;
+  const name = b.dataset.rcon;
+  const args = b.dataset.arg ? $(b.dataset.arg).value.trim() : undefined;
+  if (b.dataset.arg && !args) return toast('Nhập giá trị trước.', 'err');
+  const label = b.textContent.trim();
+  if (b.dataset.confirm) {
+    confirmAction({
+      title: b.dataset.confirm, body: 'Thao tác có hiệu lực ngay trên server đang chạy.',
+      okLabel: 'Thực hiện', withReason: false,
+      run: async (token) => { await rconCall(name, args, token); toast(`${label}: xong`); refresh(); },
+    });
+  } else {
+    withToken(label, async (token) => { await rconCall(name, args, token); toast(`${label}: xong`); refresh(); });
+  }
+});
+
+// --- config -----------------------------------------------------------------
+
+let cfgData = null;
+/** Known roster (v0.21.x) + what the live server reported + what is already set. */
+function classOptions(selected) {
+  const names = new Set([...(cfgData?.knownPlayables ?? []), ...playablesCache,
+    ...creator.catalog.map((c) => dino(c.species)), ...selected]);
+  return [...names].filter((n) => /^[A-Za-z0-9_]{2,64}$/.test(n)).sort();
+}
+// --- Server sub-tabs ------------------------------------------------------------
+// #server/<sub>: operation panels, then one tab per config group (cfg:<group>).
+// The config form is ONE form shown a group at a time, so edits in several
+// groups survive switching tabs and are saved together.
+const OPS_SUBS = [['status', 'Trạng thái'], ['schedule', 'Lịch khởi động lại'], ['rcon', 'RCON trực tiếp'], ['audit', 'Lịch sử thao tác']];
+const EXTRA_CFG_SUBS = [['garage-settings', 'Gara'], ['commands-settings', 'Lệnh người chơi']];
+function currentSub() {
+  const h = location.hash.slice(1);
+  const sub = h.startsWith('server/') ? decodeURIComponent(h.slice('server/'.length)) : 'status';
+  const cfgGroups = Object.keys(cfgData?.groups ?? {});
+  if ([...OPS_SUBS, ...EXTRA_CFG_SUBS].some(([id]) => id === sub)) return sub;
+  if (sub.startsWith('cfg:') && (cfgGroups.length === 0 || cfgGroups.includes(sub.slice(4)))) return sub;
+  return 'status';
+}
+function renderSubtabs() {
+  const cur = currentSub();
+  const btn = ([id, label]) => `<a href="#server/${encodeURIComponent(id)}" class="${id === cur ? 'on' : ''}">${esc(label)}${id.startsWith('cfg:') && cfgDirty && dirtyGroups.has(id.slice(4)) ? ' <span class="dot" title="Có thay đổi chưa lưu"></span>' : ''}</a>`;
+  // Game.ini groups, then the garage mod's own settings (a file of its own).
+  const cfgTabs = [...Object.entries(cfgData?.groups ?? {}).map(([g, t]) => [`cfg:${g}`, t]), ...EXTRA_CFG_SUBS];
+  $('srv-subtabs').innerHTML = `<div class="subtab-group"><span class="subtab-label">Vận hành</span>${OPS_SUBS.map(btn).join('')}</div>`
+    + (cfgTabs.length ? `<div class="subtab-group"><span class="subtab-label">Cấu hình game</span>${cfgTabs.map(btn).join('')}</div>` : '');
+}
+function showSub() {
+  const sub = currentSub();
+  const panel = sub.startsWith('cfg:') ? 'cfg' : sub;
+  for (const el of document.querySelectorAll('[data-sub-panel]')) el.hidden = el.dataset.subPanel !== panel;
+  if (panel === 'cfg') {
+    const group = sub.slice(4);
+    for (const g of document.querySelectorAll('#cfg-fields .cfg-group')) g.hidden = g.dataset.group !== group;
+    $('cfg-title').textContent = `Cấu hình · ${cfgData?.groups?.[group] ?? ''}`;
+  }
+  for (const a of document.querySelectorAll('#srv-subtabs a')) {
+    a.classList.toggle('on', a.getAttribute('href') === `#server/${encodeURIComponent(sub)}`);
+  }
+}
+
+const STEAM_LIST = new Set(['AdminsSteamIDs', 'WhitelistIDs', 'VIPs']);
+function cfgFieldHtml(key, spec, value, known) {
+  const id = `cfg-f-${key}`;
+  const badge = spec.verified === false ? ' <span class="cfg-unverified" title="Game đọc key này theo tên (có trong file game) nhưng chưa đọc ngược được giá trị để kiểm chứng">chưa xác minh</span>' : '';
+  const unverified = spec.verified === false;
+  const dflt = spec.type === 'list' || spec.type === 'text' ? ''
+    : unverified ? ' · mặc định của game: <b>không rõ</b> (để "theo game" = không ghi dòng này)'
+    : ` · mặc định <b>${esc(spec.type === 'bool' ? (spec.default ? 'Bật' : 'Tắt') : String(spec.default))}</b>`;
+  const label = `<label for="${id}">${esc(spec.label)} <span class="muted mono">${esc(key)}</span>${badge}</label>`;
+  const hint = `<div class="step-hint" style="margin-top:4px">${esc(spec.help || '')}${dflt}</div>`;
+  let input;
+  if (spec.type === 'bool') {
+    const auto = unverified ? `<option value=""${value === undefined ? ' selected' : ''}>Theo mặc định của game</option>` : '';
+    input = `<select id="${id}" data-key="${key}">${auto}<option value="false"${value === false ? ' selected' : ''}>Tắt</option><option value="true"${value === true ? ' selected' : ''}>Bật</option></select>`;
+  } else if (spec.type === 'int' || spec.type === 'float') {
+    const step = spec.type === 'int' ? 1 : spec.step;
+    input = `<input id="${id}" data-key="${key}" type="number" min="${spec.min}" max="${spec.max}" step="${step}" value="${esc(String(value ?? ''))}"${unverified ? ' placeholder="theo mặc định của game"' : ''}>`;
+  } else if (spec.type === 'text') {
+    // The game default (e.g. "DiscordLinkHere") is a placeholder, not a value.
+    const shown = value === spec.default ? '' : String(value ?? '');
+    input = `<input id="${id}" data-key="${key}" type="text" maxlength="${spec.maxLen}" value="${esc(shown)}" placeholder="${esc(spec.default || 'để trống = mặc định')}">`;
+  } else if (STEAM_LIST.has(key)) {
+    const add = `<div class="row" style="margin-top:8px"><input type="text" inputmode="numeric" maxlength="17" data-add="${key}" placeholder="SteamID64 (17 chữ số)" style="max-width:260px">
+      <button type="button" class="btn-soft" data-add-btn="${key}">+ Thêm ${esc(spec.label.toLowerCase())}</button></div>`;
+    return `<div data-field="${key}">${label}<textarea id="${id}" data-key="${key}" placeholder="mỗi dòng một SteamID64">${esc((value ?? []).join('\n'))}</textarea>${add}${hint}</div>`;
+  } else {
+    const selected = value ?? [];
+    const options = key === 'AllowedClasses' ? classOptions(selected)
+      : [...new Set([...(spec.suggest ?? []), ...selected])].sort();
+    const grid = options.map((n) => {
+      const odd = key === 'AllowedClasses' && !known.has(n);
+      return `<label${odd ? ' title="Không có trong danh sách loài server chấp nhận — kiểm tra lại tên"' : ''}><input type="checkbox" data-list="${key}" value="${esc(n)}"${selected.includes(n) ? ' checked' : ''}>${esc(n)}${odd ? ' <span class="kill">?</span>' : ''}</label>`;
+    }).join('') || '<span class="muted" style="font-size:12.5px">Chưa có mục nào.</span>';
+    const extra = key === 'AllowedClasses'
+      ? '<div class="row" style="margin-top:8px"><button type="button" class="link-btn" id="cfg-load-playables">Tải danh sách loài từ server (RCON)</button></div>'
+      : `<input type="text" data-extra="${key}" placeholder="thêm tên khác, cách nhau bằng dấu phẩy" style="margin-top:8px">`;
+    return `<div data-field="${key}">${label}<div class="check-grid" id="${id}">${grid}</div>${extra}${hint}</div>`;
+  }
+  return `<div data-field="${key}" class="cfg-field">${label}${input}${hint}</div>`;
+}
+function renderConfig(data) {
+  cfgData = data;
+  const known = new Set(data.knownPlayables ?? []);
+  const schema = data.schema ?? {};
+  const eff = { ...data.effective, ...data.settings };
+  $('cfg-fields').innerHTML = Object.entries(data.groups ?? {}).map(([group, title]) => {
+    const keys = Object.keys(schema).filter((k) => schema[k].group === group);
+    if (keys.length === 0) return '';
+    // A key missing from Game.ini runs on the game's default: show that value,
+    // or nothing for a key whose default is unknown ("theo mặc định của game").
+    const value = (k) => (k in eff && eff[k] !== null ? eff[k] : schema[k].verified === false ? undefined : schema[k].default);
+    const wide = keys.filter((k) => schema[k].type === 'list');
+    const narrow = keys.filter((k) => schema[k].type !== 'list');
+    return `<section class="cfg-group" data-group="${group}" data-title="${esc(title)}">
+      <div class="cfg-grid">${narrow.map((k) => cfgFieldHtml(k, schema[k], value(k), known)).join('')}</div>
+      ${wide.map((k) => `<div style="margin-top:12px">${cfgFieldHtml(k, schema[k], value(k), known)}</div>`).join('')}
+    </section>`;
+  }).join('');
+  renderSubtabs();
+  showSub();
+  $('cfg-load-playables')?.addEventListener('click', loadPlayables);
+  $('cfg-pending').hidden = !data.pendingRestart;
+  $('cfg-error').hidden = !data.error;
+  $('cfg-error').textContent = data.error ?? '';
+}
+// Which groups hold unsaved edits — only their sub-tabs get the dot.
+const dirtyGroups = new Set();
+// Quick add to a SteamID list: validates the ID, appends it once, marks the
+// group dirty. Nothing is saved until "Lưu cấu hình" — like every other field.
+$('cfg-fields').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-add-btn]');
+  if (!btn) return;
+  const key = btn.dataset.addBtn;
+  const input = document.querySelector(`[data-add="${key}"]`);
+  const area = document.querySelector(`textarea[data-key="${key}"]`);
+  const id = input.value.trim();
+  if (!/^\d{17}$/.test(id)) { toast('SteamID64 phải gồm đúng 17 chữ số.', 'err'); input.focus(); return; }
+  const ids = area.value.split(/[\s,]+/).map((x) => x.trim()).filter(Boolean);
+  if (ids.includes(id)) { toast('SteamID này đã có trong danh sách.', 'err'); return; }
+  area.value = [...ids, id].join('\n');
+  input.value = '';
+  area.dispatchEvent(new Event('input', { bubbles: true }));
+  toast('Đã thêm — bấm "Lưu cấu hình" (hoặc Lưu & khởi động lại) để áp dụng.');
+});
+$('cfg-fields').addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' && ev.target.matches('[data-add]')) {
+    ev.preventDefault();
+    document.querySelector(`[data-add-btn="${ev.target.dataset.add}"]`).click();
+  }
+});
+const markDirty = (ev) => {
+  const group = ev.target.closest?.('.cfg-group')?.dataset.group;
+  cfgDirty = true;
+  if (group && !dirtyGroups.has(group)) { dirtyGroups.add(group); renderSubtabs(); }
+};
+$('cfg-form').addEventListener('input', markDirty);
+$('cfg-form').addEventListener('change', markDirty);
+$('cfg-reset').addEventListener('click', () => { cfgDirty = false; dirtyGroups.clear(); if (cfgData) renderConfig(cfgData); });
+function loadPlayables() {
+  withToken('tải danh sách loài', async (token) => {
+    const text = await rconCall('getPlayables', undefined, token);
+    playablesCache = String(text).split(/[\s,]+/).map((x) => x.trim()).filter((x) => /^[A-Za-z0-9_]+$/.test(x));
+    const keepDirty = cfgDirty;
+    renderConfig({ ...cfgData, settings: { ...cfgData.settings, ...collectSettings() } });
+    cfgDirty = keepDirty;
+    renderSubtabs();
+    toast(`Đã tải ${playablesCache.length} loài.`);
+  });
+}
+
+/** Every field as the form shows it — the panel always saves the full set. */
+function collectSettings() {
+  const out = {};
+  const schema = cfgData?.schema ?? {};
+  for (const [key, spec] of Object.entries(schema)) {
+    if (spec.type === 'list') {
+      const box = document.querySelector(`[data-field="${key}"]`);
+      if (!box) continue;
+      const ticked = [...box.querySelectorAll(`input[data-list="${key}"]:checked`)].map((i) => i.value);
+      const typed = [...box.querySelectorAll(`textarea[data-key="${key}"], input[data-extra="${key}"]`)]
+        .flatMap((el) => el.value.split(/[\s,]+/)).map((x) => x.trim()).filter(Boolean);
+      out[key] = [...new Set([...ticked, ...typed])];
+      continue;
+    }
+    const el = document.querySelector(`[data-key="${key}"]`);
+    if (!el) continue;
+    if (el.value === '' && spec.verified === false) out[key] = null;   // no line: the game decides
+    else if (spec.type === 'bool') out[key] = el.value === 'true';
+    else if (spec.type === 'text') out[key] = el.value.trim() === '' ? null : el.value;
+    else if (el.value !== '') out[key] = Number(el.value);
+  }
+  return out;
+}
+$('cfg-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  withToken('lưu cấu hình', async (token) => {
+    await adminFetch('/api/game-config', 'PUT', token, { settings: collectSettings() });
+    cfgDirty = false;
+    dirtyGroups.clear();
+    toast('Đã lưu cấu hình — có hiệu lực từ lần khởi động sau.');
+    refresh();
+  });
+});
+$('cfg-save-restart').addEventListener('click', () => {
+  const settings = collectSettings();
+  confirmAction({
+    title: 'Lưu và khởi động lại?',
+    body: `Cấu hình được ghi vào Game.ini rồi server khởi động lại để áp dụng.${countdownSelect('cfg-cd', 300)}`,
+    okLabel: 'Lưu & khởi động lại', withReason: true,
+    run: async (token, reason) => {
+      await adminFetch('/api/game-config', 'PUT', token, {
+        settings, restart: { countdownSeconds: Number($('cfg-cd').value), reason },
+      });
+      cfgDirty = false;
+      dirtyGroups.clear();
+      toast('Đã lưu — server sẽ khởi động lại.');
+      refresh();
+    },
+  });
+});
+
+const RD_ICON = { ok: '✓', wait: '…', fail: '✕' };
+function renderReadiness(r) {
+  $('rd-verdict').className = `rd-verdict ${r.verdict}`;
+  $('rd-verdict').innerHTML = `<span class="led"></span>${esc(r.summary)}`;
+  $('rd-sub').textContent = `kiểm tra lúc ${clock(r.checkedAt)}`;
+  $('rd-checks').innerHTML = r.checks.map((c) => `<li class="${c.state}"><span class="ic">${RD_ICON[c.state]}</span>
+    <div><b>${esc(c.label)}</b><small>${esc(c.detail)}${c.at ? ` · từ ${clock(c.at)} (${ago(c.at)})` : ''}</small></div></li>`).join('');
+  $('rd-join').innerHTML = r.lastJoin
+    ? `Người chơi vào gần nhất: <b>${esc(r.lastJoin.name ?? '?')}</b> lúc ${clock(r.lastJoin.t)} (${ago(r.lastJoin.t)}) — bằng chứng chắc chắn server đã hiện và vào được.`
+    : 'Chưa có người chơi nào vào kể từ khi bridge chạy.';
+}
+
+async function refreshServerTab() {
+  const [status, audit, cfg, readiness] = await Promise.all([
+    getJson('/api/server/status'),
+    getJson('/api/server/audit?limit=60'),
+    cfgDirty ? Promise.resolve(null) : getJson('/api/game-config'),
+    getJson('/api/server/readiness'),
+    getJson('/api/garage-settings').then(renderGarageSettings),
+    getJson('/api/commands-settings').then(renderCommandsSettings),
+    refreshCatalog(),
+    buildToggles(),
+  ]);
+  renderServer(status);
+  renderReadiness(readiness);
+  renderAudit(audit.entries);
+  if (cfg && !cfgDirty) renderConfig(cfg);
+}
+
+// --- garage settings ------------------------------------------------------------
+const GS_HELP = {
+  current: 'Người chơi respawn đúng loài đã cất rồi gõ <span class="mono">!redeem &lt;slot&gt;</span> — dino được khôi phục ngay tại chỗ đang đứng.',
+  stored: 'Người chơi respawn đúng loài rồi gõ <span class="mono">!redeem &lt;slot&gt;</span> — dino được đưa về đúng chỗ lúc gõ <span class="mono">!store</span>. Slot tạo từ panel không có điểm cất nên khôi phục tại chỗ.',
+  choice: '<span class="mono">!redeem &lt;slot&gt;</span> = tại chỗ đang đứng · <span class="mono">!redeem &lt;slot&gt; cu</span> (hoặc <span class="mono">old</span>) = về điểm đã cất · <span class="mono">!redeem cu</span> = slot mới nhất, về điểm đã cất.',
+};
+let gsDirty = false;
+function renderGarageSettings(gs) {
+  if (gsDirty) return;
+  $('gs-redeem-at').value = gs.redeemAt;
+  $('gs-max-slots').value = gs.maxSlots;
+  $('gs-countdown').value = gs.storeCountdown;
+  $('gs-cooldown').value = gs.cooldown;
+  $('gs-help').innerHTML = GS_HELP[gs.redeemAt] ?? '';
+}
+for (const id of ['gs-max-slots', 'gs-countdown', 'gs-cooldown']) $(id).addEventListener('input', () => { gsDirty = true; });
+$('gs-redeem-at').addEventListener('change', () => {
+  gsDirty = true;
+  $('gs-help').innerHTML = GS_HELP[$('gs-redeem-at').value] ?? '';
+});
+$('gs-save').addEventListener('click', () => withToken('lưu cài đặt gara', async (token) => {
+  await adminFetch('/api/garage-settings', 'PUT', token, {
+    redeemAt: $('gs-redeem-at').value,
+    maxSlots: Number($('gs-max-slots').value),
+    storeCountdown: Number($('gs-countdown').value),
+    cooldown: Number($('gs-cooldown').value),
+  });
+  gsDirty = false;
+  toast('Đã lưu — áp dụng từ lần !redeem kế tiếp.');
+  refresh();
+}));
+
+// --- player command settings ------------------------------------------------------
+const PC_NAMES = { slay: '!slay', unstuck: '!unstuck', prime: '!prime', status: '!status' };
+let pcDirty = false;
+function renderCommandsSettings(cs) {
+  if (pcDirty) return;
+  $('pc-slay-cd').value = cs.slayCooldown;
+  $('pc-unstuck-cd').value = cs.unstuckCooldown;
+  $('pc-enabled').innerHTML = Object.entries(PC_NAMES).map(([k, label]) =>
+    `<label><input type="checkbox" data-cmd="${k}"${cs.enabled[k] ? ' checked' : ''}>${label}</label>`).join('');
+}
+for (const id of ['pc-slay-cd', 'pc-unstuck-cd', 'pc-enabled']) {
+  $(id).addEventListener('input', () => { pcDirty = true; });
+  $(id).addEventListener('change', () => { pcDirty = true; });
+}
+$('pc-save').addEventListener('click', () => withToken('lưu cài đặt lệnh', async (token) => {
+  const enabled = {};
+  for (const box of document.querySelectorAll('#pc-enabled input[data-cmd]')) enabled[box.dataset.cmd] = box.checked;
+  await adminFetch('/api/commands-settings', 'PUT', token, {
+    slayCooldown: Number($('pc-slay-cd').value),
+    unstuckCooldown: Number($('pc-unstuck-cd').value),
+    enabled,
+  });
+  pcDirty = false;
+  toast('Đã lưu — có hiệu lực ngay.');
+  refresh();
+}));
+
 // --- routing + refresh --------------------------------------------------------
 
 const getJson = (url) => fetch(url).then((r) => {
@@ -2031,11 +3544,14 @@ function currentTab() {
   const h = location.hash.slice(1);
   if (h.startsWith('player/')) return 'player';
   if (h.startsWith('garage/')) return 'garage';
+  if (h.startsWith('server/')) return 'server';
+  if (h.startsWith('map/')) return 'map';
   return document.querySelector(`[data-view="${CSS.escape(h)}"]`) ? h : 'overview';
 }
 
 function showTab() {
   const tab = currentTab();
+  if (tab === 'server') { renderSubtabs(); showSub(); }
   for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== tab;
   for (const a of document.querySelectorAll('#tabs a')) {
     a.classList.toggle('active', a.dataset.tab === tab || (tab === 'player' && a.dataset.tab === 'overview'));
@@ -2083,10 +3599,16 @@ async function refreshTab(tab) {
       renderLeaderboard(await getJson('/api/leaderboard'));
       break;
     case 'map':
-      renderMap((await getJson('/api/map')).players);
+      {
+        const m = await getJson('/api/map');
+        renderMap(m.players, m.ai ?? null);
+      }
       break;
     case 'chat':
       renderChat((await getJson('/api/chat?limit=300')).events);
+      break;
+    case 'server':
+      await refreshServerTab();
       break;
     case 'garage': {
       const [garage, health] = await Promise.all([getJson('/api/garage'), getJson('/api/health'), refreshCreator()]);
@@ -2099,17 +3621,50 @@ async function refreshTab(tab) {
   }
 }
 
+// An empty server writes no events, so event age alone cannot tell "up but
+// quiet" from "down". The systemd phase can; it costs a systemctl call, so it
+// is fetched every 10 s rather than on every 2 s tick.
+const unitPhase = { phase: null, at: 0 };
+async function refreshUnitPhase() {
+  if (Date.now() - unitPhase.at < 10_000) return;
+  unitPhase.at = Date.now();
+  try {
+    unitPhase.phase = (await getJson('/api/server/status')).phase;
+  } catch {
+    unitPhase.phase = null;
+  }
+}
+const PHASE_BADGE = {
+  starting: ['stale', 'Server đang khởi động', 'đợi mod nạp xong'],
+  stopping: ['stale', 'Server đang tắt', 'systemd đang dừng tiến trình'],
+  stopped:  ['stale', 'Server đã tắt', 'bật lại ở tab Server'],
+  failed:   ['stale', 'Server lỗi', 'systemd báo failed — xem tab Server'],
+};
+
 async function refresh() {
   try {
-    const [health] = await Promise.all([getJson('/api/health'), refreshTab(currentTab())]);
+    const [health] = await Promise.all([getJson('/api/health'), refreshTab(currentTab()), refreshUnitPhase()]);
     const last = health.lastEventAt;
     const age = last === null ? null : Math.floor(Date.now() / 1000) - last;
     const live = age !== null && age < 30;
-    $('dot').className = 'pulse ' + (last === null ? '' : live ? 'live' : 'stale');
-    $('status-title').textContent = last === null ? 'Chưa có dữ liệu' : live ? 'Server đang chạy' : 'Server im lặng';
-    $('status-sub').textContent = last === null
-      ? 'chưa nhận được event nào'
-      : live ? `${health.online} online · event ${ago(last)}` : `không có event ${dur(age)} — có thể đã dừng`;
+    const phase = unitPhase.phase;
+    let dot, title, sub;
+    if (PHASE_BADGE[phase]) {
+      [dot, title, sub] = PHASE_BADGE[phase];
+    } else if (live) {
+      [dot, title, sub] = ['live', 'Server đang chạy', `${health.online} online · event ${ago(last)}`];
+    } else if (phase === 'running') {
+      [dot, title, sub] = ['live', 'Server đang chạy', health.online > 0
+        ? `${health.online} online · event ${last === null ? 'chưa có' : ago(last)}`
+        : 'chưa có người chơi'];
+    } else if (last === null) {
+      [dot, title, sub] = ['', 'Chưa có dữ liệu', 'chưa nhận được event nào'];
+    } else {
+      [dot, title, sub] = ['stale', 'Server im lặng', `không có event ${dur(age)} — có thể đã dừng`];
+    }
+    $('dot').className = 'pulse ' + dot;
+    $('status-title').textContent = title;
+    $('status-sub').textContent = sub;
     setCount('overview', health.online);
   } catch {
     $('dot').className = 'pulse stale';

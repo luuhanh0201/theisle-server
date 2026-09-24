@@ -5,9 +5,12 @@
 # afterwards. Read docs/architecture.md and docs/server-paths.md first.
 #
 #   sudo ./scripts/install.sh
+#   sudo ./scripts/install.sh --resume     finish an install that stopped part-way
 #
 # Refuses to run if the server directory already exists, so it can never
-# clobber an installed server or its Saved/ data.
+# clobber an installed server or its Saved/ data — unless --resume is given.
+# Every step after the check is safe to repeat: SteamCMD "validate" only
+# re-checks files, UE4SS is reinstalled (install-ue4ss.sh), units/sudoers are rewritten.
 
 set -euo pipefail
 
@@ -15,16 +18,24 @@ SERVICE_USER="${SERVICE_USER:-isle}"
 HOME_DIR="/home/$SERVICE_USER"
 GAME_ROOT="$HOME_DIR/server"
 WINEPREFIX_DIR="$HOME_DIR/prefix"
-STEAM_APP_ID=412680          # The Isle dedicated server
+STEAM_APP_ID=412680          # The Isle DEDICATED SERVER (376210 is the game client — not installable anonymously)
 STEAM_BRANCH=evrima          # without it SteamCMD installs the obsolete Legacy build
 NODE_MIN_MAJOR=20
-UE4SS_VERSION="${UE4SS_VERSION:-v3.0.1}"
 
 die() { echo "install.sh: $*" >&2; exit 1; }
 say() { echo "==> $*"; }
 
+RESUME=0
+case "${1:-}" in
+    --resume) RESUME=1 ;;
+    "") ;;
+    *) die "unknown option: $1 (only --resume)" ;;
+esac
+
 [[ $EUID -eq 0 ]] || die "run as root"
-[[ -d "$GAME_ROOT" ]] && die "$GAME_ROOT already exists — refusing to reinstall"
+if [[ -d "$GAME_ROOT" ]] && (( ! RESUME )); then
+    die "$GAME_ROOT already exists — refusing to reinstall (use --resume to finish a partial install)"
+fi
 
 # --- 1. packages --------------------------------------------------------
 
@@ -46,8 +57,18 @@ fi
 echo "steam steam/question select I AGREE" | debconf-set-selections
 echo "steam steam/license note ''"         | debconf-set-selections
 apt-get update
+# WineHQ (docs/HUONG-DAN-WINE.md section 7) replaces Ubuntu's wine packages and
+# conflicts with them; keep whichever Wine is already there.
+WINE_PKGS=(wine wine64 wine32:i386)
+for pkg in winehq-stable winehq-staging winehq-devel; do
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'install ok installed'; then
+        say "$pkg is installed; not installing Ubuntu's wine packages"
+        WINE_PKGS=()
+        break
+    fi
+done
 apt-get install -y --no-install-recommends \
-    wine wine64 wine32:i386 winbind xvfb \
+    "${WINE_PKGS[@]}" winbind xvfb \
     steamcmd \
     rsync curl unzip ca-certificates gettext-base lua5.4
 
@@ -72,33 +93,36 @@ sudo -u "$SERVICE_USER" env WINEPREFIX="$WINEPREFIX_DIR" wineserver -w
 # that. UE4SS only works with the Windows build (under Wine), so force it.
 say "downloading the dedicated server (app $STEAM_APP_ID, branch $STEAM_BRANCH, Windows build)"
 STEAMCMD="$(command -v steamcmd || echo /usr/games/steamcmd)"
-sudo -u "$SERVICE_USER" "$STEAMCMD" \
-    +@sSteamCmdForcePlatformType windows \
-    +force_install_dir "$GAME_ROOT" \
-    +login anonymous \
-    +app_update "$STEAM_APP_ID" -beta "$STEAM_BRANCH" validate \
-    +quit
-[[ -f "$GAME_ROOT/TheIsle/Binaries/Win64/TheIsleServer-Win64-Shipping.exe" ]] || \
-    die "the Windows server binary is missing after SteamCMD — check the output above"
+SERVER_EXE="$GAME_ROOT/TheIsle/Binaries/Win64/TheIsleServer-Win64-Shipping.exe"
+# A fresh SteamCMD often fails its first app_update with "Missing
+# configuration" while it is still fetching its own config; a retry works.
+for attempt in 1 2 3; do
+    if sudo -u "$SERVICE_USER" "$STEAMCMD" \
+        +@sSteamCmdForcePlatformType windows \
+        +force_install_dir "$GAME_ROOT" \
+        +login anonymous \
+        +app_update "$STEAM_APP_ID" -beta "$STEAM_BRANCH" validate \
+        +quit && [[ -f "$SERVER_EXE" ]]; then
+        break
+    fi
+    (( attempt < 3 )) || die "SteamCMD failed 3 times — see the output above"
+    say "SteamCMD did not finish (attempt $attempt/3) — retrying in 10s"
+    sleep 10
+done
+[[ -f "$SERVER_EXE" ]] || die "the Windows server binary is missing after SteamCMD — check the output above"
 
 # --- 5. UE4SS ----------------------------------------------------------
 
 BIN_DIR="$GAME_ROOT/TheIsle/Binaries/Win64"
-say "installing UE4SS $UE4SS_VERSION into $BIN_DIR"
-TMP="$(mktemp -d)"
-curl -fsSL -o "$TMP/ue4ss.zip" \
-    "https://github.com/UE4SS-RE/RE-UE4SS/releases/download/${UE4SS_VERSION}/UE4SS_${UE4SS_VERSION}.zip"
-sudo -u "$SERVICE_USER" unzip -q "$TMP/ue4ss.zip" -d "$BIN_DIR"
-rm -rf "$TMP"
-# 3.0+ installs a proxy (dwmapi.dll) plus the real UE4SS.dll. Both must be there.
-for dll in dwmapi.dll UE4SS.dll; do
-    [[ -f "$BIN_DIR/$dll" ]] || die "UE4SS did not install ($dll missing)"
-done
+# Latest experimental build, unpacked flat (the stable v3.0.1 cannot find
+# Evrima's engine). Set UE4SS_URL to pin a specific zip. See install-ue4ss.sh.
+bash "$(dirname "$0")/install-ue4ss.sh" --bin-dir "$BIN_DIR" --user "$SERVICE_USER" \
+    ${UE4SS_URL:+--url "$UE4SS_URL"}
 # Mods/shared/ comes from UE4SS (Types.lua, UEHelpers/). Ours goes in shared/isle.
-[[ -f "$BIN_DIR/ue4ss/Mods/shared/UEHelpers/UEHelpers.lua" ]] || \
+[[ -f "$BIN_DIR/Mods/shared/UEHelpers/UEHelpers.lua" ]] || \
     echo "install.sh: warning — UE4SS shared/UEHelpers not found" >&2
 
-mkdir -p "$BIN_DIR/ue4ss/Mods/shared/isle"
+mkdir -p "$BIN_DIR/Mods/shared/isle"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$HOME_DIR"
 
 # --- 6. systemd ---------------------------------------------------------
@@ -121,6 +145,10 @@ WorkingDirectory=$BIN_DIR
 Environment=WINEPREFIX=$WINEPREFIX_DIR
 Environment=GAME_ROOT=$GAME_ROOT
 Environment=WINEDEBUG=-all
+# Put the admin panel's Game.ini settings back before every start: the game
+# saves its in-memory config over Game.ini (e.g. after an RCON setting change),
+# which can undo a panel save. "-": never blocks the start (bridge not deployed yet).
+ExecStartPre=-/usr/bin/node $HOME_DIR/bridge/dist/cli-apply-settings.js --in-place $GAME_ROOT/TheIsle/Saved/Config/WindowsServer/Game.ini $HOME_DIR/bridge/data/game-settings.json
 ExecStart=$HOME_DIR/bin/start.sh
 Restart=on-failure
 RestartSec=15
@@ -141,10 +169,20 @@ BRIDGE_DIR="$HOME_DIR/bridge"
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" "$BRIDGE_DIR"
 # Runtime data directories. Lua cannot mkdir, so these must exist before the
 # mods first try to write, and deploy.sh deliberately never touches them.
+# Every level is listed: `install -d -o` only chowns the LAST component, so
+# "Mods/DinoGarage/Saved" alone would leave Mods/DinoGarage owned by root —
+# and deploy.sh (running as $SERVICE_USER) could then not create Scripts/ in it.
+# On --resume this also repairs the ownership of those directories.
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" \
-    "$BIN_DIR/ue4ss/Mods/StatsLogger/Saved" \
-    "$BIN_DIR/ue4ss/Mods/DinoGarage/Saved" \
-    "$BIN_DIR/ue4ss/Mods/DinoGarage/Saved/stored"
+    "$BIN_DIR/Mods" \
+    "$BIN_DIR/Mods/StatsLogger" \
+    "$BIN_DIR/Mods/StatsLogger/Saved" \
+    "$BIN_DIR/Mods/DinoGarage" \
+    "$BIN_DIR/Mods/DinoGarage/Saved" \
+    "$BIN_DIR/Mods/DinoGarage/Saved/stored" \
+    "$BIN_DIR/Mods/DinoGarage/Saved/deleted" \
+    "$BIN_DIR/Mods/PlayerCommands" \
+    "$BIN_DIR/Mods/PlayerCommands/Saved"
 
 cat > /etc/systemd/system/theisle-bridge.service <<UNIT
 [Unit]
@@ -171,15 +209,16 @@ chown "$SERVICE_USER:$SERVICE_USER" "$BRIDGE_DIR/.env"
 systemctl daemon-reload
 systemctl enable theisle-bridge.service
 
-# --- 6c. deploy rights --------------------------------------------------
-# deploy.sh connects as $SERVICE_USER and restarts the two services. Allow
-# exactly those two commands without a password, nothing else.
+# --- 6c. service rights -------------------------------------------------
+# deploy.sh (over ssh) and the bridge (the panel's Server tab) both run as
+# $SERVICE_USER. Allow exactly these commands without a password, nothing else:
+# start/stop/restart the game, restart the bridge.
 
-say "allowing $SERVICE_USER to restart theisle and theisle-bridge (sudoers)"
+say "allowing $SERVICE_USER to start/stop/restart theisle and restart theisle-bridge (sudoers)"
 SYSTEMCTL="$(command -v systemctl)"
 SUDOERS_TMP="$(mktemp)"
-printf '# Written by install.sh: lets deploy.sh restart exactly these units.\n%s ALL=(root) NOPASSWD: %s restart theisle.service, %s restart theisle-bridge.service\n' \
-    "$SERVICE_USER" "$SYSTEMCTL" "$SYSTEMCTL" > "$SUDOERS_TMP"
+printf '# Written by install.sh: deploy.sh and the admin panel manage exactly these units.\n%s ALL=(root) NOPASSWD: %s start theisle.service, %s stop theisle.service, %s restart theisle.service, %s restart theisle-bridge.service\n' \
+    "$SERVICE_USER" "$SYSTEMCTL" "$SYSTEMCTL" "$SYSTEMCTL" "$SYSTEMCTL" > "$SUDOERS_TMP"
 visudo -cf "$SUDOERS_TMP" >/dev/null || die "generated sudoers rule failed visudo"
 install -o root -g root -m 0440 "$SUDOERS_TMP" /etc/sudoers.d/theisle-deploy
 rm -f "$SUDOERS_TMP"

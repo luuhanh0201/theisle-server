@@ -11,8 +11,8 @@ local function check(name, ok, detail)
 end
 
 local A, B = "76561198000000001", "76561198000000002"
-local SAVED  = RUN .. "/ue4ss/Mods/DinoGarage/Saved/"
-local EVENTS = RUN .. "/ue4ss/Mods/StatsLogger/Saved/events.ndjson"
+local SAVED  = RUN .. "/Mods/DinoGarage/Saved/"
+local EVENTS = RUN .. "/Mods/StatsLogger/Saved/events.ndjson"
 os.remove(EVENTS)
 
 local pawnA = H.makePawn({ growth = 0.8 })
@@ -21,7 +21,7 @@ local ctrlB = H.makeCtrl(B, nil, "Bravo")        -- in the spawn menu, no dino
 local online = { ctrlA, ctrlB }
 _G.FindAllOf = function() H.touch("FindAllOf"); return online end
 
-dofile(RUN .. "/ue4ss/Mods/DinoGarage/Scripts/main.lua")
+dofile(RUN .. "/Mods/DinoGarage/Scripts/main.lua")
 local json = require("shared.isle.json")
 
 local function writeInbox(commands)

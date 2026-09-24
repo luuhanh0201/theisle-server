@@ -5,11 +5,13 @@
     (Health, Growth…), the class-path format DinoGarage compares on !redeem,
     mutation FNames, hook parameter order, and which UE4SS functions exist.
     This mod checks them against the live game once and writes the answers to
-    ue4ss/UE4SS.log, ending with a PROBE SUMMARY block to paste back.
+    UE4SS.log, ending with a PROBE SUMMARY block to paste back.
 
     STRICTLY READ-ONLY:
       * never calls a setter — for Set* functions it only checks they exist
-      * never writes a file (not even under Saved/)
+      * writes one file only: Mods/IsleProbe/census-started, just before the
+        world census, so a census that crashes the server does not run again
+        on every restart (deploy removes the file: one census per deploy)
       * logs SteamIDs masked to the last 4 digits, player names as a length
 
     Threads: hooks log on the game thread (they already run there); the pawn
@@ -19,6 +21,13 @@
     Turn it off in ue4ss/mods.txt (IsleProbe : 0) once the summary is clean.
 ]]
 
+-- Resolve require("shared.isle.*") to Mods/shared/isle/ whatever UE4SS itself
+-- puts on package.path. Relative to the server's working directory
+-- (Binaries/Win64), like every path the mods use.
+if not package.path:find("Mods/?.lua", 1, true) then
+    package.path = "Mods/?.lua;" .. package.path
+end
+
 local H = require("shared.isle.helpers")
 
 local MOD = "IsleProbe"
@@ -27,7 +36,7 @@ local PREFIX = "[isle-probe]"
 local POLL_MS          = 5000
 local MAX_SPECIES      = 3      -- probe this many different species, then stop
 local MAX_HOOK_SAMPLES = 3      -- log the first few fires of each hook
-local GIVE_UP_AFTER_S  = 60 * 60
+local GIVE_UP_AFTER_S  = 12 * 60 * 60   -- a quiet server may see its first spawn hours after a restart
 
 -- What the other mods read, in the same candidate order they use.
 local CANDIDATES = {
@@ -142,12 +151,12 @@ local function probeEnvironment()
     -- The mods open files by paths relative to the process working directory
     -- (Binaries/Win64). Reading our own script proves that resolves; nothing
     -- is written.
-    local f = io.open("ue4ss/Mods/" .. MOD .. "/Scripts/main.lua", "r")
+    local f = io.open("Mods/" .. MOD .. "/Scripts/main.lua", "r")
     if f then f:close() end
     note("relative paths", f ~= nil,
-        f and "ue4ss/Mods/... resolves from the working directory"
-          or "ue4ss/Mods/... does NOT resolve — every mod's files would go missing")
-    out("relative path ue4ss/Mods/%s/Scripts/main.lua readable: %s", MOD, tostring(f ~= nil))
+        f and "Mods/... resolves from the working directory"
+          or "Mods/... does NOT resolve — every mod's files would go missing")
+    out("relative path Mods/%s/Scripts/main.lua readable: %s", MOD, tostring(f ~= nil))
 end
 
 --------------------------------------------------------------------------
@@ -204,14 +213,17 @@ local function probeHooks()
             string.format("param2 is a pawn: %s, param3 is a number: %s (%s)",
                 tostring(targetIsPawn), tostring(okA and type(amount) == "number"), show(amount)))
     end)
-    -- helpers.lua reads (param 1 = controller, param 2 = message).
-    sampleHook("/Script/TheIsle.TIPlayerController:GetChatMessage", "GetChatMessage", function(ctrlP, msgP)
-        local okC, ctrl = pcall(function() return ctrlP:get() end)
+    -- helpers.lua reads (self = receiver, NewText, ChatPlayerController = sender).
+    -- The text must come back as words: tostring() on an FText returns
+    -- "FText: <address>", which is what this check used to accept.
+    sampleHook("/Script/TheIsle.TIPlayerController:GetChatMessage", "GetChatMessage", function(_, textP, senderP)
+        local okC, ctrl = pcall(function() return senderP:get() end)
         local hasSteam = okC and pcall(function() return ctrl:GetSteamId():ToString() end)
-        local okM, msg = pcall(function() return tostring(msgP:get()) end)
-        note("GetChatMessage params", hasSteam and okM,
-            string.format("param1 has GetSteamId: %s, param2 as text: %s",
-                tostring(hasSteam), okM and "ok" or "failed"))
+        local okM, msg = pcall(function() return H.textOf(textP:get()) end)
+        local isWords = okM and type(msg) == "string" and not msg:find("^FText: ")
+        note("GetChatMessage params", hasSteam and isWords,
+            string.format("sender (param 2) has GetSteamId: %s, text (param 1) readable as words: %s",
+                tostring(hasSteam), tostring(isWords)))
     end, true)   -- never log what players wrote
 end
 
@@ -266,6 +278,113 @@ local function probeNutrients(pawn)
         if okF and v ~= nil then readable = readable + 1 end
     end
     note("nutrients", readable > 0, string.format("%d/%d fields readable", readable, #NUTRIENT_FIELDS))
+end
+
+--- Every NutrientsStruct field with its value (real names, from reflection),
+--- and what the prime getters answer. Read-only.
+local function probeNutrientsAndPrime(pawn)
+    local ok, struct = pcall(function() return pawn.NutrientsStruct end)
+    if ok and struct ~= nil then
+        local names = H.structFields(struct)
+        local parts = {}
+        for _, name in ipairs(names) do
+            local got, v = pcall(function() return struct[name] end)
+            parts[#parts + 1] = name .. "=" .. (got and show(v) or "?")
+        end
+        out("  NutrientsStruct (%d fields): %s", #names, table.concat(parts, ", "))
+        note("nutrient fields", #names > 0, #names > 0 and (#names .. " fields readable by name")
+            or "reflection gave no field names")
+    else
+        out("  NutrientsStruct: unreadable")
+        note("nutrient fields", false, "NutrientsStruct unreadable")
+    end
+    for _, fn in ipairs({ "IsPrimeElder", "GetIsEligiblePrimeElder", "GetMaxHunger", "GetMaxHealth" }) do
+        local got, v = pcall(function() return pawn[fn](pawn) end)
+        out("  %s() -> %s", fn, got and show(v) or ("error: " .. tostring(v)))
+    end
+end
+
+--- Every reflected property whose name looks like quests / prime / elder, on
+--- the object's class AND its parents, with its value (structs field by
+--- field). Read-only. Used to find where Evrima keeps prime-quest progress:
+--- the native binary has no quest names, so they live in Blueprints.
+local DISCOVER = { "Quest", "Prime", "Elder", "Mission", "Objective", "Task", "Lineage" }
+local function describe(v)
+    local t = type(v)
+    if v == nil or t == "number" or t == "boolean" or t == "string" then return show(v) end
+    local okN, n = pcall(function() return v:GetArrayNum() end)
+    if okN and type(n) == "number" then
+        local items = {}
+        pcall(function() v:ForEach(function(_, e)
+            if #items < 12 then
+                local ev = e:get()
+                local fields = H.structFields(ev)
+                if #fields > 0 then
+                    local parts = {}
+                    for _, f in ipairs(fields) do
+                        local okF, fv = pcall(function() return ev[f] end)
+                        parts[#parts + 1] = f .. "=" .. (okF and show(fv) or "?")
+                    end
+                    items[#items + 1] = "{" .. table.concat(parts, ", ") .. "}"
+                else
+                    items[#items + 1] = show(ev)
+                end
+            end
+        end) end)
+        return string.format("array[%d] %s", n, table.concat(items, " "))
+    end
+    local fields = H.structFields(v)
+    if #fields > 0 then
+        local parts = {}
+        for _, f in ipairs(fields) do
+            local okF, fv = pcall(function() return v[f] end)
+            parts[#parts + 1] = f .. "=" .. (okF and show(fv) or "?")
+        end
+        return "{" .. table.concat(parts, ", ") .. "}"
+    end
+    return show(v)
+end
+
+local function discoverOn(obj, label)
+    if not H.isValid(obj) then out("  %s: not available", label); return end
+    local found = 0
+    local ok = pcall(function()
+        local cls = obj:GetClass()
+        local depth = 0
+        while cls ~= nil and depth < 12 and pcall(function() return cls:IsValid() end) and cls:IsValid() do
+            cls:ForEachProperty(function(prop)
+                local name = prop:GetFName():ToString()
+                for _, word in ipairs(DISCOVER) do
+                    if name:find(word, 1, true) then
+                        found = found + 1
+                        local okV, v = pcall(function() return obj[name] end)
+                        out("  %s.%s : %s = %s", label, name, prop:GetClass():GetFName():ToString(),
+                            okV and describe(v) or "<unreadable>")
+                        break
+                    end
+                end
+            end)
+            local okS, super = pcall(function() return cls:GetSuperStruct() end)
+            cls = okS and super or nil
+            depth = depth + 1
+        end
+    end)
+    out("  %s: %d quest/prime/elder properties%s", label, found, ok and "" or " (walk stopped early)")
+    note("quest/prime " .. label, ok and found > 0, found .. " matching properties")
+end
+
+local function discoverPrimeAndQuests(ctrl, pawn)
+    out("  --- prime / quest discovery ---")
+    for _, fn in ipairs({ "IsElder", "IsPrimeElder", "GetIsEligiblePrimeElder", "GetElderReplicationStacks" }) do
+        local got, v = pcall(function() return pawn[fn](pawn) end)
+        out("  %s() -> %s", fn, got and show(v) or ("error: " .. tostring(v)))
+    end
+    local got, data = pcall(function() return pawn:GetEligiblePrimeElderData() end)
+    out("  GetEligiblePrimeElderData() -> %s", got and describe(data) or ("error: " .. tostring(data)))
+    discoverOn(pawn, "pawn")
+    discoverOn(ctrl, "controller")
+    local okPS, ps = pcall(function() return ctrl.PlayerState end)
+    discoverOn(okPS and ps or nil, "playerState")
 end
 
 local function probePawn(ctrl, pawn)
@@ -330,6 +449,8 @@ local function probePawn(ctrl, pawn)
     note("position (K2_GetActorLocation)", okL, okL and "ok" or "live map will be empty")
 
     probeMutations(pawn)
+    probeNutrientsAndPrime(pawn)
+    discoverPrimeAndQuests(ctrl, pawn)
     probeNutrients(pawn)
 end
 
@@ -360,24 +481,291 @@ local startedAt = os.time()
 local busy = false
 local finished = false
 
+--------------------------------------------------------------------------
+-- Game config dump (game thread only, once)
+--
+-- Every property the session and game-state classes declare, with its type
+-- and live value, so the admin panel only offers Game.ini keys this build
+-- really has — and in the class (= Game.ini section) that owns them. Read-only.
+-- Secrets are masked; arrays are printed as a count (they hold SteamIDs).
+--------------------------------------------------------------------------
+
+local CONFIG_CLASSES = { "TIGameSession", "TIGameStateBase" }
+local configDumped = false
+
+-- Arrays whose elements are printed (names of species, AI, mutations). The
+-- SteamID arrays (AdminsSteamIDs, WhitelistIDs, VIPs, VIPQueue) stay a count.
+local LIST_ELEMENTS = { AllowedClasses = true, DisallowedAIClasses = true, EnabledMutations = true }
+local MAX_ELEMENTS = 80
+
+local function configValue(inst, name)
+    if name:lower():find("password", 1, true) then return "<masked>" end
+    local ok, v = pcall(function() return inst[name] end)
+    if not ok then return "<unreadable>" end
+    local t = type(v)
+    if v == nil or t == "number" or t == "boolean" then return tostring(v) end
+    local okN, n = pcall(function() return v:GetArrayNum() end)
+    if okN and type(n) == "number" then
+        if not LIST_ELEMENTS[name] or n == 0 then return "array[" .. n .. "]" end
+        local items = {}
+        pcall(function()
+            v:ForEach(function(_, elem)
+                if #items < MAX_ELEMENTS then items[#items + 1] = show(elem:get()) end
+            end)
+        end)
+        return string.format("array[%d] %s", n, table.concat(items, ", "))
+    end
+    return show(v)
+end
+
+local function dumpConfig()
+    local okF, session = pcall(FindFirstOf, "TIGameSession")
+    if not okF then configDumped = true; out("config dump: FindFirstOf failed"); return end
+    if not H.isValid(session) then return end        -- world not up yet: next poll
+    configDumped = true
+    for _, short in ipairs(CONFIG_CLASSES) do
+        local cls = StaticFindObject("/Script/TheIsle." .. short)
+        local inst = short == "TIGameSession" and session or FindFirstOf(short)
+        if not H.isValid(cls) then
+            out("config %s: class not found", short)
+        else
+            local n = 0
+            local ok, err = pcall(function()
+                cls:ForEachProperty(function(prop)
+                    local name = prop:GetFName():ToString()
+                    local ptype = prop:GetClass():GetFName():ToString()
+                    n = n + 1
+                    out("config %s.%s : %s = %s", short, name, ptype,
+                        H.isValid(inst) and configValue(inst, name) or "-")
+                end)
+            end)
+            out("config %s: %d properties%s", short, n, ok and "" or (" (stopped: " .. tostring(err) .. ")"))
+            note("config " .. short, ok and n > 0, string.format("%d properties dumped", n))
+        end
+    end
+end
+
+-- --- world census ------------------------------------------------------------
+-- What the live map could draw from the server itself instead of a static
+-- community map: which actor classes exist (AI, zones, water, food…), where,
+-- and what their Blueprints expose. Read-only, twice per run:
+--   * CENSUS_BOOT_AFTER_S after load: every actor, by class (one long read,
+--     done while the server is most likely empty);
+--   * CENSUS_PLAYERS_AFTER_S after the first player pawn: pawns only, since
+--     Evrima spawns AI around players.
+
+local CENSUS_BOOT_AFTER_S    = 120
+local CENSUS_PLAYERS_AFTER_S = 180
+local CENSUS_TOP             = 150   -- most common classes listed in full
+local CENSUS_DUMP_CLASSES    = 30    -- interesting classes whose properties are dumped
+local CENSUS_DUMP_PROPS      = 30    -- properties per dumped class
+local INTEREST = { "Zone", "Migrat", "Patrol", "Sanct", "Water", "Lake", "River", "Salt", "Lick",
+    "Food", "Fruit", "Plant", "Bush", "Mushroom", "Carcass", "Corpse", "Fish", "Nest", "Egg",
+    "Spawn", "AI", "Herd", "Mud", "Wallow", "Critter", "Animal", "Boar", "Deer", "Crab", "Frog",
+    "Turtle", "Chicken", "Rabbit", "Goat", "Weather", "Region" }
+local censusBootDone, censusPlayersDone, firstPawnAt = false, false, nil
+
+local function classOf(obj)
+    local ok, name = pcall(function() return obj:GetClass():GetFName():ToString() end)
+    return ok and type(name) == "string" and name or nil
+end
+
+local function whereText(actor)
+    local ok, s = pcall(function()
+        local l = actor:K2_GetActorLocation()
+        return string.format("(%d, %d, %d)", math.floor(l.X + 0.5), math.floor(l.Y + 0.5), math.floor(l.Z + 0.5))
+    end)
+    return ok and s or "?"
+end
+
+local function interesting(name)
+    for _, word in ipairs(INTEREST) do
+        if name:find(word, 1, true) then return true end
+    end
+    return false
+end
+
+--- The Blueprint-level properties of one actor with their values, stopping at
+--- the engine's own base classes (their properties are the same everywhere).
+--- ONLY scalar properties are read. Reading any property of an arbitrary actor
+--- crashed the server in UE4SS.dll (2026-09-24, right after
+--- TIGoreBase.bIsSolid) — a native crash pcall cannot catch. Other kinds are
+--- listed by name and type, never read.
+local ENGINE_BASES = { Actor = true, Pawn = true, Character = true, Object = true, Info = true, Volume = true }
+local SCALAR = { BoolProperty = true, IntProperty = true, Int64Property = true, FloatProperty = true,
+    DoubleProperty = true, ByteProperty = true, EnumProperty = true, NameProperty = true, StrProperty = true }
+local function dumpProps(obj, label)
+    local n = 0
+    pcall(function()
+        local cls = obj:GetClass()
+        local depth = 0
+        while cls ~= nil and depth < 8 and n < CENSUS_DUMP_PROPS do
+            local cname = cls:GetFName():ToString()
+            if ENGINE_BASES[cname] then break end
+            cls:ForEachProperty(function(prop)
+                if n >= CENSUS_DUMP_PROPS then return end
+                n = n + 1
+                local pname = prop:GetFName():ToString()
+                local ptype = prop:GetClass():GetFName():ToString()
+                if SCALAR[ptype] then
+                    local okV, v = pcall(function() return obj[pname] end)
+                    out("    %s.%s : %s = %s", cname, pname, ptype, okV and show(v) or "<unreadable>")
+                else
+                    out("    %s.%s : %s (not read)", cname, pname, ptype)
+                end
+            end)
+            local okS, super = pcall(function() return cls:GetSuperStruct() end)
+            cls = okS and super or nil
+            depth = depth + 1
+        end
+    end)
+    out("    (%s: %d properties shown)", label, n)
+end
+
+--- Group objects by a key, most common first.
+local function tally(list, keyOf)
+    local count, first, order = {}, {}, {}
+    for _, obj in ipairs(list) do
+        local key = keyOf(obj)
+        if key ~= nil then
+            if count[key] == nil then count[key] = 0; first[key] = obj; order[#order + 1] = key end
+            count[key] = count[key] + 1
+        end
+    end
+    table.sort(order, function(a, b) return count[a] > count[b] or (count[a] == count[b] and a < b) end)
+    return count, first, order
+end
+
+local function actorCensus()
+    local ok, actors = pcall(FindAllOf, "Actor")
+    if not ok or type(actors) ~= "table" then
+        out("world census: FindAllOf(Actor) failed: %s", tostring(actors))
+        note("world census", false, "FindAllOf(Actor) failed")
+        return
+    end
+    local count, first, order = tally(actors, classOf)
+    out("================ WORLD CENSUS: %d actors, %d classes ================", #actors, #order)
+    for i, name in ipairs(order) do
+        if i <= CENSUS_TOP or interesting(name) then
+            out("  %6d  %s  e.g. at %s", count[name], name, whereText(first[name]))
+        end
+    end
+    local dumped = 0
+    for _, name in ipairs(order) do
+        if dumped >= CENSUS_DUMP_CLASSES then break end
+        if interesting(name) and H.isValid(first[name]) then
+            dumped = dumped + 1
+            out("  --- %s (x%d) ---", name, count[name])
+            dumpProps(first[name], name)
+        end
+    end
+    out("================ END WORLD CENSUS ================")
+    note("world census", true, string.format("%d actors, %d classes", #actors, #order))
+end
+
+--- Pawns grouped by class and by who controls them: player-controlled vs AI.
+local function pawnCensus(label)
+    local ok, pawns = pcall(FindAllOf, "Pawn")
+    if not ok or type(pawns) ~= "table" then
+        out("pawn census: FindAllOf(Pawn) failed: %s", tostring(pawns))
+        note("pawn census " .. label, false, "FindAllOf(Pawn) failed")
+        return
+    end
+    local count, first, order = tally(pawns, function(p)
+        local okC, ctrl = pcall(function() return p.Controller end)
+        local by = okC and H.isValid(ctrl) and classOf(ctrl) or "no controller"
+        return (classOf(p) or "?") .. "  <- " .. by
+    end)
+    out("================ PAWN CENSUS (%s): %d pawns ================", label, #pawns)
+    for _, key in ipairs(order) do
+        out("  %5d  %s  e.g. at %s", count[key], key, whereText(first[key]))
+    end
+    -- What an AI pawn answers to: the live map needs "alive?" and a name.
+    local shown = 0
+    for _, key in ipairs(order) do
+        if shown >= 6 then break end
+        local p = first[key]
+        if not key:find("PlayerController", 1, true) and H.isValid(p) then
+            shown = shown + 1
+            local parts = {}
+            for _, fn in ipairs({ "GetHealth", "GetMaxHealth", "IsDead", "GetIsDead", "IsAlive", "GetGrowth" }) do
+                local okF, v = pcall(function() return p[fn](p) end)
+                parts[#parts + 1] = fn .. "=" .. (okF and show(v) or "n/a")
+            end
+            out("  AI sample %s: %s", key, table.concat(parts, " "))
+        end
+    end
+    out("================ END PAWN CENSUS ================")
+    note("pawn census " .. label, true, string.format("%d pawns, %d kinds", #pawns, #order))
+end
+
+-- A census that crashes the server must not run again on every restart.
+local CENSUS_MARK = "Mods/IsleProbe/census-started"
+local function censusAlreadyStarted()
+    local f = io.open(CENSUS_MARK, "r")
+    if f then f:close(); return true end
+    return false
+end
+local function markCensusStarted()
+    local f = io.open(CENSUS_MARK, "w")
+    if not f then return false end
+    f:write(os.date("!%Y-%m-%dT%H:%M:%SZ"), "\n")
+    f:close()
+    return true
+end
+
+local function censusOnGameThread()
+    local now = os.time()
+    if firstPawnAt == nil then
+        H.forEachPlayer(function(ctrl)
+            if firstPawnAt == nil and H.livePawnFromCtrl(ctrl) then firstPawnAt = now end
+        end)
+    end
+    if not censusBootDone and now - startedAt >= CENSUS_BOOT_AFTER_S then
+        censusBootDone = true
+        if censusAlreadyStarted() then
+            out("world census skipped: %s exists (it ran, or crashed, since the last deploy)", CENSUS_MARK)
+            censusPlayersDone = true
+            return
+        end
+        if not markCensusStarted() then
+            out("world census skipped: cannot write %s", CENSUS_MARK)
+            censusPlayersDone = true
+            return
+        end
+        H.try(MOD .. ": world census", actorCensus)
+        H.try(MOD .. ": pawn census", pawnCensus, "boot")
+        printSummary()
+    end
+    if not censusPlayersDone and firstPawnAt ~= nil and now - firstPawnAt >= CENSUS_PLAYERS_AFTER_S then
+        censusPlayersDone = true
+        H.try(MOD .. ": pawn census", pawnCensus, "players online")
+        printSummary()
+    end
+end
+
 local function probeOnGameThread()
     busy = false
-    local before = probedCount
-    H.forEachPlayer(function(ctrl)
-        if probedCount >= MAX_SPECIES then return end
-        local pawn = H.livePawnFromCtrl(ctrl)
-        if pawn then probePawn(ctrl, pawn) end
-    end)
-    -- Reprint the cumulative summary after every new species, so one admin
-    -- spawning once is enough to get an answer.
-    if probedCount > before then printSummary() end
-    if probedCount >= MAX_SPECIES then finished = true end
+    if not configDumped then H.try(MOD .. ": config dump", dumpConfig) end
+    if not finished then
+        local before = probedCount
+        H.forEachPlayer(function(ctrl)
+            if probedCount >= MAX_SPECIES then return end
+            local pawn = H.livePawnFromCtrl(ctrl)
+            if pawn then probePawn(ctrl, pawn) end
+        end)
+        -- Reprint the cumulative summary after every new species, so one admin
+        -- spawning once is enough to get an answer.
+        if probedCount > before then printSummary() end
+        if probedCount >= MAX_SPECIES then finished = true end
+    end
+    censusOnGameThread()
 end
 
 LoopAsync(POLL_MS, function()
-    if finished then return true end                     -- stop the loop
+    if finished and censusBootDone and censusPlayersDone then return true end   -- stop the loop
     if os.time() - startedAt > GIVE_UP_AFTER_S then
-        finished = true
+        finished, censusBootDone, censusPlayersDone = true, true, true
         out("giving up after %d min with %d species probed", GIVE_UP_AFTER_S // 60, probedCount)
         printSummary()
         return true
