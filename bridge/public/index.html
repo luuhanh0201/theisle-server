@@ -557,7 +557,7 @@
   .az-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; font-size: 13px; }
   .az-row input[type=checkbox] { width: 15px; height: 15px; flex: none; accent-color: #fb923c; }
   label.az-row { justify-content: flex-start; cursor: pointer; }
-  .az-row input:not([type=checkbox]) { max-width: 60%; }
+  .az-row input:not([type=checkbox]), .az-row select { max-width: 60%; }
   .az-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   .az-list li { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; cursor: pointer; font-size: 13px; }
   .az-list li.on { border-color: #fb923c; background: color-mix(in srgb, #fb923c 12%, transparent); }
@@ -849,12 +849,16 @@
                   <label>Mỗi lượt sinh từ (con)<input id="az-ptmin" type="number" min="1" max="5"></label>
                   <label>…đến (con)<input id="az-ptmax" type="number" min="1" max="5"></label>
                   <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
+                  <label>AI cách nhau tối thiểu (m)<input id="az-spacing" type="number" min="0" max="300" step="5"></label>
                   <label>Growth thấp nhất (%)<input id="az-gmin" type="number" min="10" max="100" step="5"></label>
                   <label>Growth cao nhất (%)<input id="az-gmax" type="number" min="10" max="100" step="5"></label>
                 </div>
                 <div class="step-hint">Vùng luôn được bù đủ <b>tối thiểu</b> trong vài giây (có người hay không).
                   Khi có người chơi trong vùng: mỗi lượt sinh thêm ngẫu nhiên trong khoảng đã đặt, mỗi con một chỗ khác nhau,
-                  đến khi đủ <b>tối đa</b> — và không vượt tổng AI toàn server. Trên bản đồ, AI thuộc vùng có viền cam.</div>
+                  đến khi đủ <b>tối đa</b> — và không vượt tổng AI toàn server. AI mới luôn cách mọi AI khác (kể cả AI game tự sinh)
+                  ít nhất khoảng đã đặt; hết chỗ thưa thì vùng ít hơn mức đặt chứ không dồn cục. Trên bản đồ, AI thuộc vùng có viền cam.
+                  <br>Vùng chỉ quản AI <b>do mod sinh</b>: thỏ, gà… quanh người chơi là AI game tự sinh (Game.ini) — chặn loài đó ở
+                  tab Server → cấu hình AI (<span class="mono">DisallowedAIClasses</span>).</div>
                 <div class="step-hint" id="az-points"></div>
                 <div class="az-row" style="gap:8px">
                   <button type="button" class="btn-ghost sm" id="az-move">Đặt lại tâm</button>
@@ -862,6 +866,21 @@
                 </div>
               </div>
               <button type="button" class="btn" id="az-save">Lưu vùng AI</button>
+            </div>
+          </section>
+          <section class="card" id="drop-card">
+            <div class="card-head"><h2>Thả AI cạnh người chơi</h2><span class="sub">mod AIZones</span></div>
+            <div class="card-body az">
+              <div class="az-row"><label for="drop-player">Người chơi</label><select id="drop-player"></select></div>
+              <div class="az-row"><label for="drop-species">Loại AI</label><select id="drop-species"></select></div>
+              <div class="az-grid">
+                <label>Số con (1–5)<input id="drop-count" type="number" min="1" max="5" value="1"></label>
+                <label>Cách người chơi (m)<input id="drop-dist" type="number" min="15" max="200" step="5" value="40"></label>
+                <label>Growth (%)<input id="drop-growth" type="number" min="10" max="100" step="5" value="100"></label>
+              </div>
+              <div class="step-hint">Thả ở chỗ đã có người/AI từng đứng (không rơi xuống dưới đất), gần khoảng cách đã chọn,
+                các con cách nhau ≥ 15 m. Không tính vào tổng AI toàn server. Server không nhận trong 30 giây thì lệnh tự huỷ.</div>
+              <button type="button" class="btn" id="drop-go">Thả AI</button>
             </div>
           </section>
           <section class="card">
@@ -2404,7 +2423,7 @@ function drawMap() {
 // --- AI zones (AIZones mod): drawn and edited on this map ---
 // az.draft is what the form shows and the map draws; saved with "Lưu vùng AI".
 const az = { data: null, draft: null, status: null, points: {}, speciesLabel: {}, speciesCls: {}, sel: null, placing: null, dirty: false, drag: null };
-const ZONE_DEFAULT = { radiusM: 300, species: ['Boar', 'Deer'], min: 3, max: 10, perTurnMin: 1, perTurnMax: 3, everySec: 60, growthMin: 0.75, growthMax: 1, enabled: true };
+const ZONE_DEFAULT = { radiusM: 300, species: ['Boar', 'Deer'], min: 3, max: 10, perTurnMin: 1, perTurnMax: 3, everySec: 60, spacingM: 40, growthMin: 0.75, growthMax: 1, enabled: true };
 const aiZoneShape = (zn) => ({ kind: 'circle', at: unitsOf({ x: zn.x, y: zn.y }), r: [zn.radiusM / 10, zn.radiusM / 10] });
 /** Screen point of the selected zone's resize handle (the zone's right edge). */
 function zoneHandle(zn) {
@@ -2445,6 +2464,7 @@ async function refreshAiZones() {
   az.speciesCls = Object.fromEntries(d.species.map((s) => [s.key, s.cls]));
   if (!az.dirty) az.draft = { enabled: d.enabled, globalMax: d.globalMax, zones: structuredClone(d.zones) };
   renderAiZones();
+  renderDropSpecies();
   requestDraw();
 }
 
@@ -2494,7 +2514,7 @@ function renderAiZoneForm() {
   set('az-name', zn.name);
   $('az-zenabled').checked = zn.enabled;
   set('az-radius', zn.radiusM);
-  set('az-min', zn.min); set('az-max', zn.max); set('az-ptmin', zn.perTurnMin); set('az-ptmax', zn.perTurnMax); set('az-every', zn.everySec);
+  set('az-min', zn.min); set('az-max', zn.max); set('az-ptmin', zn.perTurnMin); set('az-ptmax', zn.perTurnMax); set('az-every', zn.everySec); set('az-spacing', zn.spacingM);
   set('az-gmin', Math.round(zn.growthMin * 100)); set('az-gmax', Math.round(zn.growthMax * 100));
   const groups = [['animal', 'Thú'], ['dino', 'Khủng long']];
   const key = JSON.stringify(zn.species);
@@ -2560,7 +2580,7 @@ $('az-edit').addEventListener('input', (e) => {
     zn.name = $('az-name').value;
     zn.enabled = $('az-zenabled').checked;
     zn.radiusM = n('az-radius');
-    zn.min = n('az-min'); zn.max = n('az-max'); zn.perTurnMin = n('az-ptmin'); zn.perTurnMax = n('az-ptmax'); zn.everySec = n('az-every');
+    zn.min = n('az-min'); zn.max = n('az-max'); zn.perTurnMin = n('az-ptmin'); zn.perTurnMax = n('az-ptmax'); zn.everySec = n('az-every'); zn.spacingM = n('az-spacing');
     zn.growthMin = n('az-gmin') / 100; zn.growthMax = n('az-gmax') / 100;
     if (e.target.id === 'az-radius') delete az.points[zn.id];
   }
@@ -2572,6 +2592,62 @@ $('az-save').addEventListener('click', () => withToken('lưu vùng AI', async (t
   toast('Đã lưu vùng AI — mod đọc lại trong vòng 10 giây.');
   await refreshAiZones();
 }));
+
+// --- drop AI next to a player (mod AIZones, bridge/src/ai-drop.ts) ---
+
+const AI_ERRORS = {
+  expired: 'server không nhận kịp (mod AIZones có đang chạy?)',
+  'the player is offline or has no dino': 'người chơi đã offline hoặc chưa có dino',
+  'no spot left far enough from other AI': 'hết chỗ đứng đủ xa AI khác (vùng thưa hơn mức đặt)',
+  'no world to spawn in': 'chưa lấy được world của game',
+};
+const aiError = (e) => AI_ERRORS[e] ?? (/^class not found/.test(e) ? `game không có class này (${e.slice(17)})` : e);
+
+function renderDropSpecies() {
+  const sel = $('drop-species');
+  if (!az.data || sel.dataset.done) return;
+  sel.innerHTML = [['dino', 'Khủng long'], ['animal', 'Thú']].map(([kind, label]) => `<optgroup label="${label}">`
+    + az.data.species.filter((s) => s.kind === kind).map((s) => `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('')
+    + '</optgroup>').join('');
+  sel.value = 'Tyrannosaurus';
+  sel.dataset.done = '1';
+}
+
+/** Who can get a drop: players on the map now (they have a live position). */
+function renderDropPlayers() {
+  const sel = $('drop-player');
+  const online = lm.players.filter((p) => p.loc);
+  const key = online.map((p) => `${p.steamId}:${p.name ?? ''}`).join('|');
+  $('drop-go').disabled = online.length === 0;
+  if (sel.dataset.key === key) return;
+  const cur = sel.value;
+  sel.dataset.key = key;
+  sel.innerHTML = online.length === 0 ? '<option value="">(không có ai online)</option>'
+    : online.map((p) => `<option value="${esc(p.steamId)}">${esc(p.name ?? shortId(p.steamId))} · ${esc(dino(p.species))}</option>`).join('');
+  if (online.some((p) => p.steamId === cur)) sel.value = cur;
+}
+
+$('drop-go').addEventListener('click', () => {
+  const steamId = $('drop-player').value;
+  if (!steamId) { toast('Chọn một người chơi đang online', 'err'); return; }
+  const n = (id) => Math.round(Number($(id).value) || 0);
+  const body = { steamId, species: $('drop-species').value, count: n('drop-count'), distanceM: n('drop-dist'), growth: n('drop-growth') / 100 };
+  const what = `${body.count} × ${az.speciesLabel[body.species] ?? body.species}`;
+  withToken('thả AI', async (token) => {
+    const { id } = await adminFetch('/api/ai-drop', 'POST', token, body);
+    toast(`Đã gửi lệnh thả ${what} — chờ server…`);
+    for (let i = 0; i < 16; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const { result } = await getJson(`/api/ai-drop?id=${id}`);
+      if (!result) continue;
+      if (result.ok) toast(`Đã thả ${result.made} con ${az.speciesLabel[body.species] ?? body.species}${result.error ? ` (thiếu vì ${aiError(result.error)})` : ''}`);
+      else toast(`Không thả được: ${aiError(result.error ?? '?')}`, 'err');
+      requestDraw();
+      return;
+    }
+    toast('Server chưa nhận lệnh sau 30 giây — mod AIZones có đang chạy không?', 'err');
+  });
+});
 
 // --- hover and tooltips ---
 
@@ -2619,8 +2695,9 @@ function tipHtml(h) {
     const names = zn.species.map((k) => az.speciesLabel[k] ?? k).join(', ');
     return `<b>${esc(zn.name)}</b> — vùng AI${zn.enabled && az.draft.enabled ? '' : ' (tắt)'}<br>${esc(names)}<br>`
       + `<span class="m">bán kính ${zn.radiusM} m · tối thiểu ${zn.min} · tối đa ${zn.max} khi có người<br>`
-      + `mỗi lượt ${zn.perTurnMin === zn.perTurnMax ? zn.perTurnMin : `${zn.perTurnMin}–${zn.perTurnMax}`} con / ${zn.everySec} s`
+      + `mỗi lượt ${zn.perTurnMin === zn.perTurnMax ? zn.perTurnMin : `${zn.perTurnMin}–${zn.perTurnMax}`} con / ${zn.everySec} s · cách nhau ≥ ${zn.spacingM} m`
       + `${st && typeof st.count === 'number' ? `<br>đang có ${st.count} · ${st.occupied ? `có người${typeof st.nextTurn === 'number' ? `, lượt sau ${st.nextTurn} s` : ''}` : 'vắng người'}` : ''}`
+      + `${st?.lastError ? `<br>gần nhất: ${esc(aiError(st.lastError))}` : ''}`
       + `<br>bấm để sửa</span>`;
   }
   if (h.ai) {
@@ -2988,6 +3065,7 @@ setInterval(async () => {
 
 function renderMap(players, ai = null) {
   lm.players = players;
+  renderDropPlayers();
   for (const p of players) moveTo(p);
   lm.ai = ai;
   renderAiStatus();

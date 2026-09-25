@@ -8,6 +8,9 @@
 --   * `max`: once a player is inside, every `every` seconds a random
 --     perTurnMin..perTurnMax (1–5) more appear, each at a different spot,
 --     until the zone holds `max`.
+-- New AI keep `spacing` away from every living AI (the game's too), so a
+-- zone stays spread out; with no such spot left it stays below its numbers.
+-- Admins can also drop a few AI next to a chosen player (see Drops below).
 --
 -- The bridge writes Mods/AIZones/Saved/zones.json: the zones, each species'
 -- pawn + AI controller class (pairs verified live by the evrima-dev-knowledge
@@ -154,8 +157,11 @@ local function num(v, lo, hi, default)
 end
 
 --- The zone's points in a random order, spots near a player last: each AI of
---- a turn takes the next one, so no two land on the same spot.
-local function spotsFor(zone, players)
+--- a turn takes the next one, so no two land on the same spot. With a
+--- `spacing` (cm), a spot closer than that to a living AI (`ai`) or to one
+--- taken this turn is skipped, and when none is left there is no spot: the
+--- zone stays thinner rather than crowded.
+local function spotsFor(zone, players, ai, spacing)
     local far, close = {}, {}
     for _, pt in ipairs(zone.points) do
         local isClose = false
@@ -173,9 +179,27 @@ local function spotsFor(zone, players)
     end
     for _, pt in ipairs(close) do far[#far + 1] = pt end
     local i = 0
+    if spacing <= 0 then
+        return function()
+            i = i + 1
+            return far[(i - 1) % #far + 1]    -- more AI than spots: round again
+        end
+    end
+    local taken = {}
+    for _, a in ipairs(ai or {}) do taken[#taken + 1] = { x = a.x, y = a.y } end
     return function()
-        i = i + 1
-        return far[(i - 1) % #far + 1]    -- more AI than spots: round again
+        while i < #far do
+            i = i + 1
+            local pt, free = far[i], true
+            for _, t in ipairs(taken) do
+                if near(t, pt[1], pt[2], spacing) then free = false; break end
+            end
+            if free then
+                taken[#taken + 1] = { x = pt[1], y = pt[2] }
+                return pt
+            end
+        end
+        return nil
     end
 end
 
@@ -188,6 +212,7 @@ local function spawnOne(world, zone, sp, nextSpot)
     end
     for _ = 1, TRIES do
         local pt = nextSpot()
+        if pt == nil then return false, "no spot left far enough from other AI", true end
         local loc = { X = pt[1], Y = pt[2], Z = pt[3] + num(sp.lift, 0, 1000, 150) }
         local rot = { Pitch = 0, Yaw = math.random(0, 359), Roll = 0 }
         local okP, pawn = pcall(function() return world:SpawnActor(pawnCls, loc, rot) end)
@@ -328,11 +353,15 @@ local function tick()
             room = 0
         end
         local made = {}
-        local nextSpot = room > 0 and spotsFor(z, players) or nil
+        local nextSpot = room > 0 and spotsFor(z, players, ai, num(z.spacing, 0, 30000, 0)) or nil
         for _ = 1, room do
             local sp = z.species[math.random(#z.species)]
-            local ok, err = spawnOne(world, z, sp, nextSpot)
-            if ok then
+            local ok, err, noSpot = spawnOne(world, z, sp, nextSpot)
+            if noSpot then
+                -- Spacing leaves no room: thinner than asked, not crowded. Not a failure.
+                stats.lastError = err
+                break
+            elseif ok then
                 count, alive, total = count + 1, alive + 1, total + 1
                 stats.spawned = stats.spawned + 1
                 stats.lastSpawn = now
@@ -343,7 +372,7 @@ local function tick()
                 H.logError(MOD .. ": zone '" .. tostring(z.name) .. "': " .. tostring(err))
             end
         end
-        budget = budget - room
+        budget = budget - #made
         -- A top-up that made nothing (no class, no free spot) is not retried every tick.
         if room > 0 and #made == 0 then retryAt[z.id] = now + RETRY_S end
         if #made > 0 then
@@ -376,6 +405,134 @@ local function tick()
 end
 
 --------------------------------------------------------------------------
+-- Drops: "put N of this AI next to that player" from the admin panel
+--------------------------------------------------------------------------
+-- The bridge (bridge/src/ai-drop.ts) writes drops.json with the spots it
+-- picked from the ground points around the player; this runs each id once
+-- (the last id is kept in drops.done.json, written BEFORE acting, so a crash
+-- or a restart never replays a drop) and writes the outcome back. A drop is
+-- an admin's explicit act: it does not wait for the zones' server-wide cap,
+-- only HARD_MAX. Game thread (H.every), like DinoGarage's inbox.
+
+local DROPS_PATH   = "Mods/AIZones/Saved/drops.json"
+local DONE_PATH    = "Mods/AIZones/Saved/drops.done.json"
+local DROP_MS      = 2000
+local DROP_NEAR_CM = 1000   -- never closer to the player than this (they may have moved since)
+local DROP_APART_CM = 1500  -- dropped AI this far apart from each other
+local done = nil            -- { lastId, results }, loaded lazily
+
+local function readJsonFile(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local raw = f:read("*a")
+    f:close()
+    if raw == nil or raw == "" then return nil end
+    local ok, data = pcall(json.decode, raw)
+    if ok and type(data) == "table" then return data end
+    return nil
+end
+
+local function writeDone()
+    local ok, text = pcall(json.encode, done)
+    if not ok then return end
+    local tmp = DONE_PATH .. ".tmp"
+    local f = io.open(tmp, "w")
+    if not f then H.logError(MOD .. ": cannot write " .. tmp); return end
+    f:write(text)
+    f:close()
+    os.remove(DONE_PATH)
+    os.rename(tmp, DONE_PATH)
+end
+
+local function finish(id, ok, made, err)
+    local results = done.results
+    results[#results + 1] = { id = id, ok = ok, made = made, error = err, t = os.time() }
+    while #results > 20 do table.remove(results, 1) end
+    writeDone()
+end
+
+--- One drop, on the game thread. Returns ok, how many were made, why not.
+local function runDrop(d)
+    local target = nil
+    H.forEachPlayer(function(c)
+        if target == nil and H.safeSteamId(c) == d.steamId then target = c end
+    end)
+    local pawn = target and H.livePawnFromCtrl(target)
+    if pawn == nil then return false, 0, "the player is offline or has no dino" end
+    local at = locationOf(pawn)
+    local okW, world = pcall(function() return pawn:GetWorld() end)
+    if at == nil or not okW or world == nil or not H.isValid(world) then return false, 0, "no world to spawn in" end
+    local sp = type(d.sp) == "table" and d.sp or nil
+    if sp == nil or type(d.spots) ~= "table" then return false, 0, "bad drop" end
+    -- The bridge's spots, re-sorted around where the player is now: closest
+    -- to the asked distance first, none on top of them, a little apart.
+    local want = num(d.distanceM, 15, 200, 30) * 100
+    local list = {}
+    for _, pt in ipairs(d.spots) do
+        if type(pt) == "table" and tonumber(pt[1]) and tonumber(pt[2]) and tonumber(pt[3]) then
+            local dist = math.sqrt((pt[1] - at.x) ^ 2 + (pt[2] - at.y) ^ 2)
+            if dist >= DROP_NEAR_CM then list[#list + 1] = { pt = pt, off = math.abs(dist - want) } end
+        end
+    end
+    table.sort(list, function(a, b) return a.off < b.off end)
+    local used, i = {}, 0
+    local function nextSpot()
+        while i < #list do
+            i = i + 1
+            local pt, free = list[i].pt, true
+            for _, u in ipairs(used) do
+                if near(u, pt[1], pt[2], DROP_APART_CM) then free = false; break end
+            end
+            if free then used[#used + 1] = { x = pt[1], y = pt[2] }; return pt end
+        end
+        return nil
+    end
+    local alive = 0
+    for _ in pairs(ours) do alive = alive + 1 end
+    local count = math.min(math.floor(num(d.count, 1, 5, 1)), HARD_MAX - alive)
+    if count <= 0 then return false, 0, "the mod's own limit (" .. HARD_MAX .. " AI) is reached" end
+    local g = num(d.growth, 0.1, 1, 1)
+    local asZone = { growthMin = g, growthMax = g }
+    local made, why = 0, nil
+    for _ = 1, count do
+        local ok, err, noSpot = spawnOne(world, asZone, sp, nextSpot)
+        if ok then made = made + 1 else why = err end
+        if noSpot then break end
+    end
+    return made > 0, made, why
+end
+
+local function pollDrops()
+    local file = readJsonFile(DROPS_PATH)
+    if file == nil or type(file.drops) ~= "table" then return end
+    if done == nil then
+        done = readJsonFile(DONE_PATH) or {}
+        done.lastId = tonumber(done.lastId) or 0
+        if type(done.results) ~= "table" then done.results = {} end
+    end
+    local pending = {}
+    for _, d in ipairs(file.drops) do
+        if type(d) == "table" and tonumber(d.id) and tonumber(d.id) > done.lastId then pending[#pending + 1] = d end
+    end
+    table.sort(pending, function(a, b) return tonumber(a.id) < tonumber(b.id) end)
+    local now = os.time()
+    for _, d in ipairs(pending) do
+        local id = tonumber(d.id)
+        done.lastId = id
+        writeDone()                                   -- before acting: never twice
+        if tonumber(d.expiresAt) == nil or now > tonumber(d.expiresAt) then
+            finish(id, false, 0, "expired")
+        else
+            local ok, made, why = runDrop(d)
+            finish(id, ok, made, (not ok or made < (tonumber(d.count) or 0)) and why or nil)
+            local line = string.format("%s: drop %d — %d × %s next to %s%s", MOD, id, made,
+                tostring(d.sp and d.sp.key), tostring(d.steamId), why and (" (" .. tostring(why) .. ")") or "")
+            if ok then H.log(line) else H.logError(line) end
+        end
+    end
+end
+
+--------------------------------------------------------------------------
 -- Start
 --------------------------------------------------------------------------
 
@@ -387,4 +544,5 @@ LoopAsync(READ_MS, function()
     return false
 end)
 H.every(TICK_MS, MOD .. " turn", tick)
+H.every(DROP_MS, MOD .. " drops", pollDrops)
 H.log(MOD .. ": loaded — zones from " .. ZONES_PATH .. " (off until the panel turns them on)")

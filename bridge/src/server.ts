@@ -25,6 +25,7 @@ import { speciesOfClassPath } from './catalog.js';
 import { maximaAt } from './species-stats.js';
 import { AI_SPECIES } from './ai-species.js';
 import { readAiZones, readAiZonesStatus, saveAiZones, type AiZonesSettings } from './ai-zones.js';
+import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
   listAll,
@@ -199,7 +200,7 @@ function describeZoneChanges(before: AiZonesSettings, after: AiZonesSettings): s
   if (top) parts.push(top);
   const old = new Map(before.zones.map((z) => [z.id, z]));
   const now = new Map(after.zones.map((z) => [z.id, z]));
-  for (const z of after.zones) if (!old.has(z.id)) parts.push(`+ vùng "${z.name}" (${z.species.join(', ')}; tối thiểu ${z.min}, tối đa ${z.max}, mỗi lượt ${z.perTurnMin}–${z.perTurnMax} con / ${z.everySec} s)`);
+  for (const z of after.zones) if (!old.has(z.id)) parts.push(`+ vùng "${z.name}" (${z.species.join(', ')}; tối thiểu ${z.min}, tối đa ${z.max}, mỗi lượt ${z.perTurnMin}–${z.perTurnMax} con / ${z.everySec} s, cách nhau ≥ ${z.spacingM} m)`);
   for (const z of before.zones) if (!now.has(z.id)) parts.push(`− vùng "${z.name}"`);
   for (const z of after.zones) {
     const was = old.get(z.id);
@@ -283,7 +284,8 @@ async function handlePanel(
       (path === '/api/commands-settings' && req.method === 'PUT') ||
       (path === '/api/voice-settings' && req.method === 'PUT') ||
       (path === '/api/panel-access' && req.method === 'PUT') ||
-      (path === '/api/ai-zones' && req.method === 'PUT');
+      (path === '/api/ai-zones' && req.method === 'PUT') ||
+      (path === '/api/ai-drop' && req.method === 'POST');
     if (!allowed) {
       sendJson(res, 404, { error: 'not found' });
       return;
@@ -353,6 +355,23 @@ async function handlePanel(
       const saved = await saveAiZones(await readJsonBody(req), store.groundPoints);
       await audit({ action: 'AI zones saved', detail: describeZoneChanges(before, saved) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/ai-drop') {
+      const drop = validateDrop(await readJsonBody(req));
+      const player = livePlayer(await readLiveState(), drop.steamId);
+      if (player === null) {
+        sendJson(res, 409, { error: 'that player is not in the game right now (no live position)' });
+        return;
+      }
+      const queued = await queueDrop(drop, player.loc, store.groundPoints);
+      await audit({
+        action: 'AI dropped near a player',
+        detail: `${drop.steamId} · ${drop.count} × ${drop.species} ${Math.round(drop.growth * 100)}% · ~${drop.distanceM} m · lệnh ${queued.id}`,
+        ok: true,
+      });
+      sendJson(res, 202, { id: queued.id, spots: queued.spots.length });
       return;
     }
 
@@ -600,6 +619,13 @@ async function handlePanel(
         points: Object.fromEntries(zones.zones.map((z) => [z.id, store.groundPoints.within(z.x, z.y, z.radiusM * 100, 200).length])),
         groundPoints: store.groundPoints.size,
       });
+      return;
+    }
+    case '/api/ai-drop': {
+      // The mod's outcome for a drop (null while it has not run it yet).
+      const id = Number(url.searchParams.get('id'));
+      if (!Number.isInteger(id) || id < 1) { sendJson(res, 400, { error: 'id required' }); return; }
+      sendJson(res, 200, { id, result: await dropResult(id) });
       return;
     }
     case '/api/ai-zones/points': {

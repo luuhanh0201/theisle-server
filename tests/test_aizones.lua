@@ -249,6 +249,63 @@ if f then f:close() end
 check("…kept between scans", st and st.zones.z3 and st.zones.z3.count == 2, st and json.encode(st) or "no file")
 check("…and the spawn counters", st and st.zones.z3.spawned == 2)
 
+say("\n-- 5c. spacing: no new AI closer than `spacing` to a living one --")
+fresh()
+playerAt(500000)
+-- A deer the game made, standing on the first spot.
+aiPawns[#aiPawns + 1] = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Deer.BP_Deer_C", loc = { X = 50000, Y = 100, Z = 2000 } })
+writeZones({ enabled = true, globalMax = 60, zones = { zone({ id = "zs", min = 3, max = 3, spacing = 4000 }) } })
+reader.fn()
+step(12)
+local onDeer = false
+for _, c in ipairs(H.calls) do
+  if c.what == "SpawnActor" and not c.args[1]:match("Controller$") and c.args[2].X == 50000 then onDeer = true end
+end
+check("min 3 but only 2 spots 40 m clear of other AI: 2", spawns() == 2, tostring(spawns()))
+check("nothing next to the deer", not onDeer)
+step(12)
+check("no crowding later either", spawns() == 2, tostring(spawns()))
+
+say("\n-- 5d. drop N AI next to a player, from the panel --")
+local drops = nil
+for _, l in ipairs(H.gameLoops) do if l.ms == 2000 then drops = l end end
+check("a 2 s game-thread drop poll", drops ~= nil)
+fresh()
+writeZones({ enabled = false, globalMax = 0, zones = {} })   -- drops do not need zones on
+reader.fn()
+playerAt(100000)
+local DROPS = RUN .. "/Mods/AIZones/Saved/drops.json"
+local DONE = RUN .. "/Mods/AIZones/Saved/drops.done.json"
+local function writeDrops(t) local f = assert(io.open(DROPS, "w")); f:write(json.encode({ drops = t })); f:close() end
+local function readDone() local f = io.open(DONE, "r"); if not f then return nil end; local d = json.decode(f:read("*a")); f:close(); return d end
+local rex = { key = "Rex", cls = "BP_Tyrannosaurus_C", pawn = REX, ctrl = REX_AI, kind = "dino", lift = 300 }
+writeDrops({
+  { id = 1, steamId = "76561190000000001", count = 2, distanceM = 30, growth = 0.5, sp = rex, expiresAt = clock + 30,
+    spots = { { 100500, 0, 2000 }, { 103000, 0, 2000 }, { 103200, 0, 2000 }, { 97000, 0, 2000 }, { 120000, 0, 2000 } } },
+})
+drops.fn()
+local at = {}
+for _, c in ipairs(H.calls) do
+  if c.what == "SpawnActor" and not c.args[1]:match("Controller$") then at[#at + 1] = c.args[2].X end
+end
+table.sort(at)
+check("2 dropped ~30 m away, apart, not on the player", #at == 2 and at[1] == 97000 and at[2] == 103000, table.concat(at, ","))
+local g = nil
+for _, c in ipairs(H.calls) do if c.what == "SetGrowth" then g = c.args[1] end end
+check("at the asked growth", g == 0.5, tostring(g))
+local d = readDone()
+check("done: id 1 ok, 2 made", d and d.lastId == 1 and d.results[1].ok == true and d.results[1].made == 2, d and json.encode(d) or "no file")
+drops.fn()
+check("run once only", spawns() == 2, tostring(spawns()))
+writeDrops({
+  { id = 2, steamId = "76561190000000001", count = 1, distanceM = 30, growth = 1, sp = rex, expiresAt = clock - 1, spots = { { 103000, 0, 2000 } } },
+  { id = 3, steamId = "76561190000000099", count = 1, distanceM = 30, growth = 1, sp = rex, expiresAt = clock + 30, spots = { { 103000, 0, 2000 } } },
+})
+drops.fn()
+d = readDone()
+check("expired and offline: refused, nothing spawned", spawns() == 2 and d and d.lastId == 3
+  and d.results[2].error == "expired" and d.results[3].ok == false, d and json.encode(d) or "no file")
+
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
 

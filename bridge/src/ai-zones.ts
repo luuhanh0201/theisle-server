@@ -40,6 +40,8 @@ export interface AiZone {
   perTurnMin: number;
   perTurnMax: number;
   everySec: number;
+  /** No new AI closer than this to any living AI (or another new one): herds stay spread out. */
+  spacingM: number;
   growthMin: number;
   growthMax: number;
 }
@@ -52,6 +54,8 @@ export interface AiZonesSettings {
 
 export const AI_ZONES_DEFAULTS: AiZonesSettings = { enabled: false, globalMax: 150, zones: [] };
 const MAX_ZONES = 40;
+/** Zones saved before spacing existed get this. */
+export const DEFAULT_SPACING_M = 40;
 
 const settingsPath = (): string => join(config.dataDir, 'ai-zones.json');
 const modPath = (): string => join(config.aiZonesRoot, 'zones.json');
@@ -84,6 +88,7 @@ function validateZone(raw: unknown, i: number): AiZone {
   const perTurnMin = int(r['perTurnMin'] ?? r['perTurn'], 1, 5, `${at}: perTurnMin`);
   const perTurnMax = int(r['perTurnMax'] ?? r['perTurn'], 1, 5, `${at}: perTurnMax`);
   if (perTurnMin > perTurnMax) throw new ValidationError(`${at}: perTurnMin is above perTurnMax`);
+  const spacingM = int(r['spacingM'] ?? DEFAULT_SPACING_M, 0, 300, `${at}: spacingM`);
   const growthMin = real(r['growthMin'], 0.1, 1, `${at}: growthMin`);
   const growthMax = real(r['growthMax'], 0.1, 1, `${at}: growthMax`);
   if (growthMin > growthMax) throw new ValidationError(`${at}: growthMin is above growthMax`);
@@ -94,7 +99,7 @@ function validateZone(raw: unknown, i: number): AiZone {
     y: real(r['y'], -2_000_000, 2_000_000, `${at}: y`),
     radiusM: int(r['radiusM'], 50, 5000, `${at}: radius (m)`),
     species: species as string[],
-    min, max, perTurnMin, perTurnMax,
+    min, max, perTurnMin, perTurnMax, spacingM,
     everySec: int(r['everySec'], 10, 3600, `${at}: everySec`),
     growthMin, growthMax,
   };
@@ -135,6 +140,7 @@ export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
       id: z.id, name: z.name, enabled: z.enabled, x: z.x, y: z.y,
       radius: z.radiusM * 100,
       min: z.min, max: z.max, perTurnMin: z.perTurnMin, perTurnMax: z.perTurnMax, every: z.everySec,
+      spacing: z.spacingM * 100,
       growthMin: z.growthMin, growthMax: z.growthMax,
       species: z.species.map((k) => {
         const sp = AI_BY_KEY.get(k);

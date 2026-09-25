@@ -59,6 +59,7 @@ test('validation: names, known species, min under max, a per-turn range 1–5, g
   assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ perTurnMax: 6 })] }), /perTurnMax/);
   assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ perTurnMin: 0 })] }), /perTurnMin/);
   assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ perTurnMin: 4, perTurnMax: 2 })] }), /perTurnMin is above/);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ spacingM: 500 })] }), /spacingM/);
   assert.throws(() => validateAiZones({ enabled: 'yes', globalMax: 150, zones: [] }), /enabled/);
   assert.throws(() => validateAiZones({ enabled: true, globalMax: -1, zones: [] }), /globalMax/);
 });
@@ -67,6 +68,7 @@ test('a file saved before the rename: idleMax is the min, perTurn both ends of t
   const { min: _m, perTurnMin: _a, perTurnMax: _b, ...rest } = zone();
   const z = validateAiZones({ enabled: true, globalMax: 150, zones: [{ ...rest, idleMax: 2, perTurn: 4 }] }).zones[0];
   assert.deepEqual([z.min, z.perTurnMin, z.perTurnMax], [2, 4, 4]);
+  assert.equal(z.spacingM, 40, 'no spacing saved: 40 m');
   assert.ok(!('idleMax' in z) && !('perTurn' in z), 'saved under the new names only');
 });
 
@@ -82,6 +84,7 @@ test('save: the panel\'s file and the mod\'s file (classes, radius in cm, the zo
   const z = mod.zones[0];
   assert.equal(z.radius, 30000);
   assert.deepEqual([z.min, z.max, z.perTurnMin, z.perTurnMax], [3, 10, 1, 3]);
+  assert.equal(z.spacing, 4000, 'spacing in cm');
   assert.equal(z.every, 60);
   assert.deepEqual(z.species.map((s) => s.cls), ['BP_Boar_C', 'BP_Deer_C']);
   assert.ok(z.species.every((s) => s.pawn && s.ctrl && s.lift > 0));
