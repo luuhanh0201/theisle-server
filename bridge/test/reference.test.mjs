@@ -31,7 +31,28 @@ test('reference data is well-formed', () => {
     assert.ok(r.sources.length > 0, `${r.name} cites a source`);
     assert.ok(MUTATION_NAME_RE.test(r.name), `${r.name} passes the name check`);
     if (r.status !== 'active') assert.ok(r.statusNote, `${r.name} explains its status`);
+    assert.ok(r.en.length > 5 && /^[\x20-\x7e]+$/.test(r.en), `${r.name} has the source's English description`);
+    if (r.kind === 'unlock') assert.ok(r.unlockEn, `${r.name}: how to unlock, as the source says`);
+    if (r.tiers) assert.ok(r.stat, `${r.name}: what its values measure`);
   }
+});
+
+test('matches Evrima Quick Guide (4/9/2026): every mutation it lists, removed ones marked', () => {
+  // The page's names, in its order (lifecycle, dinosaur type, unlockable, removed).
+  const EQG = ['Advanced Gestation', 'Cellular Regeneration', 'Congenital Hypoalgesia', 'Efficient Digestion',
+    'Enlarged Meniscus', 'Epidermal Fibrosis', 'Featherweight', 'Gastronomic Regeneration', 'Hydrodynamic',
+    'Hydro-regenerative', 'Increased Inspiratory Capacity', 'Infrasound Communication', 'Nocturnal', 'Osteosclerosis',
+    'Photosynthetic Tissue', 'Reabsorption', 'Sequential Hermaphroditism', 'Submerged Optical Retention',
+    'Sustained Hydration', 'Wader', 'Barometric Sensitivity', 'Hypervigilance', 'Photosynthetic Regeneration',
+    'Social Behavior', 'Tactile Endurance', 'Truculency', 'Xerocole Adaptation', 'Accelerated Prey Drive',
+    'Cannibalistic', 'Hematophagy', 'Hemomania', 'Hypermetabolic Inanition', 'Enhanced Digestion',
+    'Heightened Ghrelin', 'Multichambered Lungs', 'Reinforced Tendons', 'Reniculate Kidneys', 'Augmented Tapetum',
+    'Osteophagic', 'Parthenogenesis', 'Prolific Reproduction'];
+  for (const n of EQG) assert.equal(findReference(n)?.status, 'active', `${n} listed and active`);
+  assert.equal(findReference('Traumatic Thrombosis')?.status, 'removed', 'removed in 0.21.720');
+  assert.equal(findReference('Intraspecific Aggression')?.status, 'removed', 'removed in 0.15.116');
+  // Values per generation (đời 1 = never entombed): the user's own check in game.
+  assert.equal(findReference('Hemomania')?.tiers, '5% / 7% / 10% / 10%');
 });
 
 test('the name check accepts real FNames and rejects junk', () => {

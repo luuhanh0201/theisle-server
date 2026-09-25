@@ -359,6 +359,17 @@
   .edit-btn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 11.5px; font-weight: 650; padding: 0 2px; margin-left: auto; }
   .edit-btn:hover { color: var(--accent); }
   .mut-status { font-size: 11px; margin-top: 4px; min-height: 14px; font-weight: 600; }
+  .mut-desc { margin-top: 5px; padding: 6px 8px; border-radius: 8px; background: var(--surface-3); font-size: 12px; line-height: 1.45; }
+  .mut-desc:empty { display: none; }
+  .mut-desc .en { color: var(--text); }
+  .mut-desc .vi { color: var(--text-2); margin-top: 2px; }
+  .mut-desc .lang { display: inline-block; min-width: 22px; font-size: 10px; font-weight: 800; color: var(--muted); letter-spacing: .04em; }
+  .mut-desc .meta { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .mut-desc .gens { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+  .mut-desc .gen { font-size: 10.5px; padding: 1px 5px; border-radius: 5px; border: 1px solid var(--border); color: var(--muted); }
+  .mut-desc .gen.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .mut-desc .now { margin-top: 4px; font-size: 11.5px; color: var(--text); }
+  .tip .t-desc .lang { display: inline-block; min-width: 22px; font-size: 10px; font-weight: 800; color: var(--muted); }
   .mut-status.ok { color: var(--accent); }
   .mut-status.warn { color: var(--dmg); }
   .mut[data-mut-tip] { cursor: help; }
@@ -1290,6 +1301,7 @@
                   Để "trống" thì slot đó giữ nguyên khi redeem.</div>
                 <label class="toggle"><input type="checkbox" id="f-allow-unconfirmed">
                   Cho phép cả mutation chưa xác nhận trên loài này (chỉ thấy trên loài khác)</label>
+                <div class="step-hint" id="f-mut-gen"></div>
                 <div class="group-label">Đang dùng</div>
                 <div class="mut-grid" id="f-mut-active"></div>
                 <details class="more">
@@ -3433,7 +3445,8 @@ for (const [group, keys] of Object.entries(MUT_SLOTS)) {
         <button type="button" class="info-btn" id="f-mut-info-${k}" aria-label="Mô tả mutation" hidden>!</button>
         <button type="button" class="edit-btn" id="f-mut-edit-${k}" data-edit-slot="${k}" title="Sửa mô tả" hidden>✎ mô tả</button></div>
       <select id="f-mut-${k}" data-slot="${k}" data-group="${group}"></select>
-      <div class="mut-status" id="f-mut-warn-${k}"></div></div>`).join('');
+      <div class="mut-status" id="f-mut-warn-${k}"></div>
+      <div class="mut-desc" id="f-mut-desc-${k}"></div></div>`).join('');
 }
 
 const selectedEntry = () => creator.catalog.find((c) => c.species === creator.species) ?? null;
@@ -3523,7 +3536,7 @@ function referenceHtml(r) {
     r.kind === 'slot2' ? 'Chỉ slot 2 / 4' : '',
     r.kind === 'unlock' ? `Mở khoá: ${r.unlock ?? 'nhiệm vụ trong game'}` : '',
     r.slots ? `Slot: ${r.slots}` : '',
-    r.tiers ? `Theo cấp entomb: ${r.tiers}` : '',
+    r.tiers ? `Theo đời (trùng sinh): ${tierList(r).map((v, i) => `${GEN_LABEL[i] ?? i + 1} ${v}`).join(' · ')}${r.stat ? ` — ${r.stat}` : ''}` : '',
   ].filter(Boolean);
   const hosts = r.sources.map((k) => {
     try { return new URL(mutationRef.sources[k]).hostname.replace(/^www\./, ''); } catch { return k; }
@@ -3531,6 +3544,78 @@ function referenceHtml(r) {
   return `<div class="t-meta">${chips.map((c) => `<span class="t-chip">${esc(c)}</span>`).join('')}</div>
     ${r.status !== 'active' ? `<div class="t-alert">${esc(STATUS_VN[r.status])}${r.statusNote ? ` — ${esc(r.statusNote)}` : ''}</div>` : ''}
     <div class="t-src">Nguồn: ${esc(hosts.join(', '))}${mutationRef.checked ? ` · kiểm tra ${esc(mutationRef.checked)}` : ''}</div>`;
+}
+
+/** The source's English line, then ours in Vietnamese (and how to unlock, both ways). */
+function bilingualHtml(r) {
+  return `<div class="t-desc"><span class="lang">EN</span>${esc(r.en)}<br><span class="lang">VI</span>${esc(r.description)}</div>`
+    + (r.unlockEn || r.unlock
+      ? `<div class="t-desc"><span class="lang">EN</span>How to get: ${esc(r.unlockEn ?? '')}<br><span class="lang">VI</span>Cách mở: ${esc(r.unlock ?? r.slots ?? '')}</div>`
+      : '');
+}
+
+/** What shows under a chosen mutation: the full description, English (original) and Vietnamese. */
+function mutDescHtml(name) {
+  const r = refFor(name);
+  const note = mutationNotes[name];
+  if (!r) {
+    return note ? `<div class="vi"><span class="lang">VI</span>${esc(note.description)}</div>`
+      : '<div class="meta">Chưa có mô tả cho tên này — bấm ✎ mô tả để thêm.</div>';
+  }
+  const meta = [
+    r.kind === 'slot2' ? 'Chỉ slot 2 / 4' : '',
+    r.kind === 'unlock' ? `Mở khoá: ${r.unlock ?? r.unlockEn ?? ''}` : '',
+    r.femaleOnly ? 'Chỉ con cái' : '',
+    r.groupLeaderOnly ? 'Chỉ trưởng nhóm' : '',
+  ].filter(Boolean).join(' · ');
+  return `<div class="en"><span class="lang">EN</span>${esc(r.en)}</div>`
+    + `<div class="vi"><span class="lang">VI</span>${esc(r.description)}</div>`
+    + (note ? `<div class="vi"><span class="lang">AD</span>${esc(note.description)}</div>` : '')
+    + genHtml(r, creatorStacks())
+    + (meta ? `<div class="meta">${esc(meta)}</div>` : '');
+}
+
+// --- mutation strength by generation ---------------------------------------------
+// One level for the whole dino: đời 1 (never entombed), then +1 per entombment
+// (ElderReplicationStacks); past the source's list the last value holds. So 16
+// mutations given at once to a 0-stack dino all stay at the first value.
+
+const tierList = (r) => (r.tiers ? r.tiers.split('/').map((v) => v.trim()) : []);
+const genIndex = (r, stacks) => Math.min(Math.max(0, stacks), tierList(r).length - 1);
+const GEN_LABEL = ['Đời 1', 'Đời 2', 'Đời 3', 'Đời 4+'];
+/** The stacks the created dino will have: the form's value (0 = left as the new dino has it: 0). */
+const creatorStacks = () => elderStacksWanted() ?? 0;
+
+function genHtml(r, stacks) {
+  const tiers = tierList(r);
+  if (tiers.length === 0) return '';
+  const at = genIndex(r, stacks);
+  const cells = tiers.map((v, i) => `<span class="gen${i === at ? ' on' : ''}">${GEN_LABEL[i] ?? `Đời ${i + 1}`}: ${esc(v)}</span>`).join('');
+  return `<div class="gens">${cells}</div>`
+    + `<div class="now">→ Dino này (${stacks} lần trùng sinh): <b>${esc(tiers[at])}</b>${r.stat ? ` ${esc(r.stat)}` : ''}</div>`;
+}
+
+/** Entombments the chosen elder slots imply: ElderSlotNA/B come from the N-th one. */
+function impliedStacks() {
+  let n = 0;
+  for (const sel of document.querySelectorAll('#create select[data-slot^="ElderSlot"]')) {
+    const m = /^ElderSlot(\d)/.exec(sel.dataset.slot);
+    if (sel.value && m) n = Math.max(n, Number(m[1]));
+  }
+  return n;
+}
+
+function renderGenHint() {
+  const el = $('f-mut-gen');
+  const stacks = creatorStacks();
+  const want = impliedStacks();
+  const any = [...document.querySelectorAll('#create select[data-slot]')].some((s) => s.value);
+  if (!any) { el.innerHTML = ''; return; }
+  el.innerHTML = want > stacks
+    ? `<span style="color:var(--dmg)">⚠ Đã chọn mutation elder tới cặp ${want} (người chơi thật cần trùng sinh ${want} lần) nhưng Elder stacks = ${stacks}:
+       mọi mutation sẽ chỉ ở mức <b>${GEN_LABEL[Math.min(stacks, 3)]}</b>.</span>
+       <button type="button" class="btn-soft sm" id="f-gen-fix">Đặt Elder stacks = ${want}</button>`
+    : `Chỉ số mutation tính theo <b>${GEN_LABEL[Math.min(stacks, 3)]}</b> (Elder stacks = ${stacks} lần trùng sinh) — áp dụng cho mọi mutation của dino.`;
 }
 
 /** Catalog entry for a short species name (BP_X_C), or null. */
@@ -3558,11 +3643,11 @@ function mutationTipHtml(name, species) {
       : `<span class="warn">⚠ Chưa từng thấy trên ${esc(dino(species))}</span>
          <span>${elsewhere.length ? `Chỉ thấy trên: ${esc(elsewhere.join(', '))}` : 'Chưa thấy trên loài nào'}</span>`;
   const ref = refFor(name);
+  const wiki = ref ? `<div class="t-label">Theo wiki cộng đồng</div>${bilingualHtml(ref)}${referenceHtml(ref)}` : '';
   const body = note
-    ? `<div class="t-label">Mô tả của admin</div><div class="t-desc">${esc(note.description)}</div>
-       ${ref ? `<div class="t-label">Theo wiki cộng đồng</div><div class="t-desc">${esc(ref.description)}</div>${referenceHtml(ref)}` : ''}`
+    ? `<div class="t-label">Mô tả của admin</div><div class="t-desc">${esc(note.description)}</div>${wiki}`
     : ref
-      ? `<div class="t-label">Theo wiki cộng đồng</div><div class="t-desc">${esc(ref.description)}</div>${referenceHtml(ref)}`
+      ? wiki
       : '<div class="t-desc none">Chưa có mô tả — tên này không có trong bảng tham chiếu. Admin bấm ✎ cạnh ô chọn để thêm.</div>';
   return `<div class="t-name">${esc(ref ? ref.name : mutName(name))}</div><div class="t-id">${esc(name)}</div>
     ${body}
@@ -3659,7 +3744,8 @@ function renderMutationOptions() {
       const current = picked[i];
       const takenElsewhere = new Set(picked.filter((v, j) => j !== i && v));
       const label = (n) => refFor(n)?.name ?? mutName(n);
-      const opt = (n, prefix = '') => `<option value="${esc(n)}"${takenElsewhere.has(n) ? ' disabled' : ''}${n === current ? ' selected' : ''}>${prefix}${esc(label(n))}${refAlert(n) ? ' ⚠' : ''}${takenElsewhere.has(n) ? ' (đã chọn)' : ''}</option>`;
+      const optTitle = (n) => { const r = refFor(n); return r ? ` title="${esc(`${r.en} — ${r.description}`)}"` : ''; };
+      const opt = (n, prefix = '') => `<option value="${esc(n)}"${optTitle(n)}${takenElsewhere.has(n) ? ' disabled' : ''}${n === current ? ' selected' : ''}>${prefix}${esc(label(n))}${refAlert(n) ? ' ⚠' : ''}${takenElsewhere.has(n) ? ' (đã chọn)' : ''}</option>`;
       const none = own.length === 0 && others.length === 0;
       const emptyLabel = !species ? 'chọn loài trước'
         : none ? `chưa có mutation nào được xác nhận trên ${speciesName}` : '— trống —';
@@ -3687,8 +3773,10 @@ function renderMutationOptions() {
         : (confirmed ? `✓ đã xác nhận trên ${speciesName}` : `⚠ chưa xác nhận trên ${speciesName}`)
           + (alert ? ` · ${alert.replace(/^⚠ /, '')}` : '');
       if (alert) status.className = 'mut-status warn';
+      $(`f-mut-desc-${key}`).innerHTML = sel.value ? mutDescHtml(sel.value) : '';
     });
   }
+  renderGenHint();
   refreshTip();
 }
 
@@ -3862,13 +3950,19 @@ $('create').addEventListener('input', (ev) => {
     $('f-overwrite-ok').checked = false;
     loadExistingSoon();
   }
-  if (ev.target.id === 'f-class') renderMutationOptions();
+  if (ev.target.id === 'f-class' || ev.target.id === 'f-elder-stacks') renderMutationOptions();
   if (ev.target.id !== 'f-growth' && !ev.target.matches('select, #f-overwrite-ok, #f-allow-unconfirmed')) renderPreview();
 });
 $('f-overwrite-ok').addEventListener('change', renderOverwrite);
 $('f-prime').addEventListener('change', renderPreview);
 $('f-allow-unconfirmed').addEventListener('change', () => { renderMutationOptions(); renderPreview(); });
 $('create').addEventListener('click', (ev) => {
+  if (ev.target.id === 'f-gen-fix') {
+    $('f-elder-stacks').value = String(impliedStacks());
+    renderMutationOptions();
+    renderPreview();
+    return;
+  }
   const b = ev.target.closest('[data-edit-slot]');
   if (b) editMutationNote($(`f-mut-${b.dataset.editSlot}`).value);
 });
