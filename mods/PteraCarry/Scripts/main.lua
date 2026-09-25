@@ -1,309 +1,283 @@
--- PteraCarry — step 1: find out how the game's own Pteranodon carry works.
+-- PteraCarry — a Pteranodon carries another player's dino, up to a weight the
+-- admin sets (panel → Server → Cấu hình → Ptera gắp).
 --
--- The game already lets an adult Pteranodon pick up small prey (crabs, frogs,
--- rabbits, chickens, hatchlings and small juveniles — Evrima Quick Guide).
--- On this server it reportedly does not. Before changing anything, this
--- read-only step lists what the engine really has, and logs what happens
--- when a player tries:
+-- The game (Evrima 0.21) lets a Pteranodon carry only small critters and
+-- hatchlings. What it does have, found by probing this server (2026-09-26,
+-- the probe is in git history, commit 764c3e6): flying close to a dino and
+-- holding Z + right mouse (the latch key, while the game's interaction
+-- prompt shows) makes the game call
+-- TICharacterBase:GrabPhysicsCharacter(ptera, that dino) — and let go ten
+-- seconds later without moving it. This mod takes that call as the grab:
 --
---   1. every function and property of BP_Pteranodon_C and its parents whose
---      name is about carrying (carry / grab / pick / drop / hold / prey …),
---      with the functions' parameters
---   2. the same for the player controller (the grab input may be its RPC)
---   3. a logging hook on each carry ACTION (Set…/Server…/Grab…/Release…/
---      Pickup…, never a Get…/Is… getter: those run every frame for every
---      character): when a player tries to grab, UE4SS.log shows which
---      function ran, with what (the first MAX_FIRES of each)
---   3b. every Server… RPC of the Pteranodon's own classes (down to
---      TIDinosaurBase): the client sends one when a key is pressed, so the
---      log shows what "fly close, hold Z + mouse" sends
---   3c. the Gameplay Ability System RPCs (ServerTryActivateAbility…), and
---      the list of abilities of each Pteranodon being played, so a key press
---      in the log can be named
---   4. every 30 s, for each player playing a Pteranodon: its weight and
---      bBlockPickUp, and the same for the prey (rabbit, chicken, frog, crab)
---      within 30 m — read on the live pawns, numbers and flags only
+--   * the target is a player's dino no heavier than `maxKg` (its GetWeight),
+--     the carrier is a Pteranodon not cooling down → the carry starts
+--   * every HOLD_MS, on the game thread, the target is put `belowCm` under
+--     the Pteranodon (K2_SetActorLocation, teleport — as !unstuck does), its
+--     fall speed cleared, and the game's own "being picked up" flag set
+--     (SetIsBeingPickedUp) so its player cannot walk off
+--   * it ends when the Pteranodon lands, its player types !drop, after
+--     `maxSeconds`, or when either leaves / dies. Let go in the air, the
+--     target falls — and takes the game's fall damage
+--   * a flying Pteranodon near a light enough player is told it can grab
+--     (a server message: a mod cannot draw the game's own prompt)
 --
--- NEVER read a class default object (GetCDO): reading its properties crashed
--- the server twice (2026-09-26 00:36, 00:37). Nothing is written to the game. All of it runs on the game thread
--- (H.every); hooks only read their parameters. Output: UE4SS.log, lines
--- "[isle] PteraCarry: …" — scripts/logs.sh ue4ss.
+-- Safety (docs/lua-safety-rules.md): the hook only queues the two addresses;
+-- everything else runs on the game thread, re-resolving both players by
+-- SteamID each tick (no pawn kept across ticks), every call in pcall.
+-- Never GetCDO(): reading class defaults crashed this server (00:36).
 
 if not package.path:find("Mods/?.lua", 1, true) then
     package.path = "Mods/?.lua;" .. package.path
 end
 
-local H = require("shared.isle.helpers")
+local H    = require("shared.isle.helpers")
+local json = require("shared.isle.json")
+local Msg  = require("shared.isle.messages")
 
 local MOD = "PteraCarry"
-local DINOS = "/Game/TheIsle/Core/Characters/Dinosaurs"
-local ANIMALS = "/Game/TheIsle/Core/Characters/Animals"
-local PTERA = DINOS .. "/Pteranodon/BP_Pteranodon.BP_Pteranodon_C"
-local PREY = { BP_Rabbit_C = true, BP_Chicken_C = true, BP_Bullfrog_C = true, BP_Crab_C = true }
-local PREY_NEAR_CM = 3000
--- Lower-case pieces of a name that make it worth listing.
-local WORDS = { "carr", "grab", "pick", "drop", "prey", "snatch", "releas", "talon", "claw",
-                "attach", "weight", "grip", "held", "drag", "interact" }
--- Hooked: an action about carrying. Getters (Get…, Is…, OnRep_…, Input…,
--- Receive…) are listed but never hooked — they run every frame.
-local HOOK_WORDS = { "carr", "grab", "pick", "drop", "snatch", "releas", "grip", "drag", "interact" }
-local NOT_HOOKED = { "^Get", "^Is", "^OnRep", "^Input", "^Receive", "^K2_", "^Can", "Organ", "Egg" }
-local MAX_HOOKS = 90
--- Classes this close to BP_Pteranodon_C (0 = itself … 3 = TIDinosaurBase) have every
--- Server… RPC hooked too: a client sends those only on input (the grab / latch
--- keys), so one of them is what "hold Z + mouse" near a dino sends.
-local SERVER_RPC_DEPTH = 3
-local MAX_FIRES = 5
-local RETRY_MS = 30000
+local SETTINGS_PATH = "Mods/PteraCarry/Saved/settings.json"
+local GRAB_HOOK = "/Script/TheIsle.TICharacterBase:GrabPhysicsCharacter"
+local PTERA = "BP_Pteranodon_C"
+local HOLD_MS = 100          -- how often a carried dino is put back under its carrier
+local HINT_MS = 1000         -- how often flying Pteranodons look for something to grab
+local HINT_AGAIN_S = 30      -- one hint per carrier and target this often
+local SETTINGS_RELOAD_S = 5
+local MIN_CARRY_S = 1        -- a carrier "landing" in the first second is the take-off itself
 
-local function log(fmt, ...) H.log(MOD .. ": " .. string.format(fmt, ...)) end
+local DEFAULTS = { enabled = false, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 300 }
 
-local function hookable(name)
-    for _, pat in ipairs(NOT_HOOKED) do
-        if name:find(pat) then return false end
-    end
-    return true
+--------------------------------------------------------------------------
+-- Settings (written by the bridge; read at most every few seconds)
+--------------------------------------------------------------------------
+
+local settings, settingsAt = DEFAULTS, nil
+
+local function num(v, lo, hi, default)
+    local n = tonumber(v)
+    if n == nil then return default end
+    return math.max(lo, math.min(hi, n))
 end
 
-local function matches(name, words)
-    local low = name:lower()
-    for _, w in ipairs(words) do
-        if low:find(w, 1, true) then return true end
-    end
-    return false
+local function readSettings()
+    local now = os.time()
+    if settingsAt ~= nil and now - settingsAt < SETTINGS_RELOAD_S then return settings end
+    settingsAt = now
+    local f = io.open(SETTINGS_PATH, "r")
+    if not f then settings = DEFAULTS; return settings end
+    local raw = f:read("*a")
+    f:close()
+    local ok, d = pcall(json.decode, raw or "")
+    if not ok or type(d) ~= "table" then return settings end   -- a torn file: keep the last
+    settings = {
+        enabled    = d.enabled == true,
+        maxKg      = num(d.maxKg, 1, 20000, DEFAULTS.maxKg),
+        maxSeconds = num(d.maxSeconds, 3, 120, DEFAULTS.maxSeconds),
+        cooldown   = num(d.cooldown, 0, 3600, DEFAULTS.cooldown),
+        hintMeters = num(d.hintMeters, 0, 50, DEFAULTS.hintMeters),
+        belowCm    = num(d.belowCm, 100, 2000, DEFAULTS.belowCm),
+    }
+    return settings
 end
 
-local function nameOf(obj)
-    local ok, n = pcall(function() return obj:GetFName():ToString() end)
-    return ok and tostring(n) or "?"
-end
+--------------------------------------------------------------------------
+-- Reading pawns (game thread)
+--------------------------------------------------------------------------
 
---- A value as text: numbers, booleans, names, objects by class.
-local function show(v)
-    local t = type(v)
-    if t == "number" or t == "boolean" or t == "nil" then return tostring(v) end
-    if t == "string" then return string.format("%q", v) end
-    local okS, s = pcall(function() return v:ToString() end)
-    if okS and type(s) == "string" then return string.format("%q", s) end
-    local okC, c = pcall(function() return v:GetClass():GetFName():ToString() end)
-    if okC and c then return "<" .. tostring(c) .. ">" end
-    return "<" .. t .. ">"
-end
-
---- Walk a class and its parents: fn(cls, depth). Stops at 15 levels.
-local function eachClass(cls, fn)
-    local depth = 0
-    while cls ~= nil and depth < 15 do
-        local okV, valid = pcall(function() return cls:IsValid() end)
-        if not (okV and valid) then break end
-        fn(cls, depth)
-        local okS, super = pcall(function() return cls:GetSuperStruct() end)
-        cls = okS and super or nil
-        depth = depth + 1
-    end
-end
-
-local function findClass(path)
-    local ok, cls = pcall(function() return StaticFindObject(path) end)
-    if ok and cls ~= nil and H.isValid(cls) then return cls end
+local function addressOf(obj)
+    local ok, a = pcall(function() return obj:GetAddress() end)
+    if ok and type(a) == "number" and a ~= 0 then return a end
     return nil
 end
 
---------------------------------------------------------------------------
--- 3. Logging hooks
---------------------------------------------------------------------------
-
-local hooked = {}
-local hookCount = 0
-
-local function hook(path, label, maxFires)
-    if hooked[path] or hookCount >= MAX_HOOKS then return end
-    hooked[path] = true
-    local fires = 0
-    local MAX_FIRES = maxFires or MAX_FIRES
-    local ok, err = pcall(function()
-        RegisterHook(path, function(...)
-            if fires >= MAX_FIRES then return end
-            fires = fires + 1
-            -- Read only: the parameters' values, never a call that changes anything.
-            local parts = {}
-            for i = 1, select("#", ...) do
-                local p = select(i, ...)
-                local okG, v = pcall(function() return p:get() end)
-                parts[#parts + 1] = okG and show(v) or "?"
-            end
-            log("FIRED %s #%d (self, params…): %s", label, fires, table.concat(parts, ", "))
-        end)
-    end)
-    if ok then hookCount = hookCount + 1 end
-    log("hook %s: %s", path, ok and "registered" or ("failed: " .. tostring(err)))
-end
-
---------------------------------------------------------------------------
--- 1 + 2. What the classes have
---------------------------------------------------------------------------
-
-local function listClass(label, cls, rpcDepth)
-    log("=== %s and parents: carry-related functions and properties ===", label)
-    eachClass(cls, function(c, depth)
-        local cname = nameOf(c)
-        pcall(function()
-            c:ForEachFunction(function(fn)
-                local name = nameOf(fn)
-                local rpc = rpcDepth ~= nil and depth <= rpcDepth and name:find("^Server") ~= nil
-                if not matches(name, WORDS) and not rpc then return end
-                local params = {}
-                pcall(function()
-                    fn:ForEachProperty(function(prop)
-                        params[#params + 1] = nameOf(prop) .. ":" .. nameOf(prop:GetClass())
-                    end)
-                end)
-                log("  [%d %s] function %s(%s)", depth, cname, name, table.concat(params, ", "))
-                if (rpc or matches(name, HOOK_WORDS)) and hookable(name) then
-                    local okP, full = pcall(function() return fn:GetFullName() end)
-                    -- "Function /Script/TheIsle.X:Name" -> "/Script/TheIsle.X:Name"
-                    local path = okP and tostring(full):match("^Function (.+)$")
-                    if path then hook(path, cname .. ":" .. name) end
-                end
-            end)
-        end)
-        pcall(function()
-            c:ForEachProperty(function(prop)
-                local name = nameOf(prop)
-                if matches(name, WORDS) then
-                    log("  [%d %s] property %s : %s", depth, cname, name, nameOf(prop:GetClass()))
-                end
-            end)
-        end)
-    end)
-end
-
---------------------------------------------------------------------------
--- 4. Live values: a playing Pteranodon and the prey near it
---------------------------------------------------------------------------
-
-local function num(pawn, getter)
-    local ok, v = pcall(function() return pawn[getter](pawn) end)
-    return ok and type(v) == "number" and string.format("%.1f", v) or "?"
-end
-
-local function flag(pawn, prop)
-    local ok, v = pcall(function() return pawn[prop] end)
-    return ok and type(v) == "boolean" and tostring(v) or "?"
-end
-
---- "BP_Rabbit_C" (a longer "…/BP_Rabbit.BP_Rabbit_C" is cut to its last part, as in AIZones).
-local function short(pawn)
+local function classOf(pawn)
     local ok, n = pcall(function() return pawn:GetClass():GetFName():ToString() end)
-    return ok and n ~= nil and (tostring(n):match("([%w_]+)$") or tostring(n)) or "?"
+    return ok and n ~= nil and (tostring(n):match("([%w_]+)$") or tostring(n)) or nil
 end
 
-local function where(pawn)
+--- "BP_Carnotaurus_C" -> "Carnotaurus"
+local function speciesName(cls)
+    return (tostring(cls or "?"):gsub("^BP_", ""):gsub("_C$", ""))
+end
+
+local function locOf(pawn)
     local ok, v = pcall(function() return pawn:K2_GetActorLocation() end)
-    return ok and v and type(v.X) == "number" and v or nil
+    if ok and v and type(v.X) == "number" then return { X = v.X, Y = v.Y, Z = v.Z } end
+    return nil
 end
 
-local abilitiesListed = {}   -- steamId -> true: the ptera's abilities were logged this session
-
--- 5. The Gameplay Ability System: a key that starts an ability (latch, grab…)
--- reaches the server as AbilitySystemComponent:ServerTryActivateAbility. Its
--- handle is matched against the abilities listed below.
-local ASC_CLASS = "/Script/GameplayAbilities.AbilitySystemComponent"
-local GAS_RPCS = { "ServerTryActivateAbility", "ServerTryActivateAbilityWithEventData", "ServerCancelAbility",
-                   "ServerEndAbility", "ServerSetInputPressed", "ServerSetInputReleased" }
-
---- Each ability the pawn can use: "handle N = <class>". Read-only, once per player.
-local function listAbilities(steamId, pawn)
-    if abilitiesListed[steamId] then return end
-    abilitiesListed[steamId] = true
-    local ascCls = findClass(ASC_CLASS)
-    local okA, asc = pcall(function() return pawn:GetComponentByClass(ascCls) end)
-    if not okA or asc == nil or not H.isValid(asc) then log("  abilities: no AbilitySystemComponent found"); return end
-    local n = 0
-    pcall(function()
-        asc.ActivatableAbilities.Items:ForEach(function(_, elem)
-            local spec = elem:get()
-            local okH, handle = pcall(function() return spec.Handle.Handle end)
-            local okC, cls = pcall(function() return spec.Ability:GetClass():GetFName():ToString() end)
-            local okI, input = pcall(function() return spec.InputID end)
-            log("  ability handle %s = %s (InputID %s)", okH and tostring(handle) or "?", okC and tostring(cls) or "?",
-                okI and tostring(input) or "?")
-            n = n + 1
-        end)
-    end)
-    log("  abilities of %s's ptera: %d", tostring(steamId), n)
+local function weightOf(pawn)
+    local ok, w = pcall(function() return pawn:GetWeight() end)
+    return ok and type(w) == "number" and w or nil
 end
 
-local function liveValues()
-    local pteras = {}
+local function alive(pawn)
+    local ok, hp = pcall(function() return pawn:GetHealth() end)
+    return not (ok and type(hp) == "number" and hp <= 0)
+end
+
+local function onGround(pawn)
+    local ok, g = pcall(function() return pawn.CharacterMovement:IsMovingOnGround() end)
+    return ok and g == true
+end
+
+local function stopFall(pawn)
+    pcall(function() pawn.CharacterMovement:StopMovementImmediately() end)
+end
+
+--- SteamID -> { ctrl, pawn } and pawn address -> SteamID, for this tick only.
+local function playersNow()
+    local byId, byAddr = {}, {}
     H.forEachPlayer(function(ctrl)
+        local id = H.safeSteamId(ctrl)
         local pawn = H.livePawnFromCtrl(ctrl)
-        if pawn and short(pawn) == "BP_Pteranodon_C" then pteras[#pteras + 1] = { ctrl = ctrl, pawn = pawn } end
+        if id and pawn then
+            byId[id] = { ctrl = ctrl, pawn = pawn }
+            local a = addressOf(pawn)
+            if a then byAddr[a] = id end
+        end
     end)
-    if #pteras == 0 then return end
-    for _, p in ipairs(pteras) do
-        local id = H.safeSteamId(p.ctrl)
-        if id then listAbilities(id, p.pawn) end
+    return byId, byAddr
+end
+
+--------------------------------------------------------------------------
+-- Carrying
+--------------------------------------------------------------------------
+
+local pending = {}     -- { self = address, target = address } queued by the hook
+local carries = {}     -- carrier SteamID -> { target, species, kg, startedAt, dropAsked }
+local carriedBy = {}   -- target SteamID -> carrier SteamID
+local lastCarry = {}   -- carrier SteamID -> os.time() the last carry ended
+local hinted = {}      -- "carrier:target" -> os.time()
+
+local function finish(carrierId, reason, players)
+    local c = carries[carrierId]
+    if not c then return end
+    carries[carrierId] = nil
+    carriedBy[c.target] = nil
+    lastCarry[carrierId] = os.time()
+    local t = players[c.target]
+    if t then
+        pcall(function() t.pawn:SetIsBeingPickedUp(false) end)
+        stopFall(t.pawn)
+        Msg.notify(t.ctrl, "ptera.carry.released", "Pteranodon đã thả bạn ra.")
     end
-    local okA, all = pcall(function() return FindAllOf("Pawn") or {} end)
-    for _, p in ipairs(pteras) do
-        local at = where(p.pawn)
-        log("live ptera %s: growth %s, GetWeight %s, bBlockPickUp %s, bBeingPickedUp %s",
-            tostring(H.safeSteamId(p.ctrl)), num(p.pawn, "GetGrowth"), num(p.pawn, "GetWeight"),
-            flag(p.pawn, "bBlockPickUp"), flag(p.pawn, "bBeingPickedUp"))
-        local shown = 0
-        for _, other in ipairs(okA and all or {}) do
-            if shown < 6 and H.isValid(other) and PREY[short(other)] then
-                local o = where(other)
-                if at and o and (o.X - at.X) ^ 2 + (o.Y - at.Y) ^ 2 <= PREY_NEAR_CM ^ 2 then
-                    shown = shown + 1
-                    log("  prey %s at %.0f m: GetWeight %s, bBlockPickUp %s, bBeingPickedUp %s, health %s",
-                        short(other), math.sqrt((o.X - at.X) ^ 2 + (o.Y - at.Y) ^ 2) / 100,
-                        num(other, "GetWeight"), flag(other, "bBlockPickUp"), flag(other, "bBeingPickedUp"),
-                        num(other, "GetHealth"))
+    local p = players[carrierId]
+    if p then Msg.notify(p.ctrl, "ptera.carry.dropped", "Đã thả {species}.", { species = c.species }) end
+    H.log(string.format("%s: %s let go of %s (%s) after %ds — %s", MOD, carrierId, c.target, c.species,
+        os.time() - c.startedAt, reason))
+end
+
+--- A grab the game made: start a carry if the rules allow it.
+local function tryStart(grab, s, players, byAddr)
+    local carrierId, targetId = byAddr[grab.self], byAddr[grab.target]
+    if carrierId == nil or targetId == nil or carrierId == targetId then return end   -- not player to player
+    local carrier, target = players[carrierId], players[targetId]
+    if classOf(carrier.pawn) ~= PTERA or carries[carrierId] or carriedBy[targetId] or carries[targetId] then return end
+    local wait = lastCarry[carrierId] and (lastCarry[carrierId] + s.cooldown - os.time()) or 0
+    if wait > 0 then
+        Msg.notify(carrier.ctrl, "ptera.carry.cooldown", "Gắp đang hồi: chờ {seconds} giây.", { seconds = wait })
+        return
+    end
+    local species = speciesName(classOf(target.pawn))
+    local kg = weightOf(target.pawn)
+    if kg == nil or not alive(target.pawn) then return end
+    if kg > s.maxKg then
+        Msg.notify(carrier.ctrl, "ptera.carry.tooHeavy", "{species} nặng {kg} kg — Pteranodon chỉ gắp được tới {max} kg.",
+            { species = species, kg = math.floor(kg + 0.5), max = math.floor(s.maxKg) })
+        return
+    end
+    carries[carrierId] = { target = targetId, species = species, kg = kg, startedAt = os.time() }
+    carriedBy[targetId] = carrierId
+    pcall(function() target.pawn:SetIsBeingPickedUp(true) end)
+    Msg.notify(carrier.ctrl, "ptera.carry.start", "Đang gắp {species} ({kg} kg). Đáp xuống hoặc gõ !drop để thả (tối đa {seconds} giây).",
+        { species = species, kg = math.floor(kg + 0.5), seconds = math.floor(s.maxSeconds) })
+    Msg.notify(target.ctrl, "ptera.carry.victim", "Bạn đang bị một Pteranodon gắp đi!")
+    H.log(string.format("%s: %s grabbed %s (%s, %.0f kg)", MOD, carrierId, targetId, species, kg))
+end
+
+local function holdTick()
+    if #pending == 0 and next(carries) == nil then return end
+    local s = readSettings()
+    local players, byAddr = playersNow()
+    local grabs = pending
+    pending = {}
+    if s.enabled then
+        for _, g in ipairs(grabs) do tryStart(g, s, players, byAddr) end
+    end
+    for carrierId, c in pairs(carries) do
+        local p, t = players[carrierId], players[c.target]
+        if not s.enabled then
+            finish(carrierId, "turned off on the panel", players)
+        elseif p == nil or t == nil then
+            finish(carrierId, "a player left", players)
+        elseif not alive(p.pawn) or not alive(t.pawn) then
+            finish(carrierId, "a dino died", players)
+        elseif c.dropAsked then
+            finish(carrierId, "!drop", players)
+        elseif os.time() - c.startedAt >= s.maxSeconds then
+            finish(carrierId, "time up", players)
+        elseif os.time() - c.startedAt >= MIN_CARRY_S and onGround(p.pawn) then
+            finish(carrierId, "landed", players)
+        else
+            local at = locOf(p.pawn)
+            if at then
+                pcall(function()
+                    t.pawn:K2_SetActorLocation({ X = at.X, Y = at.Y, Z = at.Z - s.belowCm }, false, {}, true)
+                end)
+                stopFall(t.pawn)
+            end
+        end
+    end
+end
+
+--- Tell a flying Pteranodon when a light enough player is within reach.
+local function hintTick()
+    local s = readSettings()
+    if not s.enabled or s.hintMeters <= 0 then return end
+    local players = playersNow()
+    local now = os.time()
+    local reach = s.hintMeters * 100
+    for carrierId, p in pairs(players) do
+        if classOf(p.pawn) == PTERA and not carries[carrierId] and not onGround(p.pawn) then
+            local at = locOf(p.pawn)
+            for targetId, t in pairs(players) do
+                local key = carrierId .. ":" .. targetId
+                if targetId ~= carrierId and at and not carriedBy[targetId] and now - (hinted[key] or 0) >= HINT_AGAIN_S then
+                    local o = locOf(t.pawn)
+                    local kg = o and weightOf(t.pawn)
+                    if kg and kg <= s.maxKg and (o.X - at.X) ^ 2 + (o.Y - at.Y) ^ 2 + (o.Z - at.Z) ^ 2 <= reach * reach then
+                        hinted[key] = now
+                        Msg.notify(p.ctrl, "ptera.carry.hint", "Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.",
+                            { species = speciesName(classOf(t.pawn)), kg = math.floor(kg + 0.5) })
+                    end
                 end
             end
         end
-        if shown == 0 then log("  no rabbit / chicken / frog / crab within %d m", PREY_NEAR_CM // 100) end
     end
 end
 
 --------------------------------------------------------------------------
--- Run once the classes are loaded (a class loads when first used).
+-- Start
 --------------------------------------------------------------------------
 
-local pteraDone, ctrlDone, gasDone = false, false, false
+-- The hook only notes who grabbed whom (addresses); the game thread does the rest.
+local okHook, err = pcall(function()
+    RegisterHook(GRAB_HOOK, function(selfP, targetP)
+        local okS, me = pcall(function() return selfP:get() end)
+        local okT, it = pcall(function() return targetP:get() end)
+        local a, b = okS and addressOf(me), okT and addressOf(it)
+        if a and b and #pending < 20 then pending[#pending + 1] = { self = a, target = b } end
+    end)
+end)
+H.log(MOD .. ": hook " .. GRAB_HOOK .. ": " .. (okHook and "registered" or ("FAILED: " .. tostring(err))))
 
+H.onChat(function(ctrl, steamId, msg)
+    if H.parseCommand(msg) ~= "drop" then return end
+    local c = carries[steamId]
+    if c then c.dropAsked = true
+    else Msg.notify(ctrl, "ptera.carry.nothing", "Bạn không gắp con nào.") end
+end)
 
-local function step()
-    if not pteraDone then
-        local cls = findClass(PTERA)
-        if cls then
-            pteraDone = true
-            listClass("BP_Pteranodon_C", cls, SERVER_RPC_DEPTH)
-            log("%d logging hooks set — now have an adult Pteranodon try to grab a rabbit or a chicken", hookCount)
-        end
-    end
-    if not ctrlDone then
-        -- The controller's class, from a player online (its path is not guessed).
-        local cls = nil
-        H.forEachPlayer(function(ctrl)
-            if cls == nil then
-                local ok, c = pcall(function() return ctrl:GetClass() end)
-                if ok and c ~= nil then cls = c end
-            end
-        end)
-        if cls then
-            ctrlDone = true
-            listClass("player controller " .. nameOf(cls), cls)
-        end
-    end
-    if not gasDone and findClass(ASC_CLASS) then
-        gasDone = true
-        for _, rpc in ipairs(GAS_RPCS) do hook(ASC_CLASS .. ":" .. rpc, "GAS:" .. rpc, 40) end
-    end
-    liveValues()
-end
-
-H.every(RETRY_MS, MOD .. " discovery", step)
-log("loaded (read-only discovery) — results appear once the classes are loaded")
+H.every(HOLD_MS, MOD .. " hold", holdTick)
+H.every(HINT_MS, MOD .. " hints", hintTick)
+H.log(MOD .. ": loaded — " .. (readSettings().enabled and "on" or "off (turn it on in the panel)"))

@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'ai' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ptera' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
 
 export interface MessageDef {
   key: string;
@@ -61,6 +61,15 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'ai.reset.warning', group: 'ai', label: 'Báo trước khi làm mới AI', default: 'AI sẽ được làm mới sau {left} / AI reset in {leftEn}.', vars: ['left', 'leftEn'] },
   { key: 'ai.reset.done', group: 'ai', label: 'Đã làm mới AI', default: 'Đã làm mới AI ({count} con) / AI has been reset.', vars: ['count'] },
   { key: 'ai.reset.cancelled', group: 'ai', label: 'Huỷ làm mới AI', default: 'Đã huỷ làm mới AI / AI reset cancelled.', vars: [] },
+  // --- Pteranodon carry (mods/PteraCarry) ---
+  { key: 'ptera.carry.hint', group: 'ptera', label: 'Gợi ý: có con gắp được ở gần', default: 'Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.', vars: ['species', 'kg'] },
+  { key: 'ptera.carry.start', group: 'ptera', label: 'Bắt đầu gắp (cho Ptera)', default: 'Đang gắp {species} ({kg} kg). Đáp xuống hoặc gõ !drop để thả (tối đa {seconds} giây).', vars: ['species', 'kg', 'seconds'] },
+  { key: 'ptera.carry.victim', group: 'ptera', label: 'Bị gắp (cho con bị gắp)', default: 'Bạn đang bị một Pteranodon gắp đi!', vars: [] },
+  { key: 'ptera.carry.dropped', group: 'ptera', label: 'Đã thả (cho Ptera)', default: 'Đã thả {species}.', vars: ['species'] },
+  { key: 'ptera.carry.released', group: 'ptera', label: 'Được thả (cho con bị gắp)', default: 'Pteranodon đã thả bạn ra.', vars: [] },
+  { key: 'ptera.carry.tooHeavy', group: 'ptera', label: 'Quá nặng', default: '{species} nặng {kg} kg — Pteranodon chỉ gắp được tới {max} kg.', vars: ['species', 'kg', 'max'] },
+  { key: 'ptera.carry.cooldown', group: 'ptera', label: 'Đang hồi', default: 'Gắp đang hồi: chờ {seconds} giây.', vars: ['seconds'] },
+  { key: 'ptera.carry.nothing', group: 'ptera', label: '!drop khi không gắp gì', default: 'Bạn không gắp con nào.', vars: [] },
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
   { key: 'garage.tenSeconds', group: 'garage', label: 'Còn 10 giây', default: 'Còn 10 giây là cất xong — đứng yên.', vars: [] },

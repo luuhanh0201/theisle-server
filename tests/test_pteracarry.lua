@@ -1,9 +1,10 @@
--- PteraCarry step 1 (read-only discovery) against fake classes: lists the
--- carry-related functions and defaults, hooks only carry-looking functions,
--- logs their fires, changes nothing.
+-- PteraCarry: a flying Pteranodon grabs a light player's dino (the game's own
+-- GrabPhysicsCharacter call), carries it under itself, lets go on landing /
+-- !drop / time up; too heavy, off, cooldown; nothing touched off the game thread.
 
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end
 local H = require("harness")
+local json = require("shared.isle.json")
 
 local pass, fail = 0, 0
 local function check(name, ok, detail)
@@ -11,97 +12,101 @@ local function check(name, ok, detail)
   else fail = fail + 1; say("  FAIL " .. name .. (detail and ("  -> " .. detail) or "")) end
 end
 
-local function named(n, extra)
-  local o = { IsValid = function() return true end,
-    GetFName = function() return FName(n) end }
-  for k, v in pairs(extra or {}) do o[k] = v end
-  return o
+os.execute('mkdir -p "' .. RUN .. '/Mods/PteraCarry/Saved"')
+local SETTINGS = RUN .. "/Mods/PteraCarry/Saved/settings.json"
+local function writeSettings(t)
+  local f = assert(io.open(SETTINGS, "w")); f:write(json.encode(t)); f:close()
 end
-local function prop(n, cls) return named(n, { GetClass = function() return named(cls or "BoolProperty") end }) end
-local function fn(n, owner, params)
-  return named(n, {
-    GetFullName = function() return "Function /Script/TheIsle." .. owner .. ":" .. n end,
-    ForEachProperty = function(_, cb) for _, p in ipairs(params or {}) do cb(prop(p, "ObjectProperty")) end end,
-  })
-end
-local function class(n, fns, props, super, cdo)
-  return named(n, {
-    ForEachFunction = function(_, cb) for _, f in ipairs(fns) do cb(f) end end,
-    ForEachProperty = function(_, cb) for _, p in ipairs(props) do cb(p) end end,
-    GetSuperStruct = function() return super end,
-    GetCDO = function() H.record("GetCDO"); return cdo end,
-  })
-end
+local clock = 1000
+os.time = function() return clock end
 
-local base = class("TIFlyingCharacter", {
-  fn("ServerTryPickUpCarriable", "TIFlyingCharacter", { "Target" }),
-  fn("ServerDropCarried", "TIFlyingCharacter"),
-  fn("GetMaxCarryWeight", "TIFlyingCharacter"),        -- a getter: listed, never hooked
-  fn("IsUseInputHeld", "TIFlyingCharacter"),           -- idem (runs every frame)
-  fn("ServerFlap", "TIFlyingCharacter"),               -- unrelated
-}, { prop("CarriedActor", "ObjectProperty"), prop("FlapSpeed", "FloatProperty") }, nil,
-  { CarriedActor = nil, MaxCarryWeight = 25 })
-local ptera = class("BP_Pteranodon_C", { fn("OnGrabbed", "BP_Pteranodon_C"), fn("ServerStartPerch", "BP_Pteranodon_C", { "Target" }) }, { prop("MaxCarryWeight", "FloatProperty") }, base,
-  { MaxCarryWeight = 25, CarriedActor = nil })
-local rabbit = class("BP_Rabbit_C", {}, { prop("bCanBeCarried"), prop("CarryWeight", "FloatProperty") }, nil,
-  { bCanBeCarried = true, CarryWeight = 2 })
-local classes = {
-  ["/Game/TheIsle/Core/Characters/Dinosaurs/Pteranodon/BP_Pteranodon.BP_Pteranodon_C"] = ptera,
-  ["/Game/TheIsle/Core/Characters/Animals/Rabbit/BP_Rabbit.BP_Rabbit_C"] = rabbit,
-  ["/Script/GameplayAbilities.AbilitySystemComponent"] = named("AbilitySystemComponent"),
-}
-_G.StaticFindObject = function(p) return classes[p] end
+local PTERA = "BlueprintGeneratedClass /Game/X/BP_Pteranodon.BP_Pteranodon_C"
+local ptera = H.makePawn({ class = PTERA, weight = 90, loc = { X = 0, Y = 0, Z = 5000 }, grounded = false })
+local pc = H.makeCtrl("76561190000000001", ptera, "Ptera")
+H.attachController(ptera, pc)
+local troo = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Troodon.BP_Troodon_C", weight = 40, loc = { X = 300, Y = 0, Z = 4800 } })
+local tc = H.makeCtrl("76561190000000002", troo, "Troodon")
+H.attachController(troo, tc)
+local rex = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Tyrannosaurus.BP_Tyrannosaurus_C", weight = 7000, loc = { X = 500, Y = 0, Z = 4700 } })
+local rc = H.makeCtrl("76561190000000003", rex, "Rex")
+H.attachController(rex, rc)
+_G.FindAllOf = function(c) if c == "PlayerController" then return { pc, tc, rc } end; return { ptera, troo, rex } end
 
+writeSettings({ enabled = true, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 300 })
 dofile(RUN .. "/Mods/PteraCarry/Scripts/main.lua")
-local loop = H.gameLoops[1]
-check("a game-thread loop", loop ~= nil)
-loop.fn()
-local text = table.concat(H.log, "\n")
-check("lists the carry functions with their params", text:find("function ServerTryPickUpCarriable%(Target:ObjectProperty%)") ~= nil)
-check("…and properties", text:find("property CarriedActor : ObjectProperty", 1, true) ~= nil)
-check("not the unrelated properties", text:find("FlapSpeed", 1, true) == nil)
-check("hooks the pick-up / drop / grab functions", H.hooks["/Script/TheIsle.TIFlyingCharacter:ServerTryPickUpCarriable"] ~= nil
-  and H.hooks["/Script/TheIsle.TIFlyingCharacter:ServerDropCarried"] ~= nil and H.hooks["/Script/TheIsle.BP_Pteranodon_C:OnGrabbed"] ~= nil)
-check("the ptera's own Server RPCs are hooked, whatever their name", H.hooks["/Script/TheIsle.BP_Pteranodon_C:ServerStartPerch"] ~= nil)
-check("…down to TIDinosaurBase (a parent at depth 1 too)", H.hooks["/Script/TheIsle.TIFlyingCharacter:ServerFlap"] ~= nil)
-check("getters are listed but not hooked", text:find("function GetMaxCarryWeight", 1, true) ~= nil
-  and H.hooks["/Script/TheIsle.TIFlyingCharacter:GetMaxCarryWeight"] == nil
-  and H.hooks["/Script/TheIsle.TIFlyingCharacter:IsUseInputHeld"] == nil)
-check("GAS: the ability RPCs are hooked (a key press that starts an ability)",
-  H.hooks["/Script/GameplayAbilities.AbilitySystemComponent:ServerTryActivateAbility"] ~= nil
-  and H.hooks["/Script/GameplayAbilities.AbilitySystemComponent:ServerSetInputPressed"] ~= nil)
-check("never reads a class default object (it crashed the server)", H.countCalls("GetCDO") == 0)
-local target = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Rabbit.BP_Rabbit_C" })
-local p = function(v) return { get = function() return v end } end
-for _ = 1, 7 do H.fire("/Script/TheIsle.TIFlyingCharacter:ServerTryPickUpCarriable", p(named("self")), p(target)) end
-local fires = 0
-for _, l in ipairs(H.log) do if l:find("FIRED TIFlyingCharacter:ServerTryPickUpCarriable", 1, true) then fires = fires + 1 end end
-check("a fire is logged with its params, the first 5 only", fires == 5, tostring(fires))
-check("nothing changed in the game", #H.calls == 0 or (function()
-  for _, c in ipairs(H.calls) do if c.what:match("^Set") or c.what:match("Destroy") then return false end end
-  return true end)())
-loop.fn()
-local hooksNow = 0
-for _ in pairs(H.hooks) do hooksNow = hooksNow + 1 end
-check("run again: nothing hooked twice", hooksNow == 11, tostring(hooksNow))
+local hold, hint
+for _, l in ipairs(H.gameLoops) do
+  if l.ms == 100 then hold = l elseif l.ms == 1000 then hint = l end
+end
+check("hook registered, two game-thread loops", H.hooks["/Script/TheIsle.TICharacterBase:GrabPhysicsCharacter"] ~= nil and hold and hint)
 
--- A player on a Pteranodon, a rabbit 10 m away and one 200 m away.
-local ptera = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Pteranodon.BP_Pteranodon_C", loc = { X = 0, Y = 0, Z = 0 } })
-local ctrl = H.makeCtrl("76561190000000001", ptera)
-H.attachController(ptera, ctrl)
-local near = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Rabbit.BP_Rabbit_C", loc = { X = 1000, Y = 0, Z = 0 } })
-local far = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Rabbit.BP_Rabbit_C", loc = { X = 20000, Y = 0, Z = 0 } })
-_G.FindAllOf = function(c) if c == "PlayerController" then return { ctrl } end; return { ptera, near, far } end
-H.calls = {}
-loop.fn()
-text = table.concat(H.log, "\n")
-check("live: the ptera's values", text:find("live ptera 76561190000000001", 1, true) ~= nil, text:sub(-400))
-local preys = 0
-for _, l in ipairs(H.log) do if l:find("prey BP_Rabbit_C at 10 m", 1, true) then preys = preys + 1 end end
-check("…and the rabbit 10 m away, not the one 200 m away", preys == 1 and text:find("at 200 m", 1, true) == nil)
-check("reading only: nothing set", (function()
-  for _, c in ipairs(H.calls) do if c.what:match("^Set") then return false end end
-  return true end)())
+local P = function(v) return { get = function() return v end } end
+local function grab(who, what) H.fire("/Script/TheIsle.TICharacterBase:GrabPhysicsCharacter", P(who), P(what)) end
+local function last(ctrl) local m = ctrl._messages; return m[#m] or "" end
+
+say("\n-- 1. a hint when a light player is within reach --")
+hint.fn()
+check("the ptera is told it can grab the Troodon (40 kg), not the Rex", last(pc):find("Có thể gắp Troodon (40 kg)", 1, true) ~= nil, last(pc))
+local n = #pc._messages
+hint.fn()
+check("…once, not every second", #pc._messages == n)
+
+say("\n-- 2. the game's grab starts a carry; the target follows under the ptera --")
+local offBefore = H.offThreadAccess
+grab(ptera, troo)
+check("the hook itself touched nothing but the addresses", #H.calls == 0 or H.countCalls("K2_SetActorLocation") == 0)
+hold.fn()
+check("carrier and target told", last(pc):find("Đang gắp Troodon (40 kg)", 1, true) ~= nil and last(tc):find("gắp đi", 1, true) ~= nil, last(pc))
+check("the game's own picked-up flag set", H.countCalls("SetIsBeingPickedUp") == 1)
+ptera.__props.Loc = { X = 10000, Y = 2000, Z = 6000 }
+hold.fn()
+local moved = nil
+for _, c in ipairs(H.calls) do if c.what == "K2_SetActorLocation" then moved = c.args[1] end end
+check("put 3 m under the ptera, as a teleport", moved and moved.X == 10000 and moved.Y == 2000 and moved.Z == 5700, moved and (moved.X .. "," .. moved.Z))
+check("its fall speed cleared", H.countCalls("StopMovementImmediately") >= 1)
+check("never off the game thread", H.offThreadAccess == offBefore, table.concat(H.offThreadWhat, ","))
+
+say("\n-- 3. landing lets go (not in the first second) --")
+clock = clock + 5
+ptera.__props.Grounded = true
+hold.fn()
+check("landed: dropped, both told", last(pc):find("Đã thả Troodon", 1, true) ~= nil and last(tc):find("thả bạn", 1, true) ~= nil, last(pc))
+local flags = {}
+for _, c in ipairs(H.calls) do if c.what == "SetIsBeingPickedUp" then flags[#flags + 1] = tostring(c.args[1]) end end
+check("the flag set back", flags[#flags] == "false", table.concat(flags, ","))
+
+say("\n-- 4. cooldown, then too heavy, then time up and !drop --")
+ptera.__props.Grounded = false
+grab(ptera, troo)
+hold.fn()
+check("cooling down (30 s)", last(pc):find("Gắp đang hồi", 1, true) ~= nil, last(pc))
+clock = clock + 40
+grab(ptera, rex)
+hold.fn()
+check("the Rex (7000 kg) is too heavy", last(pc):find("Tyrannosaurus nặng 7000 kg", 1, true) ~= nil, last(pc))
+grab(ptera, troo)
+hold.fn()
+clock = clock + 21
+hold.fn()
+check("time up after maxSeconds", last(pc):find("Đã thả", 1, true) ~= nil, last(pc))
+clock = clock + 40
+grab(ptera, troo)
+hold.fn()
+H.chat("/Script/TheIsle.TIPlayerController:GetChatMessage", pc, pc, "!drop")
+H.advance(10)
+hold.fn()
+check("!drop lets go", last(pc):find("Đã thả", 1, true) ~= nil, last(pc))
+
+say("\n-- 5. only a Pteranodon carries; off on the panel does nothing --")
+clock = clock + 40
+grab(troo, ptera)
+hold.fn()
+check("a Troodon's grab is not a carry", last(tc):find("Đang gắp", 1, true) == nil)
+writeSettings({ enabled = false })
+clock = clock + 10
+grab(ptera, troo)
+hold.fn()
+check("off: no carry", last(pc):find("Đang gắp", 1, true) == nil or last(pc):find("Đã thả", 1, true) ~= nil, last(pc))
 
 say(string.format("=== PteraCarry: %d passed, %d failed ===", pass, fail))
 io.flush()

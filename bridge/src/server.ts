@@ -27,6 +27,7 @@ import { AI_SPECIES } from './ai-species.js';
 import { readAiZones, readAiZonesStatus, saveAiZones, type AiZonesSettings } from './ai-zones.js';
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
+import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
@@ -308,6 +309,7 @@ async function handlePanel(
       (path === '/api/ai-zones' && req.method === 'PUT') ||
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
+      (path === '/api/ptera-carry' && req.method === 'PUT') ||
       ((path === '/api/ai-reset' || path === '/api/ai-reset/cancel') && req.method === 'POST');
     if (!allowed) {
       sendJson(res, 404, { error: 'not found' });
@@ -395,6 +397,14 @@ async function handlePanel(
       done.catch((error: unknown) => console.error('[ai-reset] failed:', error));
       await audit({ action: 'AI reset requested', detail: `${op.species.length ? op.species.join(', ') : 'mọi AI'} · đếm ngược ${op.countdownSec} s`, ok: true });
       sendJson(res, 202, { operation: op });
+      return;
+    }
+
+    if (path === '/api/ptera-carry') {
+      const before = await readPteraSettings();
+      const saved = await savePteraSettings(await readJsonBody(req));
+      await audit({ action: 'Ptera carry settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
       return;
     }
 
@@ -671,6 +681,10 @@ async function handlePanel(
     }
     case '/api/ai-reset': {
       sendJson(res, 200, ctx.aiReset ? ctx.aiReset.status() : { current: null, last: null });
+      return;
+    }
+    case '/api/ptera-carry': {
+      sendJson(res, 200, await readPteraSettings());
       return;
     }
     case '/api/messages': {

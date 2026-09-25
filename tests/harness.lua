@@ -195,6 +195,7 @@ function Harness.makePawn(opts)
     "SetBlood","SetFood","SetWaterLevel","SetMaxHunger","SetMaxFoodValue",
     "SetMaxThirst","SetMaxStamina","ServerSetPrimeEligible",
     "SetReplicatedMutationsData","SetNutrientsStruct","SetElderReplicationStacks",
+    "SetIsBeingPickedUp",
   }) do
     methods[m] = function(_, v)
       Harness.record(m, v)
@@ -214,6 +215,7 @@ function Harness.makePawn(opts)
                        "MaxOxygen", "Growth" }) do
     methods["Get" .. v] = function() return props[v] end
   end
+  methods.GetWeight = function() return opts.weight or 50 end
   methods.GetElderReplicationStacks = function() Harness.record("GetElderReplicationStacks"); return 3 end
   methods.GetClass = function()
     return { GetFullName = function() return className end,
@@ -227,6 +229,7 @@ function Harness.makePawn(opts)
     IsMovingOnGround = function() return props.Grounded end,
     IsFalling = function() return props.Falling end,
     IsSwimming = function() return props.Swimming end,
+    StopMovementImmediately = function() Harness.record("StopMovementImmediately") end,
   }
   -- Teleports are recorded with their arguments so tests can check where to.
   methods.K2_SetActorLocation = function(_, loc, sweep, hit, teleport)

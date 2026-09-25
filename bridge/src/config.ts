@@ -43,6 +43,9 @@ export const config = {
   /** AIZones' Saved/ directory: the bridge writes zones.json there, the mod writes status.json. */
   aiZonesRoot: env('AI_ZONES_ROOT', join(garageRoot, '..', '..', 'AIZones', 'Saved')),
 
+  /** PteraCarry's Saved/ directory: the panel writes its settings.json there. */
+  pteraRoot: env('PTERA_ROOT', join(garageRoot, '..', '..', 'PteraCarry', 'Saved')),
+
   /** The players' texts as edited on the panel, read by every mod (mods/_shared/messages.lua). */
   messagesModPath: env('MESSAGES_MOD_PATH', join(garageRoot, '..', '..', 'shared', 'isle-messages.json')),
 
