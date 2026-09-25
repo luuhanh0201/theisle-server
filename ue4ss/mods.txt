@@ -27,6 +27,8 @@ PlayerCommands : 1
 ; (never destroys any); off until the panel turns the zones on.
 AIZones : 1
 PteraCarry : 1
+PlantProbe : 0
+Flora : 1
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,

@@ -29,6 +29,7 @@ import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
+import { readFlora } from './flora.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
@@ -697,6 +698,11 @@ async function handlePanel(
     }
     case '/api/ai-reset': {
       sendJson(res, 200, ctx.aiReset ? ctx.aiReset.status() : { current: null, last: null });
+      return;
+    }
+    case '/api/map/flora': {
+      // The island's real plants and plant areas (Flora mod), or null before its first export.
+      sendJson(res, 200, { flora: await readFlora() });
       return;
     }
     case '/api/ai-ambient': {

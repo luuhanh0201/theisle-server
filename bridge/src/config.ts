@@ -43,6 +43,9 @@ export const config = {
   /** AIZones' Saved/ directory: the bridge writes zones.json there, the mod writes status.json. */
   aiZonesRoot: env('AI_ZONES_ROOT', join(garageRoot, '..', '..', 'AIZones', 'Saved')),
 
+  /** Flora's Saved/ directory: the mod writes flora.json (the island's real plants) there. */
+  floraRoot: env('FLORA_ROOT', join(garageRoot, '..', '..', 'Flora', 'Saved')),
+
   /** PteraCarry's Saved/ directory: the panel writes its settings.json there. */
   pteraRoot: env('PTERA_ROOT', join(garageRoot, '..', '..', 'PteraCarry', 'Saved')),
 

@@ -2153,7 +2153,7 @@ const LAYERS = [
   ['ai', 'AI đang có (live)', '#ef4444', true],
   ['aizone', 'Vùng AI (admin đặt)', '#fb923c', true],
   ['trails', 'Vệt di chuyển', '#f8fafc', true],
-  ['migration', 'Vùng di cư (MZ)', '#22c55e', true],
+  ['migrlive', 'Vùng di cư & vùng cây (live)', '#22c55e', true],
   ['sanctuary', 'Sanctuary', '#e879f9', true],
   ['patrol', 'Vùng tuần tra (PZ)', '#f97316', false],
   ['area', 'Khu vực', '#f8fafc', true],
@@ -2163,7 +2163,7 @@ const LAYERS = [
   ['mud', 'Bãi bùn (wallow)', '#d97706', false],
   ['air', 'Luồng khí (loài bay)', '#7dd3fc', false],
   ['road', 'Đường mòn', '#e7e5e4', false],
-  ['plant', 'Thực vật & quả (tham khảo)', '#84cc16', false],
+  ['flora', 'Thực vật (live): (α) (β) (γ)', '#84cc16', true],
   ['mineral', 'Đá muối, gastro, nghêu (tham khảo)', '#e2e8f0', false],
 ];
 // VulnonaMAP's "animal" spots are where players once saw AI. Evrima spawns AI
@@ -2222,7 +2222,8 @@ function loadMapData() {
   lm.loading ??= (async () => {
     try {
       const data = await getJson('map/gateway.json');
-      data.features = data.features.filter((f) => f.layer !== STATIC_AI_LAYER);
+      // The reference plants and migration zones are replaced by the server's own (Flora mod).
+      data.features = data.features.filter((f) => f.layer !== STATIC_AI_LAYER && f.layer !== 'plant' && f.layer !== 'migration');
       const img = new Image();
       img.src = `map/${encodeURIComponent(data.image)}?v=${encodeURIComponent(data.updated)}`;
       await img.decode();
@@ -2230,7 +2231,8 @@ function loadMapData() {
       lm.img = img;
       $('map-msg').hidden = true;
       renderLayerList();
-      $('map-legend').innerHTML = `Bản đồ &amp; dữ liệu địa điểm: <a href="${esc(data.source.url)}" target="_blank" rel="noopener">${esc(data.source.name)}</a> (${esc(data.source.author)}) · ${esc(data.name)}, cập nhật ${esc(data.updated)} · ảnh nền chụp trong game, bản quyền thuộc nhà phát triển game · kéo để di chuyển, cuộn để phóng to`;
+      $('map-legend').innerHTML = `Thực vật: <b style="color:#fbbf24">(α)</b> carb · <b style="color:#f472b6">(β)</b> protein · <b style="color:#38bdf8">(γ)</b> lipid · không ghi = không có chất (chữ hiện khi phóng to). Cây & vùng di cư là dữ liệu thật của server (cập nhật ~2 phút). `
+        + `Bản đồ &amp; dữ liệu địa điểm: <a href="${esc(data.source.url)}" target="_blank" rel="noopener">${esc(data.source.name)}</a> (${esc(data.source.author)}) · ${esc(data.name)}, cập nhật ${esc(data.updated)} · ảnh nền chụp trong game, bản quyền thuộc nhà phát triển game · kéo để di chuyển, cuộn để phóng to`;
       requestDraw();
     } catch (e) {
       lm.failed = e.message ?? String(e);
@@ -2415,6 +2417,22 @@ function drawMap() {
       drawText(ctx, f.name, x, y, { font: '700 11px Inter, system-ui, sans-serif', color: c });
     }
   }
+  // 1a. the game's plant areas: its migration zones, as live as the Flora export (~2 min).
+  if (lm.on.has('migrlive') && lm.floraZones?.length) {
+    for (const { sp, ring } of lm.floraZones) {
+      const [label, c] = floraZoneState(sp);
+      const f = { kind: 'poly', pts: [ring] };
+      traceShape(ctx, f);
+      ctx.fillStyle = hexA(c, sp.mass ? 0.26 : sp.active ? 0.16 : 0.06); ctx.fill();
+      ctx.setLineDash(sp.active || sp.mass ? [] : [5, 5]);
+      ctx.lineWidth = sp.mass ? 2.5 : 1.5; ctx.strokeStyle = hexA(c, 0.95); ctx.stroke();
+      ctx.setLineDash([]);
+      if (z >= 2.2 && (sp.active || sp.mass)) {
+        const [x, y] = scr(toMap([sp.x, sp.y]));
+        drawText(ctx, label, x, y, { font: '700 10.5px Inter, system-ui, sans-serif', color: c });
+      }
+    }
+  }
   // 1b. AI zones (drawn by admins, run by the AIZones mod): a dark outline
   // under a bright ring so the edge reads on any ground; the selected one has
   // its centre marked and a handle on its edge to resize it.
@@ -2537,6 +2555,21 @@ function drawMap() {
     drawText(ctx, lm.path.end === null ? 'Mới nhất' : 'Kết thúc', ex, ey - 15, { font: '700 11px Inter, system-ui, sans-serif', color: '#fecaca' });
   }
 
+  // 5b. every plant and fruit, marked with the nutrients it gives
+  if (lm.on.has('flora') && lm.flora) {
+    const r = Math.max(1.8, Math.min(4.5, 1.4 * Math.sqrt(z)));
+    const labels = z >= 4;
+    for (const p of [...lm.flora.plants, ...lm.flora.fruits]) {
+      const [x, y] = scr(toMap([p.x, p.y]));
+      if (x < -6 || y < -6 || x > cw + 6 || y > ch + 6) continue;
+      ctx.beginPath(); ctx.arc(x, y, lm.hover?.plant === p ? r + 2 : r, 0, Math.PI * 2);
+      ctx.fillStyle = nutriColor(p); ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(2,6,23,.8)'; ctx.stroke();
+      const mark = labels ? nutriMark(p) : '';
+      if (mark) drawText(ctx, mark, x, y - r - 7, { font: '700 10px Inter, system-ui, sans-serif', color: nutriColor(p) });
+    }
+  }
+
   // 6. AI alive on the server now
   if (lm.on.has('ai') && lm.ai && !lm.ai.stale) {
     const r = Math.max(3, Math.min(6, 2.4 * Math.sqrt(z)));
@@ -2617,6 +2650,49 @@ function drawMap() {
 // az.draft is what the form shows and the map draws; saved with "Lưu vùng AI".
 const az = { data: null, draft: null, status: null, points: {}, speciesLabel: {}, speciesCls: {}, sel: null, placing: null, dirty: false, drag: null, drawing: null };
 const ZONE_DEFAULT = { shape: 'circle', radiusM: 300, species: ['Boar', 'Deer'], min: 3, max: 10, perTurnMin: 1, perTurnMax: 3, everySec: 60, spacingM: 40, growthMin: 0.75, growthMax: 1, enabled: true };
+// --- the island's real plants (mods/Flora → /api/map/flora) ---
+// α carbs · β proteins · γ lipids, as the game marks them; nothing written = no nutrients.
+const NUTRI = [['cp', 'α', '#fbbf24'], ['pp', 'β', '#f472b6'], ['lp', 'γ', '#38bdf8']];
+let floraAt = 0;
+async function loadFlora(force = false) {
+  if (!force && Date.now() - floraAt < 60_000) return;
+  floraAt = Date.now();
+  try {
+    const { flora } = await getJson('/api/map/flora');
+    lm.flora = flora && !flora.stale ? flora : null;
+    lm.floraZones = lm.flora ? lm.flora.spawners.filter((sp) => sp.shape?.spline?.length >= 3)
+      .map((sp) => ({ sp, ring: sp.shape.spline.map(toMap) })) : [];
+    if (lm.data) renderLayerList();
+    requestDraw();
+  } catch { /* the next refresh tries again */ }
+}
+/** "(α)", "(βγ)", or "" when it gives no nutrients. */
+function nutriMark(p) {
+  if (p.n === false) return '';
+  const got = NUTRI.filter(([k]) => (p[k] ?? 0) > 0).map(([, sym]) => sym).join('');
+  return got ? `(${got})` : '';
+}
+function nutriColor(p) {
+  if (p.n === false) return '#94a3b8';
+  const got = NUTRI.filter(([k]) => (p[k] ?? 0) > 0);
+  return got.length === 1 ? got[0][2] : got.length > 1 ? '#a3e635' : '#94a3b8';
+}
+/** "BP_FruitMangoStatic_C" → "Mango (quả)", "BP_MangoTreeStaticSpawner_C" → "Mango (cây)". */
+function plantName(c) {
+  let n = String(c).replace(/^BP_/, '').replace(/_C$/, '');
+  const fruit = /^Fruit/.test(n) || (/Static$/.test(n) && !/Spawner$/.test(n));
+  const tree = /Spawner$/.test(n);
+  n = n.replace(/^Fruit/, '').replace(/(Tree)?(Static)?Spawner$/, '').replace(/Static$/, '').replace(/(\D)(\d+)$/, '$1 $2')
+    .replace(/([a-z])([A-Z])/g, '$1 $2');
+  return `${n}${fruit ? ' (quả)' : tree ? ' (cây)' : ''}`;
+}
+function floraZoneState(sp) {
+  if (sp.mass) return ['Đại di cư', '#facc15'];
+  if (sp.active) return ['Đang di cư', '#22c55e'];
+  if (sp.migration) return ['Vùng di cư (đang nghỉ)', '#94a3b8'];
+  return ['Vùng cây thường', '#38bdf8'];
+}
+
 // Zone shapes, as bridge/src/zone-shape.ts: game units (cm), X/Y as the game has them.
 // A circle stays a circle; an ellipse and a polygon are drawn and tested as an outline.
 const ELLIPSE_SIDES = 36;
@@ -3308,6 +3384,20 @@ function hitTest(sx, sy) {
   }
   const zn = aiZoneAt(sx, sy);
   if (zn) return { azone: zn };
+  if (lm.on.has('flora') && lm.flora) {
+    let best = null;
+    for (const p of [...lm.flora.plants, ...lm.flora.fruits]) {
+      const [x, y] = scr(toMap([p.x, p.y]));
+      const d = Math.hypot(x - sx, y - sy);
+      if (d <= 7 && (!best || d < best.d)) best = { p, d };
+    }
+    if (best) return { plant: best.p };
+  }
+  if (lm.on.has('migrlive') && lm.floraZones?.length) {
+    const [gx, gy] = toGame(fromScr(sx, sy));
+    const hit = lm.floraZones.find(({ sp }) => inPolyGame(sp.shape.spline, gx, gy));
+    if (hit) return { fzone: hit.sp };
+  }
   const feats = lm.data.features.filter((f) => visible(f, z));
   for (const f of feats) {
     for (const m of f.marks ?? []) if (near(m.at, 9)) return { f, mark: m };
@@ -3319,6 +3409,21 @@ function hitTest(sx, sy) {
 }
 
 function tipHtml(h) {
+  if (h.plant) {
+    const p = h.plant;
+    const mark = nutriMark(p);
+    const zone = p.s ? lm.flora.spawners.find((sp) => sp.id === p.s) : null;
+    return `<b>${esc(plantName(p.c))}</b>${mark ? ` <span style="color:${nutriColor(p)}">${mark}</span>` : ''}<br>`
+      + `${mark ? `Cho chất: ${NUTRI.filter(([k]) => (p[k] ?? 0) > 0).map(([k, sym]) => `${sym} ${Math.round(p[k] * 100)}%`).join(' · ')}` : 'Không có chất (chỉ no bụng)'}`
+      + `${p.eaten ? '<br>đã bị ăn' : ''}<br><span class="m">${zone ? floraZoneState(zone)[0] : 'không thuộc vùng cây nào'} · dữ liệu ${ago(lm.flora.t)}</span>`;
+  }
+  if (h.fzone) {
+    const sp = h.fzone;
+    const flags = [sp.patrol ? 'tuần tra' : '', sp.nesting ? 'làm tổ' : '', sp.juvenile ? 'con non' : ''].filter(Boolean).join(', ');
+    const inside = lm.flora.plants.filter((p) => p.s === sp.id).length;
+    return `<b>${esc(floraZoneState(sp)[0])}</b><br>${inside} cây trong vùng${sp.amount != null ? ` · game đặt ${sp.amount}` : ''}`
+      + `${sp.multiplier != null ? ` · hệ số ${sp.multiplier}` : ''}${flags ? `<br>${esc(flags)}` : ''}<br><span class="m">dữ liệu ${ago(lm.flora.t)}</span>`;
+  }
   if (h.azone) {
     const zn = h.azone;
     const st = az.status?.zones?.[zn.id];
@@ -3504,6 +3609,8 @@ function renderLayerList() {
   count.trails = '';
   count.ai = '';
   count.aizone = '';
+  count.migrlive = lm.flora ? lm.flora.spawners.length : '';
+  count.flora = lm.flora ? lm.flora.plants.length + lm.flora.fruits.length : '';
   $('map-layers').innerHTML = LAYERS.filter(([id]) => count[id] !== undefined).map(([id, label, color]) => `<li><label>
       <input type="checkbox" data-layer="${id}" ${lm.on.has(id) ? 'checked' : ''}>
       <span class="sw" style="background:${color}"></span>${esc(label)}<span class="n"${id === 'ai' ? ' id="ai-count"' : ''}>${count[id]}</span></label></li>`).join('')
@@ -5311,7 +5418,7 @@ async function refreshTab(tab) {
       break;
     case 'map':
       {
-        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones(), resetPolling ? null : pollReset()]);
+        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones(), resetPolling ? null : pollReset(), loadFlora()]);
         renderMap(m.players, m.ai ?? null);
       }
       break;

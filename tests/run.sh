@@ -30,7 +30,7 @@ mkdir -p "$RUN/Mods/shared/isle" \
          "$RUN/Mods/DinoGarage/Saved/stored" \
          "$RUN/Mods/DinoGarage/Saved/deleted" \
          "$RUN/Mods/StatsLogger/Saved" \
-         "$RUN/Mods/PlayerCommands/Saved"
+         "$RUN/Mods/PlayerCommands/Saved" "$RUN/Mods/Flora/Saved"
 cp "$ROOT"/mods/_shared/*.lua "$RUN/Mods/shared/isle/"
 for dir in "$ROOT"/mods/*/; do
     mod="$(basename "$dir")"
