@@ -326,6 +326,47 @@ check("3 dropped 3 m around the player, at their height + lift", spawns() - befo
 local p1, p2 = around[#around], around[#around - 1]
 check("…not on the same spot", p1 and p2 and (math.abs(p1.X - p2.X) > 1 or math.abs(p1.Y - p2.Y) > 1))
 
+say("\n-- 5f. reset: kill (never destroy) the AI, a batch per poll; players' dinos untouched --")
+fresh()
+local aiCtrl = { IsValid = function() return true end,
+  GetClass = function() return { GetFName = function() return FName("TIAIBoarController") end } end }
+local function aiPawn(cls)
+  local p = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/" .. cls .. "." .. cls .. "_C", loc = { X = 900000, Y = 0, Z = 0 } })
+  H.attachController(p, aiCtrl)
+  aiPawns[#aiPawns + 1] = p
+  return p
+end
+for _ = 1, 30 do aiPawn("BP_Boar") end
+for _ = 1, 2 do aiPawn("BP_Deer") end
+-- A dino left in the world by a player who logged out: no controller.
+local body = H.makePawn({ loc = { X = 910000, Y = 0, Z = 0 } })
+aiPawns[#aiPawns + 1] = body
+local function alive(cls)
+  local n = 0
+  for _, p in ipairs(aiPawns) do
+    if p:GetHealth() > 0 and (cls == nil or p:GetClass():GetFName():ToString():find(cls, 1, true)) then n = n + 1 end
+  end
+  return n
+end
+writeDrops({ { id = 10, kind = "reset", classes = {}, expiresAt = clock + 30 } })
+drops.fn()
+check("first poll: 25 killed", alive("BP_Boar") + alive("BP_Deer") == 7, tostring(alive("BP_Boar") + alive("BP_Deer")))
+d = readDone()
+check("…not reported until done", d and d.lastId == 10 and d.results[#d.results].id ~= 10)
+drops.fn()
+d = readDone()
+check("next poll: the rest; reported with the count", alive("BP_Boar") + alive("BP_Deer") == 0
+  and d.results[#d.results].id == 10 and d.results[#d.results].made == 32, d and json.encode(d.results[#d.results]))
+check("the logged-out player's dino and the online one untouched", body:GetHealth() > 0 and playerPawn:GetHealth() > 0)
+check("killed, not destroyed", H.countCalls("K2_DestroyActor") == 0)
+for _ = 1, 3 do aiPawn("BP_Boar") end
+for _ = 1, 2 do aiPawn("BP_Deer") end
+writeDrops({ { id = 11, kind = "reset", classes = { "BP_Deer_C" }, expiresAt = clock + 30 } })
+drops.fn()
+d = readDone()
+check("only the chosen kind", alive("BP_Deer") == 0 and alive("BP_Boar") == 3 and d.results[#d.results].made == 2,
+  tostring(alive("BP_Boar")))
+
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
 

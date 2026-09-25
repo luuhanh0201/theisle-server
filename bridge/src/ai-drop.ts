@@ -98,25 +98,33 @@ export function queueDrop(req: DropRequest, at: { x: number; y: number }, points
   }
   const s = AI_BY_KEY.get(req.species);
   if (!s) return Promise.reject(new ValidationError(`unknown AI "${req.species}"`));
+  return enqueueAiCommand((id) => ({
+    ...req, id, createdAt: nowS, expiresAt: nowS + DROP_TTL_SECONDS,
+    sp: { key: s.key, cls: s.cls, pawn: s.pawn, ctrl: s.ctrl, kind: s.kind, lift: s.lift },
+    spots,
+  }), nowS);
+}
+
+/**
+ * Append one command to the AIZones queue (drops.json): a drop, or an AI
+ * reset (ai-reset.ts). `make` gets the next id. Serialized; ids only grow.
+ */
+export function enqueueAiCommand<T extends { id: number; expiresAt: number }>(make: (id: number) => T, nowS = Math.floor(Date.now() / 1000)): Promise<T> {
   return serialized(async () => {
     const file = (await readJson(dropsPath())) as { drops?: unknown } | null;
     const done = (await readJson(donePath())) as { lastId?: unknown } | null;
     const lastDone = typeof done?.lastId === 'number' ? done.lastId : 0;
-    const existing = Array.isArray(file?.drops) ? (file.drops as Drop[]) : [];
+    const existing = Array.isArray(file?.drops) ? (file.drops as Array<{ id: number; expiresAt: number }>) : [];
     const maxId = existing.reduce((m, d) => (typeof d?.id === 'number' ? Math.max(m, d.id) : m), lastDone);
     // Keep only what the mod has not run and still can.
-    const pending = existing.filter((d) => typeof d?.id === 'number' && d.id > lastDone && d.expiresAt >= nowS);
-    const drop: Drop = {
-      ...req, id: maxId + 1, createdAt: nowS, expiresAt: nowS + DROP_TTL_SECONDS,
-      sp: { key: s.key, cls: s.cls, pawn: s.pawn, ctrl: s.ctrl, kind: s.kind, lift: s.lift },
-      spots,
-    };
-    pending.push(drop);
+    const pending: unknown[] = existing.filter((d) => typeof d?.id === 'number' && d.id > lastDone && d.expiresAt >= nowS);
+    const command = make(maxId + 1);
+    pending.push(command);
     await mkdir(config.aiZonesRoot, { recursive: true });
     const tmp = `${dropsPath()}.tmp`;
     await writeFile(tmp, JSON.stringify({ drops: pending }), 'utf8');
     await rename(tmp, dropsPath());
-    return drop;
+    return command;
   });
 }
 

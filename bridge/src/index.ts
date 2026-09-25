@@ -14,6 +14,8 @@ import { groundPointsPath, refreshModFile } from './ai-zones.js';
 import { pruneAudit } from './audit.js';
 import { loadMessages, syncModTexts } from './messages.js';
 import { Announcer } from './announcer.js';
+import { AiReset } from './ai-reset.js';
+import { dropResult, enqueueAiCommand } from './ai-drop.js';
 
 const store = new Store();
 const rcon = new Rcon(config.rcon);
@@ -65,7 +67,17 @@ metrics.start();
 // Proximity voice: who is in the LiveKit room (voice.ts). Off without LIVEKIT_* keys.
 const voice = config.voice === null ? null : new VoiceRoom(config.voice);
 
-startServer({ store, power, rcon, metrics, ...(voice ? { voice } : {}) });
+// "Làm mới AI": the AIZones mod kills, the game clears the corpses (ai-reset.ts).
+const aiReset = new AiReset({
+  rcon,
+  enqueue: (classes) => enqueueAiCommand((id) => {
+    const now = Math.floor(Date.now() / 1000);
+    return { id, kind: 'reset', classes, createdAt: now, expiresAt: now + 30 };
+  }),
+  result: dropResult,
+});
+
+startServer({ store, power, rcon, metrics, aiReset, ...(voice ? { voice } : {}) });
 
 // AI zones: keep the ground points on disk and hand the mod the points found
 // since (a zone drawn where nobody had been yet gets spots as people go there).

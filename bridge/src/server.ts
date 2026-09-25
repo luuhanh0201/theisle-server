@@ -26,6 +26,7 @@ import { maximaAt } from './species-stats.js';
 import { AI_SPECIES } from './ai-species.js';
 import { readAiZones, readAiZonesStatus, saveAiZones, type AiZonesSettings } from './ai-zones.js';
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
+import { validateReset, type AiReset } from './ai-reset.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
@@ -174,6 +175,7 @@ export interface Ctx {
   rcon: Rcon;
   metrics?: Metrics;
   voice?: VoiceRoom;
+  aiReset?: AiReset;
 }
 
 /** Everything the Server tab shows, in one call. */
@@ -305,7 +307,8 @@ async function handlePanel(
       (path === '/api/panel-access' && req.method === 'PUT') ||
       (path === '/api/ai-zones' && req.method === 'PUT') ||
       (path === '/api/ai-drop' && req.method === 'POST') ||
-      (path === '/api/messages' && req.method === 'PUT');
+      (path === '/api/messages' && req.method === 'PUT') ||
+      ((path === '/api/ai-reset' || path === '/api/ai-reset/cancel') && req.method === 'POST');
     if (!allowed) {
       sendJson(res, 404, { error: 'not found' });
       return;
@@ -378,6 +381,20 @@ async function handlePanel(
       const saved = await saveAiZones(await readJsonBody(req), store.groundPoints);
       await audit({ action: 'AI zones saved', detail: describeZoneChanges(before, saved) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/ai-reset' || path === '/api/ai-reset/cancel') {
+      if (!ctx.aiReset) { sendJson(res, 503, { error: 'AI reset is not available' }); return; }
+      if (path === '/api/ai-reset/cancel') {
+        const cancelled = ctx.aiReset.cancel();
+        sendJson(res, cancelled ? 200 : 409, cancelled ? ctx.aiReset.status() : { error: 'nothing to cancel (only during the countdown)' });
+        return;
+      }
+      const { op, done } = ctx.aiReset.request(validateReset(await readJsonBody(req)));
+      done.catch((error: unknown) => console.error('[ai-reset] failed:', error));
+      await audit({ action: 'AI reset requested', detail: `${op.species.length ? op.species.join(', ') : 'mọi AI'} · đếm ngược ${op.countdownSec} s`, ok: true });
+      sendJson(res, 202, { operation: op });
       return;
     }
 
@@ -650,6 +667,10 @@ async function handlePanel(
         points: Object.fromEntries(zones.zones.map((z) => [z.id, store.groundPoints.within(z.x, z.y, z.radiusM * 100, 200).length])),
         groundPoints: store.groundPoints.size,
       });
+      return;
+    }
+    case '/api/ai-reset': {
+      sendJson(res, 200, ctx.aiReset ? ctx.aiReset.status() : { current: null, last: null });
       return;
     }
     case '/api/messages': {

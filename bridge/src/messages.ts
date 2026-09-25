@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
 
 export interface MessageDef {
   key: string;
@@ -57,6 +57,10 @@ export const MESSAGES: readonly MessageDef[] = [
   // --- corpses (announcer.ts) ---
   { key: 'corpses.warning', group: 'corpses', label: 'Báo trước khi dọn xác', default: 'Dọn xác sau {left} / Clearing corpses in {leftEn}.', vars: ['left', 'leftEn'] },
   { key: 'corpses.done', group: 'corpses', label: 'Đã dọn xác', default: 'Đã dọn xác / Corpses cleared.', vars: [] },
+  // --- AI reset (ai-reset.ts) ---
+  { key: 'ai.reset.warning', group: 'ai', label: 'Báo trước khi làm mới AI', default: 'AI sẽ được làm mới sau {left} / AI reset in {leftEn}.', vars: ['left', 'leftEn'] },
+  { key: 'ai.reset.done', group: 'ai', label: 'Đã làm mới AI', default: 'Đã làm mới AI ({count} con) / AI has been reset.', vars: ['count'] },
+  { key: 'ai.reset.cancelled', group: 'ai', label: 'Huỷ làm mới AI', default: 'Đã huỷ làm mới AI / AI reset cancelled.', vars: [] },
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
   { key: 'garage.tenSeconds', group: 'garage', label: 'Còn 10 giây', default: 'Còn 10 giây là cất xong — đứng yên.', vars: [] },
@@ -108,7 +112,7 @@ export const MESSAGES: readonly MessageDef[] = [
 
 export const MESSAGE_BY_KEY: ReadonlyMap<string, MessageDef> = new Map(MESSAGES.map((m) => [m.key, m]));
 /** Sent by the bridge itself (RCON announce); the rest by the mods. */
-const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses']);
+const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses', 'ai']);
 
 export interface Periodic {
   id: string;

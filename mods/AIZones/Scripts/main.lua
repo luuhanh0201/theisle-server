@@ -10,7 +10,8 @@
 --     until the zone holds `max`.
 -- New AI keep `spacing` away from every living AI (the game's too), so a
 -- zone stays spread out; with no such spot left it stays below its numbers.
--- Admins can also drop a few AI next to a chosen player (see Drops below).
+-- Admins can also drop a few AI next to a chosen player, and reset (kill,
+-- never destroy) the AI (see Drops and Reset below).
 --
 -- The bridge writes Mods/AIZones/Saved/zones.json: the zones, each species'
 -- pawn + AI controller class (pairs verified live by the evrima-dev-knowledge
@@ -515,7 +516,62 @@ local function runDrop(d)
     return made > 0, made, why
 end
 
+--------------------------------------------------------------------------
+-- Reset: "clear the AI" from the admin panel (bridge/src/ai-reset.ts)
+--------------------------------------------------------------------------
+-- Nothing is ever destroyed from Lua (K2_DestroyActor on an actor the game
+-- already removed crashes the server). A reset KILLS the AI instead —
+-- SetHealth(0), as !slay does — on pawns found fresh in this very tick,
+-- RESET_BATCH per poll; the bridge then clears the corpses with the game's
+-- own RCON WipeCorpses, and the game and the zones spawn new ones.
+-- Only pawns an AIController drives: a player's dino (online, or left in the
+-- world after logging out, with no controller) is never touched.
+
+local RESET_BATCH = 25
+local RESET_MAX_S = 30      -- the game keeps spawning: stop after this long
+local reset = nil           -- { id, classes (set, or nil = every AI), started, killed }
+
+local function isAiDriven(pawn)
+    local okC, c = pcall(function() return pawn.Controller end)
+    if not okC or c == nil or not H.isValid(c) then return false end
+    local okN, name = pcall(function() return c:GetClass():GetFName():ToString() end)
+    return okN and name ~= nil and tostring(name):find("PlayerController", 1, true) == nil
+end
+
+--- Kill up to RESET_BATCH more; returns how many were killed and how many are left.
+local function resetStep()
+    local okP, pawns = pcall(function() return FindAllOf("Pawn") or {} end)
+    if not okP then return 0, 0 end
+    local killed, left = 0, 0
+    for _, pawn in ipairs(pawns) do
+        if H.isValid(pawn) and addressOf(pawn) ~= nil and isAiDriven(pawn) then
+            local okH, hp = pcall(function() return pawn:GetHealth() end)
+            local cls = classNameOf(pawn)
+            if okH and type(hp) == "number" and hp > 0 and (reset.classes == nil or (cls ~= nil and reset.classes[cls])) then
+                if killed >= RESET_BATCH then
+                    left = left + 1
+                elseif pcall(function() pawn:SetHealth(0) end) then
+                    killed = killed + 1
+                end
+            end
+        end
+    end
+    return killed, left
+end
+
+local function continueReset()
+    local killed, left = resetStep()
+    reset.killed = reset.killed + killed
+    if left == 0 or os.time() - reset.started >= RESET_MAX_S then
+        finish(reset.id, true, reset.killed, left > 0 and (left .. " still alive after " .. RESET_MAX_S .. " s") or nil)
+        H.log(string.format("%s: reset %d — %d AI killed%s", MOD, reset.id, reset.killed,
+            left > 0 and (", " .. left .. " left (the game keeps spawning)") or ""))
+        reset = nil
+    end
+end
+
 local function pollDrops()
+    if reset ~= nil then continueReset() end
     local file = readJsonFile(DROPS_PATH)
     if file == nil or type(file.drops) ~= "table" then return end
     if done == nil then
@@ -535,6 +591,19 @@ local function pollDrops()
         writeDone()                                   -- before acting: never twice
         if tonumber(d.expiresAt) == nil or now > tonumber(d.expiresAt) then
             finish(id, false, 0, "expired")
+        elseif d.kind == "reset" then
+            if reset ~= nil then
+                finish(id, false, 0, "a reset is already running")
+            else
+                local classes = nil
+                if type(d.classes) == "table" and #d.classes > 0 then
+                    classes = {}
+                    for _, c in ipairs(d.classes) do classes[tostring(c)] = true end
+                end
+                reset = { id = id, classes = classes, started = now, killed = 0 }
+                H.log(MOD .. ": reset " .. id .. " — killing " .. (classes and "the chosen AI" or "every AI"))
+                continueReset()
+            end
         else
             local ok, made, why = runDrop(d)
             finish(id, ok, made, (not ok or made < (tonumber(d.count) or 0)) and why or nil)

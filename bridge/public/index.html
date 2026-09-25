@@ -909,6 +909,24 @@
               <button type="button" class="btn" id="drop-go">Thả AI</button>
             </div>
           </section>
+          <section class="card" id="reset-card">
+            <div class="card-head"><h2>Làm mới AI</h2><span class="sub">mod AIZones + dọn xác</span></div>
+            <div class="card-body az">
+              <div class="az-row"><label for="reset-species">AI cần làm mới</label><select id="reset-species"><option value="">Tất cả AI</option></select></div>
+              <div class="az-row"><label for="reset-countdown">Báo trước</label><select id="reset-countdown">
+                <option value="0">Ngay lập tức</option><option value="30">30 giây</option><option value="60" selected>1 phút</option>
+                <option value="120">2 phút</option><option value="300">5 phút</option></select></div>
+              <label class="az-row"><input type="checkbox" id="reset-wipe" checked> Dọn xác sau khi làm mới (cả xác người chơi)</label>
+              <div class="step-hint">Game không cho xoá AI từ mod (xoá là crash server), nên AI bị <b>giết</b> rồi dọn xác bằng lệnh của game.
+                Game và các vùng AI sẽ tự sinh AI mới. Dino của người chơi (kể cả con đang offline) không bị đụng tới.
+                Nội dung thông báo sửa ở tab Thông báo.</div>
+              <div class="step-hint" id="reset-status"></div>
+              <div class="az-row" style="gap:8px;justify-content:flex-start">
+                <button type="button" class="btn-danger solid" id="reset-go">Làm mới AI</button>
+                <button type="button" class="btn-ghost sm" id="reset-cancel" hidden>Huỷ</button>
+              </div>
+            </div>
+          </section>
           <section class="card">
             <div class="card-head"><h2>Trên bản đồ</h2><span class="sub">bấm để tới vị trí</span>
               <button type="button" class="btn-soft sm" id="map-clear-all" style="margin-left:auto" title="Chỉ ẩn trên trình duyệt này; vệt mới vẫn vẽ tiếp">Xóa mọi vệt</button></div>
@@ -2651,10 +2669,59 @@ $('az-save').addEventListener('click', () => withToken('lưu vùng AI', async (t
   await refreshAiZones();
 }));
 
+// --- "Làm mới AI" (bridge/src/ai-reset.ts) ---
+
+const RESET_STEP = {
+  countdown: 'đang đếm ngược', killing: 'mod đang giết AI…', wiping: 'đang dọn xác…',
+  done: 'xong', failed: 'thất bại', cancelled: 'đã huỷ',
+};
+let resetPolling = null;
+
+function renderReset(st) {
+  const op = st.current ?? st.last;
+  $('reset-go').disabled = st.current !== null;
+  $('reset-cancel').hidden = st.current?.step !== 'countdown';
+  if (!op) { $('reset-status').textContent = ''; return; }
+  const what = op.species.length ? op.species.map((k) => az.speciesLabel[k] ?? k).join(', ') : 'mọi AI';
+  const left = op.step === 'countdown' ? ` · còn ${Math.max(0, Math.round((op.runAt - Date.now()) / 1000))} s` : '';
+  $('reset-status').innerHTML = `${st.current ? 'Đang chạy' : 'Lần gần nhất'}: làm mới ${esc(what)} — <b>${RESET_STEP[op.step] ?? op.step}</b>${left}`
+    + `${typeof op.killed === 'number' ? ` · ${op.killed} con` : ''}${op.message ? ` · <span style="color:var(--kill,#ef4444)">${esc(op.message)}</span>` : ''}`;
+}
+
+async function pollReset() {
+  const st = await getJson('/api/ai-reset');
+  renderReset(st);
+  clearTimeout(resetPolling);
+  resetPolling = st.current ? setTimeout(() => pollReset().catch(() => undefined), 1500) : null;
+}
+
+$('reset-go').addEventListener('click', () => {
+  const key = $('reset-species').value;
+  const countdownSec = Number($('reset-countdown').value);
+  const what = key ? (az.speciesLabel[key] ?? key) : 'TẤT CẢ AI trên server';
+  confirmAction({
+    title: 'Làm mới AI?',
+    body: `Giết <b>${esc(what)}</b>${countdownSec ? `, báo trước cho người chơi ${countdownSec >= 60 ? `${countdownSec / 60} phút` : `${countdownSec} giây`}` : ' ngay lập tức'}`
+      + `${$('reset-wipe').checked ? ', rồi dọn mọi xác (cả xác của người chơi)' : ''}. Không hoàn tác được.`,
+    okLabel: 'Làm mới AI',
+    withReason: false,
+    run: async (token) => {
+      await adminFetch('/api/ai-reset', 'POST', token, { countdownSec, species: key ? [key] : [], wipeCorpses: $('reset-wipe').checked });
+      toast('Đã bắt đầu làm mới AI.');
+      await pollReset();
+    },
+  });
+});
+$('reset-cancel').addEventListener('click', () => withToken('huỷ làm mới AI', async (token) => {
+  await adminFetch('/api/ai-reset/cancel', 'POST', token);
+  toast('Đã huỷ làm mới AI.');
+  await pollReset();
+}));
+
 // --- messages: every text players get, and how often (bridge/src/messages.ts) ---
 
 const MSG_GROUPS = [
-  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['garage', 'Gara — cất dino'],
+  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['garage', 'Gara — cất dino'],
   ['redeem', 'Gara — lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
   ['admin', 'Admin'], ['hello', 'Chào mừng'],
 ];
@@ -2825,6 +2892,7 @@ function renderDropSpecies() {
     + '</optgroup>').join('');
   sel.value = 'Tyrannosaurus';
   sel.dataset.done = '1';
+  $('reset-species').innerHTML = '<option value="">Tất cả AI</option>' + sel.innerHTML;
 }
 
 /** Who can get a drop: players on the map now (they have a live position). */
@@ -4781,7 +4849,7 @@ async function refreshTab(tab) {
       break;
     case 'map':
       {
-        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones()]);
+        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones(), resetPolling ? null : pollReset()]);
         renderMap(m.players, m.ai ?? null);
       }
       break;
