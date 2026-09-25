@@ -225,6 +225,15 @@ function R.apply(pawn, state, onDone)
             end)
         end
 
+        -- A slot made prime by an admin: say what the game made of it, so the
+        -- effect of ServerSetPrimeEligible can be checked in UE4SS.log.
+        if state.isPrime == true then
+            local okE, eligible = pcall(function() return pawn:GetIsEligiblePrimeElder() end)
+            local okP, prime = pcall(function() return pawn:IsPrimeElder() end)
+            H.log(string.format("restore: prime asked -> eligible=%s prime=%s",
+                okE and tostring(eligible) or "?", okP and tostring(prime) or "?"))
+        end
+
         if R.APPLY_SKIN and state.skin ~= nil then
             H.logError("restore: skin apply is enabled but not implemented — "
                 .. "verify against v0.21.720 customizer changes first")

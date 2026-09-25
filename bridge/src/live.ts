@@ -38,6 +38,8 @@ export interface Live {
   stale: boolean;
   players: LivePlayer[];
   ai: LiveAi | null;
+  /** The server's own tick rate (TIGameStateBase.ServerFPS), or null. */
+  fps: number | null;
 }
 
 const STALE_AFTER_S = 15;
@@ -103,7 +105,7 @@ export function parseLive(text: string, nowS: number): Live | null {
       growth: num(o['growth']),
     });
   }
-  return { t, stale: nowS - t > STALE_AFTER_S, players, ai: parseAi(r['ai'], nowS) };
+  return { t, stale: nowS - t > STALE_AFTER_S, players, ai: parseAi(r['ai'], nowS), fps: num(r['fps']) };
 }
 
 let lastGood: Live | null = null;

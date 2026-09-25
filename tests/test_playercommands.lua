@@ -28,11 +28,11 @@ _G.FindAllOf = function() H.touch("FindAllOf"); return { ctrl } end
 
 dofile(RUN .. "/Mods/PlayerCommands/Scripts/main.lua")
 
-local loop
-for _, l in ipairs(H.loops) do if l.ms == 3000 then loop = l end end
+local loop                              -- a game-thread loop (LoopInGameThreadWithDelay)
+for _, l in ipairs(H.gameLoops) do if l.ms == 3000 then loop = l end end
 local function tick(seconds)            -- one tracker sample, `seconds` later
   clock = clock + seconds
-  loop.fn(); H.advance(0)
+  loop.fn()
 end
 local n = 0
 local function cmd(text)                -- a fresh string each time (the chat hook dedups)

@@ -233,6 +233,34 @@ export interface AdminKillEvent extends BaseEvent {
   growth?: number;
 }
 
+/** Outcome of a player's own store / redeem from the web garage (DinoGarage inbox). */
+export interface PortalCommandEvent extends BaseEvent {
+  type: 'portal_command';
+  id: number;
+  steamId: string;
+  name?: string;
+  action: 'store' | 'redeem';
+  slot?: string;
+  /** true = started (countdown running / restore scheduled); the final result is garage_store / garage_redeem. */
+  ok: boolean;
+  /** The replies the player also got in chat. */
+  messages?: string[];
+  /** offline | expired | bad_arguments | failed */
+  error?: string;
+}
+
+/** The end of a web store's countdown: stored, or failed with a reason (DinoGarage). */
+export interface GarageStoreResultEvent extends BaseEvent {
+  type: 'garage_store_result';
+  /** The inbox command id of the store. */
+  id: number;
+  steamId: string;
+  slot?: string;
+  ok: boolean;
+  /** moved | damage_dealt | damage_taken | left | not_same_dino | full | capture_failed | save_failed | kill_failed */
+  reason?: string;
+}
+
 export type GameEvent =
   | ModLoadedEvent
   | DamageEvent
@@ -249,6 +277,8 @@ export type GameEvent =
   | GrowthSetEvent
   | MutationEvent
   | AdminKillEvent
+  | PortalCommandEvent
+  | GarageStoreResultEvent
   | GarageStoreEvent
   | GarageRedeemEvent;
 
@@ -276,6 +306,9 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   growth_set: (e) => isString(e['steamId']) && isNumber(e['from']) && isNumber(e['to']),
   mutation: (e) => isString(e['steamId']) && isString(e['slot']),
   admin_kill: (e) => isString(e['steamId']) && typeof e['ok'] === 'boolean',
+  portal_command: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean'
+    && (e['action'] === 'store' || e['action'] === 'redeem'),
+  garage_store_result: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean',
   garage_store: (e) => isString(e['steamId']) && isString(e['slot']),
   garage_redeem: (e) => isString(e['steamId']) && isString(e['slot']),
 };

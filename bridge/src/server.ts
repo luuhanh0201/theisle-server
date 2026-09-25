@@ -6,7 +6,9 @@ import { config } from './config.js';
 import type { Store } from './store.js';
 import { queueKill } from './commands.js';
 import { readNotes, setNote } from './notes.js';
-import { audit, readAudit } from './audit.js';
+import { actingAs, audit, describeChanges, readAuditPage } from './audit.js';
+import { currentLogin, panelGate } from './panel-gate.js';
+import { readAccess, ruleFor, saveAccess, sessionSecret, writeAllowed, writeToken } from './panel-auth.js';
 import type { Power } from './power.js';
 import { readSchedule, writeSchedule, validateSchedule, occurrences } from './power.js';
 import type { Rcon } from './rcon.js';
@@ -14,9 +16,15 @@ import { RCON_COMMANDS } from './rcon.js';
 import { MANAGED, GROUPS, KNOWN_PLAYABLES, readLive, saveSettings, type ManagedKey } from './gameini.js';
 import { readReadiness } from './readiness.js';
 import { readLiveState, livePlayer } from './live.js';
-import { handlePlayerApi } from './player-api.js';
+import type { Metrics } from './metrics.js';
+import type { VoiceRoom } from './voice.js';
+import { handlePlayerApi, publicServerInfo } from './player-api.js';
 import { readCommandsSettings, saveCommandsSettings } from './commands-settings.js';
+import { readVoiceSettings, saveVoiceSettings } from './voice-settings.js';
 import { speciesOfClassPath } from './catalog.js';
+import { maximaAt } from './species-stats.js';
+import { AI_SPECIES } from './ai-species.js';
+import { readAiZones, readAiZonesStatus, saveAiZones, type AiZonesSettings } from './ai-zones.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
   listAll,
@@ -43,6 +51,7 @@ const contentTypes: Record<string, string> = {
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.webp': 'image/webp',
+  '.png': 'image/png',
 };
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -95,15 +104,16 @@ async function readJsonBody(req: IncomingMessage, maxBytes = 64 * 1024): Promise
 }
 
 /**
- * Write endpoints edit player data and this service has no user accounts, so
- * they fail closed: with ADMIN_TOKEN unset, nothing can write at all.
+ * Write endpoints edit player data, so they fail closed: with ADMIN_TOKEN
+ * unset, nothing can write at all. The x-admin-token header is ADMIN_TOKEN
+ * itself (a script) or the token of the admin's own login (the panel fills it
+ * in), which only a page of the panel can know.
  */
 function authorizeWrite(req: IncomingMessage): string | null {
   if (config.adminToken === null) {
     return 'writes are disabled — set ADMIN_TOKEN to enable them';
   }
-  const supplied = req.headers['x-admin-token'];
-  if (typeof supplied !== 'string' || supplied !== config.adminToken) {
+  if (!writeAllowed(req.headers['x-admin-token'], config.adminToken, sessionSecret(), currentLogin.getStore()?.cookie)) {
     return 'invalid or missing x-admin-token';
   }
   return null;
@@ -160,6 +170,8 @@ export interface Ctx {
   store: Store;
   power: Power;
   rcon: Rcon;
+  metrics?: Metrics;
+  voice?: VoiceRoom;
 }
 
 /** Everything the Server tab shows, in one call. */
@@ -180,17 +192,69 @@ async function serverStatus(ctx: Ctx): Promise<unknown> {
   };
 }
 
+/** What an AI zones save changed: the switches, then zones added, removed and changed. */
+function describeZoneChanges(before: AiZonesSettings, after: AiZonesSettings): string {
+  const parts: string[] = [];
+  const top = describeChanges({ enabled: before.enabled, globalMax: before.globalMax }, { enabled: after.enabled, globalMax: after.globalMax });
+  if (top) parts.push(top);
+  const old = new Map(before.zones.map((z) => [z.id, z]));
+  const now = new Map(after.zones.map((z) => [z.id, z]));
+  for (const z of after.zones) if (!old.has(z.id)) parts.push(`+ vùng "${z.name}" (${z.species.join(', ')}; vắng ${z.idleMax}, có người ${z.max})`);
+  for (const z of before.zones) if (!now.has(z.id)) parts.push(`− vùng "${z.name}"`);
+  for (const z of after.zones) {
+    const was = old.get(z.id);
+    if (!was) continue;
+    const d = describeChanges({ ...was }, { ...z });
+    if (d) parts.push(`vùng "${z.name}": ${d}`);
+  }
+  return parts.join(' · ');
+}
+
 async function handle(
   req: IncomingMessage,
   res: ServerResponse,
   ctx: Ctx,
 ): Promise<void> {
-  const { store, power, rcon } = ctx;
+  const { store, power } = ctx;
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   const path = url.pathname;
 
   // The player portal's read-only routes, behind their own token.
-  if (await handlePlayerApi(req, res, path, { store, serverPhase: async () => (await power.status()).phase, live: readLiveState })) return;
+  if (await handlePlayerApi(req, res, path, { store, serverPhase: async () => (await power.status()).phase, live: readLiveState,
+    serverInfo: async () => publicServerInfo((await readLive()).effective),
+    ...(ctx.voice ? { voice: ctx.voice } : {}) })) return;
+
+  // Everything else is the admin panel: allowed address + admin login (panel-gate.ts).
+  const login = await panelGate(req, res, url, (name) => sendFile(res, name), (id) => store.player(id)?.player.name ?? null);
+  if (login === null) return;
+  const name = login.steamId !== null ? store.player(login.steamId)?.player.name ?? null : null;
+  await currentLogin.run(login, () => actingAs.run({ steamId: login.steamId, name }, () => handlePanel(req, res, ctx, url, login, name)));
+}
+
+async function handlePanel(
+  req: IncomingMessage,
+  res: ServerResponse,
+  ctx: Ctx,
+  url: URL,
+  login: { steamId: string | null; cookie: string | undefined; ip: string | null },
+  name: string | null,
+): Promise<void> {
+  const { store, power, rcon } = ctx;
+  const path = url.pathname;
+
+  // Who is logged in, and the token the panel sends with every change.
+  if (path === '/api/me' && req.method === 'GET') {
+    const secret = sessionSecret();
+    sendJson(res, 200, {
+      steamId: login.steamId, name, ip: login.ip, via: login.ip === null ? 'tunnel' : 'web',
+      token: secret !== null && login.cookie !== undefined && login.steamId !== null ? writeToken(secret, login.cookie) : null,
+    });
+    return;
+  }
+  if (path === '/api/panel-access' && req.method === 'GET') {
+    sendJson(res, 200, { ...await readAccess(), yourIp: login.ip, yourRule: login.ip ? ruleFor(login.ip) : null, webEnabled: config.panel.baseUrl !== null });
+    return;
+  }
 
   // --- writes ---------------------------------------------------------
   // POST   /api/garage/<steamId>/<slot>   put a dino straight into a garage
@@ -216,7 +280,10 @@ async function handle(
       (path === '/api/server/schedule' && req.method === 'PUT') ||
       (path === '/api/game-config' && req.method === 'PUT') ||
       (path === '/api/garage-settings' && req.method === 'PUT') ||
-      (path === '/api/commands-settings' && req.method === 'PUT');
+      (path === '/api/commands-settings' && req.method === 'PUT') ||
+      (path === '/api/voice-settings' && req.method === 'PUT') ||
+      (path === '/api/panel-access' && req.method === 'PUT') ||
+      (path === '/api/ai-zones' && req.method === 'PUT');
     if (!allowed) {
       sendJson(res, 404, { error: 'not found' });
       return;
@@ -274,25 +341,59 @@ async function handle(
     }
 
     if (path === '/api/commands-settings') {
+      const before = await readCommandsSettings();
       const saved = await saveCommandsSettings(await readJsonBody(req));
-      await audit({ action: 'player command settings saved',
-        detail: `slay ${saved.slayCooldown}s · unstuck ${saved.unstuckCooldown}s · off: ${Object.entries(saved.enabled).filter(([, on]) => !on).map(([n]) => n).join(', ') || '-'}`, ok: true });
+      await audit({ action: 'player command settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/ai-zones') {
+      const before = await readAiZones();
+      const saved = await saveAiZones(await readJsonBody(req), store.groundPoints);
+      await audit({ action: 'AI zones saved', detail: describeZoneChanges(before, saved) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/panel-access') {
+      const body = (await readJsonBody(req)) as { ips?: unknown };
+      const before = await readAccess();
+      const saved = await saveAccess(body.ips, login.ip);
+      await audit({ action: 'panel allowed IPs saved', detail: describeChanges({ ips: before.ips }, { ips: saved.ips }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { ...saved, yourIp: login.ip, yourRule: login.ip ? ruleFor(login.ip) : null, webEnabled: config.panel.baseUrl !== null });
+      return;
+    }
+
+    if (path === '/api/voice-settings') {
+      const before = await readVoiceSettings();
+      const saved = await saveVoiceSettings(await readJsonBody(req));
+      await audit({ action: 'voice settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
     }
 
     if (path === '/api/garage-settings') {
+      const before = await readGarageSettings();
       const saved = await saveGarageSettings(await readJsonBody(req));
-      await audit({ action: 'garage settings saved',
-        detail: `redeemAt=${saved.redeemAt} · slots ${saved.maxSlots} · countdown ${saved.storeCountdown}s · cooldown ${saved.cooldown}s`, ok: true });
+      await audit({ action: 'garage settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
     }
 
     if (path === '/api/game-config') {
       const body = (await readJsonBody(req)) as { settings?: unknown; restart?: { countdownSeconds?: unknown; reason?: unknown } };
+      // "Before" is what the game really had: the panel's value, else the live Game.ini's.
+      const live = await readLive();
       const settings = await saveSettings(body.settings ?? {});
-      await audit({ action: 'game config saved', detail: Object.keys(settings).join(', ') || '(defaults)', ok: true });
+      const keys = new Set([...Object.keys(live.settings), ...Object.keys(settings)]);
+      const was: Record<string, unknown> = {};
+      const is: Record<string, unknown> = {};
+      for (const k of keys) {
+        was[k] = k in live.settings ? live.settings[k] : live.effective[k];
+        is[k] = settings[k];
+      }
+      await audit({ action: 'game config saved', detail: describeChanges(was, is) || 'không đổi gì', ok: true });
       let operation = null;
       if (body.restart) {
         operation = power.request('restart', {
@@ -438,9 +539,12 @@ async function handle(
       }));
       return;
     }
-    case '/api/server/audit':
-      sendJson(res, 200, { entries: await readAudit(parseLimit(url, 50, 500)) });
+    case '/api/server/audit': {
+      // Paged, newest first; ?q= filters. Lines older than 7 days are gone.
+      const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
+      sendJson(res, 200, await readAuditPage(page, parseLimit(url, 30, 200), url.searchParams.get('q') ?? ''));
       return;
+    }
     case '/api/rcon/commands':
       sendJson(res, 200, {
         enabled: rcon.enabled,
@@ -486,6 +590,37 @@ async function handle(
       });
       return;
     }
+    case '/api/ai-zones': {
+      const zones = await readAiZones();
+      sendJson(res, 200, {
+        ...zones,
+        species: AI_SPECIES.map(({ key, label, kind }) => ({ key, label, kind })),
+        status: await readAiZonesStatus(),
+        // How many spawn spots each zone has (0 = nobody has stood there yet).
+        points: Object.fromEntries(zones.zones.map((z) => [z.id, store.groundPoints.within(z.x, z.y, z.radiusM * 100, 200).length])),
+        groundPoints: store.groundPoints.size,
+      });
+      return;
+    }
+    case '/api/ai-zones/points': {
+      // Spots within a circle being drawn (before it is saved), for the panel's preview.
+      const x = Number(url.searchParams.get('x'));
+      const y = Number(url.searchParams.get('y'));
+      const r = Number(url.searchParams.get('r'));
+      if (![x, y, r].every(Number.isFinite) || r <= 0 || r > 5000) { sendJson(res, 400, { error: 'x, y, r (metres) required' }); return; }
+      sendJson(res, 200, { count: store.groundPoints.within(x, y, r * 100, 200).length });
+      return;
+    }
+    case '/api/species-stats': {
+      // Maxima read on this server, by species and growth (species-stats.ts).
+      const stats = store.speciesStats.view();
+      const species = url.searchParams.get('species');
+      if (species === null) { sendJson(res, 200, { species: stats }); return; }
+      const one = stats[species] ?? { points: [], prime: null };
+      const g = Number(url.searchParams.get('growth'));
+      sendJson(res, 200, { species, ...one, at: Number.isFinite(g) ? maximaAt(one.points, g) : null });
+      return;
+    }
     case '/api/catalog': {
       const catalog = store.catalog.merge(await readGarageCatalog());
       sendJson(res, 200, { species: catalog.list() });
@@ -501,6 +636,13 @@ async function handle(
       sendJson(res, 200, { players, ai: live?.ai ?? null });
       return;
     }
+    case '/api/metrics': {
+      const ranges: Record<string, number> = { '1h': 3600, '6h': 6 * 3600, '24h': 86400, '7d': 7 * 86400 };
+      const range = ranges[url.searchParams.get('range') ?? '6h'] ?? ranges['6h'] as number;
+      if (!ctx.metrics) { sendJson(res, 503, { error: 'metrics not running' }); return; }
+      sendJson(res, 200, ctx.metrics.view(range));
+      return;
+    }
     case '/api/map/live': {
       // Small and cheap: the map polls this every second between full refreshes.
       const live = await readLiveState();
@@ -513,6 +655,9 @@ async function handle(
     }
     case '/api/commands-settings':
       sendJson(res, 200, await readCommandsSettings());
+      return;
+    case '/api/voice-settings':
+      sendJson(res, 200, { ...await readVoiceSettings(), enabled: config.voice !== null, url: config.voice?.publicUrl ?? null });
       return;
     case '/api/garage-settings':
       sendJson(res, 200, await readGarageSettings());

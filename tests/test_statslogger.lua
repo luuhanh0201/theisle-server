@@ -61,32 +61,37 @@ local loop
 say("")
 say("-- 1. the mod announces itself and registers one loop --")
 check("mod_loaded emitted", count("mod_loaded") == 1)
-check("a loop was registered", #H.loops == 1, tostring(#H.loops))
+check("one async loop (writes only)", #H.loops == 1, tostring(#H.loops))
 loop = H.loops[1]
 check("async tick is 0.5 s", loop.ms == 500, tostring(loop.ms))
+check("one game-thread read loop, every second", #H.gameLoops == 1 and H.gameLoops[1].ms == 1000,
+      tostring(#H.gameLoops))
+local reads = H.gameLoops[1]
+check("no ExecuteInGameThread queued from the async tick", (function()
+  local before = #H.timers
+  for _ = 1, 20 do loop.fn() end
+  return #H.timers == before end)())
 
 say("")
 say("-- 1b. the async tick never reads the game; the read runs on the game thread --")
 local offBefore = H.offThreadAccess
-for _ = 1, 9 do loop.fn() end
-check("nine ticks: no snapshot read yet", count("snapshot", SNAPSHOTS) == 0)
-loop.fn()                                   -- 10th tick (5 s) queues the read
-check("tenth tick queued, still nothing read", count("snapshot", SNAPSHOTS) == 0
-      and count("session_start") == 0)
-loop.fn(); loop.fn()                        -- slow game thread: no second read stacked
-H.advance(0)                                -- the game thread runs the read (once)
-check("nothing written from the game thread", count("snapshot", SNAPSHOTS) == 0)
-loop.fn()                                   -- the next tick writes it
+for _ = 1, 20 do loop.fn() end
+check("async ticks alone: no snapshot read", count("snapshot", SNAPSHOTS) == 0 and count("session_start") == 0)
+for _ = 1, 4 do reads.fn() end
+check("four game-thread reads (seconds): no snapshot yet", count("snapshot", SNAPSHOTS) == 0)
+reads.fn()                                  -- the 5th second takes the snapshot
+check("read on the game thread, not written from it", count("snapshot", SNAPSHOTS) == 0)
+loop.fn()                                   -- the next async tick writes it
 check("snapshots written by the async tick", count("snapshot", SNAPSHOTS) == 2,
       tostring(count("snapshot", SNAPSHOTS)))
 check("not a single engine access off the game thread", H.offThreadAccess == offBefore,
       table.concat(H.offThreadWhat, ","))
 
--- One full cycle: enough ticks to queue a read, the game thread, one write.
+-- One full cycle: five seconds of game-thread reads (one snapshot), one write.
 -- Every step also asserts that no engine object was touched off-thread.
 local function poll()
   local before = H.offThreadAccess
-  for _ = 1, 10 do loop.fn() end
+  for _ = 1, 5 do reads.fn() end
   H.advance(0)
   loop.fn()
   if H.offThreadAccess ~= before then
@@ -367,7 +372,7 @@ _G.FindAllOf = function(cls)
   return online
 end
 _G.FindFirstOf = function(cls)
-  if cls == "TIGameStateBase" then return { IsValid = function() return true end, AIAlive = 2 } end
+  if cls == "TIGameStateBase" then return { IsValid = function() return true end, AIAlive = 2, ServerFPS = 30 } end
   return nil
 end
 local ais0 = #read(SNAPSHOTS)
@@ -384,6 +389,7 @@ check("player pawns are not AI; the living AI is listed with class and position"
       ai and require("shared.isle.json").encode(ai) or "-")
 check("a corpse (health 0) is counted apart, not shown", ai and ai.dead == 1)
 check("the game's own AI counter comes along", ai and ai.aiAlive == 2)
+check("the server's tick rate (ServerFPS) comes along", live and live.fps == 30, live and tostring(live.fps))
 check("not appended to the snapshot stream", (function()
   for _, e in ipairs(read(SNAPSHOTS)) do if e.list ~= nil or e.ai ~= nil or e.players ~= nil then return false end end
   return true end)() and #read(SNAPSHOTS) >= ais0)
@@ -395,8 +401,7 @@ check("replaced, not appended (one line after two scans)", lines == 1, tostring(
 -- Between two snapshots (5 s) the live file moves every second.
 local function liveX() local l = read(AI_FILE)[1]; return l and l.players[1] and l.players[1].x end
 pawnP.__props.Loc = { X = 777, Y = 2, Z = 3 }
-loop.fn(); loop.fn()          -- one second: a live read is queued
-H.advance(0)                  -- the game thread reads
+reads.fn()                    -- one second of the game-thread loop
 loop.fn()                     -- the next half-second tick writes
 check("live position follows within a second", liveX() == 777, tostring(liveX()))
 

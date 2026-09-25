@@ -23,6 +23,10 @@ DinoGarage : 1
 ; player's own dino (cooldowns from the panel); the other two only read.
 PlayerCommands : 1
 
+; AI zones drawn on the admin panel (bridge writes Saved/zones.json). Spawns AI
+; (never destroys any); off until the panel turns the zones on.
+AIZones : 1
+
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,
 ; and prints a PROBE SUMMARY to UE4SS.log. See docs/first-run.md.

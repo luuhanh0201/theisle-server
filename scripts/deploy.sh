@@ -87,6 +87,14 @@ BRIDGE_DIR="/home/isle/bridge"
 PORTAL_DIR="/opt/isle-portal"
 if [[ -z "${PORTAL_TOKEN:-}" ]]; then DO_PORTAL=0; fi
 BRIDGE_DATA_DIR="$BRIDGE_DIR/data"
+# Proximity voice (scripts/install-voice.sh): off until VOICE_DOMAIN and both
+# LIVEKIT_* keys are set. The browser connects to wss://VOICE_DOMAIN.
+VOICE_URL=""
+if [[ -n "${VOICE_DOMAIN:-}" && -n "${LIVEKIT_API_KEY:-}" && -n "${LIVEKIT_API_SECRET:-}" ]]; then
+    [[ ${#LIVEKIT_API_SECRET} -ge 32 ]] || die "LIVEKIT_API_SECRET must be at least 32 characters (openssl rand -hex 32)"
+    [[ "$LIVEKIT_API_KEY" =~ ^[A-Za-z0-9]+$ ]] || die "LIVEKIT_API_KEY: letters and digits only"
+    VOICE_URL="wss://$VOICE_DOMAIN"
+fi
 
 # --- 2. build the bridge ------------------------------------------------
 # Needed for the bridge itself and for the config step: panel-managed Game.ini
@@ -240,9 +248,32 @@ RCON_HOST=127.0.0.1
 RCON_PORT=$RCON_PORT
 RCON_PASSWORD=$RCON_PASSWORD
 PORTAL_TOKEN=${PORTAL_TOKEN:-}
+ADMIN_STEAM_IDS=${ADMIN_STEAM_IDS:-}
+PANEL_BASE_URL=${PANEL_BASE_URL:-}
+PANEL_ALLOWED_IPS=${PANEL_ALLOWED_IPS:-}
 ENV
+    if [[ -n "$VOICE_URL" ]]; then
+        printf 'LIVEKIT_API_KEY=%s\nLIVEKIT_API_SECRET=%s\nVOICE_URL=%s\n' \
+            "$LIVEKIT_API_KEY" "$LIVEKIT_API_SECRET" "$VOICE_URL" >> "$STAGE/bridge.env"
+    fi
     "${RSYNC[@]}" --no-perms --chmod=F600 --omit-dir-times \
         "$STAGE/bridge.env" "$DEPLOY_HOST:$BRIDGE_DIR/.env"
+
+    # The voice server's keys (isle-voice.service reads this as its
+    # EnvironmentFile). Restart it only when they changed: a restart drops
+    # everyone who is talking.
+    if [[ -n "$VOICE_URL" ]]; then
+        printf 'LIVEKIT_KEYS="%s: %s"\n' "$LIVEKIT_API_KEY" "$LIVEKIT_API_SECRET" > "$STAGE/livekit.env"
+        # --checksum: the staged file is new every run; only its CONTENT counts.
+        # --no-times too: an identical file with a new mtime is not a change.
+        changed="$("${RSYNC[@]}" --checksum --no-times --no-perms --chmod=F600 --omit-dir-times \
+            "$STAGE/livekit.env" "$DEPLOY_HOST:$BRIDGE_DIR/livekit.env")"
+        if [[ -n "$changed" ]] && (( ! DRY_RUN )); then
+            say "voice keys changed: restarting isle-voice.service"
+            ssh "$DEPLOY_HOST" "sudo -n systemctl restart isle-voice.service" \
+                || echo "    ! could not restart isle-voice.service — run scripts/install-voice.sh on the VPS first" >&2
+        fi
+    fi
 
     if (( ! DRY_RUN )); then
         ssh "$DEPLOY_HOST" "cd '$BRIDGE_DIR' && chmod 600 .env && npm ci --omit=dev --silent"
@@ -277,6 +308,7 @@ BRIDGE_URL=http://127.0.0.1:$HTTP_PORT
 PORTAL_TOKEN=$PORTAL_TOKEN
 PORTAL_SESSION_SECRET=$PORTAL_SESSION_SECRET
 PORTAL_TRUST_PROXY=1
+VOICE_URL=$VOICE_URL
 ENV
     "${RSYNC[@]}" --no-perms --chmod=F640 --omit-dir-times "$STAGE/portal.env" "$DEPLOY_HOST:$PORTAL_DIR/.env"
 

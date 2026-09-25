@@ -1,11 +1,16 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
-import { isSteamId, readPlayerGarage, type StoredDino } from './garage.js';
+import { isSteamId, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
+import { queuePlayerCommand, TooSoonError } from './commands.js';
 import type { LifeRecord, PlayerStats, Store, TrailPoint } from './store.js';
 import type { Skin } from './events.js';
+import { readAiZones, readAiZonesStatus } from './ai-zones.js';
+import { AI_BY_KEY } from './ai-species.js';
 import { primeBoard, type PrimeBoard } from './prime.js';
 import { livePlayer, type Live } from './live.js';
+import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoom } from './voice.js';
+import { readVoiceSettings, shownName } from './voice-settings.js';
 
 /**
  * The player portal's view of the bridge (portal/ — the public site players
@@ -17,7 +22,20 @@ import { livePlayer, type Live } from './live.js';
  *
  *   GET /player-api/me/<steamId>     that player's dino, stats, lives, garage
  *   GET /player-api/leaderboard      top players by name (no SteamIDs)
- *   GET /player-api/server           online count and whether the game is up
+ *   GET /player-api/server           online count, whether the game is up, name, slots, Discord
+ *   GET /player-api/ai               the AI alive on the server now (species + position)
+ *   GET /player-api/ai-zones         the AI zones admins drew (name, circle, AI kinds)
+ *   POST /player-api/garage/<steamId>          { action: store|redeem, slot?, where? }
+ *        — that player's own store / redeem, run by DinoGarage exactly like
+ *          the chat command (commands.ts → inbox). 202 { id }.
+ *   GET /player-api/command/<steamId>/<id>     its outcome once the mod ran it
+ *   POST /player-api/voice/<steamId>/token     join token for the proximity voice room
+ *   POST /player-api/voice/<steamId>/range     { range: 15|30|60|90 } how far their voice carries
+ *   GET /player-api/voice/<steamId>            who that player can hear now: volume + pan,
+ *        never a position or a SteamID (voice.ts)
+ *
+ * The only writes a player can make, and only for the SteamID the portal
+ * logged in — the portal never takes a SteamID from the browser.
  *
  * The portal decides which SteamID is "me" from its Steam login; this side
  * trusts the token for that, which is why the token must stay with the portal.
@@ -78,7 +96,14 @@ export interface PlayerView {
     species: string | null; spawnedAt: number; endedAt: number | null; end: string | null;
     growth: number | null; kills: number; killedBy: string | null; killedBySpecies: string | null;
   }>;
-  garage: Array<{ slot: string; species: string | null; growth: number | null; storedAt: number | null; gift: boolean; skin: Skin | null }>;
+  garage: Array<{
+    slot: string; species: string | null; growth: number | null; storedAt: number | null; gift: boolean; skin: Skin | null;
+    /** Stored as a prime elder (the web garage highlights it). */
+    prime: boolean;
+    /** What the dino will come back with (as stored); max = its maxima then, null if the slot has none. */
+    vitals: { health: number | null; stamina: number | null; thirst: number | null };
+    max: { health: number | null; stamina: number | null; thirst: number | null };
+  }>;
 }
 
 export function playerView(
@@ -127,6 +152,9 @@ export function playerView(
       storedAt: num(g.meta.capturedAt ?? g.state?.['capturedAt']),
       gift: g.state?.['createdBy'] === 'admin',
       skin: cleanSkin(g.state?.['skin']),
+      prime: g.state?.['prime'] === true,
+      vitals: { health: num(g.state?.['health']), stamina: num(g.state?.['stamina']), thirst: num(g.state?.['thirst']) },
+      max: { health: num(g.state?.['maxHealth']), stamina: num(g.state?.['maxStamina']), thirst: num(g.state?.['maxThirst']) },
     })),
   };
 }
@@ -138,6 +166,39 @@ function ownPosition(lp: ReturnType<typeof livePlayer>, p: PlayerStats): NonNull
   const x = num(loc.x); const y = num(loc.y);
   if (x === null || y === null) return null;
   return { x, y, z: num(loc.z ?? null), yaw: num(lp?.yaw ?? null) ?? num(p.yaw) };
+}
+
+/** A JSON object body of at most 2 KB, or null. */
+async function readSmallJson(req: IncomingMessage): Promise<Record<string, unknown> | null> {
+  let size = 0;
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > 2048) return null;
+    chunks.push(chunk as Buffer);
+  }
+  try {
+    const v = JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
+    return typeof v === 'object' && v !== null && !Array.isArray(v) ? v as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A Discord invite as a clickable https link, or null (the game's placeholder, junk, other sites). */
+export function discordLink(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const m = /^(?:https?:\/\/)?(?:www\.)?(discord\.gg|discord(?:app)?\.com\/invite)\/([A-Za-z0-9-]{2,64})\/?$/.exec(raw.trim());
+  return m ? `https://${m[1]}/${m[2]}` : null;
+}
+
+export interface PublicServerInfo { name: string | null; maxPlayers: number | null; discord: string | null }
+
+/** What the portal's home page shows about the server, from the live Game.ini. */
+export function publicServerInfo(effective: Record<string, unknown>): PublicServerInfo {
+  const name = typeof effective['ServerName'] === 'string' ? effective['ServerName'].trim().slice(0, 100) : '';
+  const max = num(effective['MaxPlayerCount']);
+  return { name: name || null, maxPlayers: max !== null && max > 0 ? max : null, discord: discordLink(effective['Discord']) };
 }
 
 type Ranked = { name: string | null; species: string | null; value: number };
@@ -161,13 +222,85 @@ function send(res: ServerResponse, status: number, body: unknown): void {
 /** Returns false when the path is not a /player-api route (the caller carries on). */
 export async function handlePlayerApi(
   req: IncomingMessage, res: ServerResponse, path: string,
-  ctx: { store: Store; serverPhase: () => Promise<string>; live?: () => Promise<Live | null> },
+  ctx: {
+    store: Store; serverPhase: () => Promise<string>; live?: () => Promise<Live | null>;
+    serverInfo?: () => Promise<PublicServerInfo>;
+    voice?: VoiceRoom;
+  },
 ): Promise<boolean> {
   if (!path.startsWith('/player-api/')) return false;
   // No token configured = the portal is not set up: the routes do not exist.
   if (config.portalToken === null) { send(res, 404, { error: 'not found' }); return true; }
   if (!tokenOk(req)) { send(res, 403, { error: 'forbidden' }); return true; }
+  const voice = /^\/player-api\/voice\/(\d{17})(?:\/(token|range))?$/.exec(path);
+  if (voice !== null) {
+    const cfg = config.voice;
+    const room = ctx.voice;
+    if (cfg === null || room === undefined) { send(res, 404, { error: 'voice is not set up' }); return true; }
+    const steamId = voice[1] as string;
+    if (voice[2] !== undefined && req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const { nameMode } = await readVoiceSettings();
+    const nameOf = (id: string): string | null =>
+      shownName(nameMode, ctx.store.player(id)?.player.name ?? null, voiceIdentity(id, cfg.apiSecret));
+    if (voice[2] === 'token') {
+      // The name other clients see inside the room follows the same rule.
+      const name = nameOf(steamId) ?? '';
+      send(res, 200, {
+        url: cfg.publicUrl, room: cfg.room, identity: voiceIdentity(steamId, cfg.apiSecret),
+        token: joinToken(cfg, steamId, name, Math.floor(Date.now() / 1000)),
+        ranges: VOICE_RANGES, range: room.rangeOf(steamId),
+      });
+      return true;
+    }
+    if (voice[2] === 'range') {
+      const body = await readSmallJson(req);
+      if (body === null || !isRange(body['range'])) {
+        send(res, 400, { error: `range must be one of ${VOICE_RANGES.join(', ')}` });
+        return true;
+      }
+      room.setRange(steamId, body['range']);
+      send(res, 200, { range: room.rangeOf(steamId) });
+      return true;
+    }
+    if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const live = ctx.live ? await ctx.live() : null;
+    const players = live === null || live.stale ? [] : live.players;
+    const view = peersOf(steamId, players, await room.members(), cfg, nameOf, (id) => room.rangeOf(id));
+    send(res, 200, { t: live?.t ?? null, nameMode, ...view });
+    return true;
+  }
+  const garageCmd = /^\/player-api\/garage\/(\d{17})$/.exec(path);
+  if (garageCmd !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    try {
+      const cmd = await queuePlayerCommand(garageCmd[1] as string, body['action'], { slot: body['slot'], where: body['where'] });
+      send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt });
+    } catch (err) {
+      if (err instanceof TooSoonError) send(res, 429, { error: 'too many requests' });
+      else if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
   if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
+
+  const cmdResult = /^\/player-api\/command\/(\d{17})\/(\d{1,12})$/.exec(path);
+  if (cmdResult !== null) {
+    const steamId = cmdResult[1] as string;
+    const id = Number(cmdResult[2]);
+    const r = ctx.store.commandResult(steamId, id);
+    // A store has a second outcome, when its countdown ends.
+    const fin = r?.action === 'store' ? ctx.store.storeResult(steamId, id) : null;
+    send(res, 200, r === null ? { status: 'pending' } : {
+      status: 'done', action: r.action, ok: r.ok,
+      messages: Array.isArray(r.messages) ? r.messages.filter((m) => typeof m === 'string').slice(0, 10) : [],
+      error: r.error ?? null,
+      final: fin === null ? null : { ok: fin.ok, reason: fin.reason ?? null },
+    });
+    return true;
+  }
 
   const me = /^\/player-api\/me\/(\d{17})$/.exec(path);
   if (me !== null) {
@@ -176,7 +309,12 @@ export async function handlePlayerApi(
     const detail = ctx.store.player(steamId);
     const live = ctx.live ? await ctx.live() : null;
     const trail = ctx.store.map().find((m) => m.steamId === steamId)?.trail ?? [];
-    send(res, 200, playerView(steamId, detail?.player ?? null, detail?.lives ?? [], await readPlayerGarage(steamId), live, trail));
+    const gs = await readGarageSettings();
+    send(res, 200, {
+      ...playerView(steamId, detail?.player ?? null, detail?.lives ?? [], await readPlayerGarage(steamId), live, trail),
+      // The garage rules the web garage shows (and the mod enforces).
+      garageRules: { maxSlots: gs.maxSlots, redeemAt: gs.redeemAt, storeCountdown: gs.storeCountdown, cooldown: gs.cooldown },
+    });
     return true;
   }
   if (path === '/player-api/leaderboard') {
@@ -189,7 +327,32 @@ export async function handlePlayerApi(
     return true;
   }
   if (path === '/player-api/server') {
-    send(res, 200, { online: ctx.store.online().length, phase: await ctx.serverPhase() });
+    const info = ctx.serverInfo ? await ctx.serverInfo() : { name: null, maxPlayers: null, discord: null };
+    send(res, 200, { online: ctx.store.online().length, phase: await ctx.serverPhase(), ...info });
+    return true;
+  }
+  if (path === '/player-api/ai-zones') {
+    // The AI zones admins drew, for the players' map: where, how big, which
+    // AI. Only while zones are on, and only the zones that are on.
+    const zones = await readAiZones();
+    const status = await readAiZonesStatus();
+    send(res, 200, {
+      zones: !zones.enabled ? [] : zones.zones.filter((z) => z.enabled).map((z) => ({
+        name: z.name, x: z.x, y: z.y, radiusM: z.radiusM,
+        species: z.species.map((k) => AI_BY_KEY.get(k)?.label ?? k),
+        count: status && !status.stale ? status.zones[z.id]?.count ?? null : null,
+      })),
+    });
+    return true;
+  }
+  if (path === '/player-api/ai') {
+    // The server owner chose to show players every live AI (2026-09-24). AI
+    // spawns around players, so clusters hint where others are — say so if asked.
+    const ai = (ctx.live ? await ctx.live() : null)?.ai ?? null;
+    send(res, 200, ai === null ? { t: null, stale: true, count: 0, list: [] } : {
+      t: ai.t, stale: ai.stale, count: ai.count, aiAlive: ai.aiAlive,
+      list: ai.stale ? [] : ai.list.map((a) => ({ s: shortSpecies(a.c), x: a.x, y: a.y })),
+    });
     return true;
   }
   send(res, 404, { error: 'not found' });

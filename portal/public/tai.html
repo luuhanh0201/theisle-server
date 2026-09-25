@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tải Xóm Gáy Launcher</title>
+<link rel="icon" type="image/png" href="/img/favicon-64.png">
+<meta name="description" content="Xóm Gáy Launcher: gara, bản đồ live, bảng xếp hạng, skin và voice gần — nói chuyện cả khi đang trong game.">
+<style>
+  :root { --card: #0d121c; --surface: #151d2c; --border: rgba(255,255,255,.08); --text: #f1f5f9; --muted: #8b9bb4; --emerald: #10b981; --emerald-light: #34d399; --emerald-soft: rgba(16,185,129,.12); --amber-soft: rgba(245,158,11,.15); }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; min-height: 100vh; color: var(--text); background: radial-gradient(circle at 50% 0%, #111a2e 0%, #07090e 70%) #07090e; font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 24px 16px 56px; }
+  a.back { color: var(--muted); text-decoration: none; font-size: 13px; }
+  .hero { display: flex; align-items: center; gap: 18px; margin: 18px 0 26px; }
+  .hero img { width: 84px; height: 84px; border-radius: 50%; background: #000; flex: none; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: -.02em; }
+  .hero p { margin: 4px 0 0; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .hero { flex-direction: column; text-align: center; } }
+  .dl { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .dl.mine { border-color: rgba(52,211,153,.45); }
+  .dl h2 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+  .dl .meta { color: var(--muted); font-size: 13px; }
+  .tag { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--emerald-soft); color: var(--emerald-light); }
+  .btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-weight: 800; text-decoration: none; background: var(--emerald); color: #041f14; margin-top: auto; }
+  .btn:hover { background: var(--emerald-light); }
+  .btn.off { background: var(--surface); color: var(--muted); pointer-events: none; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-top: 16px; }
+  .card h3 { margin: 0 0 8px; font-size: 15px; }
+  ul { margin: 0; padding-left: 20px; color: var(--muted); }
+  li { margin: 4px 0; }
+  li b { color: var(--text); }
+  .warn { background: var(--amber-soft); border-color: rgba(245,158,11,.3); }
+  code { background: var(--surface); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← Trang người chơi</a>
+  <div class="hero">
+    <img src="/img/logo-96.webp" alt="" width="84" height="84">
+    <div>
+      <h1>Xóm Gáy Launcher</h1>
+      <p>Mọi thứ của trang người chơi trong một ứng dụng — cộng với <b>voice gần</b> nói được cả khi đang trong game.</p>
+      <p id="version">&nbsp;</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="dl" id="dl-win">
+      <h2>Windows <span class="tag" id="tag-win" hidden>Máy của bạn</span></h2>
+      <div class="meta" id="meta-win">Windows 10 / 11, 64-bit</div>
+      <a class="btn off" id="btn-win" href="#">Chưa có bản tải</a>
+    </div>
+    <div class="dl" id="dl-linux">
+      <h2>Linux <span class="tag" id="tag-linux" hidden>Máy của bạn</span></h2>
+      <div class="meta" id="meta-linux">AppImage, 64-bit (Steam Deck, Ubuntu, Arch…)</div>
+      <a class="btn off" id="btn-linux" href="#">Chưa có bản tải</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Có gì trong launcher</h3>
+    <ul>
+      <li><b>Voice gần</b>: giữ phím (mặc định <b>V</b>, đổi được — kể cả nút chuột) để nói, dùng được cả khi đang trong game; chọn tầm 15 / 30 / 60 / 90 m.</li>
+      <li><b>Gara, bản đồ live, bảng xếp hạng, skin</b> — như trang người chơi, đăng nhập Steam một lần.</li>
+      <li>Thu nhỏ xuống khay hệ thống, voice vẫn chạy; nút mở The Isle; tự cập nhật.</li>
+    </ul>
+  </div>
+  <div class="card warn">
+    <h3>Khi cài lần đầu</h3>
+    <ul>
+      <li><b>Windows</b> có thể hiện "Windows protected your PC" (launcher chưa có chữ ký số trả phí): bấm <b>More info → Run anyway</b>.</li>
+      <li><b>Linux</b>: chuột phải file → Properties → cho phép chạy (hoặc <code>chmod +x XomGay-Launcher.AppImage</code>), rồi mở.</li>
+      <li>Launcher không đụng vào file game và không chạy cùng tiến trình game.</li>
+    </ul>
+  </div>
+</div>
+<script src="/tai.js"></script>
+</body>
+</html>

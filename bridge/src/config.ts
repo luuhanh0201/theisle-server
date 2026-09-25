@@ -40,6 +40,9 @@ export const config = {
   /** PlayerCommands' Saved/ directory: the panel writes its settings.json there. */
   commandsRoot: env('PLAYER_COMMANDS_ROOT', join(garageRoot, '..', '..', 'PlayerCommands', 'Saved')),
 
+  /** AIZones' Saved/ directory: the bridge writes zones.json there, the mod writes status.json. */
+  aiZonesRoot: env('AI_ZONES_ROOT', join(garageRoot, '..', '..', 'AIZones', 'Saved')),
+
   /**
    * Admin-written mutation descriptions (bridge-owned). Next to the garage by
    * default because that directory is never deployed over.
@@ -128,8 +131,36 @@ export const config = {
     password: process.env['RCON_PASSWORD'] ?? '',
   },
 
+  /**
+   * Proximity voice (voice.ts): the LiveKit server on this machine. Unset
+   * key or secret = no voice routes. VOICE_URL is what players' browsers
+   * connect to (wss://…); LIVEKIT_URL is how the bridge reaches its API.
+   */
+  voice: process.env['LIVEKIT_API_KEY'] && process.env['LIVEKIT_API_SECRET'] ? {
+    apiUrl: env('LIVEKIT_URL', 'http://127.0.0.1:7880').replace(/\/+$/, ''),
+    publicUrl: env('VOICE_URL', ''),
+    apiKey: process.env['LIVEKIT_API_KEY'],
+    apiSecret: process.env['LIVEKIT_API_SECRET'],
+    room: env('VOICE_ROOM', 'isle'),
+  } : null,
+
   http: {
     host: env('HTTP_HOST', '127.0.0.1'),
     port: envInt('HTTP_PORT', 8080),
+  },
+
+  /**
+   * Who may open the admin panel (panel-auth.ts): a Steam login whose SteamID
+   * is a game admin, from an allowed IP when it comes through the web.
+   */
+  panel: {
+    /** https://admin.example.com when nginx publishes the panel; unset = SSH tunnel only. */
+    baseUrl: (process.env['PANEL_BASE_URL'] || '').replace(/\/+$/, '') || null,
+    /** Always admins of the panel, whatever the game's admin list says (the owner can never be locked out). */
+    ownerIds: (process.env['ADMIN_STEAM_IDS'] ?? '').split(/[\s,]+/).filter((s) => /^\d{17}$/.test(s)),
+    /** First allowed IPs, until the panel saves its own list (DATA_DIR/panel-access.json). */
+    seedIps: (process.env['PANEL_ALLOWED_IPS'] ?? '').split(/[\s,]+/).filter((s) => s !== ''),
+    /** How long a login lasts. */
+    sessionHours: envInt('PANEL_SESSION_HOURS', 12),
   },
 } as const;

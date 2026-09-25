@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đăng nhập launcher</title>
+<link rel="icon" type="image/png" href="/img/favicon-64.png">
+<style>
+  :root { --bg: #07090e; --card: #0d121c; --border: rgba(255,255,255,.08); --text: #f1f5f9; --muted: #8b9bb4; --ok: #34d399; --ok-soft: rgba(16,185,129,.12); --bad: #fca5a5; --bad-soft: rgba(239,68,68,.15); }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; color: var(--text);
+    background: radial-gradient(circle at 50% 0%, #111a2e 0%, #07090e 70%) #07090e; font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .card { max-width: 440px; width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; text-align: center; }
+  img { width: 72px; height: 72px; border-radius: 50%; background: #000; }
+  h1 { font-size: 19px; margin: 14px 0 6px; }
+  p { color: var(--muted); margin: 0; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+  .ok { background: var(--ok-soft); color: var(--ok); }
+  .bad { background: var(--bad-soft); color: var(--bad); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img src="/img/logo-96.webp" alt="" width="72" height="72">
+    <div id="ok">
+      <span class="badge ok">✓ Đăng nhập thành công</span>
+      <h1>Đang chuyển về Xóm Gáy Launcher…</h1>
+      <p>Nếu trình duyệt hỏi, chọn <b>Mở Xóm Gáy Launcher</b> (tích "luôn cho phép" để lần sau tự chuyển). Launcher tự vào trong vài giây — tab này có thể đóng.</p>
+      <p style="margin-top:14px"><a id="back" href="xomgay-launcher://login-done" style="color:#34d399;font-weight:700">Mở launcher</a></p>
+    </div>
+    <div id="bad" hidden>
+      <span class="badge bad">✕ Chưa đăng nhập được launcher</span>
+      <h1 id="bad-title">Liên kết đăng nhập đã hết hạn</h1>
+      <p id="bad-text">Bấm "Đăng nhập Steam" lại trong launcher.</p>
+    </div>
+  </div>
+  <script src="/launcher-done.js"></script>
+</body>
+</html>

@@ -1,6 +1,8 @@
-import type { GameEvent, DeathEvent, Loc, SnapshotEvent, Skin, VitalName } from './events.js';
+import type { GameEvent, DeathEvent, GarageStoreResultEvent, Loc, PortalCommandEvent, SnapshotEvent, Skin, VitalName } from './events.js';
 import { config } from './config.js';
 import { Catalog } from './catalog.js';
+import { SpeciesStats } from './species-stats.js';
+import { GroundPoints } from './ground-points.js';
 
 export interface KillRecord {
   t: number;
@@ -166,8 +168,16 @@ export class Store {
   readonly #lifeStart = new Map<string, number>();
   readonly #biggestPrey = new Map<string, KillRecord>();
   readonly #lives = new Map<string, LifeRecord[]>();
+  /** Web-garage command outcomes by inbox id (the newest few hundred). */
+  readonly #commandResults = new Map<number, PortalCommandEvent>();
+  /** How a web store's countdown ended, by the same command id. */
+  readonly #storeResults = new Map<number, GarageStoreResultEvent>();
   /** Species and mutations reported by the game; see catalog.ts. */
   readonly catalog = new Catalog();
+  /** Each species' maxima by growth, as read on this server (the admin create form shows them). */
+  readonly speciesStats = new SpeciesStats();
+  /** Places players and AI stood: where AI zones may spawn (ground-points.ts). */
+  readonly groundPoints = new GroundPoints();
   /** steamId -> when and why their dino was just removed on purpose. */
   readonly #recentRemoval = new Map<string, { t: number; cause: 'garage' | 'admin' }>();
   #nextId = 1;
@@ -189,6 +199,7 @@ export class Store {
         this.#player(event.steamId, event.t, event.name).skin = event.skin;
         break;
       case 'prime':
+        this.speciesStats.primeState(event.steamId, event.t, event.prime === true);
         this.#player(event.steamId, event.t, event.name).prime = {
           elder: event.elder ?? null, prime: event.prime ?? null,
           eligible: event.eligible ?? null, elderStacks: event.elderStacks ?? null,
@@ -208,6 +219,8 @@ export class Store {
         p.growth = event.growth;
         p.yaw = event.yaw ?? null;
         if (event.max !== undefined) p.max = event.max;
+        this.speciesStats.snapshot(event.steamId, event.t, event.species, event.growth, event.max);
+        if (event.loc !== undefined) this.groundPoints.add(event.loc.x, event.loc.y, event.loc.z, event.species);
         const life = this.#openLife(event.steamId);
         if (life !== null && event.t >= life.spawnedAt) {
           life.growth = event.growth ?? life.growth;
@@ -251,10 +264,12 @@ export class Store {
       }
 
       case 'death':
+        this.speciesStats.lifeEnded(event.steamId, event.t);
         this.#death(event);
         break;
 
       case 'spawn': {
+        this.speciesStats.lifeEnded(event.steamId, event.t);
         const p = this.#player(event.steamId, event.t, event.name);
         p.spawns += 1;
         p.species = event.species;
@@ -333,6 +348,29 @@ export class Store {
           }
         }
         this.#push(p.name === null ? event : { ...event, name: p.name }, [event.steamId]);
+        break;
+      }
+
+      case 'portal_command': {
+        this.#commandResults.set(event.id, event);
+        if (this.#commandResults.size > 500) {
+          const oldest = this.#commandResults.keys().next().value;
+          if (oldest !== undefined) this.#commandResults.delete(oldest);
+        }
+        // A command for a SteamID never seen in game (the portal only sends
+        // logged-in players, but an offline one may never have joined) must
+        // not create a player out of thin air.
+        const known = this.#players.get(event.steamId);
+        if (known !== undefined) this.#push(known.name === null ? event : { ...event, name: known.name }, [event.steamId]);
+        break;
+      }
+
+      case 'garage_store_result': {
+        this.#storeResults.set(event.id, event);
+        if (this.#storeResults.size > 500) {
+          const oldest = this.#storeResults.keys().next().value;
+          if (oldest !== undefined) this.#storeResults.delete(oldest);
+        }
         break;
       }
 
@@ -546,6 +584,18 @@ export class Store {
       if (kept[kept.length - 1] !== last) kept.push(last);
       points.splice(0, points.length, ...kept);
     }
+  }
+
+  /** A web-garage command's outcome, only for the player who sent it (null = not run yet). */
+  commandResult(steamId: string, id: number): PortalCommandEvent | null {
+    const r = this.#commandResults.get(id);
+    return r !== undefined && r.steamId === steamId ? { ...r } : null;
+  }
+
+  /** How a web store ended (null = still counting down), only for that player. */
+  storeResult(steamId: string, id: number): GarageStoreResultEvent | null {
+    const r = this.#storeResults.get(id);
+    return r !== undefined && r.steamId === steamId ? { ...r } : null;
   }
 
   /** The life still in progress, or null if the last one ended. */

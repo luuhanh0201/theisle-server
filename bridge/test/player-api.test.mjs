@@ -1,7 +1,7 @@
 // /player-api: the portal's read-only, player-scoped window into the bridge.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -21,7 +21,7 @@ writeFileSync(join(root, 'storage.json'), JSON.stringify({ schema: 1, players: {
   default: { classPath: 'BlueprintGeneratedClass /Game/X/BP_Carnotaurus.BP_Carnotaurus_C', growth: 1, capturedAt: 1000 },
 } } }));
 
-const { handlePlayerApi, shortSpecies } = await import('../dist/player-api.js');
+const { handlePlayerApi, shortSpecies, discordLink, publicServerInfo } = await import('../dist/player-api.js');
 const { Store } = await import('../dist/store.js');
 after(() => rmSync(root, { recursive: true, force: true }));
 
@@ -38,8 +38,10 @@ store.apply({ type: 'damage', t, attacker: OTHER, victim: ME, amount: 900, attac
 store.apply({ type: 'death', t: t + 1, steamId: ME, name: 'Me', species: 'BP_Carnotaurus_C', growth: 0.3,
   attributed: true, killer: OTHER, killerName: 'Other', killerSpecies: 'BP_Troodon_C' });
 
-async function call(path, { token = 'portal-secret-token', method = 'GET' } = {}) {
-  const req = { method, headers: token === null ? {} : { 'x-portal-token': token } };
+async function call(path, { token = 'portal-secret-token', method = 'GET', body: payload = undefined } = {}) {
+  const chunks = payload === undefined ? [] : [Buffer.from(typeof payload === 'string' ? payload : JSON.stringify(payload))];
+  const req = { method, headers: token === null ? {} : { 'x-portal-token': token },
+    async *[Symbol.asyncIterator]() { for (const c of chunks) yield c; } };
   let status = 0; let body = '';
   const res = { writeHead: (s) => { status = s; }, end: (b) => { body = b; } };
   const handled = await handlePlayerApi(req, res, path, { store, serverPhase: async () => 'running' });
@@ -71,12 +73,15 @@ test('me: own stats, lives and garage — nothing that leaks others or positions
   assert.equal(body.lives[0].species, 'Carnotaurus');
   assert.equal(body.lives[0].killedBy, 'Other', 'the killer by name, as the game showed it');
   assert.deepEqual(body.garage, [{ slot: 'default', species: 'Carnotaurus', growth: 1, storedAt: 1000, gift: false,
-    skin: { colors: { Body: { r: 0.2, g: 0.3, b: 0.4 } }, patternIndex: 2 } }], 'skin cleaned: bad keys, non-numbers and extras dropped');
+    skin: { colors: { Body: { r: 0.2, g: 0.3, b: 0.4 } }, patternIndex: 2 }, prime: false,
+    vitals: { health: 1300, stamina: null, thirst: null }, max: { health: null, stamina: null, thirst: null } }],
+    'skin cleaned: bad keys, non-numbers and extras dropped; vitals as stored, missing = null');
   const text = JSON.stringify(body);
   assert.ok(!text.includes(OTHER), 'no other SteamID');
   assert.ok(!/"loc"|"location"/.test(text), 'no raw positions');
   assert.ok(!text.includes('"x":9'), 'nobody else\'s position (the other player stands at x 9)');
-  assert.ok(!text.includes('1300'), 'no raw garage file content');
+  assert.ok(body.garage.every((g) => !('location' in g) && !('rotation' in g) && !('mutations' in g)),
+    'no raw garage file content (no stored position, no mutation data)');
 });
 
 test('leaderboard by name only; server summary', async () => {
@@ -85,7 +90,7 @@ test('leaderboard by name only; server summary', async () => {
   assert.equal(lb.body.kills[0].name, 'Other');
   assert.ok(!JSON.stringify(lb.body).includes('7656119800000'), 'no SteamIDs');
   const srv = await call('/player-api/server');
-  assert.deepEqual(srv.body, { online: 2, phase: 'running' });
+  assert.deepEqual(srv.body, { online: 2, phase: 'running', name: null, maxPlayers: null, discord: null });
 });
 
 test('the live skin of the dino being played', async () => {
@@ -137,4 +142,69 @@ test('own position falls back to the snapshot; the trail is theirs only', async 
   assert.ok(Array.isArray(body.dino.trail));
   const other = await call(`/player-api/me/${OTHER}`);
   assert.ok(!JSON.stringify(other.body).includes(`"${ME}"`), 'no other SteamID anywhere');
+});
+
+test('home page info: name, slots, a real Discord invite only', () => {
+  assert.equal(discordLink('https://discord.gg/abcDEF12'), 'https://discord.gg/abcDEF12');
+  assert.equal(discordLink('discord.gg/abc'), 'https://discord.gg/abc');
+  assert.equal(discordLink('https://discord.com/invite/xyz-1'), 'https://discord.com/invite/xyz-1');
+  assert.equal(discordLink('DiscordLinkHere'), null, 'the game\'s placeholder');
+  assert.equal(discordLink('javascript:alert(1)'), null);
+  assert.equal(discordLink('https://evil.example/discord.gg/x'), null);
+  assert.deepEqual(publicServerInfo({ ServerName: ' Xóm Gay ', MaxPlayerCount: 100, Discord: 'DiscordLinkHere' }),
+    { name: 'Xóm Gay', maxPlayers: 100, discord: null });
+});
+
+test('live AI for the map: species and position only', async () => {
+  const t3 = Math.floor(Date.now() / 1000);
+  const live = { t: t3, stale: false, players: [], ai: { t: t3, stale: false, count: 2, dead: 0, aiAlive: 2,
+    list: [{ c: 'BP_Boar_C', x: 10, y: 20, z: 1, hp: 40 }] } };
+  const req = { method: 'GET', headers: { 'x-portal-token': 'portal-secret-token' } };
+  let body = '';
+  const res = { writeHead: () => {}, end: (b) => { body = b; } };
+  await handlePlayerApi(req, res, '/player-api/ai', { store, serverPhase: async () => 'running', live: async () => live });
+  assert.deepEqual(JSON.parse(body), { t: t3, stale: false, count: 2, aiAlive: 2, list: [{ s: 'Boar', x: 10, y: 20 }] });
+  await handlePlayerApi(req, res, '/player-api/ai', { store, serverPhase: async () => 'running', live: async () => null });
+  assert.deepEqual(JSON.parse(body).list, [], 'no live file: nothing');
+});
+
+test('web garage: a player\'s own store / redeem goes to the inbox, one at a time', async () => {
+  const OTHER_ME = '76561198000000077';
+  assert.equal((await call(`/player-api/garage/${OTHER_ME}`, { method: 'POST', body: { action: 'store' }, token: null })).status, 403);
+  assert.equal((await call(`/player-api/garage/${OTHER_ME}`, { method: 'GET' })).status, 405, 'writes are POST only');
+  assert.equal((await call(`/player-api/garage/${OTHER_ME}`, { method: 'POST', body: { action: 'store', slot: '../x' } })).status, 400);
+  assert.equal((await call(`/player-api/garage/${OTHER_ME}`, { method: 'POST', body: { action: 'fly' } })).status, 400);
+  assert.equal((await call(`/player-api/garage/${OTHER_ME}`, { method: 'POST', body: 'x'.repeat(3000) })).status, 400, 'bodies are small');
+
+  const r = await call(`/player-api/garage/${OTHER_ME}`, { method: 'POST', body: { action: 'store', slot: 'web1' } });
+  assert.equal(r.status, 202);
+  const inbox = JSON.parse(readFileSync(join(root, 'inbox.json'), 'utf8'));
+  const cmd = inbox.commands.find((c) => c.id === r.body.id);
+  assert.deepEqual([cmd.type, cmd.steamId, cmd.slot], ['store', OTHER_ME, 'web1']);
+  assert.ok(cmd.expiresAt > cmd.createdAt);
+  assert.equal((await call(`/player-api/garage/${OTHER_ME}`, { method: 'POST', body: { action: 'redeem' } })).status, 429,
+    'one command every few seconds');
+
+  const pending = await call(`/player-api/command/${OTHER_ME}/${r.body.id}`);
+  assert.deepEqual(pending.body, { status: 'pending' });
+  store.apply({ type: 'portal_command', t: Math.floor(Date.now() / 1000), id: r.body.id, steamId: OTHER_ME, action: 'store',
+    slot: 'web1', ok: true, messages: ["Storing into 'web1' in 30 seconds"] });
+  const done = await call(`/player-api/command/${OTHER_ME}/${r.body.id}`);
+  assert.equal(done.body.status, 'done');
+  assert.equal(done.body.ok, true);
+  assert.deepEqual(done.body.messages, ["Storing into 'web1' in 30 seconds"]);
+  assert.equal(done.body.final, null, 'still counting down');
+  store.apply({ type: 'garage_store_result', t: Math.floor(Date.now() / 1000), id: r.body.id, steamId: OTHER_ME,
+    slot: '1', ok: false, reason: 'moved' });
+  assert.deepEqual((await call(`/player-api/command/${OTHER_ME}/${r.body.id}`)).body.final, { ok: false, reason: 'moved' },
+    'how the countdown ended');
+  assert.deepEqual((await call(`/player-api/command/${ME}/${r.body.id}`)).body, { status: 'pending' },
+    'another player cannot read it');
+});
+
+test('me: the garage rules the web garage shows', async () => {
+  const { body } = await call(`/player-api/me/${ME}`);
+  assert.equal(body.garageRules.maxSlots, 2);
+  assert.equal(body.garageRules.storeCountdown, 30);
+  assert.equal(body.garageRules.redeemAt, 'current');
 });

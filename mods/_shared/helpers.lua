@@ -281,12 +281,53 @@ end
 --- Run fn after `ms`, never on the current call stack, and on the game thread.
 -- Rule 3/4: use this instead of doing work inside a Pre hook, and re-resolve
 -- every object inside fn — the world has moved on by then.
--- The delay itself is ExecuteWithDelay's (async thread); fn is then handed to
--- the game thread, because it almost always touches a pawn or controller.
+-- Newer UE4SS (the server's experimental build): ExecuteInGameThreadWithDelay
+-- waits and runs on the game thread, one call from where we are (a hook).
+-- Older builds: ExecuteWithDelay (async thread) then ExecuteInGameThread.
+-- Handing a fresh closure from the async thread to the game thread is what
+-- lost callbacks on the server ("Ref was not function", 2026-09-24).
 function M.defer(ms, fn)
+    if type(ExecuteInGameThreadWithDelay) == "function" then
+        ExecuteInGameThreadWithDelay(ms, function()
+            M.try("deferred callback", fn)
+        end)
+        return
+    end
     ExecuteWithDelay(ms, function()
         M.onGameThread("deferred callback", fn)
     end)
+end
+
+--- Run fn on the game thread every `ms`, for as long as the server runs.
+-- Preferred: LoopInGameThreadWithDelay — one callback, registered once, run by
+-- the game thread itself. Queuing a new ExecuteInGameThread from a LoopAsync
+-- tick every second lost callbacks on the server's experimental UE4SS
+-- ("Ref was not function", 2026-09-24) and, with a "still queued" flag, a
+-- lost one stopped the loop for good. The fallback (older builds) therefore
+-- re-queues when a callback has not run for STUCK_AFTER_S.
+local STUCK_AFTER_S = 15
+function M.every(ms, what, fn)
+    if type(LoopInGameThreadWithDelay) == "function" then
+        LoopInGameThreadWithDelay(ms, function()
+            M.try(what, fn)
+        end)
+        return true
+    end
+    local queuedAt = nil
+    LoopAsync(ms, function()
+        if queuedAt ~= nil and os.time() - queuedAt < STUCK_AFTER_S then return false end
+        if queuedAt ~= nil then
+            M.logError(tostring(what) .. ": game-thread callback lost, queueing it again")
+        end
+        queuedAt = os.time()
+        local queued = M.onGameThread(what, function()
+            queuedAt = nil
+            fn()
+        end)
+        if not queued then queuedAt = nil end
+        return false
+    end)
+    return true
 end
 
 --- Defer an action for a specific player, re-resolving them on the way.

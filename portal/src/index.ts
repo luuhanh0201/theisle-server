@@ -11,6 +11,8 @@ const server = createPortal({
   sessionDays: config.sessionDays,
   trustProxy: config.trustProxy,
   bridge: new BridgeClient(config.bridgeUrl, config.portalToken),
+  voiceUrl: config.voiceUrl,
+  downloadsDir: config.downloadsDir,
 });
 
 server.listen(config.http.port, config.http.host, () => {

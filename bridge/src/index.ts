@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import { config } from './config.js';
 import { NdjsonTail } from './tail.js';
 import { Store } from './store.js';
@@ -6,6 +7,11 @@ import { Rcon } from './rcon.js';
 import { Power, scheduleTick } from './power.js';
 import { systemdService } from './service.js';
 import { Notifier } from './notify.js';
+import { Metrics } from './metrics.js';
+import { readLiveState } from './live.js';
+import { VoiceRoom } from './voice.js';
+import { groundPointsPath, refreshModFile } from './ai-zones.js';
+import { pruneAudit } from './audit.js';
 
 const store = new Store();
 const rcon = new Rcon(config.rcon);
@@ -14,6 +20,16 @@ const power = new Power({
   rcon,
   modsLoadedAt: () => store.modsLoadedAt(),
 });
+// The admin log keeps 7 days: drop what is older now (then hourly, on write).
+await pruneAudit().catch((error: unknown) => console.error('[audit] prune failed:', error));
+
+// The AIZones mod writes its status next to zones.json; Lua cannot create
+// the directory, so it has to exist before the first zones are saved.
+await mkdir(config.aiZonesRoot, { recursive: true }).catch((error: unknown) => console.error('[ai-zones] cannot create', config.aiZonesRoot, error));
+
+// Ground points gathered before (AI positions are only ever seen live).
+await store.groundPoints.load(groundPointsPath());
+
 // Events first: on a replay at startup, sessions and deaths should be known
 // before the snapshots that fill in the current state.
 const notifier = new Notifier(rcon, Math.floor(Date.now() / 1000));
@@ -24,7 +40,33 @@ const tails = [config.eventsPath, config.snapshotsPath].map(
   }),
 );
 
-startServer({ store, power, rcon });
+// Performance history (panel → Server → Hiệu năng): ServerFPS and players
+// from the live file, CPU / RAM from /proc, every 10 s.
+const metrics = new Metrics(config.dataDir, async () => {
+  const live = await readLiveState();
+  const fresh = live !== null && !live.stale;
+  // Where the AI stands now is ground the AI zones may spawn on.
+  if (fresh && live.ai && !live.ai.stale) for (const a of live.ai.list) store.groundPoints.add(a.x, a.y, a.z, a.c);
+  return {
+    online: store.online().length,
+    fps: fresh ? live.fps : null,
+    ai: fresh && live.ai && !live.ai.stale ? live.ai.count : null,
+  };
+});
+metrics.start();
+
+// Proximity voice: who is in the LiveKit room (voice.ts). Off without LIVEKIT_* keys.
+const voice = config.voice === null ? null : new VoiceRoom(config.voice);
+
+startServer({ store, power, rcon, metrics, ...(voice ? { voice } : {}) });
+
+// AI zones: keep the ground points on disk and hand the mod the points found
+// since (a zone drawn where nobody had been yet gets spots as people go there).
+setInterval(() => {
+  store.groundPoints.save(groundPointsPath())
+    .then(() => refreshModFile(store.groundPoints))
+    .catch((error: unknown) => console.error('[ai-zones] refresh failed:', error));
+}, 10 * 60_000);
 
 // Daily restart schedule: check often enough that the countdown starts on time.
 setInterval(() => {

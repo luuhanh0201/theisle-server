@@ -269,16 +269,8 @@ H.onChat(function(ctrl, steamId, msg)
     handler(ctrl, steamId, settings)
 end)
 
--- Ground tracker: the loop only schedules; the reads run on the game thread.
-local busy = false
-LoopAsync(TRACK_MS, function()
-    if not busy then
-        busy = H.onGameThread(MOD .. ": ground spots", function()
-            busy = false
-            H.try(MOD .. ": record spots", recordSpots)
-        end)
-    end
-    return false
-end)
+-- Ground tracker: a game-thread loop (H.every), never a closure queued from
+-- the async thread each tick (lost callbacks, 2026-09-24).
+H.every(TRACK_MS, MOD .. ": ground spots", recordSpots)
 
 H.log(MOD .. ": loaded")

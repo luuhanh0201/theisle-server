@@ -5,6 +5,7 @@ Harness.log      = {}
 Harness.hooks    = {}
 Harness.timers   = {}   -- { at = ms, fn = fn }
 Harness.loops    = {}
+Harness.gameLoops = {}  -- LoopInGameThreadWithDelay: { ms, fn } — tests tick them with fn()
 Harness.calls    = {}   -- ordered record of every engine call
 Harness.now      = 0
 
@@ -35,10 +36,13 @@ end
 
 --- Run fn the way UE4SS runs a LoopAsync / ExecuteWithDelay callback.
 function Harness.async(fn, ...) runOn(false, fn, ...) end
+--- Run fn on the game thread (a hook, a game-thread loop).
+function Harness.game(fn, ...) runOn(true, fn, ...) end
 
 function Harness.reset()
   Harness.log, Harness.hooks, Harness.timers = {}, {}, {}
   Harness.loops, Harness.calls, Harness.now = {}, {}, 0
+  Harness.gameLoops = {}
 end
 
 function Harness.record(what, ...)
@@ -101,6 +105,19 @@ end
 -- thread, so anything captured before the hand-off may be stale by then.
 _G.ExecuteInGameThread = function(fn)
   Harness.timers[#Harness.timers + 1] = { at = Harness.now, fn = function() runOn(true, fn) end }
+end
+
+-- The delayed-action API of newer UE4SS builds (the experimental one on the
+-- server has it): callbacks run ON the game thread, registered once.
+_G.ExecuteInGameThreadWithDelay = function(ms, fn)
+  Harness.timers[#Harness.timers + 1] = { at = Harness.now + ms, fn = function() runOn(true, fn) end }
+  return #Harness.timers
+end
+-- Not scheduled on timers: a test ticks a game loop itself with gameLoops[i].fn(),
+-- which runs one iteration on the game thread.
+_G.LoopInGameThreadWithDelay = function(ms, fn)
+  Harness.gameLoops[#Harness.gameLoops + 1] = { ms = ms, fn = function() runOn(true, fn) end }
+  return #Harness.gameLoops
 end
 
 _G.FName = function(s)

@@ -28,3 +28,5 @@ bridge/data/
 
 # the map is copied from bridge/public/map at deploy
 portal/public/map/
+launcher/node_modules/
+launcher/dist/

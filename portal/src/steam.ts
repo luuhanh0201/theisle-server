@@ -10,6 +10,8 @@
  *    attacker-controlled.
  */
 
+import { steamPost, type SteamPost } from './steam-http.js';
+
 export const STEAM_OPENID = 'https://steamcommunity.com/openid/login';
 const NS = 'http://specs.openid.net/auth/2.0';
 const IDENTIFIER_SELECT = 'http://specs.openid.net/auth/2.0/identifier_select';
@@ -40,13 +42,14 @@ export class NonceCache {
   }
 }
 
-export type VerifyResult = { ok: true; steamId: string } | { ok: false; reason: string };
+/** `steam`: Steam could not be reached to confirm the login (retry later); the others are refusals. */
+export type VerifyResult = { ok: true; steamId: string } | { ok: false; reason: string; steam?: true };
 
 export async function verify(
   query: URLSearchParams,
   baseUrl: string,
   nonces: NonceCache,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: SteamPost = steamPost,
 ): Promise<VerifyResult> {
   if (query.get('openid.mode') !== 'id_res') return { ok: false, reason: 'login cancelled or not a Steam response' };
   if (query.get('openid.op_endpoint') !== STEAM_OPENID) return { ok: false, reason: 'wrong OpenID endpoint' };
@@ -71,7 +74,8 @@ export async function verify(
     });
     text = await res.text();
   } catch (error) {
-    return { ok: false, reason: `Steam did not answer: ${(error as Error).message}` };
+    console.error('[portal] Steam login check failed:', (error as Error).message);
+    return { ok: false, reason: 'Steam did not answer', steam: true };
   }
   if (!/^is_valid\s*:\s*true\s*$/m.test(text)) return { ok: false, reason: 'Steam rejected the signature' };
   // Consumed only after Steam vouched for it: a failed attempt cannot burn a real nonce.

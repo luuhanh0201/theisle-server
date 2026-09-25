@@ -3,140 +3,1685 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Isle Player</title>
-<meta name="description" content="Dino của bạn, gara và bảng xếp hạng trên server The Isle.">
+<title>The Isle Evrima — Cổng Người Chơi</title>
+<link rel="icon" type="image/png" href="/img/favicon-64.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta name="description" content="Cổng thông tin người chơi The Isle Evrima: Thông tin Dino, Gara, Bản đồ Gateway Live, Bảng xếp hạng và Tùy chỉnh Skin.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f6f9; --surface: #ffffff; --surface-2: #f7f8fb; --border: rgba(15,23,42,.08);
-    --text: #0f172a; --muted: #64748b; --accent: #059669; --accent-soft: rgba(16,185,129,.12);
-    --kill: #dc2626; --dmg: #d97706; --chat: #2563eb; --grow: #7c3aed; --radius: 14px;
+    --bg: #07090e;
+    --bg-card: #0d121c;
+    --bg-card-hover: #121824;
+    --bg-surface: #151d2c;
+    --bg-subtle: rgba(255, 255, 255, 0.04);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(52, 211, 153, 0.3);
+    --border-glow: rgba(52, 211, 153, 0.15);
+    
+    --text: #f1f5f9;
+    --text-muted: #8b9bb4;
+    --text-sub: #62728d;
+    
+    --emerald: #10b981;
+    --emerald-light: #34d399;
+    --emerald-soft: rgba(16, 185, 129, 0.12);
+    --emerald-glow: rgba(16, 185, 129, 0.25);
+    
+    --steam-bg: #171d25;
+    --steam-btn: #1b2838;
+    --steam-blue: #66c0f4;
+    --steam-blue-hover: #1999e3;
+    
+    --discord: #5865f2;
+    --discord-hover: #4752c4;
+    
+    --red: #ef4444;
+    --red-soft: rgba(239, 68, 68, 0.15);
+    --amber: #f59e0b;
+    --amber-soft: rgba(245, 158, 11, 0.15);
+    --blue: #3b82f6;
+    --blue-soft: rgba(59, 130, 246, 0.15);
+    --purple: #8b5cf6;
+    --purple-soft: rgba(139, 92, 246, 0.15);
+    --cyan: #06b6d4;
+    --cyan-soft: rgba(6, 182, 212, 0.15);
+    
+    --radius: 16px;
+    --radius-sm: 10px;
+    --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #090b10; --surface: #10141b; --surface-2: #151a23; --border: rgba(255,255,255,.07);
-      --text: #eef1f6; --muted: #8590a3; --accent: #34d399; --accent-soft: rgba(52,211,153,.12);
-    }
-  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, sans-serif; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 16px; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; }
-  .logo { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #10b981, #0ea5e9); display: grid; place-items: center; color: #fff; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-  h2 { margin: 0 0 12px; font-size: 15px; }
-  .muted { color: var(--muted); }
-  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-  .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
-  .btn-steam { background: #1b2838; color: #fff; border: 1px solid #66c0f4; }
-  .btn-steam:hover { background: #2a475e; }
-  .btn-ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-  .hero { text-align: center; padding: 48px 16px; }
-  .hero h1 { margin: 0 0 8px; font-size: 26px; }
-  .bar { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
-  .bar > span { display: block; height: 100%; background: var(--accent); }
-  .vital { display: grid; grid-template-columns: 74px 1fr 96px; align-items: center; gap: 10px; margin: 7px 0; font-size: 13px; }
-  .vital b { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-  .vital .bar { height: 10px; }
-  .vital .bar > span { transition: width .6s linear, background-color .3s; }
-  .vital.low .bar > span { animation: pulse 1.2s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .45; } }
-  .prime { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; }
-  .quests { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
-  .quests li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 13px; }
-  .quests .ck { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-weight: 800; flex: none; border: 1px solid var(--border); color: var(--muted); }
-  .quests li.met .ck { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
-  .quests li.met { opacity: 1; }
-  .quests li:not(.met) { opacity: .85; }
-  .deadline { position: relative; height: 10px; border-radius: 99px; background: var(--surface-2); margin: 8px 0 4px; }
-  .deadline > span { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--grow); transition: width .8s; }
-  .deadline > i { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--kill); }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .stat { background: var(--surface-2); border-radius: 10px; padding: 10px; text-align: center; }
-  .stat b { display: block; font-size: 20px; }
-  .stat span { font-size: 12px; color: var(--muted); }
-  ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-  ul.list li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: 10px; }
-  .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
-  .tag.kill { background: rgba(220,38,38,.12); color: var(--kill); }
-  .err { background: rgba(220,38,38,.1); color: var(--kill); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--muted); }
-  .dot.up { background: var(--accent); }
-  .tabs { display: flex; gap: 6px; margin: 0 0 14px; flex-wrap: wrap; }
-  .tabs button { border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 99px; padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer; }
-  .tabs button.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
-  .skin { margin-top: 14px; }
-  .skin h3 { margin: 0 0 8px; font-size: 13px; }
-  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
-  .sw { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; background: var(--surface-2); font-size: 12px; }
-  .sw i { width: 20px; height: 20px; border-radius: 6px; flex: none; border: 1px solid var(--border); }
-  .strip { display: inline-flex; gap: 2px; vertical-align: middle; margin-left: 8px; }
-  .strip i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border); }
-  .map-wrap { position: relative; border-radius: 12px; overflow: hidden; background: #0d2350; }
-  .map-wrap canvas { display: block; width: 100%; aspect-ratio: 4 / 3; max-height: 70vh; cursor: grab; touch-action: none; }
-  .map-tools { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
-  .map-tools button { width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(10,14,22,.75); color: #fff; font: 700 17px/1 Inter, system-ui, sans-serif; cursor: pointer; }
-  .map-tools button.on { background: #059669; border-color: transparent; }
-  .map-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; text-align: center; color: #e2e8f0; font-size: 13px; pointer-events: none; }
-  .map-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); border-radius: 99px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
-  .chip.on { color: var(--text); border-color: var(--accent); }
-  .chip i { width: 9px; height: 9px; border-radius: 3px; }
-  .map-note { font-size: 11.5px; margin: 8px 0 0; }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at 50% 0%, #111a2e 0%, #07090e 70%);
+    color: var(--text);
+    font: 14px/1.6 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 16px 20px 48px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 22px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .brand-logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: block;
+    object-fit: cover;
+    background: #000;
+    box-shadow: 0 4px 16px rgba(250, 204, 21, 0.25);
+  }
+  .brand-info h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .launcher-version { color: var(--emerald-light); font-weight: 700; }
+  .game-mode-btn[aria-pressed="true"] { background: var(--emerald-soft); border-color: rgba(52,211,153,.5); color: var(--emerald-light); }
+  .brand-info p {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  @media (max-width: 640px) { #get-launcher { display: none; } }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Top Navigation Bar */
+  .nav-bar {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 6px;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-bar::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 10px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+    text-decoration: none;
+  }
+  .nav-btn .icon { font-size: 16px; }
+  .nav-btn:hover {
+    color: var(--text);
+    background: var(--bg-surface);
+  }
+  .nav-btn.active {
+    background: var(--emerald-soft);
+    color: var(--emerald-light);
+    box-shadow: inset 0 0 0 1px var(--border-glow);
+  }
+  .nav-badge {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+  }
+  .nav-btn.active .nav-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--emerald-light);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: var(--transition);
+  }
+  .btn-steam {
+    background: linear-gradient(180deg, #21354d 0%, #152436 100%);
+    color: #e5f3ff;
+    border-color: #38648b;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+  .btn-steam:hover {
+    background: linear-gradient(180deg, #2b4564 0%, #1c3048 100%);
+    border-color: #66c0f4;
+    color: #fff;
+  }
+  .btn-discord {
+    background: var(--discord);
+    color: #fff;
+  }
+  .btn-discord:hover {
+    background: var(--discord-hover);
+    box-shadow: 0 4px 16px rgba(88, 101, 242, 0.35);
+  }
+  .btn-emerald {
+    background: var(--emerald);
+    color: #041f14;
+    font-weight: 800;
+  }
+  .btn-emerald:hover {
+    background: var(--emerald-light);
+    box-shadow: 0 4px 16px rgba(52, 211, 153, 0.35);
+  }
+  .btn-ghost {
+    background: var(--bg-surface);
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .btn-ghost:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .btn-copy {
+    padding: 4px 10px;
+    font-size: 11.5px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .btn-copy:hover {
+    background: var(--bg-surface);
+    color: var(--emerald-light);
+    border-color: var(--border-hover);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    position: relative;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-subtitle {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* Common utilities */
+  .grid-2 { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid-4 { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .muted { color: var(--text-muted); }
+  .tag {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--emerald-soft);
+    color: var(--emerald-light);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tag.kill, .tag.danger { background: var(--red-soft); color: #f87171; }
+  .tag.warning { background: var(--amber-soft); color: #fbbf24; }
+  .tag.info { background: var(--blue-soft); color: #60a5fa; }
+  .tag.purple { background: var(--purple-soft); color: #c084fc; }
+
+  /* Dot indicators */
+  .dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--text-sub);
+    flex: none;
+  }
+  .dot.up {
+    background: var(--emerald-light);
+    box-shadow: 0 0 10px var(--emerald-light);
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* HOME PAGE STYLES */
+  .hero-banner {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0b1526 0%, #070d18 50%, #040911 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 44px 36px;
+    margin-bottom: 24px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  }
+  .hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 32px;
+  }
+  .hero-logo {
+    width: clamp(180px, 26vw, 300px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    display: block;
+    filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.6));
+  }
+  @media (max-width: 760px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 18px; }
+    .hero-logo { order: -1; width: min(220px, 60vw); margin: 0 auto; }
+  }
+  .hero-content {
+    position: relative;
+    max-width: 640px;
+    z-index: 1;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--emerald-light);
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .hero-title {
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1.2;
+    margin: 0 0 14px;
+    letter-spacing: -0.03em;
+    background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-desc {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0 0 24px;
+  }
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  /* Server Status Card on Home */
+  .status-bar-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .status-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .status-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    font-size: 24px;
+  }
+  .status-texts h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .status-texts p {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .player-meter-wrap {
+    min-width: 240px;
+    flex: 1;
+    max-width: 360px;
+  }
+  .player-meter-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .meter-bar {
+    height: 9px;
+    border-radius: 99px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    position: relative;
+  }
+  .meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    border-radius: 99px;
+    transition: width 0.8s ease;
+  }
+
+  /* Feature cards */
+  .feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    transition: var(--transition);
+  }
+  .feature-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    background: var(--bg-card-hover);
+  }
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+  .feature-card h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .feature-card p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* GAME PAGE STYLES */
+  .dino-hero-card {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 18, 28, 0.8) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .dino-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .dino-species {
+    font-size: 24px;
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .dino-growth-badge {
+    background: var(--emerald-soft);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--emerald-light);
+    font-weight: 800;
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 14px;
+  }
+
+  /* Vitals */
+  .vitals-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    margin-top: 18px;
+  }
+  .vital-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    transition: var(--transition);
+  }
+  .vital-card:hover { border-color: rgba(255, 255, 255, 0.15); }
+  .vital-card.low {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.08);
+  }
+  .vital-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .vital-name {
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .vital-val {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .vital-track {
+    height: 8px;
+    border-radius: 99px;
+    background: rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+  }
+  .vital-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.6s ease-out;
+  }
+  .vital-card.low .vital-fill {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.45; } }
+
+  /* Prime quests */
+  .prime-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .prime-deadline-track {
+    position: relative;
+    height: 12px;
+    border-radius: 99px;
+    background: var(--bg-surface);
+    margin: 12px 0 6px;
+    border: 1px solid var(--border);
+  }
+  .prime-deadline-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #7c3aed, #a855f7);
+    transition: width 0.8s;
+  }
+  .prime-marker {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    width: 2px;
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444;
+  }
+  .quest-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .quest-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .quest-check {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    font-size: 12px;
+    flex: none;
+    border: 1px solid var(--border);
+    color: var(--text-sub);
+    background: var(--bg-card);
+  }
+  .quest-item.met {
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(16, 185, 129, 0.05);
+  }
+  .quest-item.met .quest-check {
+    background: var(--emerald-soft);
+    color: var(--emerald-light);
+    border-color: transparent;
+  }
+
+  /* GARA PAGE STYLES */
+  .garage-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .garage-slot-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    transition: var(--transition);
+  }
+  .garage-slot-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+  }
+  .slot-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+  .command-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .command-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 700;
+    color: var(--emerald-light);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* MAP PAGE STYLES */
+  .map-wrap {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #091322;
+    border: 1px solid var(--border);
+  }
+  .map-wrap canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    max-height: 75vh;
+    cursor: grab;
+    touch-action: none;
+  }
+  .map-wrap canvas:active { cursor: grabbing; }
+  .map-tools {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+  }
+  .map-tool-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(13, 18, 28, 0.85);
+    color: #fff;
+    font: 700 17px/1 'Inter', sans-serif;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    display: grid;
+    place-items: center;
+    transition: var(--transition);
+  }
+  .map-tool-btn:hover { background: rgba(255, 255, 255, 0.15); }
+  .map-tool-btn.active {
+    background: var(--emerald);
+    color: #041f14;
+    border-color: transparent;
+  }
+  .map-coords-badge {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    background: rgba(13, 18, 28, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: #e2e8f0;
+    z-index: 10;
+  }
+  .map-msg {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    text-align: center;
+    color: #e2e8f0;
+    font-size: 14px;
+    pointer-events: none;
+    background: rgba(9, 19, 34, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 5;
+  }
+  /* waypoint: the target bar on the map, the saved points under it (map.js) */
+  .map-target { position: absolute; left: 10px; top: 10px; right: 64px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-radius: 12px; background: rgba(7,9,14,.86); border: 1px solid rgba(250,204,21,.45); box-shadow: 0 6px 20px rgba(0,0,0,.45); z-index: 3; }
+  .map-target .mt-info { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+  .map-target .mt-name { color: #fde68a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .map-target .mt-dist { color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+  .map-target .mt-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .map-target .mt-input { width: 170px; font: inherit; font-size: 12.5px; color: var(--text); background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; }
+  .map-target button { font: inherit; font-size: 12.5px; font-weight: 800; border: 0; border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+  .map-target .mt-save { background: #facc15; color: #1a1400; }
+  .map-target .mt-save:disabled { background: var(--bg-surface); color: var(--emerald-light); cursor: default; }
+  .map-target .mt-clear { background: var(--bg-surface); color: var(--text-muted); }
+  .map-hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--text-muted); background: rgba(7,9,14,.72); padding: 4px 12px; border-radius: 999px; pointer-events: none; }
+  .map-saved { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 0; }
+  .map-saved .ms-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-right: 4px; }
+  .map-saved .ms-item { display: inline-flex; align-items: center; border: 1px solid var(--border); background: var(--bg-surface); border-radius: 999px; overflow: hidden; }
+  .map-saved .ms-item.on { border-color: rgba(250,204,21,.6); background: rgba(250,204,21,.12); }
+  .map-saved .ms-item button { font: inherit; font-size: 12.5px; font-weight: 700; background: none; border: 0; color: var(--text); padding: 5px 10px; cursor: pointer; }
+  .map-saved .ms-item .ms-del { color: var(--text-sub); padding: 5px 9px 5px 4px; }
+  .map-saved .ms-item .ms-del:hover { color: var(--red); }
+  @media (max-width: 640px) { .map-target { right: 10px; } .map-target .mt-input { width: 120px; } }
+  .map-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    border-radius: 99px;
+    padding: 5px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .chip:hover {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .chip.on {
+    color: var(--text);
+    border-color: var(--emerald-light);
+    background: var(--emerald-soft);
+  }
+  .chip i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+
+  /* RANKING PAGE STYLES */
+  .ranking-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .ranking-tab-btn {
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    border-radius: 10px;
+    padding: 8px 16px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .ranking-tab-btn.active {
+    background: var(--emerald-soft);
+    color: var(--emerald-light);
+    border-color: var(--emerald-light);
+  }
+  .leaderboard-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .leaderboard-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+  }
+  .leaderboard-item:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  .leaderboard-rank {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    flex: none;
+  }
+  .leaderboard-rank.top-1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
+  .leaderboard-rank.top-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: #000; }
+  .leaderboard-rank.top-3 { background: linear-gradient(135deg, #b45309, #78350f); color: #fff; }
+
+  /* SKIN PAGE STYLES */
+  .regions-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  .region-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: var(--transition);
+  }
+  .region-card:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: var(--bg-card-hover);
+  }
+  .region-info h4 {
+    margin: 0 0 2px;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  .region-info span {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .region-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .color-picker-input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+    overflow: hidden;
+  }
+  .color-picker-input::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-picker-input::-webkit-color-swatch { border: none; border-radius: 8px; }
+  .hex-display {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 60px;
+  }
+
+  /* Error notice */
+  .err {
+    background: rgba(220, 38, 38, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .wrap { padding: 12px 14px 36px; }
+    .hero-banner { padding: 28px 20px; }
+    .hero-title { font-size: 26px; }
+    .status-bar-card { flex-direction: column; align-items: stretch; }
+    .player-meter-wrap { max-width: 100%; }
+    .nav-btn { padding: 8px 14px; font-size: 12.5px; }
+  }
+  /* Column card: details, then the button at the bottom — buttons line up across a row. */
+  .garage-slot-card.stacked { flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; gap: 14px; }
+  .garage-slot-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; }
+  .garage-slot-body .slot-redeem { margin-top: auto; width: 100%; justify-content: center; }
+
+  /* Gara page: commands in one row on top, the garage below */
+  .commands-row { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .commands-row .command-card { flex-direction: column; align-items: stretch; justify-content: space-between; }
+  .commands-row .command-card .btn-copy { align-self: flex-start; }
+  @media (max-width: 1000px) { .commands-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .commands-row { grid-template-columns: 1fr; } }
+  #gara-slots-list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  #gara-slots-list > li:only-child:not(.garage-slot-card) { grid-column: 1 / -1; }
+  /* What the stored dino comes back with */
+  .slot-vitals { display: grid; gap: 6px; margin-top: 10px; width: 100%; }
+  .slot-vitals .sv { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 8px; font-size: 12px; }
+  .slot-vitals .sv > span { color: var(--text-muted, #94a3b8); }
+  .slot-vitals .sv-track { height: 7px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+  .slot-vitals .sv-track i { display: block; height: 100%; border-radius: 99px; }
+  .slot-vitals .sv b { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 11.5px; }
+  /* A prime elder in the garage */
+  .garage-slot-card.prime { border-color: rgba(250, 204, 21, 0.55); box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.25), 0 8px 28px rgba(250, 204, 21, 0.10); }
+  .tag.prime { background: rgba(250, 204, 21, 0.14); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.35); }
+
+  /* Web garage */
+  .garage-actions { display: grid; gap: 8px; margin-bottom: 14px; }
+  .garage-store-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .garage-store-row input { flex: 1; min-width: 120px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text); font: inherit; }
+  .garage-store-row input:focus { outline: none; border-color: var(--emerald-light, #34d399); }
+  .garage-where { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted, #94a3b8); }
+  .garage-where select { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text); font: inherit; font-size: 13px; }
+  .garage-hint { font-size: 12px; margin: 0; }
+  .garage-status { font-size: 13px; line-height: 1.5; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border); }
+  .garage-status.ok { border-color: rgba(52, 211, 153, .5); }
+  .garage-status.bad { border-color: rgba(248, 113, 113, .55); }
+  .garage-status ul { margin: 4px 0 0; padding-left: 18px; }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  /* ---- Launcher download (Home, web only) ---- */
+  .launcher-promo {
+    position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+    margin-bottom: 20px; padding: 22px 24px; border-radius: var(--radius); overflow: hidden;
+    background: linear-gradient(120deg, rgba(16,185,129,.16), rgba(13,18,28,.95) 45%, rgba(250,204,21,.10)); border: 1px solid transparent;
+    background-clip: padding-box; isolation: isolate;
+  }
+  /* a slow light running round the frame */
+  .launcher-promo::before {
+    content: ''; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; padding: 1px;
+    background: conic-gradient(from var(--lp-angle, 0deg), rgba(52,211,153,.9), rgba(250,204,21,.8), rgba(52,211,153,.1) 40%, rgba(52,211,153,.1) 70%, rgba(52,211,153,.9));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: lp-spin 6s linear infinite;
+  }
+  @property --lp-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+  @keyframes lp-spin { to { --lp-angle: 360deg; } }
+  .lp-info { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1 1 380px; }
+  .lp-logo { width: 64px; height: 64px; border-radius: 50%; flex: none; background: #000; box-shadow: 0 0 0 2px rgba(250,204,21,.35), 0 6px 20px rgba(0,0,0,.5); animation: lp-float 4s ease-in-out infinite; }
+  @keyframes lp-float { 50% { transform: translateY(-4px) rotate(-3deg); } }
+  .lp-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--emerald-light); letter-spacing: .02em; }
+  .lp-new { background: #facc15; color: #1a1400; font-size: 10.5px; font-weight: 900; padding: 2px 7px; border-radius: 999px; animation: lp-blink 2.2s ease-in-out infinite; }
+  @keyframes lp-blink { 50% { box-shadow: 0 0 0 5px rgba(250,204,21,.18); } }
+  #lp-version { color: var(--text-muted); font-weight: 700; }
+  .lp-title { margin: 4px 0 6px; font-size: 18px; font-weight: 900; letter-spacing: -.01em; }
+  .lp-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: 13px; }
+  .lp-cta { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .lp-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 14px; padding: 14px 26px 14px 20px; border-radius: 14px; overflow: hidden;
+    color: #041f14; text-decoration: none; font-weight: 900;
+    background: linear-gradient(110deg, #10b981, #34d399 30%, #facc15 60%, #34d399 85%, #10b981); background-size: 250% 100%;
+    animation: lp-flow 5s ease-in-out infinite, lp-breathe 2.6s ease-in-out infinite;
+    transition: transform .15s ease;
+  }
+  .lp-btn:hover { transform: translateY(-2px) scale(1.03); }
+  .lp-btn:active { transform: translateY(0) scale(.99); }
+  @keyframes lp-flow { 50% { background-position: 100% 0; } }
+  @keyframes lp-breathe { 0%, 100% { box-shadow: 0 6px 22px rgba(16,185,129,.35), 0 0 0 0 rgba(52,211,153,.45); } 50% { box-shadow: 0 8px 30px rgba(250,204,21,.35), 0 0 0 9px rgba(52,211,153,0); } }
+  /* a shine sweeping across now and then */
+  .lp-btn::after { content: ''; position: absolute; top: -20%; bottom: -20%; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.65), transparent); transform: skewX(-20deg); animation: lp-shine 3.2s ease-in-out infinite; }
+  @keyframes lp-shine { 0%, 55% { left: -60%; } 85%, 100% { left: 130%; } }
+  .lp-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: rgba(4,31,20,.14); }
+  .lp-icon svg { animation: lp-drop 1.8s cubic-bezier(.4,0,.2,1) infinite; }
+  @keyframes lp-drop { 0%, 100% { transform: translateY(-3px); } 45% { transform: translateY(3px); } 60% { transform: translateY(1px); } }
+  .lp-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .lp-text b { font-size: 17px; }
+  .lp-text small { font-size: 11.5px; font-weight: 800; opacity: .78; }
+  .lp-more { font-size: 12px; color: var(--text-muted); text-decoration: none; }
+  .lp-more:hover { color: var(--emerald-light); }
+  @media (max-width: 640px) { .launcher-promo { padding: 18px; } .lp-cta { width: 100%; } .lp-btn { width: 100%; justify-content: center; } }
+  @media (prefers-reduced-motion: reduce) {
+    .launcher-promo::before, .lp-logo, .lp-new, .lp-btn, .lp-btn::after, .lp-icon svg { animation: none; }
+  }
+  /* ---- Voice gần (voice.js) ---- */
+  .nav-voice-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; margin-left: -2px; }
+  .nav-voice-dot.ok { background: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.18); animation: v-pulse 2.4s ease-in-out infinite; }
+  .nav-voice-dot.warn { background: var(--amber); }
+  .nav-voice-dot.bad { background: var(--red); }
+  @keyframes v-pulse { 50% { box-shadow: 0 0 0 5px rgba(52,211,153,.06); } }
+  :is(#page-voice, #page-overlay) .v-join-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  :is(#page-voice, #page-overlay) .v-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  :is(#page-voice, #page-overlay) .v-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-muted); }
+  :is(#page-voice, #page-overlay) .v-chip.good { background: var(--emerald-soft); border-color: rgba(16,185,129,.35); color: #a7f3d0; }
+  :is(#page-voice, #page-overlay) .v-chip.warn { background: var(--amber-soft); border-color: rgba(245,158,11,.35); color: #fde68a; }
+  :is(#page-voice, #page-overlay) .v-chip.bad { background: var(--red-soft); border-color: rgba(239,68,68,.35); color: #fecaca; }
+  :is(#page-voice, #page-overlay) .v-note { margin: 12px 0 0; font-size: 12.5px; color: var(--text-muted); }
+  :is(#page-voice, #page-overlay) .btn-big { padding: 12px 22px; font-size: 14.5px; }
+  :is(#page-voice, #page-overlay) .btn-danger { background: var(--red-soft); border-color: rgba(239,68,68,.35); color: #fecaca; }
+  :is(#page-voice, #page-overlay) .v-seg { display: inline-flex; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; gap: 3px; flex-wrap: wrap; }
+  :is(#page-voice, #page-overlay) .v-seg button { font: inherit; font-size: 12.5px; font-weight: 700; color: var(--text-muted); background: none; border: 0; border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+  :is(#page-voice, #page-overlay) .v-seg button[aria-pressed="true"] { background: var(--emerald); color: #041f14; }
+  :is(#page-voice, #page-overlay) .v-seg-range { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
+  :is(#page-voice, #page-overlay) .v-seg-range button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 6px; font-weight: 600; }
+  :is(#page-voice, #page-overlay) .v-seg-range button b { font-size: 15px; font-weight: 800; color: var(--text); }
+  :is(#page-voice, #page-overlay) .v-seg-range button[aria-pressed="true"] b { color: #041f14; }
+  :is(#page-voice, #page-overlay) .v-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  :is(#page-voice, #page-overlay) .v-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  :is(#page-voice, #page-overlay) select, :is(#page-voice, #page-overlay) input[type="range"] { width: 100%; }
+  :is(#page-voice, #page-overlay) select { font: inherit; font-size: 13px; color: var(--text); background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  :is(#page-voice, #page-overlay) input[type="range"] { accent-color: var(--emerald); }
+  :is(#page-voice, #page-overlay) .v-meter { position: relative; height: 12px; border-radius: 6px; background: var(--bg-surface); border: 1px solid var(--border); overflow: hidden; margin-top: 16px; }
+  :is(#page-voice, #page-overlay) .v-meter .lvl { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--text-sub); transition: width .06s linear; }
+  :is(#page-voice, #page-overlay) .v-meter .lvl.open { background: var(--emerald); }
+  :is(#page-voice, #page-overlay) .v-meter .thr { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--amber); }
+  :is(#page-voice, #page-overlay) .v-talk { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+  :is(#page-voice, #page-overlay) .v-talk .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-sub); }
+  :is(#page-voice, #page-overlay) .v-talk.on { color: var(--emerald-light); }
+  :is(#page-voice, #page-overlay) .v-talk.on .dot { background: var(--emerald-light); box-shadow: 0 0 0 4px var(--emerald-soft); }
+  :is(#page-voice, #page-overlay) kbd { font: 12px ui-monospace, monospace; background: var(--bg-surface); border: 1px solid rgba(255,255,255,.18); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--text); }
+  :is(#page-voice, #page-overlay) .v-keys { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; font-size: 12.5px; color: var(--text-muted); }
+  :is(#page-voice, #page-overlay) .v-peers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  :is(#page-voice, #page-overlay) .v-peer { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  :is(#page-voice, #page-overlay) .v-peer.speaking { border-color: rgba(52,211,153,.5); }
+  :is(#page-voice, #page-overlay) .v-peer .ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--bg-card); color: var(--text-muted); }
+  :is(#page-voice, #page-overlay) .v-peer.speaking .ico { color: var(--emerald-light); background: var(--emerald-soft); }
+  :is(#page-voice, #page-overlay) .v-peer .name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :is(#page-voice, #page-overlay) .v-peer .dist { font-size: 11.5px; color: var(--text-muted); }
+  :is(#page-voice, #page-overlay) .v-peer input[type="range"] { width: 110px; }
+  :is(#page-voice, #page-overlay) .v-peer .mute { padding: 6px 10px; font-size: 12px; }
+  :is(#page-voice, #page-overlay) .v-peer .mute[aria-pressed="true"] { background: var(--red-soft); border-color: rgba(239,68,68,.35); color: #fecaca; }
+  :is(#page-voice, #page-overlay) .v-empty { color: var(--text-muted); font-size: 13px; padding: 8px 2px; margin: 0; }
+  :is(#page-voice, #page-overlay) .v-subhead { font-size: 12px; font-weight: 700; color: var(--text-muted); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .05em; }
+  :is(#page-voice, #page-overlay) .ov-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  :is(#page-voice, #page-overlay) .ov-switch { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer; margin-right: auto; }
+  :is(#page-voice, #page-overlay) .ov-switch input { width: 18px; height: 18px; accent-color: var(--emerald); }
+  :is(#page-voice, #page-overlay) .ov-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 22px; margin-top: 8px; }
+  :is(#page-voice, #page-overlay) .ov-block { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  :is(#page-voice, #page-overlay) .ov-block .v-subhead { margin-top: 6px; }
+  :is(#page-voice, #page-overlay) .v-field output { color: var(--text); font-weight: 800; }
+  :is(#page-voice, #page-overlay) .ov-pos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 300px; width: 100%; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; padding: 6px; aspect-ratio: 16 / 9; }
+  :is(#page-voice, #page-overlay) .ov-pos button { font-size: 18px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); border-radius: 8px; cursor: pointer; }
+  :is(#page-voice, #page-overlay) .ov-pos button[aria-pressed="true"] { background: var(--emerald); color: #041f14; border-color: transparent; }
+  :is(#page-voice, #page-overlay) .ov-pos-mid { display: grid; place-items: center; font-size: 11px; color: var(--text-sub); }
+  :is(#page-voice, #page-overlay) .ov-checks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; font-size: 13px; }
+  :is(#page-voice, #page-overlay) .ov-checks label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  :is(#page-voice, #page-overlay) .ov-checks input { width: 16px; height: 16px; accent-color: var(--emerald); flex: none; }
+  :is(#page-voice, #page-overlay) .ov-dim { opacity: .45; pointer-events: none; }
+  :is(#page-voice, #page-overlay) .ov-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  :is(#page-voice, #page-overlay) .ov-tabs button { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 13px; font-weight: 700; color: var(--text-muted); background: var(--bg-surface); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  :is(#page-voice, #page-overlay) .ov-tabs button[aria-selected="true"] { color: var(--text); border-color: var(--border-hover); background: var(--emerald-soft); }
+  :is(#page-voice, #page-overlay) .ov-tabs .st { width: 8px; height: 8px; border-radius: 50%; background: var(--text-sub); }
+  :is(#page-voice, #page-overlay) .ov-tabs .st.on { background: var(--emerald-light); }
+  :is(#page-voice, #page-overlay) .ov-stage-wrap { display: flex; justify-content: center; }
+  :is(#page-voice, #page-overlay) .ov-stage { position: relative; width: 100%; max-width: 900px; background: #05070b; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; touch-action: none; user-select: none; }
+  :is(#page-voice, #page-overlay) .ov-screen { position: absolute; background: linear-gradient(160deg, #1b2a1f 0%, #132019 45%, #0f1a2a 100%); border: 1px solid rgba(255,255,255,.14); border-radius: 4px; }
+  :is(#page-voice, #page-overlay) .ov-screen span { position: absolute; left: 8px; bottom: 6px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.45); pointer-events: none; }
+  :is(#page-voice, #page-overlay) .ov-box { position: absolute; border: 2px solid rgba(52,211,153,.75); background: rgba(16,185,129,.18); border-radius: 6px; cursor: move; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 800; color: #ecfdf5; text-shadow: 0 1px 2px #000; overflow: hidden; }
+  :is(#page-voice, #page-overlay) .ov-box small { font-size: 10px; font-weight: 700; color: #a7f3d0; }
+  :is(#page-voice, #page-overlay) .ov-box span { max-width: 100%; padding: 0 4px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  :is(#page-voice, #page-overlay) .ov-box.sel { border-color: #facc15; background: rgba(250,204,21,.16); z-index: 2; }
+  :is(#page-voice, #page-overlay) .ov-box.drag { opacity: .85; }
+  :is(#page-voice, #page-overlay) .ov-box .h { position: absolute; }
+  :is(#page-voice, #page-overlay) .ov-box .h.n, :is(#page-voice, #page-overlay) .ov-box .h.s { left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+  :is(#page-voice, #page-overlay) .ov-box .h.e, :is(#page-voice, #page-overlay) .ov-box .h.w { top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+  :is(#page-voice, #page-overlay) .ov-box .h.n { top: -2px; } :is(#page-voice, #page-overlay) .ov-box .h.s { bottom: -2px; } :is(#page-voice, #page-overlay) .ov-box .h.e { right: -2px; } :is(#page-voice, #page-overlay) .ov-box .h.w { left: -2px; }
+  :is(#page-voice, #page-overlay) .ov-box .h.nw, :is(#page-voice, #page-overlay) .ov-box .h.ne, :is(#page-voice, #page-overlay) .ov-box .h.sw, :is(#page-voice, #page-overlay) .ov-box .h.se { width: 12px; height: 12px; }
+  :is(#page-voice, #page-overlay) .ov-box .h.nw { left: -2px; top: -2px; cursor: nwse-resize; } :is(#page-voice, #page-overlay) .ov-box .h.se { right: -2px; bottom: -2px; cursor: nwse-resize; }
+  :is(#page-voice, #page-overlay) .ov-box .h.ne { right: -2px; top: -2px; cursor: nesw-resize; } :is(#page-voice, #page-overlay) .ov-box .h.sw { left: -2px; bottom: -2px; cursor: nesw-resize; }
+  :is(#page-voice, #page-overlay) .ov-box .h.se::after { content: ''; position: absolute; right: 2px; bottom: 2px; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; }
+  :is(#page-voice, #page-overlay) .ov-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-muted); font-size: 13px; pointer-events: none; }
+  :is(#page-voice, #page-overlay) .ov-gm { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-surface); font-size: 13px; }
+  :is(#page-voice, #page-overlay) .ov-gm .ov-checks { margin-top: 8px; }
+  :is(#page-voice, #page-overlay) .ov-panel-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 6px; }
+  @media (max-width: 760px) { :is(#page-voice, #page-overlay) .ov-grid, :is(#page-voice, #page-overlay) .ov-checks { grid-template-columns: 1fr; } }
+  .v-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 50; padding: 10px 18px; border-radius: 999px; background: #0d121c; border: 1px solid rgba(52,211,153,.45); color: #a7f3d0; font-weight: 700; font-size: 13.5px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  @media (max-width: 640px) {
+    :is(#page-voice, #page-overlay) .v-grid { grid-template-columns: 1fr; }
+    :is(#page-voice, #page-overlay) .v-seg-range { grid-template-columns: repeat(2, 1fr); }
+    :is(#page-voice, #page-overlay) .v-peer { grid-template-columns: auto 1fr auto; }
+    :is(#page-voice, #page-overlay) .v-peer input[type="range"] { grid-column: 1 / -1; width: 100%; }
+  }
+
+  /* The hidden attribute must win over any display rule above (buttons, badges, pages). */
   [hidden] { display: none !important; }
+  /* In the launcher, while another window (the game) has the focus: no looping animation (app.js). */
+  html.app-idle *, html.app-idle *::before, html.app-idle *::after { animation-play-state: paused !important; }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <!-- Header -->
   <header>
-    <div class="brand"><div class="logo">🦖</div>Isle Player</div>
-    <div id="auth"></div>
-  </header>
-  <div id="error" class="err" hidden></div>
-  <div class="card" style="margin-bottom:14px"><span class="dot" id="srv-dot"></span><span id="srv-text">Đang kiểm tra server…</span></div>
-
-  <section id="guest" class="card hero" hidden>
-    <h1>Dino của bạn, ngay trong game</h1>
-    <p class="muted">Đăng nhập bằng Steam để xem dino đang chơi, gara và lịch sử. Mở trang này trong Steam overlay (Shift+Tab) hoặc trên điện thoại.</p>
-    <a class="btn btn-steam" href="/auth/steam">Đăng nhập bằng Steam</a>
-  </section>
-
-  <section id="player" hidden>
-    <div class="grid">
-      <div class="card">
-        <h2 id="dino-title">Dino hiện tại</h2>
-        <div id="dino"></div>
+    <a href="#home" class="brand">
+      <img class="brand-logo" src="/img/logo-96.webp" width="46" height="46" alt="Logo server">
+      <div class="brand-info">
+        <h1 id="srv-name">The Isle Evrima</h1>
+        <p>Cổng Người Chơi · Gateway Live Server</p>
       </div>
-      <div class="card">
-        <h2>Thống kê</h2>
-        <div class="stats" id="stats"></div>
+    </a>
+    <div class="header-actions">
+      <!-- Xóm Gáy Launcher: "play" inside the app, "download" on the web (app.js). -->
+      <button type="button" class="btn btn-ghost game-mode-btn" id="game-mode" aria-pressed="false" hidden title="Thu launcher xuống khay, chỉ giữ các khung overlay bạn chọn">🎮 Chế độ chơi game</button>
+      <button type="button" class="btn btn-emerald" id="play-game" hidden>▶ Chơi The Isle</button>
+      <a class="btn btn-ghost" id="get-launcher" href="/tai.html">⬇ Tải launcher</a>
+      <div id="auth-actions"></div>
+    </div>
+  </header>
+
+  <!-- Error display -->
+  <div id="error" class="err" hidden></div>
+
+  <!-- Primary Navigation (6 Pages) -->
+  <nav class="nav-bar">
+    <button type="button" class="nav-btn active" data-nav="home">
+      <span class="icon">🏠</span>Trang chủ
+    </button>
+    <button type="button" class="nav-btn" data-nav="game">
+      <span class="icon">🦖</span>Game
+      <span class="nav-badge" id="nav-dino-badge" hidden>Live</span>
+    </button>
+    <button type="button" class="nav-btn" data-nav="gara">
+      <span class="icon">🏡</span>Gara
+      <span class="nav-badge" id="nav-gara-badge">0</span>
+    </button>
+    <button type="button" class="nav-btn" data-nav="map">
+      <span class="icon">🗺️</span>Bản đồ
+    </button>
+    <button type="button" class="nav-btn" data-nav="ranking">
+      <span class="icon">🏆</span>Bảng xếp hạng
+    </button>
+    <button type="button" class="nav-btn" data-nav="skin">
+      <span class="icon">🎨</span>Skin
+    </button>
+    <button type="button" class="nav-btn" data-nav="voice">
+      <span class="icon">🎙️</span>Voice gần
+      <span class="nav-voice-dot" id="nav-voice-dot" role="img" hidden></span>
+    </button>
+    <button type="button" class="nav-btn" data-nav="overlay" id="nav-overlay" hidden>
+      <span class="icon">🖥️</span>Overlay
+    </button>
+  </nav>
+
+  <!-- ==========================================
+       PAGE 1: HOME (Trang chủ)
+       ========================================== -->
+  <section id="page-home" class="page-content">
+    <!-- Hero Banner with Server Intro -->
+    <div class="hero-banner">
+      <div class="hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge">🌿 CỘNG ĐỒNG THE ISLE EVRIMA VIỆT NAM</div>
+        <h2 class="hero-title">Thế Giới Sinh Tồn Hoang Dã Khắc Nghiệt</h2>
+        <p class="hero-desc">
+          Trải nghiệm hệ sinh thái khủng long chân thực trên bản đồ <b>Gateway</b>. 
+          Hệ thống máy chủ tối ưu hóa mượt mà, lưu trữ Gara Dino an toàn chống nhân bản, bản đồ vệ tinh thời gian thực và quản lý nhiệm vụ sinh tồn thông minh.
+        </p>
+        <div class="hero-cta">
+          <div id="hero-auth-btn">
+            <a class="btn btn-steam" href="/auth/steam">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 1 10 10c0 4.88-3.5 8.94-8.1 9.8l-2.45-3.5c.34-.1.65-.27.9-.5l.05-.05c1.4-1.37 1.4-3.6 0-4.97a3.53 3.53 0 0 0-4.96 0c-.26.25-.43.55-.53.88L3.2 12.3A10 10 0 0 1 12 2zm-4.3 13.9a2.12 2.12 0 1 1 3-3 2.12 2.12 0 0 1-3 3zm10.7-3.9a1.41 1.41 0 1 1 0-2.82 1.41 1.41 0 0 1 0 2.82z"/></svg>
+              Đăng nhập bằng Steam
+            </a>
+          </div>
+          <a class="btn btn-discord" id="srv-discord" href="#" target="_blank" rel="noopener" hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+            Tham gia Discord
+          </a>
+          <button type="button" class="btn btn-ghost" data-switch-tab="map">Khám phá Bản đồ</button>
+        </div>
+      </div>
+      <img class="hero-logo" src="/img/logo-640.webp" width="300" height="300" alt="Logo server Xóm Gáy — The Isle">
       </div>
     </div>
-    <div class="card" style="margin-top:14px">
-      <h2>Bản đồ <span class="muted" style="font-weight:500;font-size:12px">· vị trí dino của bạn, cập nhật mỗi giây</span></h2>
+
+    <!-- Xóm Gáy Launcher: download (web only — app.js hides it inside the launcher) -->
+    <div class="launcher-promo" id="launcher-promo">
+      <div class="lp-info">
+        <img class="lp-logo" src="/img/logo-96.webp" width="64" height="64" alt="">
+        <div>
+          <div class="lp-badge"><span class="lp-new">MỚI</span> Xóm Gáy Launcher <span id="lp-version"></span></div>
+          <h3 class="lp-title">Chơi trọn vẹn hơn với launcher của server</h3>
+          <ul class="lp-feats">
+            <li>🎙️ Voice gần — nói được cả khi đang trong game</li>
+            <li>🗺️ Overlay mini map · 🦖 máu dino · 🏆 nhiệm vụ Prime</li>
+            <li>🏡 Gara, bản đồ live, xếp hạng — một cú click</li>
+          </ul>
+        </div>
+      </div>
+      <div class="lp-cta">
+        <a class="lp-btn" id="lp-btn" href="/tai.html">
+          <span class="lp-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m6.5 10 5.5 5.5L17.5 10"/><path d="M4 20h16"/></svg></span>
+          <span class="lp-text"><b>Tải launcher</b><small id="lp-os">cho Windows · miễn phí</small></span>
+        </a>
+        <a class="lp-more" href="/tai.html">Xem thêm: bản cho Linux &amp; hướng dẫn cài</a>
+      </div>
+    </div>
+
+    <!-- Realtime Server Status & Online Slots -->
+    <div class="status-bar-card">
+      <div class="status-main">
+        <div class="status-icon-wrap">🌐</div>
+        <div class="status-texts">
+          <h3>
+            <span class="dot" id="srv-dot"></span>
+            <span id="srv-status-text">Đang kiểm tra server…</span>
+          </h3>
+          <p id="srv-sub-text">Bản đồ Gateway · Unreal Engine 5.6</p>
+        </div>
+      </div>
+      <div class="player-meter-wrap">
+        <div class="player-meter-header">
+          <span>Người chơi trực tuyến</span>
+          <span id="srv-slots-text">0 / 100</span>
+        </div>
+        <div class="meter-bar">
+          <div class="meter-fill" id="srv-meter-fill" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature highlights -->
+    <div class="grid-4">
+      <div class="feature-card">
+        <div class="feature-icon">🦖</div>
+        <h3>Theo dõi Dino</h3>
+        <p>Xem chỉ số sinh tồn GAS realtime: Máu, Thể lực, Dạ dày, Nước và Oxy cập nhật mỗi giây.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🚗</div>
+        <h3>Gara An Toàn</h3>
+        <p>Lưu giữ dino của bạn an toàn bằng lệnh chat trong game. Khôi phục đúng loài, đúng vị trí.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗺️</div>
+        <h3>Bản Đồ Live</h3>
+        <p>Bản đồ Gateway chi tiết với vệt di chuyển 15 phút, tọa độ chính xác và các khu vực di cư.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👑</div>
+        <h3>Nhiệm Vụ Prime</h3>
+        <p>Hệ thống theo dõi 10 điều kiện tiến hóa Elder, thanh mốc growth và kiểm tra đạt/chưa đạt.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       PAGE 2: GAME (Thông tin Dino - Nhiệm vụ - Thống kê)
+       ========================================== -->
+  <section id="page-game" class="page-content" hidden>
+    <!-- Logged in Dino Status Card -->
+    <div class="dino-hero-card">
+      <div class="dino-header">
+        <div>
+          <span class="tag info" style="margin-bottom:8px">ĐANG ĐIỀU KHIỂN</span>
+          <h2 class="dino-species" id="game-dino-species">Chưa vào game</h2>
+          <p class="muted" id="game-dino-status" style="margin:4px 0 0;font-size:13px">Vào server để theo dõi chỉ số trực tiếp.</p>
+        </div>
+        <div class="dino-growth-badge" id="game-dino-growth">Growth: 0%</div>
+      </div>
+
+      <!-- Growth bar -->
+      <div style="margin-top:12px">
+        <div class="player-meter-header">
+          <span class="muted" style="font-size:12px">Tiến trình trưởng thành</span>
+          <span id="game-growth-pct" style="font-weight:700">0%</span>
+        </div>
+        <div class="meter-bar" style="height:10px">
+          <div class="meter-fill" id="game-growth-fill" style="width: 0%; background: linear-gradient(90deg, #10b981, #06b6d4)"></div>
+        </div>
+      </div>
+
+      <!-- Live Vitals Grid -->
+      <div class="vitals-grid" id="game-vitals">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Prime Quests Section -->
+    <div class="card" id="game-prime-card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">👑 Nhiệm Vụ Prime Elder</h3>
+          <span class="card-subtitle">Tiến hóa lên hình thái trưởng thành tối thượng</span>
+        </div>
+        <div id="game-prime-verdict"></div>
+      </div>
+
+      <div id="game-prime-content">
+        <p class="muted" style="font-size:13px">Chưa có dữ liệu nhiệm vụ. Hãy sinh tồn và phát triển dino.</p>
+      </div>
+    </div>
+
+    <!-- Player Lifetime Statistics -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">📊 Thống Kê Người Chơi</h3>
+          <span class="card-subtitle">Tổng thành tích ghi nhận trên server</span>
+        </div>
+      </div>
+      <div class="grid-3" id="game-stats-grid">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       PAGE 3: GARA (Dino Storage & Chức năng)
+       ========================================== -->
+  <section id="page-gara" class="page-content" hidden>
+    <!-- Player chat commands: one row on top -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">⚡ Các Lệnh Chat Trực Tuyến</h3>
+          <span class="card-subtitle">Gõ lệnh trực tiếp trong ô chat ingame</span>
+        </div>
+      </div>
+      <div class="commands-row">
+          <div class="command-card">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span class="command-code">!unstuck</span>
+                <b style="font-size:13px">Cứu hộ kẹt địa hình</b>
+              </div>
+              <p class="muted" style="margin:0;font-size:12px">Dịch chuyển về mặt đất an toàn gần nhất khi bị rơi vào khe đá (chờ 10p).</p>
+            </div>
+            <button type="button" class="btn btn-copy" data-copy="!unstuck">Copy</button>
+          </div>
+
+          <div class="command-card">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span class="command-code">!slay</span>
+                <b style="font-size:13px">Tự giải thoát</b>
+              </div>
+              <p class="muted" style="margin:0;font-size:12px">Tự sát an toàn để quay lại màn hình chọn loài mới (chờ 5p).</p>
+            </div>
+            <button type="button" class="btn btn-copy" data-copy="!slay">Copy</button>
+          </div>
+
+          <div class="command-card">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span class="command-code">!status</span>
+                <b style="font-size:13px">Kiểm tra chỉ số</b>
+              </div>
+              <p class="muted" style="margin:0;font-size:12px">In thông số máu, đói, khát, tọa độ hiện tại vào chat.</p>
+            </div>
+            <button type="button" class="btn btn-copy" data-copy="!status">Copy</button>
+          </div>
+
+          <div class="command-card">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span class="command-code">!prime</span>
+                <b style="font-size:13px">Kiểm tra điều kiện Elder</b>
+              </div>
+              <p class="muted" style="margin:0;font-size:12px">Xem số nhiệm vụ Prime đã hoàn thành trong đời sống.</p>
+            </div>
+            <button type="button" class="btn btn-copy" data-copy="!prime">Copy</button>
+          </div>
+      </div>
+    </div>
+
+    <!-- Garage: below, full width -->
+    <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">🚗 Dino Đang Cất Trong Gara</h3>
+            <span class="card-subtitle">Lưu giữ an toàn, khôi phục khi cần chơi</span>
+          </div>
+          <span class="tag" id="gara-count-tag">0 slot</span>
+        </div>
+        <!-- Store / redeem from the web: the same checks as the chat commands -->
+        <div class="garage-actions">
+          <div class="garage-store-row">
+            <button type="button" class="btn btn-emerald" id="gara-store-btn" disabled>📥 Cất dino đang chơi</button>
+          </div>
+          <label class="garage-where" id="gara-where-box" hidden>
+            Lấy ra tại
+            <select id="gara-where">
+              <option value="here">chỗ đang đứng</option>
+              <option value="stored">chỗ đã cất</option>
+            </select>
+          </label>
+          <p class="muted garage-hint" id="gara-store-hint">Đăng nhập và vào game để cất / lấy dino.</p>
+          <div class="garage-status" id="gara-status" role="status" aria-live="polite" hidden></div>
+        </div>
+        <ul class="garage-list" id="gara-slots-list">
+          <li class="muted" style="padding:16px;text-align:center">Chưa có dino nào trong gara.</li>
+        </ul>
+      </div>
+  </section>
+
+  <!-- ==========================================
+       PAGE 4: BẢN ĐỒ (Live Map Gateway)
+       ========================================== -->
+  <section id="page-map" class="page-content" hidden>
+    <div class="card" style="padding:18px">
+      <div class="card-header" style="margin-bottom:12px">
+        <div>
+          <h3 class="card-title">🗺️ Bản Đồ Vệ Tinh Gateway</h3>
+          <span class="card-subtitle">Vị trí và góc nhìn Dino của bạn, cập nhật thời gian thực mỗi giây</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="tag" id="map-status-tag">Live tracking</span>
+        </div>
+      </div>
       <div id="map"></div>
     </div>
-    <div class="card" id="prime-card" style="margin-top:14px" hidden>
-      <h2>Nhiệm vụ Prime</h2>
-      <div id="prime-board"></div>
-    </div>
-    <div class="tabs" style="margin-top:14px">
-      <button type="button" data-tab="garage" class="on">Gara</button>
-      <button type="button" data-tab="lives">Các đời dino</button>
-      <button type="button" data-tab="board">Bảng xếp hạng</button>
-    </div>
-    <div class="card" data-panel="garage">
-      <h2>Gara</h2>
-      <ul class="list" id="garage"></ul>
-      <p class="muted" style="font-size:12px;margin:10px 0 0">Trong game: <b>!store</b> để cất, respawn đúng loài rồi <b>!redeem &lt;slot&gt;</b> để lấy ra.</p>
-    </div>
-    <div class="card" data-panel="lives" hidden><h2>Các đời dino</h2><ul class="list" id="lives"></ul></div>
-    <div class="card" data-panel="board" hidden><h2>Nhiều kill nhất</h2><ul class="list" id="board"></ul></div>
   </section>
+
+  <!-- ==========================================
+       PAGE 5: BẢNG XẾP HẠNG (Leaderboard & Logs)
+       ========================================== -->
+  <section id="page-ranking" class="page-content" hidden>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">🏆 Bảng Xếp Hạng & Lịch Sử Sinh Tồn</h3>
+          <span class="card-subtitle">Thành tích thợ săn đỉnh cao và nhật ký chiến đấu</span>
+        </div>
+      </div>
+
+      <div class="ranking-tabs">
+        <button type="button" class="ranking-tab-btn active" data-rtab="kills">⚔️ Top Hạ Gục (Kills)</button>
+        <button type="button" class="ranking-tab-btn" data-rtab="playtime">⏱️ Top Giờ Chơi</button>
+        <button type="button" class="ranking-tab-btn" data-rtab="longestLife">👑 Kỷ Lục Sống Lâu</button>
+        <button type="button" class="ranking-tab-btn" data-rtab="lives">📜 Các Đời Dino Của Bạn</button>
+      </div>
+
+      <div id="ranking-content">
+        <ul class="leaderboard-list" id="ranking-list">
+          <li class="muted" style="padding:16px;text-align:center">Đang tải bảng xếp hạng…</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       PAGE 6: SKIN (Tùy chỉnh màu & Khung ảnh xem trước)
+       ========================================== -->
+  <section id="page-skin" class="page-content" hidden>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">🎨 Tùy Chỉnh Màu Sắc Dino</h3>
+          <span class="card-subtitle">Phối màu các vùng cơ thể theo chuẩn sRGB Unreal Engine</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-ghost" id="btn-load-my-skin" style="font-size:12px;padding:6px 12px">
+            Lấy màu từ Dino đang chơi
+          </button>
+        </div>
+      </div>
+
+      <!-- Active skin swatches summary -->
+      <div id="skin-active-swatches-box" style="margin-bottom:20px" hidden>
+        <h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted)">Bảng màu đang sử dụng ingame:</h4>
+        <div id="skin-active-swatches" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
+      <!-- Region Color Pickers -->
+      <h3 style="margin:0 0 14px;font-size:15px;font-weight:700">Chỉnh màu theo 10 vùng cơ thể:</h3>
+      <div class="regions-grid" id="skin-regions-grid">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Preset palettes -->
+      <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border)">
+        <h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted)">Bảng màu gợi ý (Presets):</h4>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="skin-presets-bar">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       PAGE 7: VOICE GẦN (voice.js)
+       ========================================== -->
+  <section id="page-voice" class="page-content" hidden>
+    <div class="card" id="v-login-card" hidden>
+      <div class="card-header"><h2 class="card-title">🎙️ Đăng nhập để dùng voice</h2></div>
+      <p class="card-subtitle">Voice gắn với tài khoản Steam bạn dùng trong game — bạn nghe và được nghe bởi những người ở gần dino của bạn.</p>
+      <p style="margin:14px 0 0"><a class="btn btn-steam" href="/auth/steam?next=voice">Đăng nhập bằng Steam</a></p>
+    </div>
+
+    <div class="card" id="v-join-card" hidden>
+      <div class="card-header"><h2 class="card-title">🎙️ Kênh voice gần</h2></div>
+      <div class="v-join-row">
+        <button type="button" class="btn btn-emerald btn-big" id="v-join">Vào kênh voice</button>
+        <button type="button" class="btn btn-danger btn-big" id="v-leave" hidden>Rời kênh</button>
+        <div class="v-chips">
+          <span class="v-chip" id="v-conn-chip">○ Chưa vào kênh</span>
+          <span class="v-chip" id="v-game-chip" hidden></span>
+        </div>
+      </div>
+      <p class="v-note" id="v-join-note">Cần quyền dùng micro. Voice tiếp tục chạy khi bạn chuyển sang các tab khác.</p>
+    </div>
+
+    <div class="card" id="v-range-card" hidden>
+      <div class="card-header">
+        <h2 class="card-title">Tầm giọng nói</h2>
+        <span class="card-subtitle">ai ở trong tầm này mới nghe thấy bạn</span>
+      </div>
+      <div class="v-seg v-seg-range" role="group" aria-label="Tầm giọng nói">
+        <button type="button" data-range="15" aria-pressed="false"><b>15 m</b> Thì thầm</button>
+        <button type="button" data-range="30" aria-pressed="true"><b>30 m</b> Nói thường</button>
+        <button type="button" data-range="60" aria-pressed="false"><b>60 m</b> Nói to</button>
+        <button type="button" data-range="90" aria-pressed="false"><b>90 m</b> Hét</button>
+      </div>
+      <div class="v-keys">
+        <button type="button" class="btn btn-ghost" id="v-range-key">Phím đổi tầm: <kbd id="v-range-key-name">` ~</kbd></button>
+        <span id="v-range-hint"></span>
+      </div>
+      <p class="v-note" id="v-range-note">Càng gần bạn càng nghe to; ra tới mép tầm thì nhỏ dần rồi tắt.</p>
+    </div>
+
+    <div class="card" id="v-mic-card" hidden>
+      <div class="card-header">
+        <h2 class="card-title">Micro</h2>
+        <span class="card-subtitle" id="v-mode-help"></span>
+      </div>
+      <div class="v-seg v-seg-mode" role="group" aria-label="Chế độ micro">
+        <button type="button" data-mode="vad" aria-pressed="true">Tự nhận giọng</button>
+        <button type="button" data-mode="ptt" aria-pressed="false">Giữ phím để nói</button>
+        <button type="button" data-mode="off" aria-pressed="false">Tắt mic</button>
+      </div>
+      <div class="v-subhead">Khử tiếng ồn</div>
+      <div class="v-seg v-seg-noise" role="group" aria-label="Khử tiếng ồn">
+        <button type="button" data-noise="off" aria-pressed="false">Tắt</button>
+        <button type="button" data-noise="browser" aria-pressed="false">Cơ bản</button>
+        <button type="button" data-noise="ai" aria-pressed="true">Mạnh (AI)</button>
+      </div>
+      <p class="v-note" id="v-noise-note" style="margin-top:6px"></p>
+      <div class="v-meter" aria-hidden="true"><div class="lvl" id="v-lvl"></div><div class="thr" id="v-thr"></div></div>
+      <div class="v-talk" id="v-talk"><span class="dot"></span><span id="v-talk-text">Đang im lặng</span></div>
+      <div class="v-grid">
+        <label class="v-field" id="v-thr-field">Độ nhạy (vạch vàng — nói to hơn vạch thì mới phát)
+          <input type="range" id="v-threshold" min="-80" max="-20" step="1" value="-50">
+        </label>
+        <div class="v-field" id="v-ptt-field" hidden><span id="v-ptt-hint">Phím nói (trên web chỉ khi trang này đang được chọn — dùng Xóm Gáy Launcher để nói cả khi đang trong game)</span>
+          <button type="button" class="btn btn-ghost" id="v-ptt-key">Phím: <kbd id="v-ptt-key-name">V</kbd> — bấm để đổi</button>
+        </div>
+        <label class="v-field">Âm lượng nghe
+          <input type="range" id="v-master" min="0" max="150" step="5" value="100">
+        </label>
+        <label class="v-field">Micro
+          <select id="v-mic-dev"></select>
+        </label>
+        <label class="v-field" id="v-out-field">Loa / tai nghe
+          <select id="v-out-dev"></select>
+        </label>
+      </div>
+    </div>
+
+    <div class="card" id="v-peers-card" hidden>
+      <div class="card-header"><h2 class="card-title">Đang nói gần bạn</h2></div>
+      <ul class="v-peers" id="v-peers"></ul>
+      <p class="v-empty" id="v-peers-empty">Chưa có ai nói gần bạn.</p>
+    </div>
+    <div class="v-toast" id="v-toast" role="status" hidden></div>
+  </section>
+
+  <!-- ==========================================
+       PAGE 8: OVERLAY (overlay-settings.js; Xóm Gáy Launcher only)
+       ========================================== -->
+  <section id="page-overlay" class="page-content" hidden>
+    <div class="card" id="v-overlay-card">
+      <div class="card-header">
+        <h2 class="card-title">🖥️ Overlay trong game</h2>
+        <span class="card-subtitle">các khung nhỏ nằm đè lên game: voice, mini map, thông số dino, nhiệm vụ</span>
+      </div>
+      <div id="ov-web">
+        <p class="v-note" style="margin-top:0">Overlay chỉ có trong <b>Xóm Gáy Launcher</b> (trình duyệt không vẽ được lên game).
+          <a href="/tai.html" style="color:var(--emerald-light)">Tải launcher</a></p>
+      </div>
+      <div id="ov-app" hidden>
+        <div class="ov-top">
+          <label class="ov-switch"><input type="checkbox" id="ov-enabled"><span>Bật overlay</span></label>
+          <button type="button" class="btn btn-ghost" id="ov-drag">✥ Chỉnh ngay trên màn hình</button>
+          <button type="button" class="btn btn-ghost" id="ov-preview">Xem thử 6 giây</button>
+          <button type="button" class="btn btn-ghost" id="ov-key">Bật/tắt: <kbd id="ov-key-name">F8</kbd></button>
+          <button type="button" class="btn btn-ghost" id="ov-edit-key">Chỉnh sửa: <kbd id="ov-edit-key-name">F9</kbd></button>
+        </div>
+        <p class="v-note">Trong game overlay <b>chỉ để nhìn</b>: chuột bấm xuyên qua xuống game, không lấy focus — không ảnh hưởng thao tác.
+          <kbd>F8</kbd> bật / tắt overlay · <kbd>F9</kbd> vào chế độ chỉnh ngay trên màn hình (kéo thả, kéo mép đổi cỡ, ✕ tắt / ＋ bật từng khung), bấm <kbd>F9</kbd> lần nữa là xong.
+          Overlay là cửa sổ riêng, không đụng vào game (không lo anti-cheat); để nó nằm trên game, chỉnh The Isle sang <b>Borderless</b> hoặc <b>Windowed</b> (Settings → Display → Window Mode).
+        </p>
+        <div class="ov-gm">
+          <div><b>🎮 Chế độ chơi game</b> — thu launcher xuống khay, trang không vẽ gì; overlay chỉ giữ:</div>
+          <div class="ov-checks" id="ov-gm-keep"></div>
+          <p class="v-note" style="margin-top:4px">Bật bằng nút 🎮 trên đầu trang, trong khay hệ thống, hoặc tự bật khi bấm ▶ Chơi The Isle. Voice vẫn chạy.</p>
+        </div>
+        <div class="v-subhead">Bố cục trên màn hình</div>
+        <div class="ov-stage-wrap"><div class="ov-stage" id="ov-stage"></div></div>
+        <p class="v-note" id="ov-stage-note">Kéo một khung để di chuyển · rê chuột vào mép hoặc góc khung rồi kéo để phóng to / thu nhỏ · thả ở đâu cũng được, kể cả màn hình khác. Overlay thật di chuyển theo ngay.</p>
+        <div class="ov-tabs" role="tablist" id="ov-tabs"></div>
+        <div id="ov-panel"></div>
+      </div>
+    </div>
+  </section>
+
 </div>
+
 <script type="module" src="/app.js"></script>
+<script src="/voice.js" defer></script>
+<script src="/overlay-settings.js" defer></script>
 </body>
 </html>

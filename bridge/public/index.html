@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Isle Server Panel</title>
+<link rel="icon" type="image/png" href="img/favicon-64.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -35,9 +36,14 @@
     --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
     --map-bg: #0d2350;
     --radius: 14px;
+    /* Performance charts: dataviz reference categorical slots 1–2, validated on
+       this surface (light #ffffff / dark #10141b); status colours are reserved. */
+    --series-1: #2a78d6; --series-2: #eb6834;
+    --status-good: #0ca30c; --status-warning: #fab219; --status-critical: #d03b3b;
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
+    --series-1: #3987e5; --series-2: #d95926;
     --bg: #090b10;
     --bg-glow: radial-gradient(1200px 600px at 10% -10%, rgba(16, 185, 129, 0.13), transparent 60%),
                radial-gradient(900px 500px at 110% 10%, rgba(99, 102, 241, 0.10), transparent 60%);
@@ -93,12 +99,8 @@
     backdrop-filter: blur(12px);
   }
   .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
-  .brand-mark {
-    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
-    background: linear-gradient(135deg, var(--accent-2), #6366f1); color: #fff;
-    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
-  }
-  .brand-mark svg.i { width: 20px; height: 20px; }
+  /* The server's logo (same as the player portal: portal/assets/server-logo.png). */
+  .brand-logo { width: 40px; height: 40px; border-radius: 50%; flex: none; display: block; object-fit: cover; background: #000; box-shadow: 0 4px 14px rgba(250, 204, 21, 0.22); }
   .brand b { display: block; font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
   .brand span { display: block; font-size: 11.5px; color: var(--muted); }
   nav { display: flex; flex-direction: column; gap: 2px; }
@@ -532,6 +534,43 @@
   .map-layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 1100px) { .map-layout { grid-template-columns: minmax(0, 1fr) 320px; } }
   .map-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .audit-table-wrap { overflow-x: auto; }
+  .audit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .audit-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  .audit-table { table-layout: fixed; }
+  .audit-table th, .audit-table td { text-align: left !important; display: table-cell !important; }
+  .audit-table th:nth-child(1) { width: 110px; } .audit-table th:nth-child(2) { width: 200px; } .audit-table th:nth-child(3) { width: 190px; }
+  .audit-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .audit-table td.who .id { display: block; }
+  .audit-table td.when { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .audit-table td.when .d { color: var(--muted); font-size: 11.5px; }
+  .audit-table td.who .id { color: var(--muted); font-size: 11.5px; font-family: var(--mono, ui-monospace, monospace); }
+  .audit-table td.what { white-space: nowrap; font-weight: 650; }
+  .audit-table td.what.fail { color: var(--kill, #ef4444); }
+  .audit-table td.detail { overflow-wrap: anywhere; color: var(--text); }
+  .audit-table td.detail .err { color: var(--kill, #ef4444); }
+  .audit-pager { display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; font-size: 12.5px; }
+  .audit-pager button { min-width: 34px; }
+  .audit-pager button.on { background: var(--accent-2, #10b981); color: #fff; border-color: transparent; }
+  .audit-pager .muted { margin-right: auto; }
+  .az { display: flex; flex-direction: column; gap: 10px; }
+  .az-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; font-size: 13px; }
+  .az-row input[type=checkbox] { width: 15px; height: 15px; flex: none; accent-color: #fb923c; }
+  label.az-row { justify-content: flex-start; cursor: pointer; }
+  .az-row input:not([type=checkbox]) { max-width: 60%; }
+  .az-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .az-list li { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; cursor: pointer; font-size: 13px; }
+  .az-list li.on { border-color: #fb923c; background: color-mix(in srgb, #fb923c 12%, transparent); }
+  .az-list li.off { opacity: .6; }
+  .az-list .n { margin-left: auto; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .az-edit { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+  .az-species { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 3px 8px; max-height: 190px; overflow: auto; font-size: 12.5px; }
+  .az-species label { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 6px; margin: 0; cursor: pointer; font-weight: 500; color: var(--text); text-align: left; }
+  .az-species input { width: 15px; height: 15px; flex: none; margin: 0; accent-color: #fb923c; }
+  .az-species .k { grid-column: 1 / -1; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: 4px; }
+  .az-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+  .az-grid label { display: flex; flex-direction: column; gap: 3px; margin: 0; font-size: 11.5px; color: var(--muted); }
+  .map-wrap.placing canvas { cursor: crosshair; }
   .map-wrap { position: relative; border-radius: 12px; overflow: hidden; background: var(--map-bg); }
   .map-wrap:fullscreen { border-radius: 0; }
   canvas#map { width: 100%; aspect-ratio: 1 / 1; max-height: 80vh; display: block; cursor: grab; touch-action: none; }
@@ -564,6 +603,29 @@
   .map-results button:hover { background: var(--surface-2); }
   .map-results small { color: var(--muted); margin-left: auto; white-space: nowrap; }
   #map-list li { cursor: pointer; }
+
+  /* ---- performance ------------------------------------------------------ */
+  .perf-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .perf-tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 14px 0 4px; }
+  .perf-tiles .tile .v small { font-size: 12px; color: var(--muted); font-weight: 600; margin-left: 4px; }
+  .perf-state { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; margin-top: 4px; }
+  .perf-state i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .perf-charts { display: grid; gap: 4px; margin-top: 10px; position: relative; }
+  .perf-chart { position: relative; }
+  .perf-chart h3 { margin: 10px 0 2px; font-size: 13px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .perf-chart h3 .legend-i { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .perf-chart h3 .legend-i i { width: 14px; height: 2px; border-radius: 2px; display: inline-block; }
+  .perf-chart svg { display: block; width: 100%; height: 150px; overflow: visible; }
+  .perf-chart .axis { fill: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .perf-chart .grid { stroke: var(--border); stroke-width: 1; }
+  .perf-chart .ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: .7; }
+  .perf-chart .ref-label { fill: var(--muted); font-size: 10.5px; }
+  .perf-chart .cross { stroke: var(--text); stroke-width: 1; opacity: .35; }
+  .perf-tip { position: absolute; z-index: 3; pointer-events: none; min-width: 170px; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: var(--shadow); font-size: 12px; line-height: 1.55; }
+  .perf-tip b { font-variant-numeric: tabular-nums; }
+  .perf-tip .row { display: flex; justify-content: space-between; gap: 14px; }
+  .perf-empty { padding: 28px 0; text-align: center; color: var(--muted); font-size: 13px; }
+  .cap-table td, .cap-table th { font-variant-numeric: tabular-nums; }
 
   /* ---- chat ----------------------------------------------------------- */
   .chat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -600,13 +662,18 @@
   .result { font-size: 13px; margin-top: 12px; min-height: 20px; font-weight: 600; }
   .result.ok { color: var(--accent); }
   .result.err { color: var(--kill); }
+  .me-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 12px; margin-bottom: 8px; }
+  .me-card .me-who { display: flex; flex-direction: column; min-width: 0; }
+  .me-card .me-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .me-card .sub { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .me-card button { flex: none; padding: 5px 10px; font-size: 12px; }
 </style>
 </head>
 <body>
 <div class="app">
   <aside>
     <div class="brand">
-      <div class="brand-mark"><svg class="i" viewBox="0 0 24 24"><path d="M4 18c2-6 5-9 9-9 3 0 5 1.5 6 4l2 1-2 1c-.6 2-2.4 3-5 3H9l-2 3-1-3H4z"/><circle cx="16" cy="12" r=".6"/></svg></div>
+      <img class="brand-logo" src="img/logo-96.webp" width="40" height="40" alt="Logo server">
       <div><b>Isle Panel</b><span>Evrima server admin</span></div>
     </div>
     <nav id="tabs"></nav>
@@ -614,6 +681,10 @@
       <div class="server-card">
         <div class="row"><span class="pulse" id="dot"></span><span id="status-title">Đang kết nối…</span></div>
         <div class="sub" id="status-sub">&nbsp;</div>
+      </div>
+      <div class="me-card" id="me-card" hidden>
+        <div class="me-who"><b id="me-name"></b><span class="sub mono" id="me-sub"></span></div>
+        <button type="button" class="btn-ghost" id="logout">Đăng xuất</button>
       </div>
       <button class="theme-btn" id="theme" type="button"></button>
     </div>
@@ -735,6 +806,38 @@
           <div class="legend" id="map-legend"></div>
         </div></section>
         <div class="map-side">
+          <section class="card" id="az-card">
+            <div class="card-head"><h2>Vùng AI</h2><span class="sub">mod AIZones</span></div>
+            <div class="card-body az">
+              <label class="az-row"><input type="checkbox" id="az-enabled"> <b>Bật vùng AI</b></label>
+              <div class="az-row"><label for="az-global">Tổng AI toàn server tối đa</label>
+                <input id="az-global" type="number" min="0" max="5000" step="10" style="width:90px"></div>
+              <div class="step-hint" id="az-status"></div>
+              <ul class="az-list" id="az-list"></ul>
+              <button type="button" class="btn-soft sm" id="az-add">+ Thêm vùng — bấm lên bản đồ để đặt tâm</button>
+              <div class="az-edit" id="az-edit" hidden>
+                <div class="az-row"><label for="az-name">Tên vùng</label><input id="az-name" maxlength="40"></div>
+                <label class="az-row"><input type="checkbox" id="az-zenabled"> Vùng đang bật</label>
+                <div class="az-row"><label for="az-radius">Bán kính (m)</label><input id="az-radius" type="number" min="50" max="5000" step="50"></div>
+                <div class="group-label" style="margin:6px 0 2px">Loại AI</div>
+                <div class="az-species" id="az-species"></div>
+                <div class="az-grid">
+                  <label>Khi vắng người (tối đa)<input id="az-idle" type="number" min="0" max="200"></label>
+                  <label>Khi có người (tối đa)<input id="az-max" type="number" min="0" max="200"></label>
+                  <label>Sinh mỗi lượt<input id="az-perturn" type="number" min="1" max="5"></label>
+                  <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
+                  <label>Growth thấp nhất (%)<input id="az-gmin" type="number" min="10" max="100" step="5"></label>
+                  <label>Growth cao nhất (%)<input id="az-gmax" type="number" min="10" max="100" step="5"></label>
+                </div>
+                <div class="step-hint" id="az-points"></div>
+                <div class="az-row" style="gap:8px">
+                  <button type="button" class="btn-ghost sm" id="az-move">Đặt lại tâm</button>
+                  <button type="button" class="btn-ghost sm" id="az-del" style="color:var(--kill,#ef4444)">Xoá vùng</button>
+                </div>
+              </div>
+              <button type="button" class="btn" id="az-save">Lưu vùng AI</button>
+            </div>
+          </section>
           <section class="card">
             <div class="card-head"><h2>Trên bản đồ</h2><span class="sub">bấm để tới vị trí</span>
               <button type="button" class="btn-soft sm" id="map-clear-all" style="margin-left:auto" title="Chỉ ẩn trên trình duyệt này; vệt mới vẫn vẽ tiếp">Xóa mọi vệt</button></div>
@@ -757,7 +860,7 @@
 
     <!-- Chat -->
     <div data-view="chat" hidden>
-      <div class="page-head"><div><h1>Chat</h1><p>Toàn bộ chat trong game, kể cả lệnh <span class="mono">!store</span> / <span class="mono">!redeem</span>.</p></div></div>
+      <div class="page-head"><div><h1>Chat</h1><p>Toàn bộ chat trong game, kể cả các lệnh <span class="mono">!</span>.</p></div></div>
       <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
     </div>
 
@@ -881,26 +984,26 @@
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-gar" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🦖</span>
         <h2>Cấu hình · Gara</h2><span class="sub">lưu riêng, không nằm trong Game.ini</span></div>
       <section class="card">
-        <div class="card-head"><h2>Cài đặt gara</h2><span class="sub">có hiệu lực ngay ở lần <span class="mono">!redeem</span> kế tiếp — không cần khởi động lại</span></div>
+        <div class="card-head"><h2>Cài đặt gara</h2><span class="sub">người chơi cất / lấy dino trên trang web (mục Gara) — có hiệu lực ngay, không cần khởi động lại</span></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
           <div class="row" style="align-items:end">
-            <div style="flex:1;min-width:260px"><label for="gs-redeem-at">Khi lấy dino ra (<span class="mono">!redeem</span>), dino xuất hiện ở</label>
+            <div style="flex:1;min-width:260px"><label for="gs-redeem-at">Khi lấy dino ra, dino xuất hiện ở</label>
               <select id="gs-redeem-at">
                 <option value="current">Chỗ người chơi đang đứng</option>
-                <option value="stored">Điểm đã cất (vị trí lúc gõ !store)</option>
-                <option value="choice">Người chơi tự chọn khi gõ lệnh</option>
+                <option value="stored">Điểm đã cất (vị trí lúc bắt đầu cất)</option>
+                <option value="choice">Người chơi tự chọn trên web</option>
               </select></div>
           </div>
           <div class="cfg-grid">
             <div class="cfg-field"><label for="gs-max-slots">Số slot mỗi người chơi<span class="mono">maxSlots</span></label>
               <input id="gs-max-slots" type="number" min="1" max="20" step="1">
-              <div class="step-hint">Tối đa bao nhiêu dino được cất bằng !store (slot admin tạo cũng tính). Mặc định 2.</div></div>
+              <div class="step-hint">Tối đa bao nhiêu dino một người được cất (slot admin tạo cũng tính). Slot tự đánh số 1, 2, 3… Mặc định 2.</div></div>
             <div class="cfg-field"><label for="gs-countdown">Đếm ngược khi cất (giây)<span class="mono">storeCountdown</span></label>
               <input id="gs-countdown" type="number" min="0" max="300" step="1">
-              <div class="step-hint">Từ lúc gõ !store tới khi dino vào gara. Chưa lưu gì trong lúc đếm; thoát game = huỷ. Mặc định 30.</div></div>
+              <div class="step-hint">Từ lúc bấm Cất tới khi dino vào gara. Trong lúc đếm người chơi phải đứng trong 5 m, không gây / chịu sát thương, nếu không thì cất thất bại (không tính thời gian hồi). Mặc định 30.</div></div>
             <div class="cfg-field"><label for="gs-cooldown">Chờ giữa hai lần dùng gara (giây)<span class="mono">cooldown</span></label>
               <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
-              <div class="step-hint">Áp cho cả !store và !redeem, tính riêng từng người. Mặc định 60.</div></div>
+              <div class="step-hint">Sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người (cất thất bại không tính). Mặc định 60.</div></div>
           </div>
           <div class="row"><button type="button" class="btn" id="gs-save">Lưu cài đặt</button></div>
           <div class="step-hint" id="gs-help"></div>
@@ -929,10 +1032,71 @@
       </div></section>
       </div>
 
+      <div data-sub-panel="voice-settings" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🎙</span>
+        <h2>Cấu hình · Voice gần</h2><span class="sub">lưu riêng, có hiệu lực ngay</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="step-hint" id="vs-status"></div>
+        <div class="cfg-grid">
+          <div class="cfg-field"><label for="vs-name-mode">Người chơi thấy gì về người đang nói gần họ<span class="mono">nameMode</span></label>
+            <select id="vs-name-mode">
+              <option value="name">Hiện tên trong game</option>
+              <option value="id">Chỉ hiện mã (#A3F9)</option>
+              <option value="none">Không hiện gì</option>
+            </select>
+            <div class="step-hint" id="vs-help"></div></div>
+        </div>
+        <div class="row"><button type="button" class="btn" id="vs-save">Lưu cài đặt</button></div>
+      </div></section>
+      </div>
+
+      <div data-sub-panel="panel-access" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🔒</span>
+        <h2>Truy cập admin panel</h2><span class="sub">có hiệu lực ngay</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="step-hint" id="pa-status"></div>
+        <div class="cfg-field"><label for="pa-ips">Địa chỉ IP được vào panel qua web<span class="mono">mỗi dòng một IP, hoặc một dải: 1.2.3.0/24, 2405:4802:1d32:eec0::/64</span></label>
+          <textarea id="pa-ips" rows="5" spellcheck="false" class="mono"></textarea></div>
+        <div class="row" style="gap:8px">
+          <button type="button" class="btn-ghost" id="pa-add-me" hidden>Thêm IP của tôi</button>
+          <button type="button" class="btn" id="pa-save">Lưu danh sách</button>
+        </div>
+      </div></section>
+      </div>
+
+      <div data-sub-panel="perf" hidden>
+        <section class="card">
+          <div class="card-head perf-head"><h2>Hiệu năng server</h2>
+            <span class="sub">ServerFPS (tick của game), CPU và RAM theo thời gian — đo mỗi 10 giây, giữ 7 ngày</span>
+            <div class="seg" id="perf-range" role="group" aria-label="Khoảng thời gian" style="margin-left:auto">
+              <button type="button" data-range="1h">1 giờ</button><button type="button" data-range="6h" class="on">6 giờ</button>
+              <button type="button" data-range="24h">24 giờ</button><button type="button" data-range="7d">7 ngày</button>
+            </div></div>
+          <div class="card-body">
+            <div class="perf-tiles" id="perf-tiles"></div>
+            <div class="perf-charts" id="perf-charts"></div>
+            <details style="margin-top:12px"><summary class="muted" style="cursor:pointer;font-size:12.5px">Xem số liệu dạng bảng</summary>
+              <div class="table-wrap" style="max-height:320px;overflow:auto;margin-top:8px"><table id="perf-table"></table></div></details>
+          </div>
+        </section>
+        <section class="card" style="margin-top:18px">
+          <div class="card-head"><h2>Sức chứa theo số người online</h2>
+            <span class="sub">server đã chạy thế nào ở từng mức người chơi (7 ngày gần nhất) — FPS thấp là mức 5 % tệ nhất</span></div>
+          <div class="card-body table-wrap"><table class="cap-table" id="perf-capacity"></table>
+            <p class="step-hint" style="margin-top:10px" id="perf-cap-hint"></p></div>
+        </section>
+      </div>
       <div data-sub-panel="audit" hidden>
         <section class="card">
-          <div class="card-head"><h2>Lịch sử thao tác</h2><span class="sub">mọi thao tác admin trên panel</span></div>
-          <div class="card-body"><ul class="audit-list" id="srv-audit"></ul></div>
+          <div class="card-head"><h2>Nhật ký admin</h2><span class="sub">mọi thay đổi và mọi lượt đăng nhập panel · giữ 7 ngày rồi tự xoá</span>
+            <input type="search" id="audit-q" placeholder="Tìm: tên, SteamID, thao tác…" style="margin-left:auto;max-width:260px"></div>
+          <div class="card-body">
+            <div class="audit-table-wrap"><table class="audit-table">
+              <thead><tr><th>Thời gian</th><th>Admin</th><th>Thao tác</th><th>Thay đổi</th></tr></thead>
+              <tbody id="srv-audit"></tbody>
+            </table></div>
+            <div class="audit-pager" id="audit-pager"></div>
+          </div>
         </section>
       </div>
     </div>
@@ -945,7 +1109,7 @@
         <div class="card-body"><div class="slot-grid" id="garage"></div></div>
       </section>
       <section class="card" id="creator-card">
-        <div class="card-head"><h2>Tạo dino vào gara</h2><span class="sub">Người chơi gõ <span class="mono">!redeem &lt;slot&gt;</span> để nhận</span></div>
+        <div class="card-head"><h2>Tạo dino vào gara</h2><span class="sub">Người chơi nhận trên web (mục Gara → Lấy ra)</span></div>
         <div class="card-body">
           <form class="creator" id="create" autocomplete="off">
             <div>
@@ -970,7 +1134,7 @@
 
               <div class="step">
                 <div class="step-title"><span class="step-num">2</span>Chọn dino</div>
-                <div class="step-hint">Chỉ những loài đã từng có người chơi trên server này — <span class="mono">!redeem</span> so khớp
+                <div class="step-hint">Chỉ những loài đã từng có người chơi trên server này — việc lấy ra so khớp
                   chính xác classPath, nên loài đoán sai sẽ không ai nhận được.</div>
                 <div class="species-grid" id="f-species"></div>
                 <div><button class="link-btn" type="button" id="f-manual-toggle">Nhập classPath thủ công…</button></div>
@@ -1002,6 +1166,12 @@
                   <input id="f-nutrient" type="number" min="0" max="100" step="5" value="50" style="width:90px"> <span class="muted">%</span>
                 </div>
                 <div class="step-hint">Dạ dày được lấp đầy đúng mức tối đa game báo cho dino đó. Mức dinh dưỡng % áp dụng khi đã đo được giá trị tối đa của từng chất trên server (đang kiểm tra).</div>
+                <div class="row" style="margin-top:10px;align-items:center">
+                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" id="f-prime" style="width:auto"> 👑 Prime Elder</label>
+                  <label for="f-elder-stacks" style="margin:0 0 0 12px;flex:none">Elder stacks</label>
+                  <input id="f-elder-stacks" type="number" min="0" max="10" step="1" value="0" style="width:90px">
+                </div>
+                <div class="step-hint" id="f-prime-hint"></div>
               </div>
 
               <div class="step">
@@ -1025,7 +1195,7 @@
               <div class="step">
                 <div class="step-title"><span class="step-num">5</span>Xác nhận</div>
                 <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
-                  <div style="flex:1;min-width:200px"><label for="f-token">Admin token</label>
+                  <div style="flex:1;min-width:200px" id="f-token-wrap"><label for="f-token">Admin token</label>
                     <input id="f-token" type="password" placeholder="x-admin-token"></div>
                   <button class="btn" type="submit" id="f-submit">
                     <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tạo dino</button>
@@ -1053,7 +1223,7 @@
       <input id="modal-reason" maxlength="200" placeholder="vd: vi phạm luật server"></div>
     <div id="modal-text-wrap" hidden><label for="modal-text" id="modal-text-label"></label>
       <textarea id="modal-text" maxlength="500"></textarea></div>
-    <div><label for="modal-token">Admin token</label>
+    <div id="modal-token-wrap"><label for="modal-token">Admin token</label>
       <input id="modal-token" type="password" required placeholder="x-admin-token"></div>
     <div class="err" id="modal-err"></div>
     <div class="actions">
@@ -1127,9 +1297,37 @@ PATHS.server = '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="1
 PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>';
 
 // --- admin actions ------------------------------------------------------------
-// The token lives only in this page's memory: typed once per visit, never
-// written to storage, gone when the tab closes.
+// The token lives only in this page's memory, never in storage. Logged in
+// with Steam, it is the login's own token (from /api/me), filled in by itself;
+// the token boxes are then hidden.
 let adminToken = '';
+let sessionToken = false;
+
+/** The login ended (expired, or no longer an admin): back to the login page. */
+const toLogin = () => { location.href = '/login?e=expired'; };
+
+async function loadLogin() {
+  const r = await fetch('/api/me', { cache: 'no-store' });
+  if (r.status === 401 || r.status === 403) { toLogin(); return; }
+  const me = await r.json();
+  if (me.token) {
+    adminToken = me.token;
+    sessionToken = true;
+    $('modal-token-wrap').hidden = true;
+    $('f-token-wrap').hidden = true;
+    $('f-token').value = me.token;
+  }
+  if (me.steamId) {
+    $('me-name').textContent = me.name ?? 'Admin';
+    $('me-sub').textContent = `${me.steamId}${me.ip ? ` · ${me.ip}` : ' · SSH tunnel'}`;
+    $('me-card').hidden = false;
+  }
+}
+$('logout').addEventListener('click', async () => {
+  await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
+  location.href = '/login';
+});
+loadLogin().catch(() => {});
 
 function toast(text, kind = 'ok') {
   const el = document.createElement('div');
@@ -1154,6 +1352,7 @@ function confirmAction({ title, body, okLabel, withReason, run, text = null, dan
   $('modal-text-label').textContent = text?.label ?? '';
   $('modal-text').value = text?.value ?? '';
   $('modal-token').value = adminToken;
+  $('modal-token-wrap').hidden = sessionToken;
   $('modal-err').textContent = '';
   $('modal').hidden = false;
   (text !== null ? $('modal-text') : withReason ? $('modal-reason') : adminToken ? $('modal-ok') : $('modal-token')).focus();
@@ -1184,6 +1383,7 @@ async function adminFetch(url, method, token, body) {
     headers: { 'content-type': 'application/json', 'x-admin-token': token },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (res.status === 401) { toLogin(); throw new Error('Phiên đăng nhập đã hết — đăng nhập lại'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   return data;
@@ -1221,7 +1421,7 @@ function askKill(p) {
   confirmAction({
     title: 'Xoá dino đang chơi?',
     body: `Dino <b>${esc(dino(p.species))} ${pct(p.growth)}</b> của <b>${esc(p.name ?? p.steamId)}</b> sẽ chết ngay
-      (như khi <span class="mono">!store</span>) và người chơi phải respawn. <b>Không hoàn tác được.</b>
+      (như khi cất vào gara) và người chơi phải respawn. <b>Không hoàn tác được.</b>
       Cái chết này không bị tính vào thống kê.`,
     okLabel: 'Xoá dino',
     withReason: true,
@@ -1279,7 +1479,9 @@ const EV = {
   growth: ['growth', 'tone-grow'], growth_set: ['warn', 'tone-dmg'], mutation: ['spawn', 'tone-grow'],
   admin_kill: ['warn', 'tone-kill'],
   garage_store: ['garage', 'tone-gar'], garage_redeem: ['garage', 'tone-gar'],
+  portal_command: ['garage', 'tone-gar'],
 };
+const WEB_CMD_ERRORS = { offline: 'người chơi không online', expired: 'game không nhận kịp', bad_arguments: 'tham số sai', failed: 'lỗi trong game' };
 
 /** [main line, meta line] for one event. */
 function describe(e) {
@@ -1325,6 +1527,15 @@ function describe(e) {
            `lệnh #${e.id}${e.growth !== undefined ? ` · growth ${pct(e.growth)}` : ''}${e.reason ? ` · lý do: ${esc(e.reason)}` : ''}`]
         : [`Lệnh xoá dino của ${who(e.steamId, e.name)} thất bại`,
            `lệnh #${e.id} · ${esc(KILL_ERRORS[e.error] ?? e.error ?? 'không rõ')}`];
+    case 'portal_command': {
+      // A player's own store / redeem from the web garage (DinoGarage inbox).
+      const what = e.action === 'store' ? 'cất dino' : 'lấy dino ra';
+      const reply = Array.isArray(e.messages) && e.messages.length ? ` · ${esc(e.messages[e.messages.length - 1])}` : '';
+      return e.ok
+        ? [`${who(e.steamId, e.name)} ${what} trên web`, `game đã nhận${reply}`]
+        : [`${who(e.steamId, e.name)} ${what} trên web — bị từ chối`,
+           `${esc(WEB_CMD_ERRORS[e.error] ?? (e.error || 'theo luật gara'))}${reply}`];
+    }
     case 'mutation':
       return e.to
         ? [`${who(e.steamId, e.name)} chọn mutation <b>${esc(mutName(e.to))}</b>`,
@@ -1593,7 +1804,7 @@ function storedDinoCard({ slot, meta, state }, { owner = null } = {}) {
           data-del-slot="${esc(slot)}" data-del-label="${esc(species)}">${icon('trash')}</button>` : ''}
     </div>
     ${state === null ? '<div class="warnbox">Không đọc được file slot — chỉ còn thông tin trong index.</div>' : ''}
-    ${s.createdBy === 'admin' ? '<div class="muted" style="font-size:12px">Chỉ số để trống sẽ giữ nguyên giá trị của dino lúc người chơi <span class="mono">!redeem</span>.</div>' : ''}
+    ${s.createdBy === 'admin' ? '<div class="muted" style="font-size:12px">Chỉ số để trống sẽ giữ nguyên giá trị của dino lúc người chơi lấy ra.</div>' : ''}
     <div><div class="lbl" style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px">
       <span>Growth</span></div>${meter(s.growth ?? meta.growth ?? null, 1, 'grow')}</div>
     <div class="kv">
@@ -1626,7 +1837,7 @@ function storedDinoCard({ slot, meta, state }, { owner = null } = {}) {
     <div class="foot">
       <span>Cất ${meta.capturedAt ? `${esc(ago(meta.capturedAt))} · ${esc(dateTime(meta.capturedAt))}` : 'không rõ lúc nào'}</span>
       ${loc && isNum(loc.x) ? `<span>@ ${num(loc.x)}, ${num(loc.y)}, ${num(loc.z)}</span>` : ''}
-      <span>lấy ra: <span class="mono">!redeem ${esc(slot)}</span></span>
+      <span>lấy ra trên web (slot <span class="mono">${esc(slot)}</span>)</span>
     </div>
   </section>`;
 }
@@ -1731,6 +1942,7 @@ function renderLeaderboard(b) {
 
 const LAYERS = [
   ['ai', 'AI đang có (live)', '#ef4444', true],
+  ['aizone', 'Vùng AI (admin đặt)', '#fb923c', true],
   ['trails', 'Vệt di chuyển', '#f8fafc', true],
   ['migration', 'Vùng di cư (MZ)', '#22c55e', true],
   ['sanctuary', 'Sanctuary', '#e879f9', true],
@@ -1994,6 +2206,26 @@ function drawMap() {
       drawText(ctx, f.name, x, y, { font: '700 11px Inter, system-ui, sans-serif', color: c });
     }
   }
+  // 1b. AI zones (drawn by admins, run by the AIZones mod)
+  if (lm.on.has('aizone') && az.draft) {
+    for (const zn of az.draft.zones) {
+      const f = aiZoneShape(zn);
+      const st = az.status?.zones?.[zn.id];
+      const sel = az.sel === zn.id;
+      const on = az.draft.enabled && zn.enabled;
+      traceShape(ctx, f);
+      ctx.fillStyle = on ? hexA('#fb923c', sel ? 0.22 : 0.12) : 'rgba(148,163,184,.10)';
+      ctx.fill();
+      ctx.setLineDash(on ? [] : [6, 5]);
+      ctx.lineWidth = sel ? 3 : 1.8;
+      ctx.strokeStyle = on ? '#fb923c' : '#94a3b8';
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const [x, y] = scr(f.at);
+      const count = st && typeof st.count === 'number' ? ` · ${st.count}/${st.limit ?? zn.max}` : '';
+      drawText(ctx, `${zn.name}${count}`, x, y, { font: '700 11.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
+    }
+  }
   // 2. lines: roads, air currents, caves
   for (const f of feats) {
     if (f.kind !== 'path' || !['road', 'air', 'cave'].includes(f.layer)) continue;
@@ -2129,6 +2361,146 @@ function drawMap() {
   if ((lm.flash && lm.flash.until > now) || tweening()) requestDraw();
 }
 
+// --- AI zones (AIZones mod): drawn and edited on this map ---
+// az.draft is what the form shows and the map draws; saved with "Lưu vùng AI".
+const az = { data: null, draft: null, status: null, points: {}, speciesLabel: {}, sel: null, placing: null, dirty: false };
+const ZONE_DEFAULT = { radiusM: 300, species: ['Boar', 'Deer'], max: 10, idleMax: 3, perTurn: 2, everySec: 60, growthMin: 0.75, growthMax: 1, enabled: true };
+const aiZoneShape = (zn) => ({ kind: 'circle', at: unitsOf({ x: zn.x, y: zn.y }), r: [zn.radiusM / 10, zn.radiusM / 10] });
+function aiZoneAt(sx, sy) {
+  if (!lm.on.has('aizone') || !az.draft || !lm.view) return null;
+  const pt = fromScr(sx, sy);
+  let best = null;
+  for (const zn of az.draft.zones) {
+    const f = aiZoneShape(zn);
+    const d = Math.hypot(pt[0] - f.at[0], pt[1] - f.at[1]);
+    if (d <= f.r[0] && (!best || d < best.d)) best = { zn, d };
+  }
+  return best?.zn ?? null;
+}
+
+async function refreshAiZones() {
+  const d = await getJson('/api/ai-zones');
+  az.data = d;
+  az.status = d.status;
+  az.points = d.points ?? {};
+  az.speciesLabel = Object.fromEntries(d.species.map((s) => [s.key, s.label]));
+  if (!az.dirty) az.draft = { enabled: d.enabled, globalMax: d.globalMax, zones: structuredClone(d.zones) };
+  renderAiZones();
+  requestDraw();
+}
+
+function renderAiZones() {
+  const d = az.draft;
+  if (!d || !az.data) return;
+  if (document.activeElement !== $('az-global')) $('az-global').value = d.globalMax;
+  $('az-enabled').checked = d.enabled;
+  const st = az.status;
+  $('az-status').innerHTML = [
+    !st ? 'Mod AIZones chưa báo trạng thái (chưa cài, hoặc server chưa chạy lại).'
+      : st.stale ? `Mod AIZones không báo từ ${ago(st.t)} — server tắt hoặc mod lỗi.`
+      : `AI đang sống trên server: <b>${st.total ?? '?'}</b> / ${st.cap ?? d.globalMax} (cả AI game tự sinh). Chạm mức này thì vùng ngừng sinh — người chơi phải săn bớt.`,
+    `Điểm đứng đã biết trên đảo: ${az.data.groundPoints} ô 25 m.`,
+    az.dirty ? '<b style="color:#fb923c">Có thay đổi chưa lưu.</b>' : '',
+  ].filter(Boolean).join('<br>');
+  $('az-list').innerHTML = d.zones.length === 0 ? '<li class="muted" style="cursor:default">Chưa có vùng nào.</li>'
+    : d.zones.map((zn) => {
+      const s = st?.zones?.[zn.id];
+      const n = s && typeof s.count === 'number' ? `${s.count}/${s.limit ?? zn.max}${s.occupied ? ' · có người' : ''}` : `${zn.idleMax}–${zn.max}`;
+      return `<li data-az="${esc(zn.id)}" class="${zn.id === az.sel ? 'on' : ''}${zn.enabled ? '' : ' off'}"><span class="sw" style="background:#fb923c;width:10px;height:10px;border-radius:50%"></span>${esc(zn.name)}<span class="n">${esc(n)}</span></li>`;
+    }).join('');
+  renderAiZoneForm();
+}
+
+function renderAiZoneForm() {
+  const zn = az.draft?.zones.find((z) => z.id === az.sel);
+  $('az-edit').hidden = !zn;
+  $('az-add').textContent = az.placing === 'new' ? 'Bấm lên bản đồ để đặt tâm vùng mới… (bấm lại để huỷ)' : '+ Thêm vùng — bấm lên bản đồ để đặt tâm';
+  $('az-move').textContent = az.placing && az.placing !== 'new' ? 'Bấm lên bản đồ… (bấm lại để huỷ)' : 'Đặt lại tâm';
+  $('map-wrap').classList.toggle('placing', Boolean(az.placing));
+  if (!zn) return;
+  const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
+  set('az-name', zn.name);
+  $('az-zenabled').checked = zn.enabled;
+  set('az-radius', zn.radiusM);
+  set('az-idle', zn.idleMax); set('az-max', zn.max); set('az-perturn', zn.perTurn); set('az-every', zn.everySec);
+  set('az-gmin', Math.round(zn.growthMin * 100)); set('az-gmax', Math.round(zn.growthMax * 100));
+  const groups = [['animal', 'Thú'], ['dino', 'Khủng long']];
+  const key = JSON.stringify(zn.species);
+  if ($('az-species').dataset.key !== `${zn.id}:${key}`) {
+    $('az-species').dataset.key = `${zn.id}:${key}`;
+    $('az-species').innerHTML = groups.map(([kind, label]) => `<div class="k">${label}</div>`
+      + az.data.species.filter((s) => s.kind === kind).map((s) =>
+        `<label><input type="checkbox" data-az-sp="${esc(s.key)}"${zn.species.includes(s.key) ? ' checked' : ''}> ${esc(s.label)}</label>`).join('')).join('');
+  }
+  const pts = az.points[zn.id];
+  $('az-points').textContent = pts === undefined ? 'Điểm spawn: tính khi lưu.'
+    : pts === 0 ? '⚠ Chưa có điểm spawn: chưa người chơi hay AI nào từng đứng trong vùng này. Vùng sẽ bắt đầu sinh khi có người đi qua (điểm cập nhật 10 phút/lần).'
+    : `Điểm spawn: ${pts} chỗ người chơi / AI đã từng đứng trong vùng (AI chỉ được đặt ở đó — không bao giờ dưới đất hay giữa không trung).`;
+}
+
+function markAz() { az.dirty = true; renderAiZones(); requestDraw(); }
+function selectAiZone(id) { az.sel = id; az.placing = null; renderAiZones(); requestDraw(); }
+function placeAiZone(x, y) {
+  if (az.placing === 'new') {
+    const id = Math.random().toString(36).slice(2, 10);
+    az.draft.zones.push({ id, name: `Vùng ${az.draft.zones.length + 1}`, x, y, ...structuredClone(ZONE_DEFAULT) });
+    az.sel = id;
+  } else {
+    const zn = az.draft.zones.find((z) => z.id === az.placing);
+    if (zn) { zn.x = x; zn.y = y; }
+    delete az.points[az.placing];
+  }
+  az.placing = null;
+  markAz();
+}
+$('az-add').addEventListener('click', () => {
+  if (!az.draft) return;
+  az.placing = az.placing === 'new' ? null : 'new';
+  renderAiZoneForm();
+});
+$('az-move').addEventListener('click', () => {
+  az.placing = az.placing && az.placing !== 'new' ? null : az.sel;
+  renderAiZoneForm();
+});
+$('az-del').addEventListener('click', () => {
+  az.draft.zones = az.draft.zones.filter((z) => z.id !== az.sel);
+  az.sel = null;
+  markAz();
+});
+$('az-list').addEventListener('click', (e) => {
+  const li = e.target.closest('[data-az]');
+  if (!li) return;
+  selectAiZone(li.dataset.az);
+  const zn = az.draft.zones.find((z) => z.id === li.dataset.az);
+  if (zn) flyTo(aiZoneShape(zn).at, 3);
+});
+$('az-enabled').addEventListener('change', () => { az.draft.enabled = $('az-enabled').checked; markAz(); });
+$('az-global').addEventListener('input', () => { az.draft.globalMax = Math.max(0, Math.round(Number($('az-global').value) || 0)); markAz(); });
+$('az-edit').addEventListener('input', (e) => {
+  const zn = az.draft?.zones.find((z) => z.id === az.sel);
+  if (!zn) return;
+  const n = (id) => Math.round(Number($(id).value) || 0);
+  if (e.target.dataset.azSp) {
+    const on = new Set(zn.species);
+    if (e.target.checked) on.add(e.target.dataset.azSp); else on.delete(e.target.dataset.azSp);
+    zn.species = [...on];
+  } else {
+    zn.name = $('az-name').value;
+    zn.enabled = $('az-zenabled').checked;
+    zn.radiusM = n('az-radius');
+    zn.idleMax = n('az-idle'); zn.max = n('az-max'); zn.perTurn = n('az-perturn'); zn.everySec = n('az-every');
+    zn.growthMin = n('az-gmin') / 100; zn.growthMax = n('az-gmax') / 100;
+    if (e.target.id === 'az-radius') delete az.points[zn.id];
+  }
+  markAz();
+});
+$('az-save').addEventListener('click', () => withToken('lưu vùng AI', async (token) => {
+  await adminFetch('/api/ai-zones', 'PUT', token, az.draft);
+  az.dirty = false;
+  toast('Đã lưu vùng AI — mod đọc lại trong vòng 10 giây.');
+  await refreshAiZones();
+}));
+
 // --- hover and tooltips ---
 
 function inPoly(pt, ring) {
@@ -2156,6 +2528,8 @@ function hitTest(sx, sy) {
   if (lm.on.has('ai') && lm.ai && !lm.ai.stale) {
     for (const a of lm.ai.list) if (near(unitsOf(a), 8)) return { ai: a };
   }
+  const zn = aiZoneAt(sx, sy);
+  if (zn) return { azone: zn };
   const feats = lm.data.features.filter((f) => visible(f, z));
   for (const f of feats) {
     for (const m of f.marks ?? []) if (near(m.at, 9)) return { f, mark: m };
@@ -2167,6 +2541,14 @@ function hitTest(sx, sy) {
 }
 
 function tipHtml(h) {
+  if (h.azone) {
+    const zn = h.azone;
+    const st = az.status?.zones?.[zn.id];
+    const names = zn.species.map((k) => az.speciesLabel[k] ?? k).join(', ');
+    return `<b>${esc(zn.name)}</b> — vùng AI${zn.enabled && az.draft.enabled ? '' : ' (tắt)'}<br>${esc(names)}<br>`
+      + `<span class="m">bán kính ${zn.radiusM} m · vắng người ${zn.idleMax} / có người ${zn.max} con`
+      + `${st && typeof st.count === 'number' ? ` · đang có ${st.count}` : ''}<br>bấm để sửa</span>`;
+  }
   if (h.ai) {
     const a = h.ai;
     const age = Math.max(0, Math.round(Date.now() / 1000 - lm.ai.t));
@@ -2191,7 +2573,7 @@ function tipHtml(h) {
 
 function showHover(sx, sy) {
   const h = hitTest(sx, sy);
-  const same = (a, b) => (a?.player?.steamId ?? a?.ai ?? a?.mark ?? a?.f) === (b?.player?.steamId ?? b?.ai ?? b?.mark ?? b?.f);
+  const same = (a, b) => (a?.player?.steamId ?? a?.ai ?? a?.azone ?? a?.mark ?? a?.f) === (b?.player?.steamId ?? b?.ai ?? b?.azone ?? b?.mark ?? b?.f);
   const changed = !same(h, lm.hover);
   lm.hover = h;
   const tip = $('map-tip');
@@ -2210,7 +2592,7 @@ function showHover(sx, sy) {
   // Same order and format as the game's own location, so the two compare directly.
   const g = (v) => Math.round(v * 1000).toLocaleString('en-US');
   $('map-coord').textContent = `${g(x)}, ${g(y)}`;
-  $('map').style.cursor = h?.player ? 'pointer' : '';
+  $('map').style.cursor = az.placing ? 'crosshair' : h?.player || h?.azone ? 'pointer' : '';
   if (changed) requestDraw();
 }
 
@@ -2262,8 +2644,14 @@ function endPointer(e) {
   $('map').classList.remove('dragging');
   if (click && e.type === 'pointerup') {
     const [x, y] = localXY(e);
-    const h = hitTest(x, y);
-    if (h?.player) location.hash = `player/${encodeURIComponent(h.player.steamId)}`;
+    if (az.placing) {
+      const [p0, p1] = fromScr(x, y);
+      placeAiZone(Math.round(p1 * 1000), Math.round(p0 * 1000));   // map units are [game Y, game X] / 1000
+    } else {
+      const h = hitTest(x, y);
+      if (h?.player) location.hash = `player/${encodeURIComponent(h.player.steamId)}`;
+      else if (h?.azone) selectAiZone(h.azone.id);
+    }
   }
   lm.drag = null;
 }
@@ -2299,6 +2687,7 @@ function renderLayerList() {
   for (const f of lm.data.features) count[f.layer] = (count[f.layer] ?? 0) + 1;
   count.trails = '';
   count.ai = '';
+  count.aizone = '';
   $('map-layers').innerHTML = LAYERS.filter(([id]) => count[id] !== undefined).map(([id, label, color]) => `<li><label>
       <input type="checkbox" data-layer="${id}" ${lm.on.has(id) ? 'checked' : ''}>
       <span class="sw" style="background:${color}"></span>${esc(label)}<span class="n"${id === 'ai' ? ' id="ai-count"' : ''}>${count[id]}</span></label></li>`).join('')
@@ -2811,6 +3200,7 @@ function renderMutationOptions() {
 
 function renderPreview() {
   $('f-growth-val').textContent = `${creator.growth}%`;
+  renderPrimeControls();
   for (const b of document.querySelectorAll('#f-presets button')) {
     b.classList.toggle('on', Number(b.dataset.g) === creator.growth);
   }
@@ -2827,14 +3217,92 @@ function renderPreview() {
     return;
   }
   const now = Math.floor(Date.now() / 1000);
-  $('f-preview').innerHTML = storedDinoCard({
+  // What the dino will have first, then the slot as it will be stored.
+  $('f-preview').innerHTML = '<div id="f-expected"></div>' + storedDinoCard({
     slot: $('f-slot').value.trim() || 'admin',
     meta: { classPath, growth: creator.growth / 100, capturedAt: now },
     state: { classPath, growth: creator.growth / 100,
+             isPrime: primeWanted() || null, elderStacks: elderStacksWanted(),
              mutations: chosenMutations(), createdBy: 'admin', version: 1 },
   });
   // The mutations are the point of the preview: show them without a click.
   $('f-preview').querySelector('details')?.setAttribute('open', '');
+  loadExpectedSoon(classPath);
+}
+
+// --- prime + what the dino will have (maxima read on this server) --------------------
+const PRIME_MIN = 75;
+const primeWanted = () => $('f-prime').checked && creator.growth >= PRIME_MIN;
+const elderStacksWanted = () => {
+  const n = Math.round(Number($('f-elder-stacks').value));
+  return Number.isFinite(n) && n > 0 ? Math.min(10, n) : null;
+};
+function renderPrimeControls() {
+  const young = creator.growth < PRIME_MIN;
+  $('f-prime').disabled = young;
+  if (young) $('f-prime').checked = false;
+  $('f-prime-hint').innerHTML = young
+    ? `Prime cần growth ≥ ${PRIME_MIN}% — game chỉ gắn prime cho dino đủ điều kiện từ mốc này.`
+    : 'Prime: khi lấy ra, dino được đặt <b>đủ điều kiện Prime Elder</b> (ServerSetPrimeEligible). Elder stacks: bộ đếm dòng dõi (0 = giữ nguyên). Kết quả thật ghi trong UE4SS.log: <span class="mono">prime asked -> eligible=… prime=…</span>.';
+}
+
+const STAT_ROWS = [['health', 'Máu tối đa'], ['stamina', 'Thể lực tối đa'], ['hunger', 'Dạ dày tối đa'],
+  ['thirst', 'Nước tối đa'], ['oxygen', 'Oxy tối đa'], ['blood', 'Huyết tối đa']];
+let expectedTimer = null;
+let expectedSeq = 0;
+function loadExpectedSoon(classPath) {
+  clearTimeout(expectedTimer);
+  expectedTimer = setTimeout(() => loadExpected(classPath), 150);
+}
+async function loadExpected(classPath) {
+  const seq = ++expectedSeq;
+  const species = String(classPath).split('.').pop();
+  const g = creator.growth / 100;
+  let data;
+  try {
+    data = await getJson(`/api/species-stats?species=${encodeURIComponent(species)}&growth=${g}`);
+  } catch { return; }
+  if (seq !== expectedSeq || !$('f-expected')) return;
+  $('f-expected').innerHTML = expectedCard(data, g);
+}
+function expectedCard(data, g) {
+  const fmt = (v) => (isNum(v) ? Math.round(v).toLocaleString('vi-VN') : '—');
+  const at = data.at;
+  if (!at) {
+    return `<section class="card" style="margin-bottom:12px"><div class="card-body">
+      <div class="group-label">Thông số dự kiến</div>
+      <div class="muted" style="font-size:12.5px">Chưa có số đo nào của loài này trên server — thông số sẽ là của game khi người chơi lấy ra.</div></div></section>`;
+  }
+  const pct = (x) => `${Math.round(x * 100)}%`;
+  const source = at.exact ? `đo trực tiếp ở ${pct(at.from === at.to ? at.from : g)}`
+    : at.from === at.to ? `gần nhất đã đo: ${pct(at.from)} (chưa có số đo ở ${pct(g)})`
+    : `ước tính giữa hai mức đã đo ${pct(at.from)} và ${pct(at.to)}`;
+  // Prime: how much the maxima rose on prime elders of this species here.
+  let primeNote = '';
+  let factor = null;
+  if (primeWanted()) {
+    const pm = data.prime;
+    if (pm && isNum(pm.max.health)) {
+      const base = (data.points.find((p) => Math.abs(p.growth - pm.growth) < 0.011) ?? data.points[data.points.length - 1])?.max;
+      factor = base && isNum(base.health) && base.health > 0 ? pm.max.health / base.health : null;
+      primeNote = `👑 Prime trên server này: máu và dạ dày tối đa <b>tăng dần</b> khi dino giữ trạng thái prime —
+        cao nhất đã thấy <b>${fmt(pm.max.health)} máu</b>${factor ? ` (×${factor.toFixed(2).replace('.', ',')})` : ''}
+        ở growth ${pct(pm.growth)} (${pm.readings} lần đọc). Lúc mới lên prime, chỉ số vẫn như thường.`;
+    } else {
+      primeNote = '👑 Chưa từng thấy dino prime của loài này trên server — chưa biết prime tăng bao nhiêu.';
+    }
+  }
+  const rows = STAT_ROWS.filter(([k]) => isNum(at.max[k])).map(([k, label]) => {
+    const up = factor && (k === 'health' || k === 'hunger') ? `<span class="muted" style="font-size:11.5px;font-weight:600"> → tới ${fmt(at.max[k] * factor)} khi prime lâu</span>` : '';
+    return `<div><div class="lbl"><span>${label}</span></div><div class="val">${fmt(at.max[k])}${up}</div></div>`;
+  }).join('');
+  const fill = [$('f-stomach').checked ? 'dạ dày đầy' : null, `dinh dưỡng ${Math.round(Number($('f-nutrient').value) || 0)}%`].filter(Boolean).join(' · ');
+  return `<section class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+    <div class="group-label">Thông số dự kiến ở growth ${pct(g)}</div>
+    <div class="kv">${rows}</div>
+    <div class="muted" style="font-size:12px">Số tối đa game báo cho loài này trên server (${esc(source)}). Khi lấy ra: ${esc(fill)}.</div>
+    ${primeNote ? `<div style="font-size:12.5px">${primeNote}</div>` : ''}
+  </div></section>`;
 }
 
 /** Fetch the species/mutation catalog; re-render the form only if it changed. */
@@ -2904,6 +3372,7 @@ $('create').addEventListener('input', (ev) => {
   if (ev.target.id !== 'f-growth' && !ev.target.matches('select, #f-overwrite-ok, #f-allow-unconfirmed')) renderPreview();
 });
 $('f-overwrite-ok').addEventListener('change', renderOverwrite);
+$('f-prime').addEventListener('change', renderPreview);
 $('f-allow-unconfirmed').addEventListener('change', () => { renderMutationOptions(); renderPreview(); });
 $('create').addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-edit-slot]');
@@ -3002,6 +3471,8 @@ $('create').addEventListener('submit', async (ev) => {
         classPath, growth: creator.growth / 100, mutations,
         stomachFull: $('f-stomach').checked,
         nutrientPct: Math.max(0, Math.min(100, Math.round(Number($('f-nutrient').value) || 0))),
+        ...(primeWanted() ? { isPrime: true } : {}),
+        ...(elderStacksWanted() !== null ? { elderStacks: elderStacksWanted() } : {}),
         allowUnconfirmedMutations: $('f-allow-unconfirmed').checked,
         overwrite: existing.slots[slot] !== undefined && $('f-overwrite-ok').checked,
       }),
@@ -3012,8 +3483,8 @@ $('create').addEventListener('submit', async (ev) => {
     $('f-overwrite-ok').checked = false;
     loadExisting();
     out.className = 'result ok';
-    out.textContent = `✓ Đã tạo ${dino(classPath)} ${creator.growth}% vào ${steamId} / ${slot}. `
-      + `Người chơi spawn đúng loài này rồi gõ !redeem ${slot}.`
+    out.textContent = `✓ Đã tạo ${dino(classPath)} ${creator.growth}%${primeWanted() ? ' 👑 Prime' : ''} vào ${steamId} / ${slot}. `
+      + `Người chơi spawn đúng loài này rồi bấm Lấy ra trên trang web (mục Gara).`
       + (body.meta?.replaced ? ` Con cũ đã sao lưu: deleted/${body.meta.replaced}` : '');
     refresh();
   } catch (err) {
@@ -3048,7 +3519,7 @@ function withToken(label, fn) {
       await fn(token);
       adminToken = token;
     } catch (err) {
-      if (/token/i.test(err.message)) adminToken = '';
+      if (/token/i.test(err.message) && !sessionToken) adminToken = '';
       throw err;
     }
   };
@@ -3197,12 +3668,57 @@ $('sch-save').addEventListener('click', () => withToken('lưu lịch', async (to
   refresh();
 }));
 
-function renderAudit(entries) {
-  $('srv-audit').innerHTML = entries.length === 0 ? '<li class="empty">Chưa có thao tác nào</li>'
-    : entries.map((e) => `<li><span class="ev-time" title="${esc(dateTime(e.t))}">${clock(e.t)}</span>
-        <div style="min-width:0"><div class="a">${e.ok ? '' : '<span class="kill">✗ </span>'}${esc(e.action)}</div>
-        ${e.detail ? `<div class="d">${esc(e.detail)}</div>` : ''}${e.error ? `<div class="d kill">${esc(e.error)}</div>` : ''}</div></li>`).join('');
+// Admin log: a page at a time, newest first (bridge audit.ts keeps 7 days).
+const AUDIT_VN = {
+  'panel login': 'Đăng nhập panel', 'panel logout': 'Đăng xuất panel', 'panel login refused': 'Đăng nhập bị từ chối',
+  'game config saved': 'Lưu cấu hình game', 'garage settings saved': 'Lưu cài đặt gara', 'player command settings saved': 'Lưu lệnh người chơi',
+  'voice settings saved': 'Lưu cài đặt voice', 'panel allowed IPs saved': 'Lưu IP được vào panel', 'AI zones saved': 'Lưu vùng AI',
+  'garage slot created': 'Tạo dino vào gara', 'garage slot deleted': 'Xoá dino khỏi gara', 'kill current dino queued': 'Giết dino đang chơi',
+  'restart schedule set': 'Đặt lịch khởi động lại', 'mutation note set': 'Sửa mô tả mutation', 'mutation note cleared': 'Xoá mô tả mutation',
+  'server start requested': 'Bật server', 'server stop requested': 'Tắt server', 'server restart requested': 'Khởi động lại server',
+};
+const auditName = (a) => AUDIT_VN[a] ?? (a.startsWith('rcon ') ? `RCON: ${a.slice(5)}` : a);
+const audits = { page: 1, q: '' };
+function renderAudit(data) {
+  const entries = data.entries ?? [];
+  $('srv-audit').innerHTML = entries.length === 0
+    ? `<tr><td colspan="4" class="empty">${audits.q ? 'Không có dòng nào khớp' : 'Chưa có thao tác nào trong 7 ngày qua'}</td></tr>`
+    : entries.map((e) => {
+      const d = new Date(e.t * 1000);
+      const who = e.byId ? `<b>${esc(e.byName ?? 'Không rõ tên')}</b><div class="id">${esc(e.byId)}</div>`
+        : e.by === 'ADMIN_TOKEN' ? '<b>Script (ADMIN_TOKEN)</b>'
+        : e.by ? esc(e.by) : '<span class="muted">Hệ thống</span>';
+      return `<tr>
+        <td class="when">${esc(d.toLocaleTimeString('vi-VN', { hour12: false }))}<div class="d">${esc(d.toLocaleDateString('vi-VN'))}</div></td>
+        <td class="who">${who}</td>
+        <td class="what${e.ok ? '' : ' fail'}">${e.ok ? '' : '✗ '}${esc(auditName(e.action))}</td>
+        <td class="detail">${esc(e.detail ?? '')}${e.error ? `<div class="err">${esc(e.error)}</div>` : ''}</td>
+      </tr>`;
+    }).join('');
+  const { page, pages, total } = data;
+  const btn = (p, label = String(p)) => `<button type="button" class="btn-ghost sm${p === page ? ' on' : ''}" data-audit-page="${p}"${p < 1 || p > pages ? ' disabled' : ''}>${label}</button>`;
+  const around = [...new Set([1, page - 2, page - 1, page, page + 1, page + 2, pages])].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
+  let prev = 0;
+  const nums = around.map((p) => { const gap = p - prev > 1 ? '<span class="muted">…</span>' : ''; prev = p; return gap + btn(p); }).join('');
+  $('audit-pager').innerHTML = `<span class="muted">${total} dòng · trang ${page}/${pages}</span>${btn(page - 1, '‹')}${nums}${btn(page + 1, '›')}`;
 }
+async function loadAudit() {
+  const q = audits.q ? `&q=${encodeURIComponent(audits.q)}` : '';
+  const data = await getJson(`/api/server/audit?page=${audits.page}&limit=30${q}`);
+  audits.page = data.page;
+  renderAudit(data);
+}
+$('audit-pager').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-audit-page]');
+  if (!b || b.disabled) return;
+  audits.page = Number(b.dataset.auditPage);
+  loadAudit().catch(() => {});
+});
+let auditSearchTimer = null;
+$('audit-q').addEventListener('input', () => {
+  clearTimeout(auditSearchTimer);
+  auditSearchTimer = setTimeout(() => { audits.q = $('audit-q').value.trim(); audits.page = 1; loadAudit().catch(() => {}); }, 250);
+});
 
 // --- RCON -------------------------------------------------------------------
 
@@ -3252,8 +3768,8 @@ function classOptions(selected) {
 // #server/<sub>: operation panels, then one tab per config group (cfg:<group>).
 // The config form is ONE form shown a group at a time, so edits in several
 // groups survive switching tabs and are saved together.
-const OPS_SUBS = [['status', 'Trạng thái'], ['schedule', 'Lịch khởi động lại'], ['rcon', 'RCON trực tiếp'], ['audit', 'Lịch sử thao tác']];
-const EXTRA_CFG_SUBS = [['garage-settings', 'Gara'], ['commands-settings', 'Lệnh người chơi']];
+const OPS_SUBS = [['status', 'Trạng thái'], ['perf', 'Hiệu năng'], ['schedule', 'Lịch khởi động lại'], ['rcon', 'RCON trực tiếp'], ['audit', 'Lịch sử thao tác']];
+const EXTRA_CFG_SUBS = [['garage-settings', 'Gara'], ['commands-settings', 'Lệnh người chơi'], ['voice-settings', 'Voice gần'], ['panel-access', 'Truy cập panel']];
 function currentSub() {
   const h = location.hash.slice(1);
   const sub = h.startsWith('server/') ? decodeURIComponent(h.slice('server/'.length)) : 'status';
@@ -3458,27 +3974,205 @@ function renderReadiness(r) {
 }
 
 async function refreshServerTab() {
-  const [status, audit, cfg, readiness] = await Promise.all([
+  const [status, , cfg, readiness] = await Promise.all([
     getJson('/api/server/status'),
-    getJson('/api/server/audit?limit=60'),
+    loadAudit(),
     cfgDirty ? Promise.resolve(null) : getJson('/api/game-config'),
     getJson('/api/server/readiness'),
     getJson('/api/garage-settings').then(renderGarageSettings),
     getJson('/api/commands-settings').then(renderCommandsSettings),
+    getJson('/api/voice-settings').then(renderVoiceSettings),
+    getJson('/api/panel-access').then(renderPanelAccess),
     refreshCatalog(),
     buildToggles(),
   ]);
   renderServer(status);
   renderReadiness(readiness);
-  renderAudit(audit.entries);
+
   if (cfg && !cfgDirty) renderConfig(cfg);
+  if (currentSub() === 'perf') await refreshPerf();
 }
+
+// --- performance (Server → Hiệu năng) ---------------------------------------------
+// /api/metrics: samples every 10 s (bridge/src/metrics.ts). Small multiples on
+// one shared time axis — FPS, players, game CPU, RAM — never a dual axis; one
+// crosshair + tooltip across all four. Colours: --series-1/2 (validated), and
+// the reserved status colours only for the FPS state, always with icon + label.
+
+let perfRange = '6h';
+let perfData = null;
+let perfFetchedAt = 0;
+let perfHoverT = null;
+
+async function refreshPerf(force = false) {
+  if (!force && Date.now() - perfFetchedAt < 10_000 && perfData) return;
+  perfFetchedAt = Date.now();
+  try {
+    perfData = await getJson(`/api/metrics?range=${perfRange}`);
+    renderPerf();
+  } catch {
+    $('perf-charts').innerHTML = '<div class="perf-empty">Chưa đọc được số liệu hiệu năng (bridge chưa có /api/metrics?).</div>';
+  }
+}
+$('perf-range').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-range]');
+  if (!b) return;
+  perfRange = b.dataset.range;
+  for (const x of $('perf-range').querySelectorAll('button')) x.classList.toggle('on', x === b);
+  refreshPerf(true);
+});
+window.addEventListener('resize', () => { if (perfData && currentSub() === 'perf') renderPerf(); });
+
+// Evrima's server ticks at ~30; below 20 players notice rubber-banding, below 12 it is bad.
+function fpsState(fps) {
+  if (typeof fps !== 'number') return { cls: '', label: 'Chưa có số liệu', color: 'var(--muted)', icon: '·' };
+  if (fps >= 25) return { label: 'Mượt', color: 'var(--status-good)', icon: '✓' };
+  if (fps >= 15) return { label: 'Hơi giật', color: 'var(--status-warning)', icon: '⚠' };
+  return { label: 'Giật', color: 'var(--status-critical)', icon: '✕' };
+}
+const gb = (mb) => (typeof mb === 'number' ? (mb / 1024).toFixed(mb >= 10240 ? 0 : 1) : '–');
+const n1 = (v) => (typeof v === 'number' ? (Math.round(v * 10) / 10).toLocaleString('vi-VN') : '–');
+
+function perfTiles(d) {
+  const s = d.now;
+  const st = fpsState(s?.fps);
+  const tile = (k, v, extra = '') => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div>${extra}</div>`;
+  $('perf-tiles').innerHTML = !s ? '<div class="perf-empty">Chưa có mẫu nào — bridge đo 10 giây một lần.</div>' : [
+    tile('ServerFPS (tick game)', `${n1(s.fps)}`,
+      `<div class="perf-state" style="color:${st.color}"><i style="background:${st.color}"></i>${st.icon} ${st.label}</div>`),
+    tile('Người online', `${s.online ?? '–'}`, s.ai !== null && s.ai !== undefined ? `<div class="k" style="margin-top:4px">AI đang có: ${s.ai}</div>` : ''),
+    tile('CPU game', `${n1(s.gameCpu)}<small>% 1 nhân</small>`, `<div class="k" style="margin-top:4px">Cả máy: ${n1(s.cpu)}% · ${d.cores} nhân</div>`),
+    tile('RAM game', `${gb(s.gameRss)}<small>GB</small>`),
+    tile('RAM máy', `${gb(s.memUsed)}<small>/ ${gb(s.memTotal)} GB</small>`,
+      s.memTotal ? `<div class="k" style="margin-top:4px">${Math.round((s.memUsed / s.memTotal) * 100)}% đã dùng</div>` : ''),
+    tile('Swap', `${gb(s.swapUsed)}<small>GB</small>`,
+      s.swapUsed > 256 ? '<div class="perf-state" style="color:var(--status-warning)"><i style="background:var(--status-warning)"></i>⚠ Đang dùng swap — sẽ lag</div>' : ''),
+  ].join('');
+}
+
+/** One small line chart. series: [{ key, label, color }]; ref: { value, label }. */
+/** The smallest round step (1, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × 10ⁿ) at or above v. */
+function niceCeil(v) {
+  const e = Math.pow(10, Math.floor(Math.log10(v)));
+  return [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map((m) => m * e).find((c) => c >= v) ?? 10 * e;
+}
+
+/** One small line chart. series: [{ key, label, color }]; ref: { value, label }; div scales values (MB → GB). */
+function perfChart({ id, title, series, unit, max, ref, fmt = n1, div = 1 }) {
+  const d = perfData;
+  const W = Math.max(280, $('perf-charts').clientWidth), H = 150;
+  const L = 44, R = 10, T = 10, B = 22;
+  const now = d.now?.t ?? Math.floor(Date.now() / 1000);
+  const t0 = now - d.rangeS, t1 = now;
+  const pts = d.points.map((p) => (div === 1 ? p : Object.fromEntries(Object.entries(p).map(([k, v]) =>
+    [k, k !== 't' && typeof v === 'number' ? v / div : v]))));
+  const vals = pts.flatMap((p) => series.map((s) => p[s.key])).filter((v) => typeof v === 'number');
+  const yMax = niceCeil(Math.max(max ?? 0, ref?.value ?? 0, ...vals, 1) * 1.05);
+  const x = (t) => L + ((t - t0) / (t1 - t0)) * (W - L - R);
+  const y = (v) => T + (1 - v / yMax) * (H - T - B);
+  const gapS = Math.max(60, (d.rangeS / 360) * 3);  // a hole in the data = server/bridge down: break the line
+  const path = (key) => {
+    let dStr = '', prev = null;
+    for (const p of pts) {
+      const v = p[key];
+      if (typeof v !== 'number') { prev = null; continue; }
+      dStr += `${prev !== null && p.t - prev <= gapS ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(v).toFixed(1)}`;
+      prev = p.t;
+    }
+    return dStr;
+  };
+  const grid = [0, 0.5, 1].map((f) => {
+    const v = yMax * f;
+    return `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`;
+  }).join('');
+  const ticks = [0, 1 / 3, 2 / 3, 1].map((f) => {
+    const t = t0 + (t1 - t0) * f;
+    const date = new Date(t * 1000);
+    const lab = d.rangeS > 86400 ? date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `<text class="axis" x="${x(t)}" y="${H - 5}" text-anchor="${f === 0 ? 'start' : f === 1 ? 'end' : 'middle'}">${lab}</text>`;
+  }).join('');
+  const refLine = ref ? `<line class="ref" x1="${L}" x2="${W - R}" y1="${y(ref.value)}" y2="${y(ref.value)}"/><text class="ref-label" x="${W - R}" y="${y(ref.value) - 4}" text-anchor="end">${esc(ref.label)}</text>` : '';
+  const lines = series.map((s) => `<path d="${path(s.key)}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
+  let cross = '';
+  if (perfHoverT !== null) {
+    const p = pts.reduce((a, b) => (Math.abs(b.t - perfHoverT) < Math.abs(a.t - perfHoverT) ? b : a), pts[0]);
+    cross = `<line class="cross" x1="${x(p.t)}" x2="${x(p.t)}" y1="${T}" y2="${H - B}"/>`
+      + series.map((s) => (typeof p[s.key] === 'number' ? `<circle cx="${x(p.t)}" cy="${y(p[s.key])}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>` : '')).join('');
+  }
+  const legend = series.length > 1 ? series.map((s) => `<span class="legend-i"><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join('') : '';
+  return `<div class="perf-chart" data-chart="${id}"><h3>${esc(title)} <span class="muted" style="font-weight:500;font-size:12px">${esc(unit)}</span>${legend}</h3>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">${grid}${refLine}${lines}${ticks}${cross}
+      <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" data-hover="1"/></svg></div>`;
+}
+
+function renderPerf() {
+  const d = perfData;
+  if (!d) return;
+  perfTiles(d);
+  if (d.points.length === 0) {
+    $('perf-charts').innerHTML = '<div class="perf-empty">Chưa có số liệu trong khoảng này — bridge vừa bắt đầu đo, quay lại sau vài phút.</div>';
+  } else {
+    const memTotal = d.now?.memTotal;
+    $('perf-charts').innerHTML = [
+      perfChart({ id: 'fps', title: 'ServerFPS', unit: 'khung/giây (trung bình mỗi điểm)', series: [{ key: 'fps', label: 'ServerFPS', color: 'var(--series-1)' }], max: 30, ref: { value: 20, label: 'dưới 20: người chơi thấy giật' } }),
+      perfChart({ id: 'online', title: 'Người online', unit: 'người', series: [{ key: 'online', label: 'Người online', color: 'var(--series-1)' }], fmt: (v) => String(Math.round(v)) }),
+      perfChart({ id: 'cpu', title: 'CPU của game', unit: '% một nhân — luồng game là giới hạn', series: [{ key: 'gameCpu', label: 'CPU game', color: 'var(--series-1)' }], max: 100, ref: { value: 100, label: '100% = 1 nhân đầy' } }),
+      perfChart({ id: 'ram', title: 'RAM', unit: 'GB', div: 1024, series: [{ key: 'gameRss', label: 'Game', color: 'var(--series-1)' }, { key: 'memUsed', label: 'Cả máy', color: 'var(--series-2)' }],
+        ref: memTotal ? { value: memTotal / 1024, label: `tổng ${gb(memTotal)} GB` } : undefined }),
+    ].join('') + '<div class="perf-tip" id="perf-tip" hidden></div>';
+  }
+  // Table view (accessibility): newest first.
+  $('perf-table').innerHTML = `<thead><tr><th>Thời gian</th><th>Online</th><th>FPS</th><th>FPS thấp nhất</th><th>CPU game %</th><th>RAM game GB</th><th>RAM máy GB</th><th>Swap GB</th></tr></thead><tbody>`
+    + [...d.points].reverse().map((p) => `<tr><td class="muted">${esc(dateTime(p.t))}</td><td>${p.online ?? '–'}</td><td>${n1(p.fps)}</td><td>${n1(p.fpsMin)}</td><td>${n1(p.gameCpu)}</td><td>${gb(p.gameRss)}</td><td>${gb(p.memUsed)}</td><td>${gb(p.swapUsed)}</td></tr>`).join('')
+    + '</tbody>';
+  // Capacity: how it behaved at each player count.
+  const rows = d.capacity ?? [];
+  $('perf-capacity').innerHTML = `<thead><tr><th>Người online</th><th>Thời gian đo</th><th>FPS TB</th><th>FPS thấp (5%)</th><th>CPU game TB</th><th>RAM game cao nhất</th><th>RAM máy cao nhất</th><th>Swap cao nhất</th><th>AI TB</th></tr></thead><tbody>`
+    + (rows.length === 0 ? '<tr><td colspan="9" class="empty">Chưa có số liệu</td></tr>' : rows.map((r) => {
+      const st = fpsState(r.fpsLow);
+      return `<tr><td><b>${esc(r.band)}</b></td><td class="muted">${r.minutes} phút</td><td>${n1(r.fpsAvg)}</td>
+        <td><span style="color:${st.color}">${st.icon}</span> ${n1(r.fpsLow)} <span class="muted">${st.label}</span></td>
+        <td>${n1(r.gameCpuAvg)}%</td><td>${gb(r.gameRssMax)} GB</td><td>${gb(r.memUsedMax)} GB</td><td>${gb(r.swapUsedMax)} GB</td><td>${n1(r.aiAvg)}</td></tr>`;
+    }).join('')) + '</tbody>';
+  const worst = rows.filter((r) => typeof r.fpsLow === 'number' && r.fpsLow < 20 && r.minutes >= 10);
+  $('perf-cap-hint').textContent = worst.length
+    ? `FPS bắt đầu tụt dưới 20 từ mức ${worst[0].band} người — đó là sức chứa thực tế hiện tại của máy.`
+    : 'Chưa thấy mức người chơi nào làm FPS tụt dưới 20 (cần đủ thời gian đo ở mỗi mức — ít nhất 10 phút).';
+}
+
+// One crosshair + tooltip for all four charts.
+$('perf-charts').addEventListener('pointermove', (e) => {
+  const rect = e.target.closest('rect[data-hover]');
+  if (!rect || !perfData?.points.length) return;
+  const svg = rect.ownerSVGElement;
+  const box = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const px = ((e.clientX - box.left) / box.width) * vb.width;
+  const L = 44, R = 10;
+  const now = perfData.now?.t ?? Math.floor(Date.now() / 1000);
+  const t = now - perfData.rangeS + ((px - L) / (vb.width - L - R)) * perfData.rangeS;
+  const p = perfData.points.reduce((a, b) => (Math.abs(b.t - t) < Math.abs(a.t - t) ? b : a), perfData.points[0]);
+  if (perfHoverT !== p.t) { perfHoverT = p.t; renderPerf(); }
+  const tip = $('perf-tip');
+  if (!tip) return;
+  const wrap = $('perf-charts').getBoundingClientRect();
+  tip.hidden = false;
+  tip.innerHTML = `<div class="muted" style="margin-bottom:2px">${esc(dateTime(p.t))}</div>`
+    + [['ServerFPS', n1(p.fps) + (typeof p.fpsMin === 'number' && p.fpsMin !== p.fps ? ` (thấp ${n1(p.fpsMin)})` : '')], ['Online', p.online ?? '–'],
+       ['CPU game', `${n1(p.gameCpu)}%`], ['RAM game', `${gb(p.gameRss)} GB`], ['RAM máy', `${gb(p.memUsed)} GB`]]
+      .map(([k, v]) => `<div class="row"><span class="muted">${k}</span><b>${v}</b></div>`).join('');
+  const left = Math.min(e.clientX - wrap.left + 14, wrap.width - tip.offsetWidth - 4);
+  tip.style.left = `${Math.max(0, left)}px`;
+  tip.style.top = `${e.clientY - wrap.top + 14}px`;
+});
+$('perf-charts').addEventListener('pointerleave', () => { perfHoverT = null; if (perfData) renderPerf(); });
 
 // --- garage settings ------------------------------------------------------------
 const GS_HELP = {
-  current: 'Người chơi respawn đúng loài đã cất rồi gõ <span class="mono">!redeem &lt;slot&gt;</span> — dino được khôi phục ngay tại chỗ đang đứng.',
-  stored: 'Người chơi respawn đúng loài rồi gõ <span class="mono">!redeem &lt;slot&gt;</span> — dino được đưa về đúng chỗ lúc gõ <span class="mono">!store</span>. Slot tạo từ panel không có điểm cất nên khôi phục tại chỗ.',
-  choice: '<span class="mono">!redeem &lt;slot&gt;</span> = tại chỗ đang đứng · <span class="mono">!redeem &lt;slot&gt; cu</span> (hoặc <span class="mono">old</span>) = về điểm đã cất · <span class="mono">!redeem cu</span> = slot mới nhất, về điểm đã cất.',
+  current: 'Người chơi respawn đúng loài đã cất rồi bấm Lấy ra trên web — dino được khôi phục ngay tại chỗ đang đứng.',
+  stored: 'Người chơi respawn đúng loài rồi bấm Lấy ra trên web — dino được đưa về đúng chỗ lúc bắt đầu cất. Slot tạo từ panel không có điểm cất nên khôi phục tại chỗ.',
+  choice: 'Trên web người chơi chọn "chỗ đang đứng" hoặc "chỗ đã cất" trước khi bấm Lấy ra.',
 };
 let gsDirty = false;
 function renderGarageSettings(gs) {
@@ -3502,7 +4196,7 @@ $('gs-save').addEventListener('click', () => withToken('lưu cài đặt gara', 
     cooldown: Number($('gs-cooldown').value),
   });
   gsDirty = false;
-  toast('Đã lưu — áp dụng từ lần !redeem kế tiếp.');
+  toast('Đã lưu — áp dụng ngay cho lần cất / lấy ra kế tiếp.');
   refresh();
 }));
 
@@ -3533,9 +4227,67 @@ $('pc-save').addEventListener('click', () => withToken('lưu cài đặt lệnh'
   refresh();
 }));
 
+// --- voice settings ----------------------------------------------------------------
+const VS_HELP = {
+  name: 'Danh sách "Đang nói gần bạn" hiện tên trong game của người nói.',
+  id: 'Chỉ hiện một mã ngắn (ví dụ #A3F9) — cùng một người luôn cùng mã, nên vẫn tắt tiếng / chỉnh âm lượng từng người được, nhưng không biết là ai.',
+  none: 'Chỉ hiện "Có người đang nói" kèm gần / xa, trái / phải — không tên, không mã. Hợp với server nhập vai.',
+};
+let vsDirty = false;
+function renderVoiceSettings(vs) {
+  $('vs-status').innerHTML = vs.enabled
+    ? `Voice đang bật · máy chủ <span class="mono">${esc(vs.url ?? '')}</span>. Tên trong kênh đổi theo cài đặt này từ lần vào kênh kế tiếp của mỗi người; danh sách "đang nói" đổi ngay.`
+    : 'Voice chưa bật trên bridge (thiếu LIVEKIT_API_KEY / LIVEKIT_API_SECRET) — cài đặt vẫn lưu được.';
+  if (vsDirty) return;
+  $('vs-name-mode').value = vs.nameMode;
+  $('vs-help').textContent = VS_HELP[vs.nameMode] ?? '';
+}
+$('vs-name-mode').addEventListener('change', () => {
+  vsDirty = true;
+  $('vs-help').textContent = VS_HELP[$('vs-name-mode').value] ?? '';
+});
+$('vs-save').addEventListener('click', () => withToken('lưu cài đặt voice', async (token) => {
+  await adminFetch('/api/voice-settings', 'PUT', token, { nameMode: $('vs-name-mode').value });
+  vsDirty = false;
+  toast('Đã lưu — danh sách người đang nói đổi ngay.');
+  refresh();
+}));
+
+// --- who may open the panel -----------------------------------------------------
+let paDirty = false;
+let paYourRule = null;
+function renderPanelAccess(pa) {
+  paYourRule = pa.yourRule;
+  const list = pa.ips.length ? pa.ips.map((ip) => `<span class="mono">${esc(ip)}</span>`).join(', ') : '<b>(trống)</b>';
+  $('pa-status').innerHTML = [
+    'Vào panel phải qua <b>2 lượt</b>: (1) địa chỉ IP nằm trong danh sách dưới đây — vào qua SSH tunnel thì luôn qua lượt này; (2) đăng nhập Steam bằng tài khoản có trong danh sách Admin (Cấu hình → Máy chủ → Admin).',
+    pa.webEnabled ? 'Panel đang mở qua web.' : 'Panel chưa mở qua web (chưa đặt PANEL_BASE_URL) — hiện chỉ vào được qua SSH tunnel; danh sách này dùng khi mở.',
+    `Đang cho phép: ${list}${pa.saved ? '' : ' (từ PANEL_ALLOWED_IPS trong .env, chưa lưu trên panel)'}.`,
+    pa.yourIp ? `Bạn đang vào từ <span class="mono">${esc(pa.yourIp)}</span> — không thể bỏ địa chỉ này khỏi danh sách. Mạng nhà dùng IPv6 thì phần cuối địa chỉ đổi vài giờ một lần: hãy cho cả dải /64 (nút bên dưới).` : 'Bạn đang vào qua SSH tunnel.',
+  ].map((l) => `<div>${l}</div>`).join('');
+  $('pa-add-me').hidden = !pa.yourRule || pa.ips.includes(pa.yourRule);
+  $('pa-add-me').textContent = pa.yourRule?.includes('/') ? `Thêm mạng của tôi (${pa.yourRule})` : 'Thêm IP của tôi';
+  if (!paDirty) $('pa-ips').value = pa.ips.join('\n');
+}
+$('pa-ips').addEventListener('input', () => { paDirty = true; });
+$('pa-add-me').addEventListener('click', () => {
+  const lines = $('pa-ips').value.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (paYourRule && !lines.includes(paYourRule)) lines.push(paYourRule);
+  $('pa-ips').value = lines.join('\n');
+  paDirty = true;
+});
+$('pa-save').addEventListener('click', () => withToken('lưu danh sách IP', async (token) => {
+  const ips = $('pa-ips').value.split(/[\s,]+/).map((l) => l.trim()).filter(Boolean);
+  await adminFetch('/api/panel-access', 'PUT', token, { ips });
+  paDirty = false;
+  toast('Đã lưu danh sách IP — có hiệu lực ngay.');
+  refresh();
+}));
+
 // --- routing + refresh --------------------------------------------------------
 
 const getJson = (url) => fetch(url).then((r) => {
+  if (r.status === 401) toLogin();
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 });
@@ -3600,7 +4352,7 @@ async function refreshTab(tab) {
       break;
     case 'map':
       {
-        const m = await getJson('/api/map');
+        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones()]);
         renderMap(m.players, m.ai ?? null);
       }
       break;

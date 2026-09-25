@@ -30,6 +30,12 @@ export const config = {
   /** x-portal-token for /player-api — the same value as PORTAL_TOKEN in the bridge's env. */
   portalToken: env('PORTAL_TOKEN', ''),
 
+  /** The proximity voice server players' browsers connect to (wss://…); empty = no voice. Same value as the bridge's VOICE_URL. */
+  voiceUrl: env('VOICE_URL', ''),
+
+  /** Xóm Gáy Launcher installers and its update feed, served at /tai/ (scripts/release-launcher.sh fills it). */
+  downloadsDir: env('PORTAL_DOWNLOADS_DIR', '/opt/isle-portal/downloads'),
+
   /** Signs the login cookie. At least 32 characters; changing it logs everyone out. */
   sessionSecret: env('PORTAL_SESSION_SECRET', ''),
   sessionDays: envInt('PORTAL_SESSION_DAYS', 7),

@@ -47,6 +47,14 @@ export interface NewSlotSpec {
   maxStamina?: number;
   maxFoodValue?: number;
   isFemale?: boolean;
+  /**
+   * Prime elder: restore.lua calls ServerSetPrimeEligible(true). The game
+   * marks a dino prime from about 75 % growth when it is eligible, so it
+   * needs growth >= 0.75.
+   */
+  isPrime?: boolean;
+  /** Elder replication stacks (the lineage counter), 0–10; restore.lua sets them. */
+  elderStacks?: number;
   /** Fill the stomach to the game's max for this dino on redeem (default true). */
   stomachFull?: boolean;
   /** Nutrient level to give, % of the dino's max (default 50). Applied once
@@ -185,6 +193,9 @@ export async function readSlot(steamId: string, slot: string): Promise<unknown |
  * Fields the admin does not set are left null rather than zeroed: the restore
  * code skips nulls, and a zero would come back as a starving dino.
  */
+/** The game marks an eligible dino prime from about this growth (seen: 0.752). */
+export const PRIME_MIN_GROWTH = 0.75;
+
 export async function createSlot(
   steamId: string,
   slot: string,
@@ -207,6 +218,16 @@ export async function createSlot(
   }
   if (spec.isFemale !== undefined && typeof spec.isFemale !== 'boolean') {
     throw new ValidationError('isFemale must be true or false');
+  }
+  if (spec.isPrime !== undefined && typeof spec.isPrime !== 'boolean') {
+    throw new ValidationError('isPrime must be true or false');
+  }
+  if (spec.isPrime === true && spec.growth < PRIME_MIN_GROWTH) {
+    throw new ValidationError(`a prime elder needs growth of at least ${PRIME_MIN_GROWTH * 100} %`);
+  }
+  const elderStacks = spec.elderStacks ?? null;
+  if (elderStacks !== null && (!Number.isInteger(elderStacks) || elderStacks < 0 || elderStacks > 10)) {
+    throw new ValidationError('elderStacks must be a whole number 0–10');
   }
   const mutations = validateMutations(spec.mutations);
   if (spec.stomachFull !== undefined && typeof spec.stomachFull !== 'boolean') {
@@ -245,12 +266,14 @@ export async function createSlot(
     // picks it at respawn), so an unset value stays null rather than
     // claiming "male".
     isFemale: spec.isFemale ?? null,
+    // restore.lua: ServerSetPrimeEligible(true). Null = leave it as the game has it.
+    isPrime: spec.isPrime === true ? true : null,
 
     // Only what the admin chose. Empty slots are left out, and the restore
     // skips a missing slot rather than clearing it.
     mutations,
     nutrients: {},
-    elderStacks: null,
+    elderStacks,
     // Read by restore.lua: an admin gift comes out fed (see NewSlotSpec).
     fill: { stomachFull: spec.stomachFull ?? true, nutrientPct },
 

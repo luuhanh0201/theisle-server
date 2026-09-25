@@ -1,7 +1,8 @@
 // Your dino on the Gateway map: position and heading from /api/me (the bridge
 // reads the game every second), your own recent trail, and the places players
 // plan around (migration / patrol zones, sanctuaries, water, landmarks).
-// Only YOUR dino: the portal never gets anyone else's position, nor the AI's.
+// Only YOUR dino: the portal never gets anyone else's position. The AI alive on
+// the server is shown (the owner's choice), from /api/ai every 2 s.
 //
 // Base image and places: VulnonaMAP (Coco.N), fetched by the bridge
 // (bridge/src/cli-fetch-map.ts) and shipped to public/map/. Map units = game
@@ -9,6 +10,8 @@
 // map X (down the image) is world Y, map Y (right) is world X.
 
 const LAYERS = [
+  ['ai', 'AI (live)', '#ef4444', true],
+  ['aizone', 'Vùng AI', '#fb923c', true],
   ['migration', 'Vùng di cư', '#22c55e', true],
   ['sanctuary', 'Sanctuary', '#e879f9', true],
   ['patrol', 'Tuần tra', '#f97316', false],
@@ -31,6 +34,37 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const unitsOf = (p) => [p.y / 1000, p.x / 1000];
 const hexA = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, '0');
 
+// --- waypoints ("điểm đến") ------------------------------------------------------------
+// Tap the map to set where you are heading: a line from your dino points
+// straight at it, here and on the launcher's mini map. Points can be saved
+// with a name. Kept in this browser (localStorage), in world units like the
+// dino's position.
+const WP_KEY = 'isle-waypoints.v1';
+const WP_MAX = 30;
+export function loadWaypoints() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(WP_KEY) ?? 'null');
+    const ok = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+    return {
+      target: ok(raw?.target) ? { x: raw.target.x, y: raw.target.y, name: String(raw.target.name ?? 'Điểm đến').slice(0, 40) } : null,
+      saved: Array.isArray(raw?.saved) ? raw.saved.filter(ok).slice(0, WP_MAX).map((p) => ({ id: String(p.id), name: String(p.name).slice(0, 40), x: p.x, y: p.y })) : [],
+    };
+  } catch {
+    return { target: null, saved: [] };
+  }
+}
+function saveWaypoints(wp) {
+  try { localStorage.setItem(WP_KEY, JSON.stringify(wp)); } catch { /* not remembered */ }
+}
+/** Metres between two world positions (cm), on the ground. */
+export const distanceM = (a, b) => Math.hypot(b.x - a.x, b.y - a.y) / 100;
+/** Compass bearing 0–360 (0 = north = up the map; world X east, Y south). */
+export const bearingOf = (a, b) => (Math.atan2(b.x - a.x, -(b.y - a.y)) * 180 / Math.PI + 360) % 360;
+const COMPASS = ['Bắc', 'Đông Bắc', 'Đông', 'Đông Nam', 'Nam', 'Tây Nam', 'Tây', 'Tây Bắc'];
+export const compassName = (deg) => COMPASS[Math.round(deg / 45) % 8];
+export const fmtDistance = (m) => (m >= 1000 ? `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km` : `${Math.round(m)} m`);
+const TARGET = '#facc15';
+
 export function createMap(root) {
   root.innerHTML = `<div class="map-wrap">
       <canvas></canvas>
@@ -40,7 +74,17 @@ export function createMap(root) {
         <button type="button" data-z="follow" title="Bám theo dino" class="on">◎</button>
       </div>
       <div class="map-msg">Đang tải bản đồ…</div>
+      <div class="map-target" hidden>
+        <div class="mt-info"><span class="mt-pin">📍</span><b class="mt-name"></b><span class="mt-dist"></span></div>
+        <div class="mt-actions">
+          <input class="mt-input" type="text" maxlength="40" placeholder="Tên điểm (vd. Hồ nước)" aria-label="Tên điểm">
+          <button type="button" class="mt-save">Lưu điểm</button>
+          <button type="button" class="mt-clear" title="Bỏ điểm đến">✕</button>
+        </div>
+      </div>
+      <div class="map-hint">Bấm vào bản đồ để đặt điểm đến</div>
     </div>
+    <div class="map-saved" hidden></div>
     <div class="map-chips"></div>
     <p class="muted map-note"></p>`;
   const canvas = root.querySelector('canvas');
@@ -52,9 +96,13 @@ export function createMap(root) {
     zoomIn: true,        // the first position zooms in on the dino (4x the whole island)
     on: new Set(LAYERS.filter((l) => l[3]).map((l) => l[0])),
     pointers: new Map(), drag: null, pinch: null,
+    ai: [],              // [{ s: species, x, y }] from /api/ai
+    zones: [],           // AI zones the admins drew, from /api/ai-zones
+    wp: loadWaypoints(), // { target, saved }
+    onTarget: null,      // told when the target changes (the launcher's overlay)
   };
   try {
-    const saved = JSON.parse(localStorage.getItem('portalMapLayers') ?? 'null');
+    const saved = JSON.parse(localStorage.getItem('portalMapLayers.v2') ?? 'null');
     if (Array.isArray(saved)) st.on = new Set(saved.filter((id) => LAYER[id]));
   } catch { /* defaults */ }
 
@@ -66,6 +114,14 @@ export function createMap(root) {
   const rX = (r) => r / (st.data.bounds.maxX - st.data.bounds.minX) * st.img.naturalHeight * st.view.s;
   const rY = (r) => r / (st.data.bounds.maxY - st.data.bounds.minY) * st.img.naturalWidth * st.view.s;
   const draw = () => { if (!st.raf) st.raf = requestAnimationFrame(render); };
+  /** Screen point → world position (cm), the inverse of scr(unitsOf(p)). */
+  const toWorld = (sx, sy) => {
+    const b = st.data.bounds;
+    const ix = (sx - st.view.ox) / st.view.s; const iy = (sy - st.view.oy) / st.view.s;
+    const mapY = ix / st.img.naturalWidth * (b.maxY - b.minY) + b.minY;
+    const mapX = iy / st.img.naturalHeight * (b.maxX - b.minX) + b.minX;
+    return { x: mapY * 1000, y: mapX * 1000 };
+  };
 
   function shown() {
     if (!st.to) return null;
@@ -185,6 +241,54 @@ export function createMap(root) {
       }
     }
 
+    // AI zones the admins drew: where the server keeps AI (name, which kinds).
+    if (st.on.has('aizone')) {
+      for (const zn of st.zones) {
+        const f = { kind: 'circle', at: unitsOf(zn), r: [zn.radiusM / 10, zn.radiusM / 10] };
+        trace(ctx, f);
+        ctx.fillStyle = hexA(LAYER.aizone.color, 0.12); ctx.fill();
+        ctx.lineWidth = 1.8; ctx.strokeStyle = LAYER.aizone.color; ctx.stroke();
+        const [x, y] = scr(f.at);
+        text(ctx, zn.name, x, y - (z >= 1.8 ? 7 : 0), '700 11.5px Inter, system-ui, sans-serif', '#fed7aa');
+        if (z >= 1.8) text(ctx, zn.species.join(', '), x, y + 8, '600 10px Inter, system-ui, sans-serif', '#ffedd5');
+      }
+    }
+
+    // The AI alive on the server now, under your own dino.
+    if (st.on.has('ai')) {
+      const r = Math.max(3, Math.min(6, 2.4 * Math.sqrt(z)));
+      for (const a of st.ai) {
+        const [x, y] = scr(unitsOf(a));
+        if (x < -10 || y < -10 || x > cw + 10 || y > ch + 10) continue;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = LAYER.ai.color; ctx.fill();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
+        if (z >= 3) text(ctx, a.s ?? 'AI', x, y - r - 8, '600 10.5px Inter, system-ui, sans-serif', '#fecaca');
+      }
+    }
+
+    // Where you are heading: a line from the dino straight to it, and a pin.
+    const tg = st.wp.target;
+    if (tg) {
+      const [tx, ty] = scr(unitsOf(tg));
+      if (pos) {
+        const [dx, dy] = scr(pos);
+        ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(tx, ty); ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(2,6,23,.75)'; ctx.lineWidth = 6; ctx.stroke();
+        ctx.strokeStyle = TARGET; ctx.lineWidth = 3; ctx.setLineDash([10, 7]); ctx.stroke(); ctx.setLineDash([]);
+        const d = distanceM(st.me.position, tg);
+        text(ctx, fmtDistance(d), (dx + tx) / 2, (dy + ty) / 2 - 12, '800 12px Inter, system-ui, sans-serif', TARGET);
+      }
+      // the pin: a drop with a dot, its point on the spot
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.bezierCurveTo(tx - 10, ty - 12, tx - 9, ty - 26, tx, ty - 26);
+      ctx.bezierCurveTo(tx + 9, ty - 26, tx + 10, ty - 12, tx, ty);
+      ctx.fillStyle = TARGET; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(tx, ty - 17, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#1a1400'; ctx.fill();
+      if (tg.name && tg.name !== 'Điểm đến') text(ctx, tg.name, tx, ty - 36, '700 11.5px Inter, system-ui, sans-serif', '#fde68a');
+    }
+
     // Your trail, then your dino with its heading.
     const me = st.me;
     if (me && pos) {
@@ -260,7 +364,12 @@ export function createMap(root) {
       if (st.drag.moved) { st.view.ox = st.drag.ox + dx; st.view.oy = st.drag.oy + dy; draw(); }
     }
   });
-  const end = (e) => { st.pointers.delete(e.pointerId); if (st.pointers.size < 2) st.pinch = null; st.drag = null; };
+  const end = (e) => {
+    // A tap (no drag, one finger): that is where you are heading.
+    const tap = st.drag && !st.drag.moved && st.pointers.size === 1 && e.type === 'pointerup';
+    st.pointers.delete(e.pointerId); if (st.pointers.size < 2) st.pinch = null; st.drag = null;
+    if (tap && st.data && st.view) { const [x, y] = local(e); setTarget({ ...toWorld(x, y), name: 'Điểm đến' }); }
+  };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
   canvas.addEventListener('wheel', (e) => {
@@ -282,16 +391,76 @@ export function createMap(root) {
   // --- layers ---
   function chips() {
     root.querySelector('.map-chips').innerHTML = LAYERS.map(([id, label, color]) =>
-      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}</button>`).join('');
+      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : ''}</button>`).join('');
   }
   root.querySelector('.map-chips').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-layer]');
     if (!b) return;
     const id = b.dataset.layer;
     if (st.on.has(id)) st.on.delete(id); else st.on.add(id);
-    try { localStorage.setItem('portalMapLayers', JSON.stringify([...st.on])); } catch { /* not remembered */ }
+    try { localStorage.setItem('portalMapLayers.v2', JSON.stringify([...st.on])); } catch { /* not remembered */ }
     chips(); draw();
   });
+
+  // --- the target bar and the saved points ---
+  const bar = root.querySelector('.map-target');
+  const hint = root.querySelector('.map-hint');
+  const savedEl = root.querySelector('.map-saved');
+  function setTarget(t) {
+    st.wp.target = t ? { x: t.x, y: t.y, name: t.name || 'Điểm đến' } : null;
+    saveWaypoints(st.wp);
+    const input = bar.querySelector('.mt-input');
+    input.value = t && t.name !== 'Điểm đến' ? t.name : '';
+    renderTarget(); renderSaved(); draw();
+    if (st.onTarget) st.onTarget(st.wp.target);
+  }
+  function renderTarget() {
+    const t = st.wp.target;
+    bar.hidden = !t;
+    hint.hidden = Boolean(t);
+    if (!t) return;
+    bar.querySelector('.mt-name').textContent = t.name;
+    const me = st.me && st.me.position;
+    bar.querySelector('.mt-dist').textContent = me
+      ? `${fmtDistance(distanceM(me, t))} · hướng ${compassName(bearingOf(me, t))}${distanceM(me, t) < 30 ? ' · đã tới nơi ✓' : ''}`
+      : 'vào game để thấy khoảng cách';
+    const isSaved = st.wp.saved.some((p) => p.x === t.x && p.y === t.y);
+    bar.querySelector('.mt-save').textContent = isSaved ? 'Đã lưu ✓' : 'Lưu điểm';
+    bar.querySelector('.mt-save').disabled = isSaved;
+  }
+  function renderSaved() {
+    savedEl.hidden = st.wp.saved.length === 0;
+    const t = st.wp.target;
+    savedEl.innerHTML = `<span class="ms-label">📍 Điểm đã lưu</span>` + st.wp.saved.map((p) =>
+      `<span class="ms-item${t && t.x === p.x && t.y === p.y ? ' on' : ''}"><button type="button" data-go="${esc(p.id)}" title="Chọn làm điểm đến">${esc(p.name)}</button><button type="button" class="ms-del" data-del="${esc(p.id)}" title="Xoá điểm này">✕</button></span>`).join('');
+  }
+  bar.querySelector('.mt-clear').addEventListener('click', () => setTarget(null));
+  bar.querySelector('.mt-save').addEventListener('click', () => {
+    const t = st.wp.target;
+    if (!t) return;
+    const name = bar.querySelector('.mt-input').value.trim().slice(0, 40) || `Điểm ${st.wp.saved.length + 1}`;
+    st.wp.saved = [{ id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name, x: t.x, y: t.y }, ...st.wp.saved].slice(0, WP_MAX);
+    st.wp.target = { ...t, name };
+    saveWaypoints(st.wp);
+    renderTarget(); renderSaved(); draw();
+    if (st.onTarget) st.onTarget(st.wp.target);
+  });
+  bar.querySelector('.mt-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') bar.querySelector('.mt-save').click(); });
+  // Typing a name must not pan / zoom the map or hit the page's keys.
+  for (const ev of ['pointerdown', 'wheel', 'keydown']) bar.addEventListener(ev, (e) => e.stopPropagation());
+  savedEl.addEventListener('click', (e) => {
+    const go = e.target.closest('[data-go]');
+    const del = e.target.closest('[data-del]');
+    if (go) { const p = st.wp.saved.find((x) => x.id === go.dataset.go); if (p) setTarget(p); }
+    if (del) {
+      const p = st.wp.saved.find((x) => x.id === del.dataset.del);
+      st.wp.saved = st.wp.saved.filter((x) => x.id !== del.dataset.del);
+      if (p && st.wp.target && st.wp.target.x === p.x && st.wp.target.y === p.y) st.wp.target = { ...st.wp.target, name: 'Điểm đến' };
+      saveWaypoints(st.wp); renderTarget(); renderSaved(); draw();
+      if (st.onTarget) st.onTarget(st.wp.target);
+    }
+  });
+  renderTarget(); renderSaved();
 
   (async () => {
     try {
@@ -314,6 +483,20 @@ export function createMap(root) {
   })();
 
   return {
+    /** /api/ai .list: [{ s, x, y }] (empty when the server is down). */
+    setAi(list) {
+      st.ai = Array.isArray(list) ? list.filter((a) => typeof a?.x === 'number' && typeof a?.y === 'number') : [];
+      const n = root.querySelector('.map-chips .ai-n');
+      if (n) n.textContent = String(st.ai.length);
+      draw();
+    },
+    /** /api/ai-zones .zones: [{ name, x, y, radiusM, species: [labels], count }]. */
+    setAiZones(list) {
+      st.zones = Array.isArray(list) ? list.filter((zn) => typeof zn?.x === 'number' && typeof zn?.y === 'number' && typeof zn?.radiusM === 'number') : [];
+      const n = root.querySelector('.map-chips .az-n');
+      if (n) n.textContent = String(st.zones.length);
+      draw();
+    },
     /** me.dino from /api/me (null = no dino). */
     update(dino) {
       if (!dino || !dino.position) {
@@ -329,7 +512,11 @@ export function createMap(root) {
       const far = !cur || Math.hypot(to[0] - cur[0], to[1] - cur[1]) > 60;
       st.from = far ? to : cur; st.to = to; st.t0 = performance.now();
       st.me = dino;
+      renderTarget();
       draw();
     },
+    /** The target you set on the map ({ x, y, name } in world units), or null. */
+    getTarget() { return st.wp.target; },
+    onTargetChange(cb) { st.onTarget = cb; },
   };
 }

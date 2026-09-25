@@ -14,10 +14,11 @@
     that way — if a feature needs to change the world, it belongs in another mod.
 
     Threads (docs/lua-safety-rules.md):
-      * game thread  — hooks, and the snapshot read every SNAPSHOT_SECONDS
-                       (ExecuteInGameThread). These only read and queue.
-      * async thread — the 1s LoopAsync tick. It only writes queued lines to
-                       disk and never touches a UObject.
+      * game thread  — hooks, and the read loop (H.every: the live state
+                       every second, a snapshot every SNAPSHOT_SECONDS).
+                       These only read and queue.
+      * async thread — the 0.5 s LoopAsync tick. It only writes queued lines
+                       to disk and never touches a UObject.
     So a slow disk never stalls the game, and no engine object is read from
     the wrong thread.
 
@@ -534,14 +535,17 @@ local function health(pawn)
     return nil
 end
 
-local function aiAliveCounter()
+--- A number the game keeps on its game state (scalar properties only:
+--- AIAlive, ServerFPS — both read fine by IsleProbe's config dump).
+local function gameStateNumber(field)
     local ok, n = pcall(function()
         local gs = FindFirstOf("TIGameStateBase")
         if not H.isValid(gs) then return nil end
-        return gs.AIAlive
+        return gs[field]
     end)
     return ok and type(n) == "number" and n or nil
 end
+local function aiAliveCounter() return gameStateNumber("AIAlive") end
 
 local function scanAi(now, playerPawns)
     local ok, pawns = pcall(function() return FindAllOf("Pawn") or {} end)
@@ -594,7 +598,8 @@ local function liveOnce()
     if lastAi == nil or liveCount % AI_EVERY_LIVES == 0 then
         lastAi = scanAi(now, playerPawns) or lastAi
     end
-    readyLive = { t = now, players = players, ai = lastAi }
+    -- The server's own tick rate, for the panel's performance page.
+    readyLive = { t = now, players = players, ai = lastAi, fps = gameStateNumber("ServerFPS") }
 end
 
 local function snapshotOnce()
@@ -673,16 +678,18 @@ end
 --------------------------------------------------------------------------
 -- LoopAsync runs on UE4SS's async thread, where touching a UObject can crash
 -- the server (AGENTS.md, docs/lua-safety-rules.md). So the async tick never
--- reads the game: every TICK_MS it writes whatever is queued, every
--- LIVE_EVERY_MS it asks the game thread for the live state, and every
--- SNAPSHOT_SECONDS for one snapshot.
+-- reads the game: every TICK_MS it writes whatever is queued.
+--
+-- The reads run in ONE game-thread loop (H.every → LoopInGameThreadWithDelay):
+-- the live state every second, a snapshot every SNAPSHOT_SECONDS. It used to
+-- be the async tick queuing ExecuteInGameThread for each read; on the
+-- server's UE4SS two of those callbacks were lost ("Ref was not function",
+-- 2026-09-24 11:06 UTC) and their "still queued" flags stopped every read
+-- for good — the map lost everyone while they were still playing.
 
 local TICK_MS = 500
-local READ_EVERY_TICKS = math.floor(SNAPSHOT_SECONDS * 1000 / TICK_MS)
-local LIVE_EVERY_TICKS = math.floor(LIVE_EVERY_MS / TICK_MS)
-local ticks, liveTicks = 0, 0
-local readQueued = false   -- a snapshot is waiting on the game thread
-local liveQueued = false   -- a live read is waiting on the game thread
+local SNAPSHOT_EVERY_LIVES = math.floor(SNAPSHOT_SECONDS * 1000 / LIVE_EVERY_MS)
+local lives = 0
 
 local function writeQueued()
     -- Events first: a death and the snapshot that revealed it carry the same
@@ -702,26 +709,16 @@ end
 
 LoopAsync(TICK_MS, function()
     H.try(MOD .. ": write", writeQueued)
-
-    ticks = ticks + 1
-    if ticks >= READ_EVERY_TICKS and not readQueued then
-        ticks = 0
-        -- Never stack reads: if the game thread is slow, skip rather than
-        -- queue a backlog of snapshots behind it.
-        readQueued = H.onGameThread(MOD .. ": snapshot", function()
-            readQueued = false
-            snapshotOnce()
-        end)
-    end
-    liveTicks = liveTicks + 1
-    if liveTicks >= LIVE_EVERY_TICKS and not liveQueued then
-        liveTicks = 0
-        liveQueued = H.onGameThread(MOD .. ": live", function()
-            liveQueued = false
-            liveOnce()
-        end)
-    end
     return false   -- keep looping
+end)
+
+H.every(LIVE_EVERY_MS, MOD .. ": read", function()
+    lives = lives + 1
+    if lives >= SNAPSHOT_EVERY_LIVES then
+        lives = 0
+        H.try(MOD .. ": snapshot", snapshotOnce)
+    end
+    H.try(MOD .. ": live", liveOnce)
 end)
 
 H.log(MOD .. ": loaded, writing " .. Events.STREAMS.events.path

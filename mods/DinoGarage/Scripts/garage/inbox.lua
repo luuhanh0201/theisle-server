@@ -16,15 +16,22 @@
       * a command past expiresAt is refused, not run late — an admin who
         clicked "kill" a minute ago is no longer looking at the same situation
 
-    The outcome of each command is emitted as an `admin_kill` event, which the
-    bridge reads back from events.ndjson.
+    Supported:
+      "kill"    — (admin) SetHealth(0) on the player's current dino, exactly
+                  what !store does. Outcome: an `admin_kill` event.
+      "store"   — (the player, from the web garage) { slot }
+      "redeem"  — (the player, from the web garage) { slot, where }
+                  Both run the handlers main.lua registers with I.on() — the
+                  very doStore / doRedeem of the chat commands — for the
+                  player the command names, only while that player is online.
+                  Outcome: a `portal_command` event with the replies the
+                  player also gets in chat.
+    Anything else is refused.
 
-    Supported: "kill" — SetHealth(0) on the player's current dino, exactly what
-    !store does. Nothing else is accepted.
-
-    Threads: poll() runs on the async thread and only reads/writes files. The
-    kill, including finding the player, runs on the game thread. Its outcome
-    is queued and written by the NEXT poll, up to one poll (2s) later.
+    Threads: poll() runs ON THE GAME THREAD (H.every in main.lua): it reads
+    one small file, acts, and appends the outcomes. It used to run on the
+    async thread and hand each command to ExecuteInGameThread — the hand-off
+    that lost callbacks on the server (2026-09-24).
 ]]
 
 local H      = require("shared.isle.helpers")
@@ -37,6 +44,13 @@ I.INBOX_PATH = "Mods/DinoGarage/Saved/inbox.json"
 I.ACK_PATH   = "Mods/DinoGarage/Saved/inbox.ack.json"
 
 local lastId = nil   -- loaded lazily from the ack file
+
+-- Player commands: kind -> fn(ctrl, cmd, say) returning true when started.
+local handlers = {}
+function I.on(kind, fn) handlers[kind] = fn end
+
+local SLOT_OK  = function(v) return v == nil or (type(v) == "string" and #v <= 32 and v:match("^[%w_%-]+$") ~= nil) end
+local WHERE_OK = { stored = true, here = true }
 
 local function readJson(path)
     local f = io.open(path, "r")
@@ -82,8 +96,7 @@ local function findCtrl(steamId)
     return found
 end
 
--- Outcomes are queued, not written: results decided on the game thread must
--- not do file I/O there. The next poll (async) writes them.
+-- Outcomes are collected during a poll and appended once at its end.
 local pendingResults = {}
 
 local function result(cmd, ok, fields)
@@ -106,11 +119,9 @@ local function writeResults()
     Events.emitMany(batch)
 end
 
---- Kill one player's current dino. EVERYTHING that touches the engine —
---- finding the controller, reading the pawn, SetHealth — runs on the game
---- thread; this function itself runs on the async polling thread.
+--- Kill one player's current dino (we are on the game thread).
 local function kill(cmd)
-    local queued = H.onGameThread("inbox: kill " .. cmd.steamId, function()
+    do
         local c = findCtrl(cmd.steamId)
         if c == nil then
             result(cmd, false, { error = "offline" })
@@ -139,17 +150,37 @@ local function kill(cmd)
             growth  = growth,
             error   = (not ok) and "set_health_failed" or nil,
         })
-    end)
-    if not queued then
-        -- No game thread in this UE4SS build: refuse rather than run it here.
-        result(cmd, false, { error = "no_game_thread" })
     end
+end
+
+--- The player's own store / redeem, as if they had typed it in chat.
+local function playerCommand(cmd)
+    local function done(ok, fields)
+        local event = { type = "portal_command", id = cmd.id, steamId = cmd.steamId,
+                        action = cmd.type, slot = cmd.slot, ok = ok, t = os.time() }
+        for k, v in pairs(fields or {}) do event[k] = v end
+        pendingResults[#pendingResults + 1] = event
+    end
+    if not SLOT_OK(cmd.slot) or (cmd.where ~= nil and not WHERE_OK[cmd.where]) then
+        done(false, { error = "bad_arguments" })
+        return
+    end
+    local c = findCtrl(cmd.steamId)
+    if c == nil then
+        done(false, { error = "offline" })
+        return
+    end
+    local messages = {}
+    local function say(m)
+        H.safeNotify(c, m)
+        messages[#messages + 1] = m
+    end
+    local ok, started = H.try("inbox: " .. cmd.type .. " " .. cmd.steamId, handlers[cmd.type], c, cmd, say)
+    done(ok and started == true, { messages = messages, error = (not ok) and "failed" or nil })
 end
 
 --- One poll: run every new, unexpired command once, then persist the ack.
 function I.poll()
-    -- Outcomes from the previous poll's game-thread work.
-    writeResults()
 
     local inbox = readJson(I.INBOX_PATH)
     if type(inbox) ~= "table" or type(inbox.commands) ~= "table" then return end
@@ -178,15 +209,24 @@ function I.poll()
         if not steamOk then
             H.logError("inbox: command " .. id .. " has no valid steamId")
         elseif tonumber(cmd.expiresAt) == nil or now > tonumber(cmd.expiresAt) then
-            result(cmd, false, { error = "expired" })
+            if handlers[cmd.type] ~= nil then
+                pendingResults[#pendingResults + 1] = { type = "portal_command", id = cmd.id, steamId = cmd.steamId,
+                    action = cmd.type, slot = cmd.slot, ok = false, error = "expired", t = now }
+            else
+                result(cmd, false, { error = "expired" })
+            end
         elseif cmd.type == "kill" then
             H.log("inbox: kill " .. cmd.steamId .. " (command " .. id .. ")")
             kill(cmd)
+        elseif handlers[cmd.type] ~= nil then
+            H.log("inbox: " .. cmd.type .. " for " .. cmd.steamId .. " (command " .. id .. ")")
+            playerCommand(cmd)
         else
             H.logError("inbox: unknown command type '" .. tostring(cmd.type) .. "'")
             result(cmd, false, { error = "unknown_command" })
         end
     end
+    writeResults()
 end
 
 return I

@@ -33,6 +33,7 @@ local F = {
     maxFoodValue = { "MaxFoodValue" },
     maxThirst    = { "MaxThirst" },
     maxStamina   = { "MaxStamina" },
+    maxHealth    = { "MaxHealth" },
 
     growth       = { "Growth", "GrowthPercent" },
     isFemale     = { "bIsFemale", "IsFemale" },
@@ -67,7 +68,7 @@ local GETTERS = {
     health = "GetHealth", stamina = "GetStamina", hunger = "GetHunger",
     thirst = "GetThirst", oxygen = "GetOxygen", blood = "GetBlood",
     maxHunger = "GetMaxHunger", maxThirst = "GetMaxThirst",
-    maxStamina = "GetMaxStamina", growth = "GetGrowth",
+    maxStamina = "GetMaxStamina", maxHealth = "GetMaxHealth", growth = "GetGrowth",
 }
 
 local function num(pawn, key)
@@ -175,6 +176,8 @@ function C.capture(pawn)
         maxFoodValue = num(pawn, "maxFoodValue"),
         maxThirst    = num(pawn, "maxThirst"),
         maxStamina   = num(pawn, "maxStamina"),
+        -- Shown only (the web garage's health bar); restore does not set it.
+        maxHealth    = num(pawn, "maxHealth"),
 
         growth   = num(pawn, "growth"),
         isFemale = H.readField(pawn, F.isFemale, "isFemale") == true,
@@ -188,6 +191,11 @@ function C.capture(pawn)
         return pawn:GetElderReplicationStacks()
     end)
     state.elderStacks = okElder and tonumber(stacks) or nil
+
+    -- Prime elder or not, as the game says (IsPrimeElder, which StatsLogger
+    -- also reads): shown on the web garage only; restore does not set it.
+    local okPrime, isPrime = pcall(function() return pawn:IsPrimeElder() end)
+    state.prime = okPrime and isPrime == true or nil
 
     state.location, state.rotation = captureTransform(pawn)
     -- The skin as the game had it, for the player portal. Not applied on

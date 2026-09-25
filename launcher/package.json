@@ -1,0 +1,92 @@
+{
+  "name": "xomgay-launcher",
+  "productName": "Xóm Gáy Launcher",
+  "version": "1.0.5",
+  "private": true,
+  "description": "Xóm Gáy Launcher: the player portal (garage, live map, leaderboard, skin) and proximity voice with a push-to-talk key that works in game.",
+  "author": "Xóm Gáy",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "dist:linux": "electron-builder --linux AppImage --x64",
+    "dist:win": "electron-builder --win nsis --x64",
+    "dist": "electron-builder --linux AppImage --win nsis --x64"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9",
+    "uiohook-napi": "1.5.5"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "online.xomgay.launcher",
+    "productName": "Xóm Gáy Launcher",
+    "executableName": "xomgay-launcher",
+    "copyright": "Xóm Gáy",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "npmRebuild": false,
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**"
+    ],
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://xomgay.online/tai/"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "XomGay-Launcher-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "Xóm Gáy Launcher",
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Game",
+      "synopsis": "Xóm Gáy: gara, bản đồ live, voice gần",
+      "artifactName": "XomGay-Launcher-${version}.${ext}",
+      "syncDesktopName": true
+    },
+    "protocols": [
+      {
+        "name": "Xóm Gáy Launcher",
+        "schemes": [
+          "xomgay-launcher"
+        ]
+      }
+    ]
+  },
+  "desktopName": "xomgay-launcher.desktop"
+}

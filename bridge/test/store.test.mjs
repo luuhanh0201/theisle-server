@@ -315,3 +315,15 @@ test('catalog keeps evidence per species and confirms only where seen', () => {
   assert.equal(s.catalog.knows('MUT_T'), true);
   assert.equal(s.catalog.knows('MUT_NOPE'), false);
 });
+
+test('web garage commands: results kept, but no player invented for an unknown SteamID', () => {
+  const s = new Store();
+  const t = now();
+  const STRANGER = '76561190000000042';
+  s.apply({ type: 'portal_command', t, id: 7, steamId: STRANGER, action: 'store', ok: false, error: 'offline' });
+  assert.equal(s.player(STRANGER), null, 'not in the players list');
+  assert.equal(s.commandResult(STRANGER, 7).error, 'offline', 'the web can still read its answer');
+  feed(s, [{ t, type: 'session_start', steamId: A, name: 'Alpha' }]);
+  s.apply({ type: 'portal_command', t, id: 8, steamId: A, action: 'store', ok: true, messages: ['x'] });
+  assert.equal(s.player(A).timeline[0].type, 'portal_command', 'a known player gets it in their timeline');
+});
