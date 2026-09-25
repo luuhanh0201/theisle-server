@@ -15,11 +15,13 @@ function rig({ answer = { ok: true, made: 42 }, answerAfterPolls = 2, blockSleep
   let t = 0;
   const said = [];
   const queued = [];
+  const kept = [];
   let polls = 0;
   const rcon = { enabled: true, run: async (name, args) => { said.push(args === undefined ? name : `${name}: ${args}`); return ''; } };
   const reset = new AiReset({
     rcon,
-    enqueue: async (classes) => { queued.push(classes); return { id: 7 }; },
+    enqueue: async (classes, keep) => { queued.push(classes); kept.push(keep); return { id: 7 }; },
+    zoneClasses: async () => ['BP_Boar_C', 'BP_Deer_C'],
     result: async (id) => (++polls >= answerAfterPolls ? { id, ...answer } : null),
     now: () => t,
     sleep: (ms, signal) => new Promise((resolve, reject) => {
@@ -30,12 +32,13 @@ function rig({ answer = { ok: true, made: 42 }, answerAfterPolls = 2, blockSleep
     }),
     answerTimeoutMs: 20_000,
   });
-  return { reset, said, queued };
+  return { reset, said, queued, kept };
 }
 
 test('validation: a countdown 0–600 s, known kinds, corpses cleared unless said no', () => {
-  assert.deepEqual(validateReset({ countdownSec: 60 }), { countdownSec: 60, species: [], wipeCorpses: true });
-  assert.deepEqual(validateReset({ countdownSec: 0, species: ['Rabbit', 'Rabbit'], wipeCorpses: false }), { countdownSec: 0, species: ['Rabbit'], wipeCorpses: false });
+  assert.deepEqual(validateReset({ countdownSec: 60 }), { countdownSec: 60, species: [], wipeCorpses: true, keepZoneSpecies: false });
+  assert.deepEqual(validateReset({ countdownSec: 0, species: ['Rabbit', 'Rabbit'], wipeCorpses: false }), { countdownSec: 0, species: ['Rabbit'], wipeCorpses: false, keepZoneSpecies: false });
+  assert.equal(validateReset({ countdownSec: 0, keepZoneSpecies: true }).keepZoneSpecies, true);
   assert.throws(() => validateReset({ countdownSec: 601 }), /countdownSec/);
   assert.throws(() => validateReset({ countdownSec: 0, species: ['Dragon'] }), /unknown AI/);
 });
@@ -63,6 +66,16 @@ test('no countdown, no corpse wipe: straight to the mod, then done', async () =>
   await r.reset.request({ countdownSec: 0, species: [], wipeCorpses: false }).done;
   assert.deepEqual(r.queued, [[]], 'every AI');
   assert.deepEqual(r.said, ['announce: Đã làm mới AI (42 con) / AI has been reset.']);
+});
+
+test('keep the zones\' species: every other AI is killed, theirs spared', async () => {
+  const r = rig();
+  await r.reset.request({ countdownSec: 0, species: [], wipeCorpses: false, keepZoneSpecies: true }).done;
+  assert.deepEqual(r.queued, [[]], 'every kind…');
+  assert.deepEqual(r.kept, [['BP_Boar_C', 'BP_Deer_C']], '…but the zones\' boars and deer');
+  const plain = rig();
+  await plain.reset.request({ countdownSec: 0, species: [], wipeCorpses: false }).done;
+  assert.deepEqual(plain.kept, [[]], 'a plain reset spares nothing');
 });
 
 test('cancelled in the countdown: players told, the mod never asked', async () => {

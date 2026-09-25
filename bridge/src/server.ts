@@ -28,6 +28,7 @@ import { readAiZones, readAiZonesStatus, saveAiZones, type AiZonesSettings } fro
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
+import { readAmbient, setAmbient } from './ai-ambient.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
@@ -310,6 +311,7 @@ async function handlePanel(
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
+      (path === '/api/ai-ambient' && req.method === 'PUT') ||
       ((path === '/api/ai-reset' || path === '/api/ai-reset/cancel') && req.method === 'POST');
     if (!allowed) {
       sendJson(res, 404, { error: 'not found' });
@@ -395,8 +397,22 @@ async function handlePanel(
       }
       const { op, done } = ctx.aiReset.request(validateReset(await readJsonBody(req)));
       done.catch((error: unknown) => console.error('[ai-reset] failed:', error));
-      await audit({ action: 'AI reset requested', detail: `${op.species.length ? op.species.join(', ') : 'mọi AI'} · đếm ngược ${op.countdownSec} s`, ok: true });
+      await audit({ action: 'AI reset requested', detail: `${op.species.length ? op.species.join(', ') : op.keepZoneSpecies ? 'AI không thuộc loài của vùng' : 'mọi AI'} · đếm ngược ${op.countdownSec} s`, ok: true });
       sendJson(res, 202, { operation: op });
+      return;
+    }
+
+    if (path === '/api/ai-ambient') {
+      const body = (await readJsonBody(req)) as { on?: unknown };
+      if (typeof body.on !== 'boolean') throw new ValidationError('on must be true or false');
+      const before = await readAmbient(rcon);
+      const after = await setAmbient(rcon, body.on);
+      await audit({
+        action: `game AI around players ${body.on ? 'on' : 'off'}`,
+        detail: `server: ${before.live ?? '?'} → ${after.live ?? '?'}${after.toggled ? ' (RCON ToggleAI)' : ''} · Game.ini bSpawnAI: ${before.ini ?? '?'} → ${after.ini ?? '?'}`,
+        ok: after.live === null || after.live === body.on,
+      });
+      sendJson(res, 200, after);
       return;
     }
 
@@ -681,6 +697,10 @@ async function handlePanel(
     }
     case '/api/ai-reset': {
       sendJson(res, 200, ctx.aiReset ? ctx.aiReset.status() : { current: null, last: null });
+      return;
+    }
+    case '/api/ai-ambient': {
+      sendJson(res, 200, await readAmbient(ctx.rcon));
       return;
     }
     case '/api/ptera-carry': {

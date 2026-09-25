@@ -529,7 +529,7 @@ end
 
 local RESET_BATCH = 25
 local RESET_MAX_S = 30      -- the game keeps spawning: stop after this long
-local reset = nil           -- { id, classes (set, or nil = every AI), started, killed }
+local reset = nil           -- { id, classes (set, or nil = every AI), keep (set of classes spared), started, killed }
 
 local function isAiDriven(pawn)
     local okC, c = pcall(function() return pawn.Controller end)
@@ -547,7 +547,9 @@ local function resetStep()
         if H.isValid(pawn) and addressOf(pawn) ~= nil and isAiDriven(pawn) then
             local okH, hp = pcall(function() return pawn:GetHealth() end)
             local cls = classNameOf(pawn)
-            if okH and type(hp) == "number" and hp > 0 and (reset.classes == nil or (cls ~= nil and reset.classes[cls])) then
+            local chosen = (reset.classes == nil or (cls ~= nil and reset.classes[cls]))
+                and not (reset.keep and cls ~= nil and reset.keep[cls])
+            if okH and type(hp) == "number" and hp > 0 and chosen then
                 if killed >= RESET_BATCH then
                     left = left + 1
                 elseif pcall(function() pawn:SetHealth(0) end) then
@@ -600,7 +602,12 @@ local function pollDrops()
                     classes = {}
                     for _, c in ipairs(d.classes) do classes[tostring(c)] = true end
                 end
-                reset = { id = id, classes = classes, started = now, killed = 0 }
+                local keep = nil
+                if type(d.keep) == "table" and #d.keep > 0 then
+                    keep = {}
+                    for _, c in ipairs(d.keep) do keep[tostring(c)] = true end
+                end
+                reset = { id = id, classes = classes, keep = keep, started = now, killed = 0 }
                 H.log(MOD .. ": reset " .. id .. " — killing " .. (classes and "the chosen AI" or "every AI"))
                 continueReset()
             end

@@ -10,7 +10,8 @@ import { Notifier } from './notify.js';
 import { Metrics } from './metrics.js';
 import { readLiveState } from './live.js';
 import { VoiceRoom } from './voice.js';
-import { groundPointsPath, refreshModFile } from './ai-zones.js';
+import { groundPointsPath, readAiZones, refreshModFile } from './ai-zones.js';
+import { AI_BY_KEY } from './ai-species.js';
 import { pruneAudit } from './audit.js';
 import { loadMessages, syncModTexts } from './messages.js';
 import { Announcer } from './announcer.js';
@@ -70,10 +71,15 @@ const voice = config.voice === null ? null : new VoiceRoom(config.voice);
 // "Làm mới AI": the AIZones mod kills, the game clears the corpses (ai-reset.ts).
 const aiReset = new AiReset({
   rcon,
-  enqueue: (classes) => enqueueAiCommand((id) => {
+  enqueue: (classes, keep) => enqueueAiCommand((id) => {
     const now = Math.floor(Date.now() / 1000);
-    return { id, kind: 'reset', classes, createdAt: now, expiresAt: now + 30 };
+    return { id, kind: 'reset', classes, keep, createdAt: now, expiresAt: now + 30 };
   }),
+  zoneClasses: async () => {
+    const s = await readAiZones();
+    const keys = new Set(s.zones.filter((z) => z.enabled).flatMap((z) => z.species));
+    return [...keys].map((k) => AI_BY_KEY.get(k)?.cls).filter((c): c is string => typeof c === 'string');
+  },
   result: dropResult,
 });
 

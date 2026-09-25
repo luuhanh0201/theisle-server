@@ -366,6 +366,12 @@ drops.fn()
 d = readDone()
 check("only the chosen kind", alive("BP_Deer") == 0 and alive("BP_Boar") == 3 and d.results[#d.results].made == 2,
   tostring(alive("BP_Boar")))
+for _ = 1, 2 do aiPawn("BP_Rabbit") end
+writeDrops({ { id = 12, kind = "reset", classes = {}, keep = { "BP_Boar_C", "BP_Deer_C" }, expiresAt = clock + 30 } })
+drops.fn()
+d = readDone()
+check("keep the zones' kinds: the rabbits go, the boars stay", alive("BP_Rabbit") == 0 and alive("BP_Boar") == 3
+  and d.results[#d.results].made == 2, tostring(alive("BP_Rabbit")) .. "/" .. tostring(alive("BP_Boar")))
 
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))

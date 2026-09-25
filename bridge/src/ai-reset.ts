@@ -22,6 +22,8 @@ export interface ResetOp {
   step: ResetStep;
   /** Species keys (ai-species.ts); empty = every AI. */
   species: string[];
+  /** Spare the species the AI zones keep (kill only the game's own kinds). */
+  keepZoneSpecies: boolean;
   countdownSec: number;
   wipeCorpses: boolean;
   startedAt: number;
@@ -38,8 +40,10 @@ interface RconLike {
 
 export interface AiResetDeps {
   rcon: RconLike;
-  /** Queue the mod's reset command; resolves with its id. */
-  enqueue: (classes: string[]) => Promise<{ id: number }>;
+  /** Queue the mod's reset command (classes to kill, [] = all; classes to spare); resolves with its id. */
+  enqueue: (classes: string[], keep: string[]) => Promise<{ id: number }>;
+  /** The classes of the species the enabled AI zones use. */
+  zoneClasses?: () => Promise<string[]>;
   result: (id: number) => Promise<DropResult | null>;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
@@ -49,7 +53,7 @@ export interface AiResetDeps {
   settleMs?: number;
 }
 
-export interface ResetRequest { countdownSec: number; species: string[]; wipeCorpses: boolean }
+export interface ResetRequest { countdownSec: number; species: string[]; wipeCorpses: boolean; keepZoneSpecies?: boolean }
 
 export function validateReset(raw: unknown): ResetRequest {
   if (typeof raw !== 'object' || raw === null) throw new ValidationError('body must be an object');
@@ -61,7 +65,10 @@ export function validateReset(raw: unknown): ResetRequest {
   const species = r['species'] ?? [];
   if (!Array.isArray(species) || species.length > 40) throw new ValidationError('species must be a list');
   for (const s of species) if (typeof s !== 'string' || !AI_BY_KEY.has(s)) throw new ValidationError(`unknown AI "${String(s)}"`);
-  return { countdownSec, species: [...new Set(species as string[])], wipeCorpses: r['wipeCorpses'] !== false };
+  return {
+    countdownSec, species: [...new Set(species as string[])], wipeCorpses: r['wipeCorpses'] !== false,
+    keepZoneSpecies: r['keepZoneSpecies'] === true,
+  };
 }
 
 function realSleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -73,7 +80,7 @@ function realSleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 const detailOf = (op: ResetOp): string =>
-  `${op.species.length ? op.species.join(', ') : 'mọi AI'} · đếm ngược ${op.countdownSec} s${op.wipeCorpses ? ' · dọn xác' : ''}`;
+  `${op.species.length ? op.species.join(', ') : op.keepZoneSpecies ? 'AI không thuộc loài của vùng' : 'mọi AI'} · đếm ngược ${op.countdownSec} s${op.wipeCorpses ? ' · dọn xác' : ''}`;
 
 export class AiReset {
   readonly #d: Required<AiResetDeps>;
@@ -83,7 +90,7 @@ export class AiReset {
   #nextId = 1;
 
   constructor(deps: AiResetDeps) {
-    this.#d = { now: () => Date.now(), sleep: realSleep, answerTimeoutMs: 90_000, pollMs: 2000, settleMs: 5000, ...deps };
+    this.#d = { now: () => Date.now(), sleep: realSleep, answerTimeoutMs: 90_000, pollMs: 2000, settleMs: 5000, zoneClasses: async () => [], ...deps };
   }
 
   status(): { current: ResetOp | null; last: ResetOp | null } {
@@ -96,7 +103,7 @@ export class AiReset {
     const now = this.#d.now();
     const op: ResetOp = {
       id: this.#nextId++, step: 'countdown', species: req.species, countdownSec: req.countdownSec,
-      wipeCorpses: req.wipeCorpses, startedAt: now, runAt: now + req.countdownSec * 1000,
+      wipeCorpses: req.wipeCorpses, keepZoneSpecies: req.keepZoneSpecies === true, startedAt: now, runAt: now + req.countdownSec * 1000,
     };
     this.#current = op;
     this.#abort = new AbortController();
@@ -134,7 +141,8 @@ export class AiReset {
 
       op.step = 'killing';
       const classes = op.species.map((k) => AI_BY_KEY.get(k)?.cls).filter((c): c is string => typeof c === 'string');
-      const { id } = await this.#d.enqueue(classes);
+      const keep = op.keepZoneSpecies ? await this.#d.zoneClasses() : [];
+      const { id } = await this.#d.enqueue(classes, keep);
       const deadline = now() + this.#d.answerTimeoutMs;
       let result: DropResult | null = null;
       while (result === null && now() < deadline) {

@@ -867,6 +867,9 @@
             <div class="card-head"><h2>Vùng AI</h2><span class="sub">mod AIZones</span></div>
             <div class="card-body az">
               <label class="az-row"><input type="checkbox" id="az-enabled"> <b>Bật vùng AI</b></label>
+              <label class="az-row"><input type="checkbox" id="az-ambient"> AI game tự sinh quanh người chơi (thỏ, gà, heo…)</label>
+              <div class="step-hint"><span id="az-ambient-state"></span> Tắt để trên đảo <b>chỉ còn loài của các vùng</b>.
+                Con đang có sẵn vẫn còn đến khi bị ăn — dọn bằng "Làm mới AI" (tab này, bên dưới). Có hiệu lực ngay và giữ sau restart.</div>
               <div class="az-row"><label for="az-global">Tổng AI toàn server tối đa</label>
                 <input id="az-global" type="number" min="0" max="5000" step="10" style="width:90px"></div>
               <div class="step-hint" id="az-status"></div>
@@ -2572,7 +2575,22 @@ function aiZoneAt(sx, sy) {
   return best?.zn ?? null;
 }
 
+// The game's own AI around players (bridge/src/ai-ambient.ts): read over RCON, so not every 2 s.
+let ambientAt = 0;
+async function loadAmbient(force = false) {
+  if (!force && Date.now() - ambientAt < 30_000) return;
+  ambientAt = Date.now();
+  try {
+    const a = await getJson('/api/ai-ambient');
+    const on = a.live ?? a.ini;
+    if (typeof on === 'boolean') $('az-ambient').checked = on;
+    const word = (v) => (v === null ? 'không rõ' : v ? 'bật' : 'tắt');
+    $('az-ambient-state').textContent = `Đang: ${word(a.live)} · sau restart: ${word(a.ini)}.`;
+  } catch { /* the next refresh tries again */ }
+}
+
 async function refreshAiZones() {
+  loadAmbient();
   const d = await getJson('/api/ai-zones');
   az.data = d;
   az.status = d.status;
@@ -2703,6 +2721,22 @@ $('az-edit').addEventListener('input', (e) => {
   }
   markAz();
 });
+$('az-ambient').addEventListener('change', () => {
+  const on = $('az-ambient').checked;
+  $('az-ambient').checked = !on;   // shown as it is until the server says otherwise
+  confirmAction({
+    title: on ? 'Bật AI game tự sinh?' : 'Tắt AI game tự sinh?',
+    body: on ? 'Game lại tự sinh thỏ, gà, heo… quanh người chơi (ngoài AI của các vùng).'
+      : 'Game ngừng tự sinh AI quanh người chơi; chỉ còn AI của các vùng. Con đang có sẵn vẫn còn đến khi bị ăn hoặc "Làm mới AI".',
+    okLabel: on ? 'Bật' : 'Tắt', withReason: false, danger: !on,
+    run: async (token) => {
+      const a = await adminFetch('/api/ai-ambient', 'PUT', token, { on });
+      toast(a.live === null ? 'Đã lưu vào Game.ini (RCON không trả lời — áp dụng ở lần restart).' : `AI game tự sinh: ${a.live ? 'bật' : 'tắt'}.`);
+      await loadAmbient(true);
+    },
+  });
+});
+
 $('az-save').addEventListener('click', () => withToken('lưu vùng AI', async (token) => {
   await adminFetch('/api/ai-zones', 'PUT', token, az.draft);
   az.dirty = false;
@@ -2723,7 +2757,7 @@ function renderReset(st) {
   $('reset-go').disabled = st.current !== null;
   $('reset-cancel').hidden = st.current?.step !== 'countdown';
   if (!op) { $('reset-status').textContent = ''; return; }
-  const what = op.species.length ? op.species.map((k) => az.speciesLabel[k] ?? k).join(', ') : 'mọi AI';
+  const what = op.species.length ? op.species.map((k) => az.speciesLabel[k] ?? k).join(', ') : op.keepZoneSpecies ? 'AI ngoài loài của vùng' : 'mọi AI';
   const left = op.step === 'countdown' ? ` · còn ${Math.max(0, Math.round((op.runAt - Date.now()) / 1000))} s` : '';
   $('reset-status').innerHTML = `${st.current ? 'Đang chạy' : 'Lần gần nhất'}: làm mới ${esc(what)} — <b>${RESET_STEP[op.step] ?? op.step}</b>${left}`
     + `${typeof op.killed === 'number' ? ` · ${op.killed} con` : ''}${op.message ? ` · <span style="color:var(--kill,#ef4444)">${esc(op.message)}</span>` : ''}`;
@@ -2737,9 +2771,12 @@ async function pollReset() {
 }
 
 $('reset-go').addEventListener('click', () => {
-  const key = $('reset-species').value;
+  const pick = $('reset-species').value;
+  const notZone = pick === '__notzone';
+  const key = notZone ? '' : pick;
   const countdownSec = Number($('reset-countdown').value);
-  const what = key ? (az.speciesLabel[key] ?? key) : 'TẤT CẢ AI trên server';
+  const what = notZone ? 'mọi AI KHÔNG thuộc loài của các vùng đang bật (giữ lại AI của vùng)'
+    : key ? (az.speciesLabel[key] ?? key) : 'TẤT CẢ AI trên server';
   confirmAction({
     title: 'Làm mới AI?',
     body: `Giết <b>${esc(what)}</b>${countdownSec ? `, báo trước cho người chơi ${countdownSec >= 60 ? `${countdownSec / 60} phút` : `${countdownSec} giây`}` : ' ngay lập tức'}`
@@ -2747,7 +2784,7 @@ $('reset-go').addEventListener('click', () => {
     okLabel: 'Làm mới AI',
     withReason: false,
     run: async (token) => {
-      await adminFetch('/api/ai-reset', 'POST', token, { countdownSec, species: key ? [key] : [], wipeCorpses: $('reset-wipe').checked });
+      await adminFetch('/api/ai-reset', 'POST', token, { countdownSec, species: key ? [key] : [], keepZoneSpecies: notZone, wipeCorpses: $('reset-wipe').checked });
       toast('Đã bắt đầu làm mới AI.');
       await pollReset();
     },
@@ -2933,7 +2970,7 @@ function renderDropSpecies() {
     + '</optgroup>').join('');
   sel.value = 'Tyrannosaurus';
   sel.dataset.done = '1';
-  $('reset-species').innerHTML = '<option value="">Tất cả AI</option>' + sel.innerHTML;
+  $('reset-species').innerHTML = '<option value="">Tất cả AI</option><option value="__notzone">Chỉ AI không thuộc loài của vùng</option>' + sel.innerHTML;
 }
 
 /** Who can get a drop: players on the map now (they have a live position). */
