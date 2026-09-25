@@ -18,12 +18,14 @@ export interface PteraSettings {
   cooldown: number;
   /** Tell a flying Pteranodon when a light enough player is this close (m); 0 = never. */
   hintMeters: number;
+  /** Z + right mouse takes the nearest light enough player within this many metres. */
+  grabMeters: number;
 }
 
-export const PTERA_DEFAULTS: PteraSettings = { enabled: false, maxKg: 150, maxSeconds: 20, cooldown: 30, hintMeters: 10 };
+export const PTERA_DEFAULTS: PteraSettings = { enabled: false, maxKg: 150, maxSeconds: 20, cooldown: 30, hintMeters: 10, grabMeters: 8 };
 
 const LIMITS: Record<Exclude<keyof PteraSettings, 'enabled'>, [number, number]> = {
-  maxKg: [1, 20000], maxSeconds: [3, 120], cooldown: [0, 3600], hintMeters: [0, 50],
+  maxKg: [1, 20000], maxSeconds: [3, 120], cooldown: [0, 3600], hintMeters: [0, 50], grabMeters: [2, 30],
 };
 
 const path = (): string => join(config.pteraRoot, 'settings.json');

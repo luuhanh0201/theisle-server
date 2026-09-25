@@ -1173,6 +1173,9 @@
             <input id="pt-cooldown" type="number" min="0" max="3600" step="5"></div>
           <div class="cfg-field"><label for="pt-hint">Nhắc "có thể gắp" khi cách (m, 0 = tắt)<span class="mono">hintMeters</span></label>
             <input id="pt-hint" type="number" min="0" max="50" step="1"></div>
+          <div class="cfg-field"><label for="pt-grab">Tầm gắp (m)<span class="mono">grabMeters</span></label>
+            <input id="pt-grab" type="number" min="2" max="30" step="1">
+            <div class="step-hint">Bấm Z + chuột phải khi đang bay → gắp dino người chơi gần nhất trong tầm này (nếu đủ nhẹ).</div></div>
         </div>
         <div class="row"><button type="button" class="btn" id="pt-save">Lưu cài đặt</button></div>
       </div></section>
@@ -4854,15 +4857,16 @@ function renderPteraSettings(s) {
   $('pt-maxsec').value = s.maxSeconds;
   $('pt-cooldown').value = s.cooldown;
   $('pt-hint').value = s.hintMeters;
+  $('pt-grab').value = s.grabMeters;
 }
-for (const id of ['pt-enabled', 'pt-maxkg', 'pt-maxsec', 'pt-cooldown', 'pt-hint']) {
+for (const id of ['pt-enabled', 'pt-maxkg', 'pt-maxsec', 'pt-cooldown', 'pt-hint', 'pt-grab']) {
   $(id).addEventListener('input', () => { ptDirty = true; });
   $(id).addEventListener('change', () => { ptDirty = true; });
 }
 $('pt-save').addEventListener('click', () => withToken('lưu cài đặt Ptera gắp', async (token) => {
   const n = (id) => Math.round(Number($(id).value));
   await adminFetch('/api/ptera-carry', 'PUT', token, {
-    enabled: $('pt-enabled').checked, maxKg: n('pt-maxkg'), maxSeconds: n('pt-maxsec'), cooldown: n('pt-cooldown'), hintMeters: n('pt-hint'),
+    enabled: $('pt-enabled').checked, maxKg: n('pt-maxkg'), maxSeconds: n('pt-maxsec'), cooldown: n('pt-cooldown'), hintMeters: n('pt-hint'), grabMeters: n('pt-grab'),
   });
   ptDirty = false;
   toast('Đã lưu — mod đọc lại trong vài giây.');

@@ -108,6 +108,44 @@ grab(ptera, troo)
 hold.fn()
 check("off: no carry", last(pc):find("Đang gắp", 1, true) == nil or last(pc):find("Đã thả", 1, true) ~= nil, last(pc))
 
+say("\n-- 6. the key itself: Z + right mouse (TIGameplayAbilityTryLatch) grabs the nearest light player --")
+writeSettings({ enabled = true, maxKg = 150, maxSeconds = 20, cooldown = 0, hintMeters = 10, grabMeters = 8 })
+clock = clock + 10
+local function items(list)
+  return { ForEach = function(_, fn) for i, v in ipairs(list) do fn(i, { get = function() return v end }) end end }
+end
+local function spec(h, cls) return { Handle = { Handle = h }, Ability = { GetClass = function() return { GetFName = function() return FName(cls) end } end } } end
+local asc = { IsValid = function() return true end, GetAddress = function() return 999001 end,
+  ActivatableAbilities = { Items = items({ spec(253, "GA_DirectionalPteranodonBitePrimary_C"), spec(262, "TIGameplayAbilityTryLatch") }) } }
+rawset(ptera, "GetComponentByClass", function() return asc end)
+classesASC = { IsValid = function() return true end }
+_G.StaticFindObject = function(p) if p == "/Script/GameplayAbilities.AbilitySystemComponent" then return classesASC end end
+check("the ability hooks registered", H.hooks["/Script/GameplayAbilities.AbilitySystemComponent:ServerTryActivateAbility"] ~= nil
+  and H.hooks["/Script/GameplayAbilities.AbilitySystemComponent:ServerSetInputPressed"] ~= nil)
+local function press(handle) H.fire("/Script/GameplayAbilities.AbilitySystemComponent:ServerTryActivateAbility", P(asc), P({ Handle = handle }), P(true)) end
+ptera.__props.Grounded = false
+ptera.__props.Loc = { X = 0, Y = 0, Z = 5000 }
+troo.__props.Loc = { X = 400, Y = 0, Z = 4800 }       -- 4.5 m
+rex.__props.Loc = { X = 300, Y = 0, Z = 5000 }        -- 3 m, but 7000 kg: nearest, too heavy
+press(253)
+hold.fn()
+check("a bite does not grab", last(pc):find("Đang gắp", 1, true) == nil and last(pc):find("nặng", 1, true) == nil, last(pc))
+press(262)
+hold.fn()
+check("the latch key: the nearest (the Rex) is too heavy", last(pc):find("Tyrannosaurus nặng 7000 kg", 1, true) ~= nil, last(pc))
+rex.__props.Loc = { X = 5000, Y = 0, Z = 5000 }       -- 50 m away now
+press(262)
+hold.fn()
+check("the latch key: the Troodon 4.5 m away is grabbed", last(pc):find("Đang gắp Troodon", 1, true) ~= nil, last(pc))
+H.chat("/Script/TheIsle.TIPlayerController:GetChatMessage", pc, pc, "!drop ")
+H.advance(10)
+hold.fn()
+clock = clock + 5
+ptera.__props.Grounded = true
+press(262)
+hold.fn()
+check("on the ground the latch key grabs nothing", last(pc):find("Đang gắp", 1, true) == nil, last(pc))
+
 say(string.format("=== PteraCarry: %d passed, %d failed ===", pass, fail))
 io.flush()
 os.exit(fail == 0 and 0 or 1, true)

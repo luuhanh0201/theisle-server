@@ -17,8 +17,9 @@ test('defaults: off until an admin turns it on', async () => {
 });
 
 test('save: whole numbers in range, written where the mod reads (its Saved/ created)', async () => {
-  const s = await savePteraSettings({ enabled: true, maxKg: 200, maxSeconds: 30, cooldown: 10, hintMeters: 0 });
-  assert.deepEqual(s, { enabled: true, maxKg: 200, maxSeconds: 30, cooldown: 10, hintMeters: 0 });
+  const s = await savePteraSettings({ enabled: true, maxKg: 200, maxSeconds: 30, cooldown: 10, hintMeters: 0, grabMeters: 6 });
+  assert.deepEqual(s, { enabled: true, maxKg: 200, maxSeconds: 30, cooldown: 10, hintMeters: 0, grabMeters: 6 });
+  await assert.rejects(savePteraSettings({ grabMeters: 40 }), /grabMeters/);
   assert.deepEqual(JSON.parse(readFileSync(join(process.env.PTERA_ROOT, 'settings.json'), 'utf8')), s);
   await assert.rejects(savePteraSettings({ maxKg: 0 }), /maxKg/);
   await assert.rejects(savePteraSettings({ maxSeconds: 500 }), /maxSeconds/);

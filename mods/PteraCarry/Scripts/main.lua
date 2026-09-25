@@ -7,10 +7,15 @@
 -- holding Z + right mouse (the latch key, while the game's interaction
 -- prompt shows) makes the game call
 -- TICharacterBase:GrabPhysicsCharacter(ptera, that dino) — and let go ten
--- seconds later without moving it. This mod takes that call as the grab:
+-- seconds later without moving it — but only for AI (a player's dino never
+-- got that call when tried on 2026-09-26 01:30). So the grab is the key
+-- itself: Z + right mouse starts the Gameplay Ability "TIGameplayAbilityTryLatch"
+-- (AbilitySystemComponent:ServerTryActivateAbility / ServerSetInputPressed
+-- with its handle). When a flying Pteranodon's player does that:
 --
---   * the target is a player's dino no heavier than `maxKg` (its GetWeight),
---     the carrier is a Pteranodon not cooling down → the carry starts
+--   * the nearest other player's dino within `grabMeters`, no heavier than
+--     `maxKg` (its GetWeight), is taken (the game's own grab call, when it
+--     happens, is taken too) — unless the carrier is cooling down
 --   * every HOLD_MS, on the game thread, the target is put `belowCm` under
 --     the Pteranodon (K2_SetActorLocation, teleport — as !unstuck does), its
 --     fall speed cleared, and the game's own "being picked up" flag set
@@ -44,7 +49,11 @@ local HINT_AGAIN_S = 30      -- one hint per carrier and target this often
 local SETTINGS_RELOAD_S = 5
 local MIN_CARRY_S = 1        -- a carrier "landing" in the first second is the take-off itself
 
-local DEFAULTS = { enabled = false, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 300 }
+local ASC_CLASS = "/Script/GameplayAbilities.AbilitySystemComponent"
+local KEY_HOOKS = { ASC_CLASS .. ":ServerTryActivateAbility", ASC_CLASS .. ":ServerSetInputPressed" }
+local LATCH = "Latch"        -- the ability Z + right mouse starts: TIGameplayAbilityTryLatch
+
+local DEFAULTS = { enabled = false, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 300, grabMeters = 8 }
 
 --------------------------------------------------------------------------
 -- Settings (written by the bridge; read at most every few seconds)
@@ -75,6 +84,7 @@ local function readSettings()
         cooldown   = num(d.cooldown, 0, 3600, DEFAULTS.cooldown),
         hintMeters = num(d.hintMeters, 0, 50, DEFAULTS.hintMeters),
         belowCm    = num(d.belowCm, 100, 2000, DEFAULTS.belowCm),
+        grabMeters = num(d.grabMeters, 2, 30, DEFAULTS.grabMeters),
     }
     return settings
 end
@@ -167,9 +177,56 @@ local function finish(carrierId, reason, players)
         os.time() - c.startedAt, reason))
 end
 
---- A grab the game made: start a carry if the rules allow it.
+local keys = {}        -- { asc = address, handle = n } queued by the ability hooks
+local abilities = {}   -- carrier SteamID -> { pawn = address, names = { [handle] = class } }
+
+local ascClass = nil
+local function ascOf(pawn)
+    if ascClass == nil then
+        local ok, c = pcall(function() return StaticFindObject(ASC_CLASS) end)
+        if ok and c ~= nil then ascClass = c else return nil end
+    end
+    local ok, asc = pcall(function() return pawn:GetComponentByClass(ascClass) end)
+    if ok and asc ~= nil and H.isValid(asc) then return asc end
+    return nil
+end
+
+--- handle -> ability class of this pawn (read once per pawn; read-only).
+local function abilityNames(steamId, pawn, asc)
+    local a = addressOf(pawn)
+    local known = abilities[steamId]
+    if known and known.pawn == a then return known.names end
+    local names = {}
+    pcall(function()
+        asc.ActivatableAbilities.Items:ForEach(function(_, elem)
+            local spec = elem:get()
+            local okH, h = pcall(function() return spec.Handle.Handle end)
+            local okC, c = pcall(function() return spec.Ability:GetClass():GetFName():ToString() end)
+            if okH and okC and h ~= nil then names[tonumber(h) or h] = tostring(c) end
+        end)
+    end)
+    abilities[steamId] = { pawn = a, names = names }
+    return names
+end
+
+--- The nearest other player's dino within `grabMeters` of the carrier, or nil.
+local function nearestTarget(carrierId, carrier, s, players)
+    local at = locOf(carrier.pawn)
+    if not at then return nil end
+    local best, bestD = nil, (s.grabMeters * 100) ^ 2
+    for id, t in pairs(players) do
+        if id ~= carrierId and not carriedBy[id] and not carries[id] then
+            local o = locOf(t.pawn)
+            local d = o and (o.X - at.X) ^ 2 + (o.Y - at.Y) ^ 2 + (o.Z - at.Z) ^ 2
+            if d and d <= bestD then best, bestD = id, d end
+        end
+    end
+    return best
+end
+
+--- A grab: start a carry if the rules allow it.
 local function tryStart(grab, s, players, byAddr)
-    local carrierId, targetId = byAddr[grab.self], byAddr[grab.target]
+    local carrierId, targetId = grab.carrier or byAddr[grab.self], grab.targetId or byAddr[grab.target]
     if carrierId == nil or targetId == nil or carrierId == targetId then return end   -- not player to player
     local carrier, target = players[carrierId], players[targetId]
     if classOf(carrier.pawn) ~= PTERA or carries[carrierId] or carriedBy[targetId] or carries[targetId] then return end
@@ -195,12 +252,40 @@ local function tryStart(grab, s, players, byAddr)
     H.log(string.format("%s: %s grabbed %s (%s, %.0f kg)", MOD, carrierId, targetId, species, kg))
 end
 
+--- Z + right mouse by a flying Pteranodon's player → a grab of the nearest light dino.
+local function keyGrabs(s, players, grabs)
+    local pressed = keys
+    keys = {}
+    if #pressed == 0 then return end
+    local byAsc = {}
+    for id, p in pairs(players) do
+        if classOf(p.pawn) == PTERA and not carries[id] then
+            local asc = ascOf(p.pawn)
+            local a = asc and addressOf(asc)
+            if a then byAsc[a] = { id = id, p = p, asc = asc } end
+        end
+    end
+    local done = {}
+    for _, k in ipairs(pressed) do
+        local who = byAsc[k.asc]
+        if who and not done[who.id] then
+            local name = abilityNames(who.id, who.p.pawn, who.asc)[k.handle]
+            if name and name:find(LATCH, 1, true) and not onGround(who.p.pawn) then
+                done[who.id] = true
+                local target = nearestTarget(who.id, who.p, s, players)
+                if target then grabs[#grabs + 1] = { carrier = who.id, targetId = target } end
+            end
+        end
+    end
+end
+
 local function holdTick()
-    if #pending == 0 and next(carries) == nil then return end
+    if #pending == 0 and #keys == 0 and next(carries) == nil then return end
     local s = readSettings()
     local players, byAddr = playersNow()
     local grabs = pending
     pending = {}
+    if s.enabled then keyGrabs(s, players, grabs) else keys = {} end
     if s.enabled then
         for _, g in ipairs(grabs) do tryStart(g, s, players, byAddr) end
     end
@@ -270,6 +355,20 @@ local okHook, err = pcall(function()
     end)
 end)
 H.log(MOD .. ": hook " .. GRAB_HOOK .. ": " .. (okHook and "registered" or ("FAILED: " .. tostring(err))))
+
+-- Every ability a player starts reaches these; only the two addresses are noted.
+for _, path in ipairs(KEY_HOOKS) do
+    local okK, errK = pcall(function()
+        RegisterHook(path, function(selfP, handleP)
+            if #keys >= 50 then return end
+            local okS, asc = pcall(function() return selfP:get() end)
+            local okH, h = pcall(function() return handleP:get().Handle end)
+            local a = okS and addressOf(asc)
+            if a and okH and h ~= nil then keys[#keys + 1] = { asc = a, handle = tonumber(h) or h } end
+        end)
+    end)
+    H.log(MOD .. ": hook " .. path .. ": " .. (okK and "registered" or ("FAILED: " .. tostring(errK))))
+end
 
 H.onChat(function(ctrl, steamId, msg)
     if H.parseCommand(msg) ~= "drop" then return end
