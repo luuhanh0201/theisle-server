@@ -17,7 +17,8 @@ export interface FloraSpawner {
   multiplier?: number; amount?: number; minAmount?: number; activations?: number;
 }
 export interface FloraPlant { c: string; x: number; y: number; n?: boolean; ft?: number; cp?: number; pp?: number; lp?: number; eaten?: boolean; s?: number }
-export interface Flora { t: number; stale: boolean; spawners: FloraSpawner[]; plants: FloraPlant[]; fruits: FloraPlant[] }
+export interface FloraControl { on: boolean; t: number; active: number; plants: number; plantsNutri: number; fruits: number; fruitsNutri: number }
+export interface Flora { t: number; stale: boolean; spawners: FloraSpawner[]; plants: FloraPlant[]; fruits: FloraPlant[]; control: FloraControl | null }
 
 const STALE_AFTER_S = 600;
 const path = (): string => join(config.floraRoot, 'flora.json');
@@ -31,7 +32,10 @@ export async function readFlora(nowS = Math.floor(Date.now() / 1000)): Promise<F
       const list = <T>(v: unknown): T[] => (Array.isArray(v) ? v as T[] : []);
       cache = {
         mtime: st.mtimeMs,
-        data: { t: typeof raw.t === 'number' ? raw.t : 0, spawners: list(raw.spawners), plants: list(raw.plants), fruits: list(raw.fruits) },
+        data: {
+          t: typeof raw.t === 'number' ? raw.t : 0, spawners: list(raw.spawners), plants: list(raw.plants), fruits: list(raw.fruits),
+          control: typeof raw.control === 'object' && raw.control !== null ? raw.control as FloraControl : null,
+        },
       };
     }
     return { ...cache.data, stale: nowS - cache.data.t > STALE_AFTER_S };

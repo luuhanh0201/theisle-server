@@ -30,6 +30,7 @@ import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
 import { readFlora } from './flora.js';
+import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
@@ -312,6 +313,7 @@ async function handlePanel(
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
+      (path === '/api/flora-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
       ((path === '/api/ai-reset' || path === '/api/ai-reset/cancel') && req.method === 'POST');
     if (!allowed) {
@@ -414,6 +416,14 @@ async function handlePanel(
         ok: after.live === null || after.live === body.on,
       });
       sendJson(res, 200, after);
+      return;
+    }
+
+    if (path === '/api/flora-settings') {
+      const before = await readFloraSettings();
+      const saved = await saveFloraSettings(await readJsonBody(req));
+      await audit({ action: 'plant settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
       return;
     }
 
@@ -698,6 +708,11 @@ async function handlePanel(
     }
     case '/api/ai-reset': {
       sendJson(res, 200, ctx.aiReset ? ctx.aiReset.status() : { current: null, last: null });
+      return;
+    }
+    case '/api/flora-settings': {
+      const flora = await readFlora();
+      sendJson(res, 200, { settings: await readFloraSettings(), control: flora?.control ?? null, t: flora?.t ?? null });
       return;
     }
     case '/api/map/flora': {

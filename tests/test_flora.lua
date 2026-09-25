@@ -70,6 +70,58 @@ H.log = {}
 dofile(RUN .. "/Mods/Flora/Scripts/main.lua")
 check("after a crash mid-export: off, and says why", table.concat(H.log, "\n"):find("did not finish", 1, true) ~= nil)
 os.remove(FLAG); os.remove(OUT)
+
+say("\n-- step 2: control — nutrients only in active migration areas, fewer plants outside, all put back when off --")
+H.reset()
+local SET = "Mods/Flora/Saved/settings.json"
+local CFLAG = "Mods/Flora/Saved/control.running"
+os.remove(CFLAG)
+local function settings(t) local sf = io.open(SET, "w"); sf:write(json.encode(t)); sf:close(); clock = clock + 20 end
+local function nutri(o, field) o.SetCanGiveNutrients = function(self, v) H.record("SetCanGiveNutrients", v); self[field] = v end; return o end
+mz.MigrationSpawnMultiplier, mz.AmountToBeSpawned = 1, 40
+plain.AmountToBeSpawned, plain.MinimumZoneAmountToBeSpawned = 20, 10
+local inZone = nutri(obj("BP_Fireweed_C", { K2_GetActorLocation = at(400, 400), bCanGiveNutrients = true, Spawner = mz }), "bCanGiveNutrients")
+local leaf = nutri(obj("BP_Marigold_C", { K2_GetActorLocation = at(9000, 9000), bCanGiveNutrients = true, Spawner = plain }), "bCanGiveNutrients")
+local tree = nutri(obj("BP_MangoTreeStaticSpawner_C", { K2_GetActorLocation = at(20000, 20000), bCanGiveNutrients = true,
+  bIsStaticSpawner = true, MinAmountOfFruits = 4, MaxAmountOfFruits = 10 }), "bCanGiveNutrients")
+local fruitIn = nutri(obj("BP_FruitMangoStatic_C", { K2_GetActorLocation = at(500, 600), bCanGiveNutri = true }), "bCanGiveNutri")
+local fruitOut = nutri(obj("BP_FruitMangoStatic_C", { K2_GetActorLocation = at(20100, 20000), bCanGiveNutri = true }), "bCanGiveNutri")
+_G.FindAllOf = function(c)
+  if c == "TIEdibleSpawner" then return { mz, plain } end
+  if c == "TIEdiblePlant" then return { inZone, leaf, tree } end
+  if c == "TIFruitBase" then return { fruitIn, fruitOut } end
+  return {}
+end
+settings({ control = true, migrationNutrientPct = 100, migrationMultiplier = 2, massNutrientPct = 100, massMultiplier = 3, outsideAmountPct = 30 })
+dofile(RUN .. "/Mods/Flora/Scripts/main.lua")
+local control
+for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then control = l end end
+check("a control loop on the game thread", control ~= nil)
+local function round() for _ = 1, 3 do control.fn() end end
+round()
+check("in an active migration area: nutrients kept", inZone.bCanGiveNutrients == true)
+check("in a plain area: leaves only", leaf.bCanGiveNutrients == false)
+check("a fruit inside the active area keeps them, one outside loses them", fruitIn.bCanGiveNutri == true and fruitOut.bCanGiveNutri == false)
+check("the active area grows more (multiplier 2)", mz.MigrationSpawnMultiplier == 2)
+check("the plain area grows fewer (30%)", plain.AmountToBeSpawned == 6 and plain.MinimumZoneAmountToBeSpawned == 3,
+  tostring(plain.AmountToBeSpawned))
+check("the fruit tree outside bears fewer (30%)", tree.MinAmountOfFruits == 1 and tree.MaxAmountOfFruits == 3,
+  tostring(tree.MinAmountOfFruits) .. "/" .. tostring(tree.MaxAmountOfFruits))
+check("the round's flag cleared", io.open(CFLAG, "r") == nil)
+local calls = H.countCalls("SetCanGiveNutrients")
+clock = clock + 20
+round()
+check("nothing set again when already right", H.countCalls("SetCanGiveNutrients") == calls)
+settings({ control = false })
+round()
+check("off: the game's values back", leaf.bCanGiveNutrients == true and fruitOut.bCanGiveNutri == true and mz.MigrationSpawnMultiplier == 1
+  and plain.AmountToBeSpawned == 20 and tree.MaxAmountOfFruits == 10)
+calls = H.countCalls("SetCanGiveNutrients")
+clock = clock + 20
+round()
+check("off and put back: it then leaves the game alone", H.countCalls("SetCanGiveNutrients") == calls)
+check("never off the game thread (control)", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
+os.remove(SET); os.remove(CFLAG)
 say(string.format("=== Flora: %d passed, %d failed ===", pass, fail))
 io.flush()
 os.exit(fail == 0 and 0 or 1, true)

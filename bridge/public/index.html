@@ -563,9 +563,6 @@
   details.az-sec summary { cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
   .az-listhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .az-grid label[hidden], .az-row[hidden] { display: none !important; }
-  .map-layers-pop { position: absolute; top: 10px; right: 52px; width: 270px; max-height: calc(100% - 20px); overflow: auto; z-index: 6;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.35); }
-  .map-layers-pop .pop-head { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 4px 6px 6px; }
   .map-hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 5; max-width: calc(100% - 24px);
     background: rgba(10,14,22,.86); color: #fff; padding: 7px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.4;
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
@@ -875,11 +872,6 @@
               <button type="button" id="map-zout" title="Thu nhỏ">−</button>
               <button type="button" id="map-reset" title="Xem toàn đảo">⤢</button>
               <button type="button" id="map-full" title="Toàn màn hình">⛶</button>
-              <button type="button" id="map-layers-btn" title="Lớp hiển thị" aria-expanded="false" aria-controls="map-layers-pop">☰</button>
-            </div>
-            <div class="map-layers-pop" id="map-layers-pop" hidden>
-              <div class="pop-head">Lớp hiển thị</div>
-              <ul class="layer-list" id="map-layers" aria-label="Lớp hiển thị"></ul>
             </div>
             <div class="map-coord" id="map-coord" hidden></div>
             <div class="map-tip" id="map-tip" hidden></div>
@@ -891,6 +883,7 @@
               <ul class="map-results" id="map-results"></ul>
             </div>
           </div>
+          <ul class="layer-list row" id="map-layers" aria-label="Lớp hiển thị"></ul>
           <div class="legend" id="map-legend"></div>
         </div></section>
 
@@ -1236,6 +1229,33 @@
             <div class="step-hint">Bấm Z + chuột phải khi đang bay → gắp dino người chơi gần nhất trong tầm này (nếu đủ nhẹ).</div></div>
         </div>
         <div class="row"><button type="button" class="btn" id="pt-save">Lưu cài đặt</button></div>
+      </div></section>
+      </div>
+
+      <div data-sub-panel="flora-settings" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🌿</span>
+        <h2>Cấu hình · Thực vật</h2><span class="sub">mod Flora · có hiệu lực trong ~15 giây, không cần restart</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="step-hint">Cây và quả chỉ <b>có chất (α β γ)</b> trong các vùng di cư <b>đang hoạt động</b> — ít ở di cư thường, nhiều ở
+          <b>đại di cư</b>. Ngoài vùng: ít cây hơn và chỉ là lá, <b>không có chất</b>. Game tự chọn vùng nào di cư; tắt mục này thì mọi
+          giá trị về như game gốc. Xem cây thật trên tab <a href="#map">Bản đồ</a> (lớp "Thực vật (live)").</div>
+        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="fl-control" style="width:auto"> <b>Bật điều khiển thực vật</b></label>
+        <div class="cfg-grid">
+          <div class="cfg-field"><label for="fl-mig-pct">Di cư: % cây có chất<span class="mono">migrationNutrientPct</span></label>
+            <input id="fl-mig-pct" type="number" min="0" max="100" step="5"></div>
+          <div class="cfg-field"><label for="fl-mig-mul">Di cư: hệ số số cây<span class="mono">migrationMultiplier</span></label>
+            <input id="fl-mig-mul" type="number" min="1" max="10" step="1">
+            <div class="step-hint">1 = như game. Hệ số sinh cây của chính game cho vùng đó.</div></div>
+          <div class="cfg-field"><label for="fl-mass-pct">Đại di cư: % cây có chất<span class="mono">massNutrientPct</span></label>
+            <input id="fl-mass-pct" type="number" min="0" max="100" step="5"></div>
+          <div class="cfg-field"><label for="fl-mass-mul">Đại di cư: hệ số số cây<span class="mono">massMultiplier</span></label>
+            <input id="fl-mass-mul" type="number" min="1" max="20" step="1"></div>
+          <div class="cfg-field"><label for="fl-out-pct">Ngoài vùng: % số cây / quả so với game<span class="mono">outsideAmountPct</span></label>
+            <input id="fl-out-pct" type="number" min="0" max="100" step="5">
+            <div class="step-hint">Áp cho vùng cây thường và số quả trên cây ăn quả. Cây ngoài vùng luôn không có chất.</div></div>
+        </div>
+        <div class="step-hint" id="fl-stats"></div>
+        <div class="row"><button type="button" class="btn" id="fl-save">Lưu cài đặt</button></div>
       </div></section>
       </div>
 
@@ -2153,7 +2173,8 @@ const LAYERS = [
   ['ai', 'AI đang có (live)', '#ef4444', true],
   ['aizone', 'Vùng AI (admin đặt)', '#fb923c', true],
   ['trails', 'Vệt di chuyển', '#f8fafc', true],
-  ['migrlive', 'Vùng di cư & vùng cây (live)', '#22c55e', true],
+  ['migration', 'Vùng di cư MZ (tên vùng)', '#22c55e', true],
+  ['migrlive', 'Khóm cây & di cư (đang diễn ra)', '#16a34a', true],
   ['sanctuary', 'Sanctuary', '#e879f9', true],
   ['patrol', 'Vùng tuần tra (PZ)', '#f97316', false],
   ['area', 'Khu vực', '#f8fafc', true],
@@ -2163,7 +2184,7 @@ const LAYERS = [
   ['mud', 'Bãi bùn (wallow)', '#d97706', false],
   ['air', 'Luồng khí (loài bay)', '#7dd3fc', false],
   ['road', 'Đường mòn', '#e7e5e4', false],
-  ['flora', 'Thực vật (live): (α) (β) (γ)', '#84cc16', true],
+  ['flora', 'Thực vật: (α) (β) (γ)', '#84cc16', true],
   ['mineral', 'Đá muối, gastro, nghêu (tham khảo)', '#e2e8f0', false],
 ];
 // VulnonaMAP's "animal" spots are where players once saw AI. Evrima spawns AI
@@ -2210,20 +2231,29 @@ function clearTrail(p) {
   saveCleared();
   requestDraw();
 }
+// What each browser switched on is remembered, with the layers it knew then:
+// a layer added since shows as its default instead of silently off.
 try {
-  const saved = JSON.parse(localStorage.getItem('mapLayers.v3') ?? 'null');
-  if (Array.isArray(saved)) lm.on = new Set(saved.filter((id) => LAYER[id]));
+  const v4 = JSON.parse(localStorage.getItem('mapLayers.v4') ?? 'null');
+  const v3 = v4 ? null : JSON.parse(localStorage.getItem('mapLayers.v3') ?? 'null');
+  const saved = v4?.on ?? v3;
+  // v3 was written before the live plant layers existed.
+  const known = new Set(v4?.known ?? (v3 ? LAYERS.map((l) => l[0]).filter((id) => id !== 'migrlive' && id !== 'flora') : []));
+  if (Array.isArray(saved)) {
+    lm.on = new Set(saved.filter((id) => LAYER[id]));
+    for (const [id, , , def] of LAYERS) if (!known.has(id) && def) lm.on.add(id);
+  }
 } catch { /* nothing saved, or storage blocked: defaults */ }
 function saveLayers() {
-  try { localStorage.setItem('mapLayers.v3', JSON.stringify([...lm.on])); } catch { /* not remembered */ }
+  try { localStorage.setItem('mapLayers.v4', JSON.stringify({ on: [...lm.on], known: LAYERS.map((l) => l[0]) })); } catch { /* not remembered */ }
 }
 
 function loadMapData() {
   lm.loading ??= (async () => {
     try {
       const data = await getJson('map/gateway.json');
-      // The reference plants and migration zones are replaced by the server's own (Flora mod).
-      data.features = data.features.filter((f) => f.layer !== STATIC_AI_LAYER && f.layer !== 'plant' && f.layer !== 'migration');
+      // Plants come from the server itself (Flora mod), not from the reference map.
+      data.features = data.features.filter((f) => f.layer !== STATIC_AI_LAYER && f.layer !== 'plant');
       const img = new Image();
       img.src = `map/${encodeURIComponent(data.image)}?v=${encodeURIComponent(data.updated)}`;
       await img.decode();
@@ -3012,18 +3042,6 @@ document.querySelector('.side-tabs').addEventListener('click', (e) => {
   if (b) showSide(b.dataset.side);
 });
 showSide((() => { try { return localStorage.getItem('map-side') || 'zones'; } catch { return 'zones'; } })());
-$('map-layers-btn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  const open = $('map-layers-pop').hidden;
-  $('map-layers-pop').hidden = !open;
-  $('map-layers-btn').setAttribute('aria-expanded', String(open));
-});
-document.addEventListener('click', (e) => {
-  if (!$('map-layers-pop').hidden && !e.target.closest('#map-layers-pop, #map-layers-btn')) {
-    $('map-layers-pop').hidden = true;
-    $('map-layers-btn').setAttribute('aria-expanded', 'false');
-  }
-});
 
 $('az-add').addEventListener('click', () => {
   if (!az.draft) return;
@@ -4806,7 +4824,7 @@ function classOptions(selected) {
 // The config form is ONE form shown a group at a time, so edits in several
 // groups survive switching tabs and are saved together.
 const OPS_SUBS = [['status', 'Trạng thái'], ['perf', 'Hiệu năng'], ['schedule', 'Lịch khởi động lại'], ['rcon', 'RCON trực tiếp'], ['audit', 'Lịch sử thao tác']];
-const EXTRA_CFG_SUBS = [['garage-settings', 'Gara'], ['commands-settings', 'Lệnh người chơi'], ['ptera-carry', 'Ptera gắp'], ['voice-settings', 'Voice gần'], ['panel-access', 'Truy cập panel']];
+const EXTRA_CFG_SUBS = [['garage-settings', 'Gara'], ['commands-settings', 'Lệnh người chơi'], ['ptera-carry', 'Ptera gắp'], ['flora-settings', 'Thực vật'], ['voice-settings', 'Voice gần'], ['panel-access', 'Truy cập panel']];
 function currentSub() {
   const h = location.hash.slice(1);
   const sub = h.startsWith('server/') ? decodeURIComponent(h.slice('server/'.length)) : 'status';
@@ -5022,6 +5040,7 @@ async function refreshServerTab() {
     getJson('/api/garage-settings').then(renderGarageSettings),
     getJson('/api/commands-settings').then(renderCommandsSettings),
     getJson('/api/ptera-carry').then(renderPteraSettings),
+    getJson('/api/flora-settings').then(renderFloraSettings),
     getJson('/api/voice-settings').then(renderVoiceSettings),
     getJson('/api/panel-access').then(renderPanelAccess),
     refreshCatalog(),
@@ -5290,6 +5309,35 @@ $('pt-save').addEventListener('click', () => withToken('lưu cài đặt Ptera g
   });
   ptDirty = false;
   toast('Đã lưu — mod đọc lại trong vài giây.');
+  refresh();
+}));
+
+// --- plants (mods/Flora, bridge/src/flora-settings.ts) -----------------------------
+let flDirty = false;
+function renderFloraSettings({ settings: s, control: c, t }) {
+  const st = c
+    ? `Lượt gần nhất (${ago(c.t)}): điều khiển <b>${c.on ? 'đang bật' : 'tắt'}</b> · ${c.active} vùng đang di cư · `
+      + `<b>${c.plantsNutri}/${c.plants}</b> cây và <b>${c.fruitsNutri}/${c.fruits}</b> quả đang có chất.`
+    : t ? `Dữ liệu cây: ${ago(t)} · chưa có lượt điều khiển nào (đang tắt).` : 'Chưa có dữ liệu từ mod Flora.';
+  $('fl-stats').innerHTML = st;
+  if (flDirty) return;
+  $('fl-control').checked = s.control;
+  $('fl-mig-pct').value = s.migrationNutrientPct; $('fl-mig-mul').value = s.migrationMultiplier;
+  $('fl-mass-pct').value = s.massNutrientPct; $('fl-mass-mul').value = s.massMultiplier;
+  $('fl-out-pct').value = s.outsideAmountPct;
+}
+for (const id of ['fl-control', 'fl-mig-pct', 'fl-mig-mul', 'fl-mass-pct', 'fl-mass-mul', 'fl-out-pct']) {
+  $(id).addEventListener('input', () => { flDirty = true; });
+  $(id).addEventListener('change', () => { flDirty = true; });
+}
+$('fl-save').addEventListener('click', () => withToken('lưu cài đặt thực vật', async (token) => {
+  const n = (id) => Math.round(Number($(id).value));
+  await adminFetch('/api/flora-settings', 'PUT', token, {
+    control: $('fl-control').checked, migrationNutrientPct: n('fl-mig-pct'), migrationMultiplier: n('fl-mig-mul'),
+    massNutrientPct: n('fl-mass-pct'), massMultiplier: n('fl-mass-mul'), outsideAmountPct: n('fl-out-pct'),
+  });
+  flDirty = false;
+  toast('Đã lưu — mod áp dụng trong ~15 giây.');
   refresh();
 }));
 
