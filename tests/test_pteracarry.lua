@@ -41,13 +41,14 @@ local base = class("TIFlyingCharacter", {
   fn("ServerFlap", "TIFlyingCharacter"),               -- unrelated
 }, { prop("CarriedActor", "ObjectProperty"), prop("FlapSpeed", "FloatProperty") }, nil,
   { CarriedActor = nil, MaxCarryWeight = 25 })
-local ptera = class("BP_Pteranodon_C", { fn("OnGrabbed", "BP_Pteranodon_C") }, { prop("MaxCarryWeight", "FloatProperty") }, base,
+local ptera = class("BP_Pteranodon_C", { fn("OnGrabbed", "BP_Pteranodon_C"), fn("ServerStartPerch", "BP_Pteranodon_C", { "Target" }) }, { prop("MaxCarryWeight", "FloatProperty") }, base,
   { MaxCarryWeight = 25, CarriedActor = nil })
 local rabbit = class("BP_Rabbit_C", {}, { prop("bCanBeCarried"), prop("CarryWeight", "FloatProperty") }, nil,
   { bCanBeCarried = true, CarryWeight = 2 })
 local classes = {
   ["/Game/TheIsle/Core/Characters/Dinosaurs/Pteranodon/BP_Pteranodon.BP_Pteranodon_C"] = ptera,
   ["/Game/TheIsle/Core/Characters/Animals/Rabbit/BP_Rabbit.BP_Rabbit_C"] = rabbit,
+  ["/Script/GameplayAbilities.AbilitySystemComponent"] = named("AbilitySystemComponent"),
 }
 _G.StaticFindObject = function(p) return classes[p] end
 
@@ -58,12 +59,17 @@ loop.fn()
 local text = table.concat(H.log, "\n")
 check("lists the carry functions with their params", text:find("function ServerTryPickUpCarriable%(Target:ObjectProperty%)") ~= nil)
 check("…and properties", text:find("property CarriedActor : ObjectProperty", 1, true) ~= nil)
-check("not the unrelated ones", text:find("ServerFlap", 1, true) == nil and text:find("FlapSpeed", 1, true) == nil)
+check("not the unrelated properties", text:find("FlapSpeed", 1, true) == nil)
 check("hooks the pick-up / drop / grab functions", H.hooks["/Script/TheIsle.TIFlyingCharacter:ServerTryPickUpCarriable"] ~= nil
   and H.hooks["/Script/TheIsle.TIFlyingCharacter:ServerDropCarried"] ~= nil and H.hooks["/Script/TheIsle.BP_Pteranodon_C:OnGrabbed"] ~= nil)
+check("the ptera's own Server RPCs are hooked, whatever their name", H.hooks["/Script/TheIsle.BP_Pteranodon_C:ServerStartPerch"] ~= nil)
+check("…down to TIDinosaurBase (a parent at depth 1 too)", H.hooks["/Script/TheIsle.TIFlyingCharacter:ServerFlap"] ~= nil)
 check("getters are listed but not hooked", text:find("function GetMaxCarryWeight", 1, true) ~= nil
   and H.hooks["/Script/TheIsle.TIFlyingCharacter:GetMaxCarryWeight"] == nil
   and H.hooks["/Script/TheIsle.TIFlyingCharacter:IsUseInputHeld"] == nil)
+check("GAS: the ability RPCs are hooked (a key press that starts an ability)",
+  H.hooks["/Script/GameplayAbilities.AbilitySystemComponent:ServerTryActivateAbility"] ~= nil
+  and H.hooks["/Script/GameplayAbilities.AbilitySystemComponent:ServerSetInputPressed"] ~= nil)
 check("never reads a class default object (it crashed the server)", H.countCalls("GetCDO") == 0)
 local target = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Rabbit.BP_Rabbit_C" })
 local p = function(v) return { get = function() return v end } end
@@ -77,7 +83,7 @@ check("nothing changed in the game", #H.calls == 0 or (function()
 loop.fn()
 local hooksNow = 0
 for _ in pairs(H.hooks) do hooksNow = hooksNow + 1 end
-check("run again: nothing hooked twice", hooksNow == 3, tostring(hooksNow))
+check("run again: nothing hooked twice", hooksNow == 11, tostring(hooksNow))
 
 -- A player on a Pteranodon, a rabbit 10 m away and one 200 m away.
 local ptera = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Pteranodon.BP_Pteranodon_C", loc = { X = 0, Y = 0, Z = 0 } })

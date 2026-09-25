@@ -14,6 +14,12 @@
 --      Pickup…, never a Get…/Is… getter: those run every frame for every
 --      character): when a player tries to grab, UE4SS.log shows which
 --      function ran, with what (the first MAX_FIRES of each)
+--   3b. every Server… RPC of the Pteranodon's own classes (down to
+--      TIDinosaurBase): the client sends one when a key is pressed, so the
+--      log shows what "fly close, hold Z + mouse" sends
+--   3c. the Gameplay Ability System RPCs (ServerTryActivateAbility…), and
+--      the list of abilities of each Pteranodon being played, so a key press
+--      in the log can be named
 --   4. every 30 s, for each player playing a Pteranodon: its weight and
 --      bBlockPickUp, and the same for the prey (rabbit, chicken, frog, crab)
 --      within 30 m — read on the live pawns, numbers and flags only
@@ -42,7 +48,11 @@ local WORDS = { "carr", "grab", "pick", "drop", "prey", "snatch", "releas", "tal
 -- Receive…) are listed but never hooked — they run every frame.
 local HOOK_WORDS = { "carr", "grab", "pick", "drop", "snatch", "releas", "grip", "drag", "interact" }
 local NOT_HOOKED = { "^Get", "^Is", "^OnRep", "^Input", "^Receive", "^K2_", "^Can", "Organ", "Egg" }
-local MAX_HOOKS = 30
+local MAX_HOOKS = 90
+-- Classes this close to BP_Pteranodon_C (0 = itself … 3 = TIDinosaurBase) have every
+-- Server… RPC hooked too: a client sends those only on input (the grab / latch
+-- keys), so one of them is what "hold Z + mouse" near a dino sends.
+local SERVER_RPC_DEPTH = 3
 local MAX_FIRES = 5
 local RETRY_MS = 30000
 
@@ -106,10 +116,11 @@ end
 local hooked = {}
 local hookCount = 0
 
-local function hook(path, label)
+local function hook(path, label, maxFires)
     if hooked[path] or hookCount >= MAX_HOOKS then return end
     hooked[path] = true
     local fires = 0
+    local MAX_FIRES = maxFires or MAX_FIRES
     local ok, err = pcall(function()
         RegisterHook(path, function(...)
             if fires >= MAX_FIRES then return end
@@ -132,14 +143,15 @@ end
 -- 1 + 2. What the classes have
 --------------------------------------------------------------------------
 
-local function listClass(label, cls)
+local function listClass(label, cls, rpcDepth)
     log("=== %s and parents: carry-related functions and properties ===", label)
     eachClass(cls, function(c, depth)
         local cname = nameOf(c)
         pcall(function()
             c:ForEachFunction(function(fn)
                 local name = nameOf(fn)
-                if not matches(name, WORDS) then return end
+                local rpc = rpcDepth ~= nil and depth <= rpcDepth and name:find("^Server") ~= nil
+                if not matches(name, WORDS) and not rpc then return end
                 local params = {}
                 pcall(function()
                     fn:ForEachProperty(function(prop)
@@ -147,7 +159,7 @@ local function listClass(label, cls)
                     end)
                 end)
                 log("  [%d %s] function %s(%s)", depth, cname, name, table.concat(params, ", "))
-                if matches(name, HOOK_WORDS) and hookable(name) then
+                if (rpc or matches(name, HOOK_WORDS)) and hookable(name) then
                     local okP, full = pcall(function() return fn:GetFullName() end)
                     -- "Function /Script/TheIsle.X:Name" -> "/Script/TheIsle.X:Name"
                     local path = okP and tostring(full):match("^Function (.+)$")
@@ -191,6 +203,37 @@ local function where(pawn)
     return ok and v and type(v.X) == "number" and v or nil
 end
 
+local abilitiesListed = {}   -- steamId -> true: the ptera's abilities were logged this session
+
+-- 5. The Gameplay Ability System: a key that starts an ability (latch, grab…)
+-- reaches the server as AbilitySystemComponent:ServerTryActivateAbility. Its
+-- handle is matched against the abilities listed below.
+local ASC_CLASS = "/Script/GameplayAbilities.AbilitySystemComponent"
+local GAS_RPCS = { "ServerTryActivateAbility", "ServerTryActivateAbilityWithEventData", "ServerCancelAbility",
+                   "ServerEndAbility", "ServerSetInputPressed", "ServerSetInputReleased" }
+
+--- Each ability the pawn can use: "handle N = <class>". Read-only, once per player.
+local function listAbilities(steamId, pawn)
+    if abilitiesListed[steamId] then return end
+    abilitiesListed[steamId] = true
+    local ascCls = findClass(ASC_CLASS)
+    local okA, asc = pcall(function() return pawn:GetComponentByClass(ascCls) end)
+    if not okA or asc == nil or not H.isValid(asc) then log("  abilities: no AbilitySystemComponent found"); return end
+    local n = 0
+    pcall(function()
+        asc.ActivatableAbilities.Items:ForEach(function(_, elem)
+            local spec = elem:get()
+            local okH, handle = pcall(function() return spec.Handle.Handle end)
+            local okC, cls = pcall(function() return spec.Ability:GetClass():GetFName():ToString() end)
+            local okI, input = pcall(function() return spec.InputID end)
+            log("  ability handle %s = %s (InputID %s)", okH and tostring(handle) or "?", okC and tostring(cls) or "?",
+                okI and tostring(input) or "?")
+            n = n + 1
+        end)
+    end)
+    log("  abilities of %s's ptera: %d", tostring(steamId), n)
+end
+
 local function liveValues()
     local pteras = {}
     H.forEachPlayer(function(ctrl)
@@ -198,6 +241,10 @@ local function liveValues()
         if pawn and short(pawn) == "BP_Pteranodon_C" then pteras[#pteras + 1] = { ctrl = ctrl, pawn = pawn } end
     end)
     if #pteras == 0 then return end
+    for _, p in ipairs(pteras) do
+        local id = H.safeSteamId(p.ctrl)
+        if id then listAbilities(id, p.pawn) end
+    end
     local okA, all = pcall(function() return FindAllOf("Pawn") or {} end)
     for _, p in ipairs(pteras) do
         local at = where(p.pawn)
@@ -225,14 +272,15 @@ end
 -- Run once the classes are loaded (a class loads when first used).
 --------------------------------------------------------------------------
 
-local pteraDone, ctrlDone = false, false
+local pteraDone, ctrlDone, gasDone = false, false, false
+
 
 local function step()
     if not pteraDone then
         local cls = findClass(PTERA)
         if cls then
             pteraDone = true
-            listClass("BP_Pteranodon_C", cls)
+            listClass("BP_Pteranodon_C", cls, SERVER_RPC_DEPTH)
             log("%d logging hooks set — now have an adult Pteranodon try to grab a rabbit or a chicken", hookCount)
         end
     end
@@ -249,6 +297,10 @@ local function step()
             ctrlDone = true
             listClass("player controller " .. nameOf(cls), cls)
         end
+    end
+    if not gasDone and findClass(ASC_CLASS) then
+        gasDone = true
+        for _, rpc in ipairs(GAS_RPCS) do hook(ASC_CLASS .. ":" .. rpc, "GAS:" .. rpc, 40) end
     end
     liveValues()
 end
