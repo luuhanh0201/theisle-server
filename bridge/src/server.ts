@@ -199,7 +199,7 @@ function describeZoneChanges(before: AiZonesSettings, after: AiZonesSettings): s
   if (top) parts.push(top);
   const old = new Map(before.zones.map((z) => [z.id, z]));
   const now = new Map(after.zones.map((z) => [z.id, z]));
-  for (const z of after.zones) if (!old.has(z.id)) parts.push(`+ vùng "${z.name}" (${z.species.join(', ')}; vắng ${z.idleMax}, có người ${z.max})`);
+  for (const z of after.zones) if (!old.has(z.id)) parts.push(`+ vùng "${z.name}" (${z.species.join(', ')}; tối thiểu ${z.min}, tối đa ${z.max}, mỗi lượt ${z.perTurnMin}–${z.perTurnMax} con / ${z.everySec} s)`);
   for (const z of before.zones) if (!now.has(z.id)) parts.push(`− vùng "${z.name}"`);
   for (const z of after.zones) {
     const was = old.get(z.id);
@@ -594,7 +594,7 @@ async function handlePanel(
       const zones = await readAiZones();
       sendJson(res, 200, {
         ...zones,
-        species: AI_SPECIES.map(({ key, label, kind }) => ({ key, label, kind })),
+        species: AI_SPECIES.map(({ key, label, kind, cls }) => ({ key, label, kind, cls })),
         status: await readAiZonesStatus(),
         // How many spawn spots each zone has (0 = nobody has stood there yet).
         points: Object.fromEntries(zones.zones.map((z) => [z.id, store.groundPoints.within(z.x, z.y, z.radiusM * 100, 200).length])),

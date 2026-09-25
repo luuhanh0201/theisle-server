@@ -14,10 +14,11 @@ import type { GroundPoints } from './ground-points.js';
  *                                   species' classes and the spawn points
  *   <AIZones>/Saved/status.json     what the mod reports back
  *
- * A zone: a circle (centre in game units, radius in metres), its species, how
- * many AI it keeps while nobody is in it (idleMax) and once a player is
- * (max), how many to add per turn and how often, and the growth of the
- * dinos it makes. `globalMax` caps every living AI on the server — the
+ * A zone: a circle (centre in game units, radius in metres), its species, the
+ * AI it always keeps (min: topped up within seconds, player or not), how
+ * many it fills up to while a player is inside (max) — every `everySec` a
+ * random perTurnMin..perTurnMax (1–5) more, each at a different spot — and
+ * the growth of the dinos it makes. `globalMax` caps every living AI on the server — the
  * game's own and the zones' — so the zones stop at it and players have to
  * hunt some down before more appear.
  */
@@ -31,9 +32,13 @@ export interface AiZone {
   y: number;
   radiusM: number;
   species: string[];
+  /** Always there, player or not. */
+  min: number;
+  /** Filled up to while a player is inside. */
   max: number;
-  idleMax: number;
-  perTurn: number;
+  /** Each turn (every `everySec`, a player inside) adds a random count in this range. */
+  perTurnMin: number;
+  perTurnMax: number;
   everySec: number;
   growthMin: number;
   growthMax: number;
@@ -72,9 +77,13 @@ function validateZone(raw: unknown, i: number): AiZone {
   const species = Array.isArray(r['species']) ? [...new Set(r['species'])] : [];
   if (species.length === 0 || species.length > 12) throw new ValidationError(`${at}: pick 1–12 kinds of AI`);
   for (const s of species) if (typeof s !== 'string' || !AI_BY_KEY.has(s)) throw new ValidationError(`${at}: unknown AI "${String(s)}"`);
+  // Files saved before the rename: idleMax is the min, perTurn both ends of the range.
   const max = int(r['max'], 0, 200, `${at}: max`);
-  const idleMax = int(r['idleMax'], 0, 200, `${at}: idleMax`);
-  if (idleMax > max) throw new ValidationError(`${at}: the limit while empty cannot be above the full limit`);
+  const min = int(r['min'] ?? r['idleMax'], 0, 200, `${at}: min`);
+  if (min > max) throw new ValidationError(`${at}: the minimum cannot be above the maximum`);
+  const perTurnMin = int(r['perTurnMin'] ?? r['perTurn'], 1, 5, `${at}: perTurnMin`);
+  const perTurnMax = int(r['perTurnMax'] ?? r['perTurn'], 1, 5, `${at}: perTurnMax`);
+  if (perTurnMin > perTurnMax) throw new ValidationError(`${at}: perTurnMin is above perTurnMax`);
   const growthMin = real(r['growthMin'], 0.1, 1, `${at}: growthMin`);
   const growthMax = real(r['growthMax'], 0.1, 1, `${at}: growthMax`);
   if (growthMin > growthMax) throw new ValidationError(`${at}: growthMin is above growthMax`);
@@ -85,8 +94,7 @@ function validateZone(raw: unknown, i: number): AiZone {
     y: real(r['y'], -2_000_000, 2_000_000, `${at}: y`),
     radiusM: int(r['radiusM'], 50, 5000, `${at}: radius (m)`),
     species: species as string[],
-    max, idleMax,
-    perTurn: int(r['perTurn'], 1, 5, `${at}: perTurn`),
+    min, max, perTurnMin, perTurnMax,
     everySec: int(r['everySec'], 10, 3600, `${at}: everySec`),
     growthMin, growthMax,
   };
@@ -126,7 +134,7 @@ export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
     zones: s.zones.map((z) => ({
       id: z.id, name: z.name, enabled: z.enabled, x: z.x, y: z.y,
       radius: z.radiusM * 100,
-      max: z.max, idleMax: z.idleMax, perTurn: z.perTurn, every: z.everySec,
+      min: z.min, max: z.max, perTurnMin: z.perTurnMin, perTurnMax: z.perTurnMax, every: z.everySec,
       growthMin: z.growthMin, growthMax: z.growthMax,
       species: z.species.map((k) => {
         const sp = AI_BY_KEY.get(k);
@@ -159,7 +167,10 @@ export interface AiZonesStatus {
   enabled: boolean;
   total: number | null;
   cap: number | null;
-  zones: Record<string, { occupied?: boolean; count?: number | null; limit?: number; spawned?: number; failed?: number; lastSpawn?: number; lastError?: string }>;
+  zones: Record<string, {
+    occupied?: boolean; count?: number | null; min?: number; max?: number; limit?: number; nextTurn?: number;
+    spawned?: number; failed?: number; lastSpawn?: number; lastError?: string;
+  }>;
 }
 
 export async function readAiZonesStatus(nowS = Math.floor(Date.now() / 1000)): Promise<AiZonesStatus | null> {

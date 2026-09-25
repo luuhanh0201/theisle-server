@@ -592,6 +592,22 @@
   .map-tip b { font-size: 12.5px; }
   .map-tip .m { color: #94a3b8; }
   .legend { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  /* Search on the map's top-left corner (places, or coordinates Y, X as the game shows them). */
+  .map-find { position: absolute; top: 10px; left: 10px; width: min(340px, calc(100% - 70px)); z-index: 3; }
+  .map-find input { width: 100%; background: rgba(10,14,22,.82); color: #f1f5f9; border: 1px solid rgba(255,255,255,.2); border-radius: 10px; padding: 8px 11px; font-size: 13px; }
+  .map-find input::placeholder { color: #94a3b8; }
+  .map-find .map-results { margin: 6px 0 0; background: rgba(10,14,22,.92); border-radius: 10px; max-height: 320px; overflow: auto; }
+  .map-find .map-results:empty { display: none; }
+  .map-find .map-results button { color: #f1f5f9; }
+  .map-find .map-results button:hover { background: rgba(255,255,255,.08); }
+  .map-path { top: 56px !important; }
+  /* Layers: one row of chips under the map. */
+  .layer-list.row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .layer-list.row li { flex: none; }
+  .layer-list.row label { display: inline-flex; width: auto; justify-content: flex-start; border: 1px solid var(--border); border-radius: 99px; padding: 4px 11px 4px 8px; font-size: 12.5px; gap: 7px; }
+  .layer-list.row input { flex: 0 0 14px; width: 14px !important; min-width: 0 !important; height: 14px; padding: 0 !important; margin: 0 !important; }
+  .layer-list.row .n { margin-left: 2px; }
+  .layer-list.row #ai-status { flex-basis: 100%; padding: 2px 4px 0 !important; }
   .layer-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
   .layer-list label { display: flex; align-items: center; gap: 9px; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 13px; }
   .layer-list label:hover { background: var(--surface-2); }
@@ -802,7 +818,12 @@
             <div class="map-tip" id="map-tip" hidden></div>
             <div class="map-msg" id="map-msg">Đang tải bản đồ…</div>
             <div class="map-path" id="map-path" hidden></div>
+            <div class="map-find">
+              <input type="search" id="map-search" placeholder="Tìm địa điểm, hoặc toạ độ: 349,211, 148,696" autocomplete="off" aria-label="Tìm địa điểm hoặc toạ độ">
+              <ul class="map-results" id="map-results"></ul>
+            </div>
           </div>
+          <ul class="layer-list row" id="map-layers" aria-label="Lớp hiển thị"></ul>
           <div class="legend" id="map-legend"></div>
         </div></section>
         <div class="map-side">
@@ -815,6 +836,7 @@
               <div class="step-hint" id="az-status"></div>
               <ul class="az-list" id="az-list"></ul>
               <button type="button" class="btn-soft sm" id="az-add">+ Thêm vùng — bấm lên bản đồ để đặt tâm</button>
+              <div class="step-hint">Chọn một vùng rồi <b>kéo bên trong</b> để di chuyển, <b>kéo núm tròn trên mép</b> để đổi bán kính.</div>
               <div class="az-edit" id="az-edit" hidden>
                 <div class="az-row"><label for="az-name">Tên vùng</label><input id="az-name" maxlength="40"></div>
                 <label class="az-row"><input type="checkbox" id="az-zenabled"> Vùng đang bật</label>
@@ -822,13 +844,17 @@
                 <div class="group-label" style="margin:6px 0 2px">Loại AI</div>
                 <div class="az-species" id="az-species"></div>
                 <div class="az-grid">
-                  <label>Khi vắng người (tối đa)<input id="az-idle" type="number" min="0" max="200"></label>
-                  <label>Khi có người (tối đa)<input id="az-max" type="number" min="0" max="200"></label>
-                  <label>Sinh mỗi lượt<input id="az-perturn" type="number" min="1" max="5"></label>
+                  <label>Tối thiểu (luôn có)<input id="az-min" type="number" min="0" max="200"></label>
+                  <label>Tối đa (khi có người)<input id="az-max" type="number" min="0" max="200"></label>
+                  <label>Mỗi lượt sinh từ (con)<input id="az-ptmin" type="number" min="1" max="5"></label>
+                  <label>…đến (con)<input id="az-ptmax" type="number" min="1" max="5"></label>
                   <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
                   <label>Growth thấp nhất (%)<input id="az-gmin" type="number" min="10" max="100" step="5"></label>
                   <label>Growth cao nhất (%)<input id="az-gmax" type="number" min="10" max="100" step="5"></label>
                 </div>
+                <div class="step-hint">Vùng luôn được bù đủ <b>tối thiểu</b> trong vài giây (có người hay không).
+                  Khi có người chơi trong vùng: mỗi lượt sinh thêm ngẫu nhiên trong khoảng đã đặt, mỗi con một chỗ khác nhau,
+                  đến khi đủ <b>tối đa</b> — và không vượt tổng AI toàn server. Trên bản đồ, AI thuộc vùng có viền cam.</div>
                 <div class="step-hint" id="az-points"></div>
                 <div class="az-row" style="gap:8px">
                   <button type="button" class="btn-ghost sm" id="az-move">Đặt lại tâm</button>
@@ -842,17 +868,6 @@
             <div class="card-head"><h2>Trên bản đồ</h2><span class="sub">bấm để tới vị trí</span>
               <button type="button" class="btn-soft sm" id="map-clear-all" style="margin-left:auto" title="Chỉ ẩn trên trình duyệt này; vệt mới vẫn vẽ tiếp">Xóa mọi vệt</button></div>
             <div class="card-body"><ul class="rank-list" id="map-list"></ul></div>
-          </section>
-          <section class="card">
-            <div class="card-head"><h2>Tìm địa điểm</h2></div>
-            <div class="card-body">
-              <input type="search" id="map-search" placeholder="Hồ, hang, MZ 05, salt lick, Boar…" autocomplete="off" style="width:100%">
-              <ul class="map-results" id="map-results"></ul>
-            </div>
-          </section>
-          <section class="card">
-            <div class="card-head"><h2>Lớp hiển thị</h2></div>
-            <div class="card-body"><ul class="layer-list" id="map-layers"></ul></div>
           </section>
         </div>
       </div>
@@ -2206,24 +2221,34 @@ function drawMap() {
       drawText(ctx, f.name, x, y, { font: '700 11px Inter, system-ui, sans-serif', color: c });
     }
   }
-  // 1b. AI zones (drawn by admins, run by the AIZones mod)
+  // 1b. AI zones (drawn by admins, run by the AIZones mod): a dark outline
+  // under a bright ring so the edge reads on any ground; the selected one has
+  // its centre marked and a handle on its edge to resize it.
   if (lm.on.has('aizone') && az.draft) {
     for (const zn of az.draft.zones) {
       const f = aiZoneShape(zn);
       const st = az.status?.zones?.[zn.id];
       const sel = az.sel === zn.id;
       const on = az.draft.enabled && zn.enabled;
+      const c = on ? '#fb923c' : '#cbd5e1';
       traceShape(ctx, f);
-      ctx.fillStyle = on ? hexA('#fb923c', sel ? 0.22 : 0.12) : 'rgba(148,163,184,.10)';
+      ctx.fillStyle = on ? hexA('#fb923c', sel ? 0.24 : 0.14) : 'rgba(148,163,184,.12)';
       ctx.fill();
-      ctx.setLineDash(on ? [] : [6, 5]);
-      ctx.lineWidth = sel ? 3 : 1.8;
-      ctx.strokeStyle = on ? '#fb923c' : '#94a3b8';
-      ctx.stroke();
+      ctx.lineWidth = sel ? 7 : 5.5; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
+      ctx.setLineDash(on ? [] : [8, 6]);
+      ctx.lineWidth = sel ? 3.5 : 2.5; ctx.strokeStyle = c; ctx.stroke();
       ctx.setLineDash([]);
       const [x, y] = scr(f.at);
       const count = st && typeof st.count === 'number' ? ` · ${st.count}/${st.limit ?? zn.max}` : '';
-      drawText(ctx, `${zn.name}${count}`, x, y, { font: '700 11.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
+      drawText(ctx, `${zn.name}${count}`, x, y - 9, { font: '800 12px Inter, system-ui, sans-serif', color: on ? '#ffedd5' : '#e2e8f0' });
+      drawText(ctx, `bán kính ${zn.radiusM} m${on ? '' : ' · tắt'}`, x, y + 7, { font: '600 10.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
+      if (sel) {
+        ctx.beginPath(); ctx.moveTo(x - 6, y + 20); ctx.lineTo(x + 6, y + 20); ctx.moveTo(x, y + 14); ctx.lineTo(x, y + 26);
+        ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+        const [hx, hy] = zoneHandle(zn);
+        ctx.beginPath(); ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fb923c'; ctx.stroke();
+      }
     }
   }
   // 2. lines: roads, air currents, caves
@@ -2309,6 +2334,11 @@ function drawMap() {
       ctx.beginPath(); ctx.arc(x, y, lm.hover?.ai === a ? r + 2 : r, 0, Math.PI * 2);
       ctx.fillStyle = LAYER.ai.color; ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
+      // Counted by an AI zone: an orange ring, so admins see what each zone holds.
+      if (lm.on.has('aizone') && aiZoneOf(a)) {
+        ctx.beginPath(); ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+        ctx.lineWidth = 2.5; ctx.strokeStyle = '#fb923c'; ctx.stroke();
+      }
       if (z >= 3) drawText(ctx, dino(a.c), x, y - r - 8, { font: '600 10.5px Inter, system-ui, sans-serif', color: '#fecaca' });
     }
   }
@@ -2358,14 +2388,42 @@ function drawMap() {
     drawText(ctx, `${dino(p.species)} · ${pct(p.growth)}`, x + 13, y + 8, { font: '600 10.5px Inter, system-ui, sans-serif', color: '#cbd5e1', align: 'left' });
   }
 
+  // 8. a searched coordinate
+  if (lm.pin) {
+    const [x, y] = scr(lm.pin.at);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 9, y - 22); ctx.arc(x, y - 26, 9.5, Math.PI * 0.8, Math.PI * 0.2); ctx.closePath();
+    ctx.fillStyle = '#facc15'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y - 26, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#1a1400'; ctx.fill();
+    const g = (v) => Math.round(v * 1000).toLocaleString('en-US');
+    drawText(ctx, `${g(lm.pin.at[0])}, ${g(lm.pin.at[1])}`, x, y + 12, { font: '700 11.5px "JetBrains Mono", ui-monospace, monospace', color: '#fde68a' });
+  }
+
   if ((lm.flash && lm.flash.until > now) || tweening()) requestDraw();
 }
 
 // --- AI zones (AIZones mod): drawn and edited on this map ---
 // az.draft is what the form shows and the map draws; saved with "Lưu vùng AI".
-const az = { data: null, draft: null, status: null, points: {}, speciesLabel: {}, sel: null, placing: null, dirty: false };
-const ZONE_DEFAULT = { radiusM: 300, species: ['Boar', 'Deer'], max: 10, idleMax: 3, perTurn: 2, everySec: 60, growthMin: 0.75, growthMax: 1, enabled: true };
+const az = { data: null, draft: null, status: null, points: {}, speciesLabel: {}, speciesCls: {}, sel: null, placing: null, dirty: false, drag: null };
+const ZONE_DEFAULT = { radiusM: 300, species: ['Boar', 'Deer'], min: 3, max: 10, perTurnMin: 1, perTurnMax: 3, everySec: 60, growthMin: 0.75, growthMax: 1, enabled: true };
 const aiZoneShape = (zn) => ({ kind: 'circle', at: unitsOf({ x: zn.x, y: zn.y }), r: [zn.radiusM / 10, zn.radiusM / 10] });
+/** Screen point of the selected zone's resize handle (the zone's right edge). */
+function zoneHandle(zn) {
+  const f = aiZoneShape(zn);
+  const [cx, cy] = scr(f.at);
+  return [cx + rY(f.r[1]), cy];
+}
+/** What a press at (sx, sy) grabs on the selected zone: its edge handle (resize) or its inside (move). */
+function zoneGrab(sx, sy) {
+  if (!lm.on.has('aizone') || !az.draft || !az.sel || az.placing) return null;
+  const zn = az.draft.zones.find((z) => z.id === az.sel);
+  if (!zn) return null;
+  const [hx, hy] = zoneHandle(zn);
+  if (Math.hypot(sx - hx, sy - hy) <= 12) return { mode: 'resize', zn };
+  const f = aiZoneShape(zn);
+  const pt = fromScr(sx, sy);
+  if (Math.hypot(pt[0] - f.at[0], pt[1] - f.at[1]) <= f.r[0]) return { mode: 'move', zn, off: [pt[0] - f.at[0], pt[1] - f.at[1]] };
+  return null;
+}
 function aiZoneAt(sx, sy) {
   if (!lm.on.has('aizone') || !az.draft || !lm.view) return null;
   const pt = fromScr(sx, sy);
@@ -2384,9 +2442,23 @@ async function refreshAiZones() {
   az.status = d.status;
   az.points = d.points ?? {};
   az.speciesLabel = Object.fromEntries(d.species.map((s) => [s.key, s.label]));
+  az.speciesCls = Object.fromEntries(d.species.map((s) => [s.key, s.cls]));
   if (!az.dirty) az.draft = { enabled: d.enabled, globalMax: d.globalMax, zones: structuredClone(d.zones) };
   renderAiZones();
   requestDraw();
+}
+
+/** The AI zone an AI counts for, as the mod counts: a species of the zone, inside its circle. */
+function aiZoneOf(a) {
+  const d = az.draft;
+  if (!d || !d.enabled) return null;
+  const cls = String(a.c ?? '').split('.').pop();
+  for (const zn of d.zones) {
+    if (!zn.enabled || !zn.species.some((k) => az.speciesCls[k] === cls)) continue;
+    const dx = a.x - zn.x, dy = a.y - zn.y, r = zn.radiusM * 100;
+    if (dx * dx + dy * dy <= r * r) return zn;
+  }
+  return null;
 }
 
 function renderAiZones() {
@@ -2405,7 +2477,7 @@ function renderAiZones() {
   $('az-list').innerHTML = d.zones.length === 0 ? '<li class="muted" style="cursor:default">Chưa có vùng nào.</li>'
     : d.zones.map((zn) => {
       const s = st?.zones?.[zn.id];
-      const n = s && typeof s.count === 'number' ? `${s.count}/${s.limit ?? zn.max}${s.occupied ? ' · có người' : ''}` : `${zn.idleMax}–${zn.max}`;
+      const n = s && typeof s.count === 'number' ? `${s.count}/${s.limit ?? zn.max}${s.occupied ? ' · có người' : ''}` : `${zn.min}–${zn.max}`;
       return `<li data-az="${esc(zn.id)}" class="${zn.id === az.sel ? 'on' : ''}${zn.enabled ? '' : ' off'}"><span class="sw" style="background:#fb923c;width:10px;height:10px;border-radius:50%"></span>${esc(zn.name)}<span class="n">${esc(n)}</span></li>`;
     }).join('');
   renderAiZoneForm();
@@ -2422,7 +2494,7 @@ function renderAiZoneForm() {
   set('az-name', zn.name);
   $('az-zenabled').checked = zn.enabled;
   set('az-radius', zn.radiusM);
-  set('az-idle', zn.idleMax); set('az-max', zn.max); set('az-perturn', zn.perTurn); set('az-every', zn.everySec);
+  set('az-min', zn.min); set('az-max', zn.max); set('az-ptmin', zn.perTurnMin); set('az-ptmax', zn.perTurnMax); set('az-every', zn.everySec);
   set('az-gmin', Math.round(zn.growthMin * 100)); set('az-gmax', Math.round(zn.growthMax * 100));
   const groups = [['animal', 'Thú'], ['dino', 'Khủng long']];
   const key = JSON.stringify(zn.species);
@@ -2488,7 +2560,7 @@ $('az-edit').addEventListener('input', (e) => {
     zn.name = $('az-name').value;
     zn.enabled = $('az-zenabled').checked;
     zn.radiusM = n('az-radius');
-    zn.idleMax = n('az-idle'); zn.max = n('az-max'); zn.perTurn = n('az-perturn'); zn.everySec = n('az-every');
+    zn.min = n('az-min'); zn.max = n('az-max'); zn.perTurnMin = n('az-ptmin'); zn.perTurnMax = n('az-ptmax'); zn.everySec = n('az-every');
     zn.growthMin = n('az-gmin') / 100; zn.growthMax = n('az-gmax') / 100;
     if (e.target.id === 'az-radius') delete az.points[zn.id];
   }
@@ -2546,13 +2618,17 @@ function tipHtml(h) {
     const st = az.status?.zones?.[zn.id];
     const names = zn.species.map((k) => az.speciesLabel[k] ?? k).join(', ');
     return `<b>${esc(zn.name)}</b> — vùng AI${zn.enabled && az.draft.enabled ? '' : ' (tắt)'}<br>${esc(names)}<br>`
-      + `<span class="m">bán kính ${zn.radiusM} m · vắng người ${zn.idleMax} / có người ${zn.max} con`
-      + `${st && typeof st.count === 'number' ? ` · đang có ${st.count}` : ''}<br>bấm để sửa</span>`;
+      + `<span class="m">bán kính ${zn.radiusM} m · tối thiểu ${zn.min} · tối đa ${zn.max} khi có người<br>`
+      + `mỗi lượt ${zn.perTurnMin === zn.perTurnMax ? zn.perTurnMin : `${zn.perTurnMin}–${zn.perTurnMax}`} con / ${zn.everySec} s`
+      + `${st && typeof st.count === 'number' ? `<br>đang có ${st.count} · ${st.occupied ? `có người${typeof st.nextTurn === 'number' ? `, lượt sau ${st.nextTurn} s` : ''}` : 'vắng người'}` : ''}`
+      + `<br>bấm để sửa</span>`;
   }
   if (h.ai) {
     const a = h.ai;
     const age = Math.max(0, Math.round(Date.now() / 1000 - lm.ai.t));
-    return `<b>${esc(dino(a.c))}</b><br>AI trên server${typeof a.hp === 'number' ? ` · máu ${Math.round(a.hp)}` : ''}<br><span class="m">vị trí đọc ${age} s trước</span>`;
+    const zn = aiZoneOf(a);
+    return `<b>${esc(dino(a.c))}</b><br>AI trên server${typeof a.hp === 'number' ? ` · máu ${Math.round(a.hp)}` : ''}`
+      + `${zn ? `<br>tính cho vùng AI "${esc(zn.name)}"` : ''}<br><span class="m">vị trí đọc ${age} s trước</span>`;
   }
   if (h.player) {
     const p = h.player;
@@ -2592,7 +2668,8 @@ function showHover(sx, sy) {
   // Same order and format as the game's own location, so the two compare directly.
   const g = (v) => Math.round(v * 1000).toLocaleString('en-US');
   $('map-coord').textContent = `${g(x)}, ${g(y)}`;
-  $('map').style.cursor = az.placing ? 'crosshair' : h?.player || h?.azone ? 'pointer' : '';
+  const grab = zoneGrab(sx, sy);
+  $('map').style.cursor = az.placing ? 'crosshair' : grab?.mode === 'resize' ? 'ew-resize' : grab ? 'move' : h?.player || h?.azone ? 'pointer' : '';
   if (changed) requestDraw();
 }
 
@@ -2608,6 +2685,8 @@ $('map').addEventListener('pointerdown', (e) => {
   lm.pointers.set(e.pointerId, localXY(e));
   if (lm.pointers.size === 1) {
     const [x, y] = localXY(e);
+    const grab = zoneGrab(x, y);
+    if (grab) { az.drag = { ...grab, moved: false }; lm.drag = null; $('map-tip').hidden = true; return; }
     lm.drag = { x, y, ox: lm.view.ox, oy: lm.view.oy, moved: false };
   } else if (lm.pointers.size === 2) {
     const [a, b] = [...lm.pointers.values()];
@@ -2619,6 +2698,23 @@ $('map').addEventListener('pointermove', (e) => {
   if (!lm.view) return;
   const [x, y] = localXY(e);
   if (lm.pointers.has(e.pointerId)) lm.pointers.set(e.pointerId, [x, y]);
+  if (az.drag) {
+    // Move the zone (keeping where it was grabbed under the pointer) or pull its edge.
+    const pt = fromScr(x, y);
+    const zn = az.drag.zn;
+    if (az.drag.mode === 'move') {
+      const at = [pt[0] - az.drag.off[0], pt[1] - az.drag.off[1]];
+      zn.x = Math.round(at[1] * 1000); zn.y = Math.round(at[0] * 1000);   // map units are [game Y, game X] / 1000
+    } else {
+      const f = aiZoneShape(zn);
+      const r = Math.hypot(pt[0] - f.at[0], pt[1] - f.at[1]) * 10;         // map units -> metres
+      zn.radiusM = Math.min(5000, Math.max(50, Math.round(r / 10) * 10));
+      if (document.activeElement !== $('az-radius')) $('az-radius').value = zn.radiusM;
+    }
+    az.drag.moved = true;
+    requestDraw();
+    return;
+  }
   if (lm.pinch && lm.pointers.size === 2) {
     const [a, b] = [...lm.pointers.values()];
     const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -2638,6 +2734,13 @@ $('map').addEventListener('pointermove', (e) => {
   showHover(x, y);
 });
 function endPointer(e) {
+  if (az.drag) {
+    const { moved, zn } = az.drag;
+    az.drag = null;
+    lm.pointers.delete(e.pointerId);
+    if (moved) { delete az.points[zn.id]; markAz(); }
+    return;
+  }
   const click = lm.drag && !lm.drag.moved && lm.pointers.size === 1;
   lm.pointers.delete(e.pointerId);
   if (lm.pointers.size < 2) lm.pinch = null;
@@ -2710,9 +2813,34 @@ function turnOn(layer) {
   if (box) box.checked = true;
 }
 
+/**
+ * Coordinates typed the way the game (and this map's readout) shows them: Y
+ * first, then X — "349,211.187, 148,696.686", "349211 148696" or
+ * "349211,148696". Small numbers (|n| <= 1000) are taken as map units.
+ * Returns the map point [Y/1000, X/1000], or null.
+ */
+function parseCoords(q) {
+  let parts = q.trim().split(/\s*[;|]\s*|,\s+|\s+/).filter(Boolean);
+  if (parts.length === 1 && /^-?[\d.]+,-?[\d.]+$/.test(parts[0])) parts = parts[0].split(',');
+  if (parts.length !== 2) return null;
+  const nums = parts.map((p) => Number(p.replace(/,/g, '')));
+  if (!nums.every(Number.isFinite)) return null;
+  const small = nums.every((n) => Math.abs(n) <= 1000);
+  return small ? nums : nums.map((n) => n / 1000);
+}
 let searchHits = [];
 $('map-search').addEventListener('input', () => {
   const q = $('map-search').value.trim().toLowerCase();
+  if (q === '' && lm.pin) { lm.pin = null; requestDraw(); }
+  const at = lm.data ? parseCoords(q) : null;
+  if (at) {
+    const b = lm.data.bounds;
+    const inside = at[0] >= b.minX && at[0] <= b.maxX && at[1] >= b.minY && at[1] <= b.maxY;
+    const g = (v) => Math.round(v * 1000).toLocaleString('en-US');
+    searchHits = [{ coord: at }];
+    $('map-results').innerHTML = `<li><button type="button" data-hit="0">📍 Tới toạ độ ${g(at[0])}, ${g(at[1])}<small>${inside ? 'Y, X' : 'ngoài bản đồ'}</small></button></li>`;
+    return;
+  }
   if (!lm.data || q.length < 2) { $('map-results').innerHTML = ''; searchHits = []; return; }
   const foods = new Map();
   const places = [];
@@ -2735,6 +2863,12 @@ $('map-results').addEventListener('click', (e) => {
   const h = btn && searchHits[Number(btn.dataset.hit)];
   if (!h) return;
   const until = performance.now() + 6000;
+  if (h.coord) {
+    lm.pin = { at: h.coord };
+    flyTo(h.coord, 4);
+    $('map-results').innerHTML = '';
+    return;
+  }
   if (h.food !== undefined) {
     turnOn(h.layer);
     lm.flash = { food: h.food, until };
@@ -3853,7 +3987,10 @@ function renderConfig(data) {
     const value = (k) => (k in eff && eff[k] !== null ? eff[k] : schema[k].verified === false ? undefined : schema[k].default);
     const wide = keys.filter((k) => schema[k].type === 'list');
     const narrow = keys.filter((k) => schema[k].type !== 'list');
-    return `<section class="cfg-group" data-group="${group}" data-title="${esc(title)}">
+    const zonesHint = group === 'ai' ? `<div class="banner" style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span>🗺️ <b>Vùng AI</b> (sinh AI theo vùng, giới hạn tổng AI toàn server) chỉnh trên bản đồ: vẽ, kéo, đổi bán kính từng vùng.</span>
+        <a class="btn-soft sm" href="#map" style="margin-left:auto">Mở Vùng AI trên bản đồ →</a></div>` : '';
+    return `<section class="cfg-group" data-group="${group}" data-title="${esc(title)}">${zonesHint}
       <div class="cfg-grid">${narrow.map((k) => cfgFieldHtml(k, schema[k], value(k), known)).join('')}</div>
       ${wide.map((k) => `<div style="margin-top:12px">${cfgFieldHtml(k, schema[k], value(k), known)}</div>`).join('')}
     </section>`;

@@ -1,10 +1,13 @@
 -- AIZones — AI that lives in admin-drawn zones.
 --
 -- The game spawns its own AI around players (Game.ini AIDensity…); it has no
--- zones. This mod adds them: each zone (drawn on the admin panel) has its
--- species, how many to add at a time and how often, a growth range, and two
--- limits: `idleMax` while nobody is in the zone (it is never empty, but
--- stays light) and `max` once a player is inside (it fills up for them).
+-- zones. This mod adds them. Each zone (drawn on the admin panel) has its
+-- species, a growth range and two limits:
+--   * `min`: always there. Whenever the zone has fewer (eaten, killed,
+--     wandered off), it is topped up within seconds, player or not.
+--   * `max`: once a player is inside, every `every` seconds a random
+--     perTurnMin..perTurnMax (1–5) more appear, each at a different spot,
+--     until the zone holds `max`.
 --
 -- The bridge writes Mods/AIZones/Saved/zones.json: the zones, each species'
 -- pawn + AI controller class (pairs verified live by the evrima-dev-knowledge
@@ -38,16 +41,21 @@ local STATUS_PATH = "Mods/AIZones/Saved/status.json"
 local TICK_MS     = 5000     -- game-thread turn
 local READ_MS     = 10000    -- re-read zones.json (async thread)
 local HARD_MAX    = 200      -- whatever the panel says, never more of OUR AI alive than this
-local PER_TURN    = 5        -- …and never more than this many spawns per zone per turn
+local PER_TURN    = 5        -- …never more than this many per zone per turn
+local TOPUP       = 5        -- …per zone per tick when below `min`
+local TICK_BUDGET = 10       -- …nor more than this many spawns in one tick, all zones
 local TRIES       = 3        -- spawn points tried per AI before giving up this turn
+local KEEP_OFF_CM = 4000     -- spots this close to a player are used last (no AI popping in your face)
+local RETRY_S     = 30       -- a zone whose top-up made nothing waits this long
 
 local config = nil           -- the decoded zones.json (plain Lua data)
 local status = nil           -- built on the game thread, written by the async loop
-local nextAt = {}            -- zone id -> os.time() of its next turn
+local nextAt = {}            -- zone id -> os.time() of its next turn (while occupied)
+local retryAt = {}           -- zone id -> os.time() before which a failed top-up is not retried
 local ours = {}              -- address -> true: AI this mod spawned, still seen alive
 local zoneStats = {}         -- zone id -> { spawned, failed, lastSpawn, lastError }
 local lastScan = 0           -- os.time() of the last AI scan
-local SCAN_EVERY_S = 30      -- with nothing due, the count of ours is refreshed this often
+local SCAN_EVERY_S = 10      -- the AI are counted this often (a zone's turn counts them too)
 
 --------------------------------------------------------------------------
 -- Files (async thread only: no engine objects here)
@@ -75,6 +83,8 @@ local function writeStatus()
     if not f then return end
     f:write(text)
     f:close()
+    -- Windows (the server runs under Wine) does not rename over an existing file.
+    os.remove(STATUS_PATH)
     os.rename(tmp, STATUS_PATH)
 end
 
@@ -143,16 +153,41 @@ local function num(v, lo, hi, default)
     return math.max(lo, math.min(hi, n))
 end
 
---- One AI of `sp` at one of the zone's points. Returns true, or false + why.
-local function spawnOne(world, zone, sp)
+--- The zone's points in a random order, spots near a player last: each AI of
+--- a turn takes the next one, so no two land on the same spot.
+local function spotsFor(zone, players)
+    local far, close = {}, {}
+    for _, pt in ipairs(zone.points) do
+        local isClose = false
+        for _, p in ipairs(players) do
+            if near(p, pt[1], pt[2], KEEP_OFF_CM) then isClose = true; break end
+        end
+        local list = isClose and close or far
+        list[#list + 1] = pt
+    end
+    for _, list in ipairs({ far, close }) do
+        for i = #list, 2, -1 do
+            local j = math.random(i)
+            list[i], list[j] = list[j], list[i]
+        end
+    end
+    for _, pt in ipairs(close) do far[#far + 1] = pt end
+    local i = 0
+    return function()
+        i = i + 1
+        return far[(i - 1) % #far + 1]    -- more AI than spots: round again
+    end
+end
+
+--- One AI of `sp` at the next free spot. Returns true, or false + why.
+local function spawnOne(world, zone, sp, nextSpot)
     local pawnCls = findClass(sp.pawn)
     local ctrlCls = findClass(sp.ctrl)
     if pawnCls == nil or ctrlCls == nil then
         return false, "class not found: " .. tostring(pawnCls == nil and sp.pawn or sp.ctrl)
     end
-    local points = zone.points
     for _ = 1, TRIES do
-        local pt = points[math.random(#points)]
+        local pt = nextSpot()
         local loc = { X = pt[1], Y = pt[2], Z = pt[3] + num(sp.lift, 0, 1000, 150) }
         local rot = { Pitch = 0, Yaw = math.random(0, 359), Roll = 0 }
         local okP, pawn = pcall(function() return world:SpawnActor(pawnCls, loc, rot) end)
@@ -219,9 +254,9 @@ local function tick()
         if okW and w ~= nil and H.isValid(w) then world = w end
     end
 
-    -- Which zones take a turn now: on, due, with points and species. Whether
-    -- a player is inside decides the limit (max) or (idleMax).
-    local due = {}
+    -- The zones that can spawn: on, with points and species; occupied when a
+    -- player is inside.
+    local active = {}
     for _, z in ipairs(zones) do
         local zs = { occupied = false, count = nil }
         st.zones[tostring(z.id)] = zs
@@ -232,15 +267,19 @@ local function tick()
             for _, p in ipairs(players) do
                 if near(p, x, y, radius) then zs.occupied = true; break end
             end
-            if now >= (nextAt[z.id] or 0) then due[#due + 1] = z end
+            active[#active + 1] = z
         end
     end
 
-    -- One scan of the AI serves every zone. Only when a zone is due, or now
-    -- and then to keep the count of ours fresh: a FindAllOf of every pawn is
-    -- not free, and with nothing to spawn there is nothing to count for.
+    -- One scan of the AI serves every zone: every SCAN_EVERY_S (to keep each
+    -- zone at its minimum), and whenever an occupied zone's turn is due. A
+    -- FindAllOf of every pawn is not free, so not every tick.
+    local turnDue = false
+    for _, z in ipairs(active) do
+        if st.zones[tostring(z.id)].occupied and now >= (nextAt[z.id] or 0) then turnDue = true end
+    end
     local ai = nil
-    if #due > 0 or (st.enabled and now - lastScan >= SCAN_EVERY_S) then
+    if #active > 0 and (turnDue or now - lastScan >= SCAN_EVERY_S) then
         ai = scanAi(playerAddrs)
         lastScan = now
         if ai then
@@ -254,9 +293,10 @@ local function tick()
     -- Every living AI on the server counts against the cap, whoever made it.
     local total = ai and #ai or 0
     local cap = math.floor(num(cfg and cfg.globalMax, 0, 5000, 150))
+    local budget = TICK_BUDGET
 
-    for _, z in ipairs(due) do
-        nextAt[z.id] = now + math.floor(num(z.every, 10, 3600, 60))
+    for _, z in ipairs(ai and active or {}) do
+        local zs = st.zones[tostring(z.id)]
         local stats = zoneStats[z.id] or { spawned = 0, failed = 0 }
         zoneStats[z.id] = stats
         -- What is in the zone now: its species, whoever spawned them.
@@ -264,22 +304,34 @@ local function tick()
         for _, sp in ipairs(z.species) do if sp.cls then classes[sp.cls] = true end end
         local radius = num(z.radius, 1000, 2000000, 20000)
         local count = 0
-        for _, a in ipairs(ai or {}) do
+        for _, a in ipairs(ai) do
             if a.cls and classes[a.cls] and near(a, z.x, z.y, radius) then count = count + 1 end
         end
-        local full = math.floor(num(z.max, 0, 500, 5))
-        local occupied = st.zones[tostring(z.id)].occupied
-        local max = occupied and full or math.min(full, math.floor(num(z.idleMax, 0, 500, 0)))
-        local room = math.min(math.floor(num(z.perTurn, 1, PER_TURN, 1)), max - count, cap - total, HARD_MAX - alive)
-        if ai == nil then room = 0 end                -- no count, no spawn
+        local max = math.floor(num(z.max, 0, 500, 5))
+        -- `idleMax`: the name of `min` in files written before it was renamed.
+        local min = math.min(max, math.floor(num(z.min or z.idleMax, 0, 500, 0)))
+
+        -- Below the minimum: top it up now, player or not.
+        local want, why = 0, "min"
+        if count < min and now >= (retryAt[z.id] or 0) then want = math.min(min - count, TOPUP) end
+        -- A player inside and the turn due: a random 1–5 (as set) more, up to max.
+        if zs.occupied and now >= (nextAt[z.id] or 0) then
+            nextAt[z.id] = now + math.floor(num(z.every, 10, 3600, 60))
+            local lo = math.floor(num(z.perTurnMin or z.perTurn, 1, PER_TURN, 1))
+            local hi = math.floor(num(z.perTurnMax or z.perTurn, lo, PER_TURN, lo))
+            local n = math.random(lo, hi)
+            if n > want then want, why = n, "turn" end
+        end
+        local room = math.min(want, max - count, cap - total, HARD_MAX - alive, budget)
         if room > 0 and world == nil then
             stats.lastError = "no world to spawn in"
             room = 0
         end
         local made = {}
+        local nextSpot = room > 0 and spotsFor(z, players) or nil
         for _ = 1, room do
             local sp = z.species[math.random(#z.species)]
-            local ok, why = spawnOne(world, z, sp)
+            local ok, err = spawnOne(world, z, sp, nextSpot)
             if ok then
                 count, alive, total = count + 1, alive + 1, total + 1
                 stats.spawned = stats.spawned + 1
@@ -287,17 +339,29 @@ local function tick()
                 made[#made + 1] = tostring(sp.key)
             else
                 stats.failed = stats.failed + 1
-                stats.lastError = why
-                H.logError(MOD .. ": zone '" .. tostring(z.name) .. "': " .. tostring(why))
+                stats.lastError = err
+                H.logError(MOD .. ": zone '" .. tostring(z.name) .. "': " .. tostring(err))
             end
         end
+        budget = budget - room
+        -- A top-up that made nothing (no class, no free spot) is not retried every tick.
+        if room > 0 and #made == 0 then retryAt[z.id] = now + RETRY_S end
         if #made > 0 then
-            H.log(string.format("%s: zone '%s' +%d (%s) — %d/%d in the zone (%s), %d/%d AI on the server",
-                MOD, tostring(z.name), #made, table.concat(made, ", "), count, max,
-                occupied and "a player is in it" or "empty", total, cap))
+            H.log(string.format("%s: zone '%s' +%d (%s, %s) — %d in the zone (min %d, max %d, %s), %d/%d AI on the server",
+                MOD, tostring(z.name), #made, table.concat(made, ", "), why == "min" and "keeping the minimum" or "a turn",
+                count, min, max, zs.occupied and "a player is in it" or "empty", total, cap))
         end
-        local zs = st.zones[tostring(z.id)]
-        zs.count, zs.limit = count, max
+        zs.count, zs.min, zs.max = count, min, max
+        zs.limit = zs.occupied and max or min
+        if zs.occupied then zs.nextTurn = math.max(0, (nextAt[z.id] or now) - now) end
+    end
+
+    -- Between scans: the last counts, so the panel does not flicker to "?".
+    if ai == nil and status and status.zones then
+        for _, z in ipairs(active) do
+            local zs, prev = st.zones[tostring(z.id)], status.zones[tostring(z.id)]
+            if prev then zs.count, zs.min, zs.max, zs.limit = prev.count, prev.min, prev.max, prev.limit end
+        end
     end
 
     for id, stats in pairs(zoneStats) do
@@ -307,7 +371,7 @@ local function tick()
         end
     end
     st.alive, st.cap = alive, cap
-    if ai then st.total = total end
+    if ai then st.total = total elseif status then st.total = status.total end
     status = st
 end
 

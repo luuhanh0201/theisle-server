@@ -246,8 +246,10 @@ export function createMap(root) {
       for (const zn of st.zones) {
         const f = { kind: 'circle', at: unitsOf(zn), r: [zn.radiusM / 10, zn.radiusM / 10] };
         trace(ctx, f);
-        ctx.fillStyle = hexA(LAYER.aizone.color, 0.12); ctx.fill();
-        ctx.lineWidth = 1.8; ctx.strokeStyle = LAYER.aizone.color; ctx.stroke();
+        ctx.fillStyle = hexA(LAYER.aizone.color, 0.14); ctx.fill();
+        // A dark outline under a bright ring: the edge reads on any ground.
+        ctx.lineWidth = 5.5; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
+        ctx.lineWidth = 2.5; ctx.strokeStyle = LAYER.aizone.color; ctx.stroke();
         const [x, y] = scr(f.at);
         text(ctx, zn.name, x, y - (z >= 1.8 ? 7 : 0), '700 11.5px Inter, system-ui, sans-serif', '#fed7aa');
         if (z >= 1.8) text(ctx, zn.species.join(', '), x, y + 8, '600 10px Inter, system-ui, sans-serif', '#ffedd5');

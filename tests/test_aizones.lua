@@ -1,5 +1,6 @@
--- AIZones against the mock UE4SS: zones spawn only near players, up to their
--- maximum and the server-wide cap, with a brain, replicated, grown; nothing is
+-- AIZones against the mock UE4SS: a zone is always kept at its minimum; with a
+-- player inside, each turn adds a random few at different spots, up to its
+-- maximum and the server-wide cap; with a brain, replicated, grown; nothing is
 -- ever destroyed; the engine is touched only on the game thread.
 
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end
@@ -13,6 +14,13 @@ local function check(name, ok, detail)
 end
 
 os.execute('mkdir -p "' .. RUN .. '/Mods/AIZones/Saved"')
+-- As on Windows (Wine): a rename does not replace an existing file.
+local realRename = os.rename
+os.rename = function(from, to)
+  local f = io.open(to, "r")
+  if f then f:close(); return nil, to .. ": file exists" end
+  return realRename(from, to)
+end
 local ZONES = RUN .. "/Mods/AIZones/Saved/zones.json"
 local STATUS = RUN .. "/Mods/AIZones/Saved/status.json"
 local function writeZones(t)
@@ -72,9 +80,9 @@ end
 local function zone(over)
   local z = {
     id = "z1", name = "Test", enabled = true, x = 50000, y = 0, radius = 20000,
-    max = 3, idleMax = 1, perTurn = 2, every = 60, growthMin = 1, growthMax = 1,
+    max = 3, min = 1, perTurnMin = 2, perTurnMax = 2, every = 60, growthMin = 1, growthMax = 1,
     species = { { key = "Boar", cls = "BP_Boar_C", pawn = BOAR, ctrl = BOAR_AI, kind = "animal", lift = 100 } },
-    points = { { 50000, 100, 2000 }, { 51000, -200, 2100 }, { 49000, 300, 1900 } },
+    points = { { 50000, 100, 2000 }, { 56000, -200, 2100 }, { 44000, 300, 1900 } },
   }
   for k, v in pairs(over or {}) do z[k] = v end
   return z
@@ -99,16 +107,21 @@ playerAt(50000)
 step()
 check("nothing spawned while disabled", H.countCalls("SpawnActor") == 0)
 
-say("\n-- 2. a player in the zone: it fills up to max --")
+say("\n-- 2. a player in the zone: each turn adds perTurn, at different spots, up to max --")
 writeZones({ enabled = true, globalMax = 60, zones = { zone() } })
 reader.fn()
 step()
-check("perTurn = 2 boars this turn", spawns() == 2, tostring(spawns()))
+check("perTurn 2 boars this turn", spawns() == 2, tostring(spawns()))
 check("each gets its brain", H.countCalls("Possess") == 2)
 check("replicated", H.countCalls("SetReplicates") == 2 and H.countCalls("ForceNetUpdate") == 2)
-local first = nil
-for _, c in ipairs(H.calls) do if c.what == "SpawnActor" then first = c; break end end
-check("at a known point, lifted, level", first and first.args[2].Z >= 1900 + 100 and first.args[3].Pitch == 0)
+local spots = {}
+for _, c in ipairs(H.calls) do
+  if c.what == "SpawnActor" and not c.args[1]:match("Controller$") then spots[#spots + 1] = c.args[2] end
+end
+check("at a known point, lifted, level", spots[1] and spots[1].Z >= 1900 + 100)
+check("two different spots", spots[2] and (spots[1].X ~= spots[2].X or spots[1].Y ~= spots[2].Y))
+check("not on top of the player (the spot 1 m from them is used last)",
+  spots[1] and spots[2] and spots[1].X ~= 50000 and spots[2].X ~= 50000)
 step(10)
 check("not again before 'every' (60 s)", spawns() == 2)
 step(60)
@@ -116,16 +129,45 @@ check("max 3: only one more", spawns() == 3, tostring(spawns()))
 step(60)
 check("full: no more", spawns() == 3)
 
-say("\n-- 3. nobody in the zone: it still lives, up to idleMax --")
+say("\n-- 3. the minimum is always there, player or not --")
 fresh()
 playerAt(500000)                                   -- 4.5 km away
+step(12)
+check("empty zone: min 1 spawned", spawns() == 1, tostring(spawns()))
 step(120)
-check("idleMax 1 with the zone empty", spawns() == 1, tostring(spawns()))
-step(120)
-check("stays at idleMax", spawns() == 1)
+check("stays at min (no turns while empty)", spawns() == 1)
+table.remove(aiPawns, 1)                           -- someone ate it
+step(12)
+check("eaten: topped up at once, not after 'every'", spawns() == 2, tostring(spawns()))
 playerAt(50000)
-step(120)
-check("a player arrives: up to max (+2 this turn)", spawns() == 3, tostring(spawns()))
+step(12)
+check("a player arrives: a turn right away (+2)", spawns() == 4, tostring(spawns()))
+
+say("\n-- 3b. a top-up is a few per tick; a turn is a random count in the range --")
+fresh()
+playerAt(500000)
+writeZones({ enabled = true, globalMax = 5000, zones = { zone({ id = "zm", min = 8, max = 8 }) } })
+reader.fn()
+step(12)
+check("min 8: 5 in the first tick", spawns() == 5, tostring(spawns()))
+step(12)
+check("…the other 3 in the next", spawns() == 8, tostring(spawns()))
+fresh()
+playerAt(50000)
+writeZones({ enabled = true, globalMax = 5000, zones = { zone({ id = "zr", min = 0, max = 150, perTurnMin = 2, perTurnMax = 4 }) } })
+reader.fn()
+local seen, inRange, before = {}, true, 0
+for _ = 1, 20 do
+  step(60)
+  local n = spawns() - before
+  before = spawns()
+  if n < 2 or n > 4 then inRange = false end
+  seen[n] = true
+end
+local kinds = 0
+for _ in pairs(seen) do kinds = kinds + 1 end
+check("every turn 2–4", inRange)
+check("…and not always the same number", kinds >= 2)
 
 say("\n-- 4. the server-wide cap counts ALL living AI, the game's own too --")
 fresh()
@@ -134,7 +176,7 @@ for _, x in ipairs({ 900000, 910000 }) do
   aiPawns[#aiPawns + 1] = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Deer.BP_Deer_C", loc = { X = x, Y = 0, Z = 0 } })
 end
 aiPawns[#aiPawns + 1] = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Deer.BP_Deer_C", health = 0, loc = { X = 920000, Y = 0, Z = 0 } })
-writeZones({ enabled = true, globalMax = 5, zones = { zone({ max = 50, perTurn = 5 }) } })
+writeZones({ enabled = true, globalMax = 5, zones = { zone({ id = "zc", min = 0, max = 50, perTurnMin = 5, perTurnMax = 5 }) } })
 reader.fn()
 step(120)
 check("cap 5 with 2 of the game's alive: 3 added", spawns() == 3, tostring(spawns()))
@@ -148,7 +190,7 @@ check("two eaten: two more", spawns() == 5, tostring(spawns()))
 say("\n-- 5. dinos: grown after Possess, vitals refilled; blocked spots are skipped --")
 fresh()
 blocked = 2
-writeZones({ enabled = true, globalMax = 60, zones = { zone({ id = "z2", max = 1, perTurn = 1, growthMin = 0.75, growthMax = 0.75,
+writeZones({ enabled = true, globalMax = 60, zones = { zone({ id = "z2", max = 1, perTurnMin = 1, perTurnMax = 1, growthMin = 0.75, growthMax = 0.75,
   species = { { key = "Rex", cls = "BP_Tyrannosaurus_C", pawn = REX, ctrl = REX_AI, kind = "dino", lift = 300 } } }) } })
 reader.fn()
 step(120)
@@ -161,7 +203,7 @@ for _, c in ipairs(H.calls) do if c.what == "SetGrowth" then grown = c.args[1] e
 check("growth as set on the zone", grown == 0.75, tostring(grown))
 check("vitals set after growth", idx("SetHealth") and idx("SetHealth") > idx("SetGrowth"))
 
-say("\n-- 5b. nobody online: the game state's world, idle limit --")
+say("\n-- 5b. nobody online: the game state's world; an old file's idleMax is the min --")
 local gsWorldAsked = false
 _G.FindFirstOf = function(cls)
   H.touch("FindFirstOf")
@@ -176,7 +218,9 @@ _G.FindAllOf = function(cls)
   return aiPawns
 end
 fresh()
-writeZones({ enabled = true, globalMax = 60, zones = { zone({ id = "z3", idleMax = 2, perTurn = 5 }) } })
+local old = zone({ id = "z3", perTurn = 5, idleMax = 2 })
+old.min, old.perTurnMin, old.perTurnMax = nil, nil, nil
+writeZones({ enabled = true, globalMax = 60, zones = { old } })
 reader.fn()
 step(120)
 check("spawns with nobody online, up to idleMax 2", spawns() == 2 and gsWorldAsked, tostring(spawns()))
@@ -193,8 +237,16 @@ reader.fn()
 local f = io.open(STATUS, "r")
 local st = f and json.decode(f:read("*a"))
 if f then f:close() end
-check("status.json: enabled, the zone with its count and limit", st and st.enabled == true and st.zones.z3
-  and st.zones.z3.count == 2 and st.zones.z3.limit == 2 and st.zones.z3.occupied == false, st and json.encode(st) or "no file")
+check("status.json: enabled, the zone with its count, min, max and limit", st and st.enabled == true and st.zones.z3
+  and st.zones.z3.count == 2 and st.zones.z3.min == 2 and st.zones.z3.max == 3 and st.zones.z3.limit == 2
+  and st.zones.z3.occupied == false, st and json.encode(st) or "no file")
+playerAt(500000)
+step(5)
+reader.fn()
+f = io.open(STATUS, "r")
+st = f and json.decode(f:read("*a"))
+if f then f:close() end
+check("…kept between scans", st and st.zones.z3 and st.zones.z3.count == 2, st and json.encode(st) or "no file")
 check("…and the spawn counters", st and st.zones.z3.spawned == 2)
 
 say("\n-- threads --")

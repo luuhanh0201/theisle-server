@@ -16,7 +16,7 @@ after(() => rmSync(root, { recursive: true, force: true }));
 
 const zone = (over = {}) => ({
   name: 'Đồng cỏ', x: 100000, y: 200000, radiusM: 300, species: ['Boar', 'Deer'],
-  max: 10, idleMax: 3, perTurn: 2, everySec: 60, growthMin: 1, growthMax: 1, ...over,
+  max: 10, min: 3, perTurnMin: 1, perTurnMax: 3, everySec: 60, growthMin: 1, growthMax: 1, ...over,
 });
 
 test('species: every pair has a pawn and a controller class, keys unique', () => {
@@ -48,17 +48,26 @@ test('ground points: one per 25 m cell, fliers and swimmers left out, a circle q
   assert.ok(spread[49][0] - spread[0][0] > 800 * CELL_CM, 'spread over the area, not the first 50');
 });
 
-test('validation: names, known species, idle limit under the full one, growth order', () => {
+test('validation: names, known species, min under max, a per-turn range 1–5, growth order', () => {
   const ok = validateAiZones({ enabled: true, globalMax: 150, zones: [zone()] });
   assert.equal(ok.zones.length, 1);
   assert.match(ok.zones[0].id, /^[a-z0-9]{1,16}$/, 'a zone without an id gets one');
   assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ name: '' })] }), /name/);
   assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ species: ['Dragon'] })] }), /unknown AI/);
-  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ idleMax: 20 })] }), /while empty/);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ min: 20 })] }), /minimum/);
   assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ growthMin: 0.9, growthMax: 0.5 })] }), /growthMin/);
-  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ perTurn: 50 })] }), /perTurn/);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ perTurnMax: 6 })] }), /perTurnMax/);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ perTurnMin: 0 })] }), /perTurnMin/);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ perTurnMin: 4, perTurnMax: 2 })] }), /perTurnMin is above/);
   assert.throws(() => validateAiZones({ enabled: 'yes', globalMax: 150, zones: [] }), /enabled/);
   assert.throws(() => validateAiZones({ enabled: true, globalMax: -1, zones: [] }), /globalMax/);
+});
+
+test('a file saved before the rename: idleMax is the min, perTurn both ends of the range', () => {
+  const { min: _m, perTurnMin: _a, perTurnMax: _b, ...rest } = zone();
+  const z = validateAiZones({ enabled: true, globalMax: 150, zones: [{ ...rest, idleMax: 2, perTurn: 4 }] }).zones[0];
+  assert.deepEqual([z.min, z.perTurnMin, z.perTurnMax], [2, 4, 4]);
+  assert.ok(!('idleMax' in z) && !('perTurn' in z), 'saved under the new names only');
 });
 
 test('save: the panel\'s file and the mod\'s file (classes, radius in cm, the zone\'s points)', async () => {
@@ -72,7 +81,7 @@ test('save: the panel\'s file and the mod\'s file (classes, radius in cm, the zo
   assert.equal(mod.globalMax, 120);
   const z = mod.zones[0];
   assert.equal(z.radius, 30000);
-  assert.equal(z.idleMax, 3);
+  assert.deepEqual([z.min, z.max, z.perTurnMin, z.perTurnMax], [3, 10, 1, 3]);
   assert.equal(z.every, 60);
   assert.deepEqual(z.species.map((s) => s.cls), ['BP_Boar_C', 'BP_Deer_C']);
   assert.ok(z.species.every((s) => s.pawn && s.ctrl && s.lift > 0));
