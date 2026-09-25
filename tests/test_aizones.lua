@@ -373,6 +373,31 @@ d = readDone()
 check("keep the zones' kinds: the rabbits go, the boars stay", alive("BP_Rabbit") == 0 and alive("BP_Boar") == 3
   and d.results[#d.results].made == 2, tostring(alive("BP_Rabbit")) .. "/" .. tostring(alive("BP_Boar")))
 
+say("\n-- 5g. a zone of any outline (a strip of beach): inside means inside the outline --")
+fresh()
+-- 400 m along X, 40 m across; the circle around it reaches 200 m.
+local strip = zone({ id = "zp", min = 0, max = 5, perTurnMin = 1, perTurnMax = 1, radius = 20100,
+  poly = { { 30000, -2000 }, { 70000, -2000 }, { 70000, 2000 }, { 30000, 2000 } },
+  points = { { 50000, 0, 2000 }, { 62000, 500, 2000 } } })
+writeZones({ enabled = true, globalMax = 60, zones = { strip } })
+reader.fn()
+playerAt(50000)
+playerPawn.__props.Loc = { X = 50000, Y = 10000, Z = 100 }   -- 100 m off the strip, inside its circle
+step(60)
+check("beside the strip (inside its circle): not 'in the zone', no turn", spawns() == 0, tostring(spawns()))
+playerPawn.__props.Loc = { X = 45000, Y = 0, Z = 100 }        -- on the strip
+step(60)
+check("on the strip: a turn", spawns() == 1, tostring(spawns()))
+-- Counted only inside the outline: a boar beside the strip is not the zone's.
+aiPawns[#aiPawns + 1] = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Boar.BP_Boar_C", loc = { X = 50000, Y = 9000, Z = 0 } })
+step(60)
+reader.fn()
+local fz = io.open(STATUS, "r")
+local sz = fz and json.decode(fz:read("*a"))
+if fz then fz:close() end
+check("status: the zone counts the boars on the strip only", sz and sz.zones.zp and sz.zones.zp.count == 2 and sz.zones.zp.occupied == true,
+  sz and json.encode(sz.zones.zp) or "no status")
+
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
 

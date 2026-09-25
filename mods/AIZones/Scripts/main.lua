@@ -13,6 +13,9 @@
 -- Admins can also drop a few AI next to a chosen player, and reset (kill,
 -- never destroy) the AI (see Drops and Reset below).
 --
+-- A zone is a circle, or any outline (an ellipse or a polygon the admin drew,
+-- sent as `poly`): who is inside and what counts go by that outline.
+--
 -- The bridge writes Mods/AIZones/Saved/zones.json: the zones, each species'
 -- pawn + AI controller class (pairs verified live by the evrima-dev-knowledge
 -- AI Spawn Pair catalog, MIT/CC BY 4.0), and spawn POINTS — places a player
@@ -138,6 +141,22 @@ end
 local function near(a, x, y, dist)
     local dx, dy = a.x - x, a.y - y
     return dx * dx + dy * dy <= dist * dist
+end
+
+--- Inside a zone: within its `radius` (for a circle, the zone; for an ellipse
+--- or a polygon, the circle around it) and, when it has one, its outline
+--- `poly` ({ {x, y}, … } — the bridge turns an ellipse into one).
+local function inZone(z, radius, pt)
+    if not near(pt, z.x, z.y, radius) then return false end
+    local poly = z.poly
+    if type(poly) ~= "table" or #poly < 3 then return true end
+    local inside, j = false, #poly
+    for i = 1, #poly do
+        local xi, yi, xj, yj = poly[i][1], poly[i][2], poly[j][1], poly[j][2]
+        if (yi > pt.y) ~= (yj > pt.y) and pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi then inside = not inside end
+        j = i
+    end
+    return inside
 end
 
 --------------------------------------------------------------------------
@@ -291,7 +310,7 @@ local function tick()
                 and type(z.species) == "table" and #z.species > 0 then
             local radius = num(z.radius, 1000, 2000000, 20000)
             for _, p in ipairs(players) do
-                if near(p, x, y, radius) then zs.occupied = true; break end
+                if inZone(z, radius, p) then zs.occupied = true; break end
             end
             active[#active + 1] = z
         end
@@ -331,7 +350,7 @@ local function tick()
         local radius = num(z.radius, 1000, 2000000, 20000)
         local count = 0
         for _, a in ipairs(ai) do
-            if a.cls and classes[a.cls] and near(a, z.x, z.y, radius) then count = count + 1 end
+            if a.cls and classes[a.cls] and inZone(z, radius, a) then count = count + 1 end
         end
         local max = math.floor(num(z.max, 0, 500, 5))
         -- `idleMax`: the name of `min` in files written before it was renamed.

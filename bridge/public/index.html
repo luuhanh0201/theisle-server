@@ -543,8 +543,34 @@
 
   /* ---- map ------------------------------------------------------------ */
   .map-layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
-  @media (min-width: 1100px) { .map-layout { grid-template-columns: minmax(0, 1fr) 320px; } }
-  .map-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  @media (min-width: 1100px) { .map-layout { grid-template-columns: minmax(0, 1fr) 350px; } }
+  .map-side { min-width: 0; align-self: start; padding: 0; }
+  @media (min-width: 1100px) { .map-side { position: sticky; top: 14px; max-height: calc(100vh - 28px); overflow: auto; } }
+  .side-tabs { display: flex; gap: 2px; padding: 6px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 2; border-radius: var(--radius) var(--radius) 0 0; }
+  .side-tabs button { flex: 1; border: 0; background: none; color: var(--text-2); font: 650 12.5px Inter, system-ui, sans-serif; padding: 8px 4px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+  .side-tabs button:hover { background: var(--surface-3); }
+  .side-tabs button.on { background: var(--accent-soft); color: var(--accent); }
+  .side-pane { padding: 14px 16px 16px; }
+  .side-pane[hidden] { display: none !important; }
+  .seg { display: flex; width: 100%; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; background: none; padding: 7px 4px; white-space: nowrap; font: 650 12.5px Inter, system-ui, sans-serif; color: var(--text-2); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.on { background: color-mix(in srgb, #fb923c 18%, transparent); color: #fb923c; }
+  details.howto { font-size: 12px; color: var(--muted); border: 1px dashed var(--border); border-radius: 10px; padding: 6px 10px; }
+  details.howto summary { cursor: pointer; font-weight: 650; color: var(--text-2); }
+  details.howto p { margin: 6px 0 0; line-height: 1.5; }
+  details.az-sec { border-top: 1px solid var(--border); padding-top: 6px; }
+  details.az-sec summary { cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  .az-listhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .az-grid label[hidden], .az-row[hidden] { display: none !important; }
+  .map-layers-pop { position: absolute; top: 10px; right: 52px; width: 270px; max-height: calc(100% - 20px); overflow: auto; z-index: 6;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.35); }
+  .map-layers-pop .pop-head { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 4px 6px 6px; }
+  .map-hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 5; max-width: calc(100% - 24px);
+    background: rgba(10,14,22,.86); color: #fff; padding: 7px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.4;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+  .map-hint button { border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff; border-radius: 7px; padding: 3px 10px; font: 650 12px Inter, system-ui, sans-serif; cursor: pointer; }
+  .map-hint button:disabled { opacity: .4; cursor: default; }
   .audit-table-wrap { overflow-x: auto; }
   .audit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .audit-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 6px 10px; border-bottom: 1px solid var(--border); }
@@ -841,7 +867,7 @@
     <div data-view="map" hidden>
       <div class="page-head"><div><h1>Bản đồ trực tiếp</h1><p>Gateway: người chơi đang online, vệt di chuyển gần nhất, vùng di cư, tuần tra, sanctuary, nước, hang và nguồn thức ăn.</p></div></div>
       <div class="map-layout">
-        <section class="card"><div class="card-body">
+        <section class="card map-card"><div class="card-body">
           <div class="map-wrap" id="map-wrap">
             <canvas id="map"></canvas>
             <div class="map-tools">
@@ -849,103 +875,132 @@
               <button type="button" id="map-zout" title="Thu nhỏ">−</button>
               <button type="button" id="map-reset" title="Xem toàn đảo">⤢</button>
               <button type="button" id="map-full" title="Toàn màn hình">⛶</button>
+              <button type="button" id="map-layers-btn" title="Lớp hiển thị" aria-expanded="false" aria-controls="map-layers-pop">☰</button>
+            </div>
+            <div class="map-layers-pop" id="map-layers-pop" hidden>
+              <div class="pop-head">Lớp hiển thị</div>
+              <ul class="layer-list" id="map-layers" aria-label="Lớp hiển thị"></ul>
             </div>
             <div class="map-coord" id="map-coord" hidden></div>
             <div class="map-tip" id="map-tip" hidden></div>
             <div class="map-msg" id="map-msg">Đang tải bản đồ…</div>
             <div class="map-path" id="map-path" hidden></div>
+            <div class="map-hint" id="map-hint" hidden></div>
             <div class="map-find">
               <input type="search" id="map-search" placeholder="Tìm địa điểm, hoặc toạ độ: 349,211, 148,696" autocomplete="off" aria-label="Tìm địa điểm hoặc toạ độ">
               <ul class="map-results" id="map-results"></ul>
             </div>
           </div>
-          <ul class="layer-list row" id="map-layers" aria-label="Lớp hiển thị"></ul>
           <div class="legend" id="map-legend"></div>
         </div></section>
-        <div class="map-side">
-          <section class="card" id="az-card">
-            <div class="card-head"><h2>Vùng AI</h2><span class="sub">mod AIZones</span></div>
-            <div class="card-body az">
-              <label class="az-row"><input type="checkbox" id="az-enabled"> <b>Bật vùng AI</b></label>
-              <label class="az-row"><input type="checkbox" id="az-ambient"> AI game tự sinh quanh người chơi (thỏ, gà, heo…)</label>
-              <div class="step-hint"><span id="az-ambient-state"></span> Tắt để trên đảo <b>chỉ còn loài của các vùng</b>.
-                Con đang có sẵn vẫn còn đến khi bị ăn — dọn bằng "Làm mới AI" (tab này, bên dưới). Có hiệu lực ngay và giữ sau restart.</div>
-              <div class="az-row"><label for="az-global">Tổng AI toàn server tối đa</label>
-                <input id="az-global" type="number" min="0" max="5000" step="10" style="width:90px"></div>
-              <div class="step-hint" id="az-status"></div>
-              <ul class="az-list" id="az-list"></ul>
-              <button type="button" class="btn-soft sm" id="az-add">+ Thêm vùng — bấm lên bản đồ để đặt tâm</button>
-              <div class="step-hint">Chọn một vùng rồi <b>kéo bên trong</b> để di chuyển, <b>kéo núm tròn trên mép</b> để đổi bán kính.</div>
-              <div class="az-edit" id="az-edit" hidden>
-                <div class="az-row"><label for="az-name">Tên vùng</label><input id="az-name" maxlength="40"></div>
-                <label class="az-row"><input type="checkbox" id="az-zenabled"> Vùng đang bật</label>
-                <div class="az-row"><label for="az-radius">Bán kính (m)</label><input id="az-radius" type="number" min="50" max="5000" step="50"></div>
-                <div class="group-label" style="margin:6px 0 2px">Loại AI</div>
-                <div class="az-species" id="az-species"></div>
+
+        <div class="card map-side">
+          <div class="side-tabs" role="tablist" aria-label="Công cụ bản đồ">
+            <button type="button" role="tab" data-side="zones">Vùng AI</button>
+            <button type="button" role="tab" data-side="drop">Thả AI</button>
+            <button type="button" role="tab" data-side="reset">Làm mới</button>
+            <button type="button" role="tab" data-side="players">Người chơi</button>
+          </div>
+
+          <!-- AI zones (mod AIZones) -->
+          <div class="side-pane az" data-pane="zones" id="az-card">
+            <label class="az-row"><input type="checkbox" id="az-enabled"> <b>Bật vùng AI</b></label>
+            <label class="az-row"><input type="checkbox" id="az-ambient"> AI game tự sinh quanh người chơi</label>
+            <div class="az-row"><label for="az-global">Tổng AI toàn server tối đa</label>
+              <input id="az-global" type="number" min="0" max="5000" step="10" style="width:90px"></div>
+            <div class="step-hint" id="az-status"></div>
+            <details class="howto"><summary>Cách dùng</summary>
+              <p>Bấm <b>+ Vùng mới</b> rồi bấm lên bản đồ để đặt tâm. Chọn kiểu <b>Tròn</b>, <b>Bầu dục</b> (bãi biển, bờ sông) hoặc
+                <b>Đa giác</b> (tự vẽ, bấm từng điểm). Kéo bên trong để dời vùng, kéo núm để đổi kích thước.</p>
+              <p>Vùng luôn được bù đủ <b>tối thiểu</b>; có người trong vùng thì mỗi lượt sinh thêm tới <b>tối đa</b>, không vượt tổng AI
+                toàn server. AI thuộc vùng có viền cam trên bản đồ.</p>
+              <p><span id="az-ambient-state"></span> Tắt "AI game tự sinh" để trên đảo chỉ còn loài của các vùng; con có sẵn dọn bằng
+                tab <b>Làm mới</b> → "Chỉ AI không thuộc loài của vùng". Có hiệu lực ngay, giữ sau restart.</p>
+            </details>
+            <div class="az-listhead"><span class="group-label" style="margin:0">Các vùng</span>
+              <button type="button" class="btn-soft sm" id="az-add">+ Vùng mới</button></div>
+            <ul class="az-list" id="az-list"></ul>
+            <div class="az-edit" id="az-edit" hidden>
+              <div class="az-row"><input id="az-name" maxlength="40" aria-label="Tên vùng" placeholder="Tên vùng">
+                <label class="az-row" style="flex:none"><input type="checkbox" id="az-zenabled"> Bật</label></div>
+              <div class="seg" id="az-shape" role="radiogroup" aria-label="Hình dạng vùng">
+                <button type="button" data-shape="circle">Tròn</button>
+                <button type="button" data-shape="ellipse">Bầu dục</button>
+                <button type="button" data-shape="polygon">Đa giác</button>
+              </div>
+              <div class="az-grid" id="az-dims">
+                <label id="az-radius-l">Bán kính (m)<input id="az-radius" type="number" min="50" max="5000" step="50"></label>
+                <label id="az-radius2-l">Bán kính ngang (m)<input id="az-radius2" type="number" min="50" max="5000" step="50"></label>
+                <label id="az-angle-l">Góc xoay (°)<input id="az-angle" type="number" min="-180" max="180" step="5"></label>
+              </div>
+              <div class="az-row" id="az-poly-row" hidden>
+                <span class="step-hint" id="az-poly-info"></span>
+                <button type="button" class="btn-soft sm" id="az-redraw">Vẽ lại</button>
+              </div>
+              <details class="az-sec" open><summary>Loại AI</summary><div class="az-species" id="az-species"></div></details>
+              <details class="az-sec" open><summary>Số lượng</summary>
                 <div class="az-grid">
                   <label>Tối thiểu (luôn có)<input id="az-min" type="number" min="0" max="200"></label>
                   <label>Tối đa (khi có người)<input id="az-max" type="number" min="0" max="200"></label>
-                  <label>Mỗi lượt sinh từ (con)<input id="az-ptmin" type="number" min="1" max="5"></label>
+                  <label>Mỗi lượt sinh từ<input id="az-ptmin" type="number" min="1" max="5"></label>
                   <label>…đến (con)<input id="az-ptmax" type="number" min="1" max="5"></label>
                   <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
+                </div></details>
+              <details class="az-sec"><summary>Nâng cao</summary>
+                <div class="az-grid">
                   <label>AI cách nhau tối thiểu (m)<input id="az-spacing" type="number" min="0" max="300" step="5"></label>
                   <label>Growth thấp nhất (%)<input id="az-gmin" type="number" min="10" max="100" step="5"></label>
                   <label>Growth cao nhất (%)<input id="az-gmax" type="number" min="10" max="100" step="5"></label>
-                </div>
-                <div class="step-hint">Vùng luôn được bù đủ <b>tối thiểu</b> trong vài giây (có người hay không).
-                  Khi có người chơi trong vùng: mỗi lượt sinh thêm ngẫu nhiên trong khoảng đã đặt, mỗi con một chỗ khác nhau,
-                  đến khi đủ <b>tối đa</b> — và không vượt tổng AI toàn server. AI mới luôn cách mọi AI khác (kể cả AI game tự sinh)
-                  ít nhất khoảng đã đặt; hết chỗ thưa thì vùng ít hơn mức đặt chứ không dồn cục. Trên bản đồ, AI thuộc vùng có viền cam.
-                  <br>Vùng chỉ quản AI <b>do mod sinh</b>: thỏ, gà… quanh người chơi là AI game tự sinh (Game.ini) — chặn loài đó ở
-                  tab Server → cấu hình AI (<span class="mono">DisallowedAIClasses</span>).</div>
-                <div class="step-hint" id="az-points"></div>
-                <div class="az-row" style="gap:8px">
-                  <button type="button" class="btn-ghost sm" id="az-move">Đặt lại tâm</button>
-                  <button type="button" class="btn-ghost sm" id="az-del" style="color:var(--kill,#ef4444)">Xoá vùng</button>
-                </div>
-              </div>
-              <button type="button" class="btn" id="az-save">Lưu vùng AI</button>
-            </div>
-          </section>
-          <section class="card" id="drop-card">
-            <div class="card-head"><h2>Thả AI cạnh người chơi</h2><span class="sub">mod AIZones</span></div>
-            <div class="card-body az">
-              <div class="az-row"><label for="drop-player">Người chơi</label><select id="drop-player"></select></div>
-              <div class="az-row"><label for="drop-species">Loại AI</label><select id="drop-species"></select></div>
-              <div class="az-grid">
-                <label>Số con (1–5)<input id="drop-count" type="number" min="1" max="5" value="1"></label>
-                <label>Cách người chơi (m)<input id="drop-dist" type="number" min="2" max="200" value="8"></label>
-                <label>Growth (%)<input id="drop-growth" type="number" min="10" max="100" step="5" value="100"></label>
-              </div>
-              <div class="step-hint">Dưới 15 m: thả ngay cạnh người chơi, chia đều vòng quanh họ, theo độ cao chỗ họ đang đứng
-                (con to có thể chen, đẩy nhau lúc xuất hiện). Từ 15 m: thả ở chỗ đã có người/AI từng đứng, các con cách nhau ≥ 15 m.
-                Không tính vào tổng AI toàn server. Server không nhận trong 30 giây thì lệnh tự huỷ.</div>
-              <button type="button" class="btn" id="drop-go">Thả AI</button>
-            </div>
-          </section>
-          <section class="card" id="reset-card">
-            <div class="card-head"><h2>Làm mới AI</h2><span class="sub">mod AIZones + dọn xác</span></div>
-            <div class="card-body az">
-              <div class="az-row"><label for="reset-species">AI cần làm mới</label><select id="reset-species"><option value="">Tất cả AI</option></select></div>
-              <div class="az-row"><label for="reset-countdown">Báo trước</label><select id="reset-countdown">
-                <option value="0">Ngay lập tức</option><option value="30">30 giây</option><option value="60" selected>1 phút</option>
-                <option value="120">2 phút</option><option value="300">5 phút</option></select></div>
-              <label class="az-row"><input type="checkbox" id="reset-wipe" checked> Dọn xác sau khi làm mới (cả xác người chơi)</label>
-              <div class="step-hint">Game không cho xoá AI từ mod (xoá là crash server), nên AI bị <b>giết</b> rồi dọn xác bằng lệnh của game.
-                Game và các vùng AI sẽ tự sinh AI mới. Dino của người chơi (kể cả con đang offline) không bị đụng tới.
-                Nội dung thông báo sửa ở tab Thông báo.</div>
-              <div class="step-hint" id="reset-status"></div>
+                </div></details>
+              <div class="step-hint" id="az-points"></div>
               <div class="az-row" style="gap:8px;justify-content:flex-start">
-                <button type="button" class="btn-danger solid" id="reset-go">Làm mới AI</button>
-                <button type="button" class="btn-ghost sm" id="reset-cancel" hidden>Huỷ</button>
+                <button type="button" class="btn-ghost sm" id="az-move">Đặt lại tâm</button>
+                <button type="button" class="btn-ghost sm" id="az-del" style="color:var(--kill,#ef4444);margin-left:auto">Xoá vùng</button>
               </div>
             </div>
-          </section>
-          <section class="card">
-            <div class="card-head"><h2>Trên bản đồ</h2><span class="sub">bấm để tới vị trí</span>
-              <button type="button" class="btn-soft sm" id="map-clear-all" style="margin-left:auto" title="Chỉ ẩn trên trình duyệt này; vệt mới vẫn vẽ tiếp">Xóa mọi vệt</button></div>
-            <div class="card-body"><ul class="rank-list" id="map-list"></ul></div>
-          </section>
+            <button type="button" class="btn" id="az-save">Lưu vùng AI</button>
+          </div>
+
+          <!-- drop AI next to a player -->
+          <div class="side-pane az" data-pane="drop" id="drop-card" hidden>
+            <div class="az-row"><label for="drop-player">Người chơi</label><select id="drop-player"></select></div>
+            <div class="az-row"><label for="drop-species">Loại AI</label><select id="drop-species"></select></div>
+            <div class="az-grid">
+              <label>Số con (1–5)<input id="drop-count" type="number" min="1" max="5" value="1"></label>
+              <label>Cách (m)<input id="drop-dist" type="number" min="2" max="200" value="8"></label>
+              <label>Growth (%)<input id="drop-growth" type="number" min="10" max="100" step="5" value="100"></label>
+            </div>
+            <button type="button" class="btn" id="drop-go">Thả AI</button>
+            <details class="howto"><summary>Cách dùng</summary>
+              <p>Dưới 15 m: thả ngay cạnh người chơi, chia đều vòng quanh họ. Từ 15 m: thả ở chỗ đã có người/AI từng đứng, các con
+                cách nhau ≥ 15 m. Không tính vào tổng AI toàn server; server không nhận trong 30 giây thì lệnh tự huỷ.</p>
+            </details>
+          </div>
+
+          <!-- reset AI -->
+          <div class="side-pane az" data-pane="reset" id="reset-card" hidden>
+            <div class="az-row"><label for="reset-species">AI cần làm mới</label><select id="reset-species"><option value="">Tất cả AI</option></select></div>
+            <div class="az-row"><label for="reset-countdown">Báo trước</label><select id="reset-countdown">
+              <option value="0">Ngay lập tức</option><option value="30">30 giây</option><option value="60" selected>1 phút</option>
+              <option value="120">2 phút</option><option value="300">5 phút</option></select></div>
+            <label class="az-row"><input type="checkbox" id="reset-wipe" checked> Dọn xác sau đó (cả xác người chơi)</label>
+            <div class="step-hint" id="reset-status"></div>
+            <div class="az-row" style="gap:8px;justify-content:flex-start">
+              <button type="button" class="btn-danger solid" id="reset-go">Làm mới AI</button>
+              <button type="button" class="btn-ghost sm" id="reset-cancel" hidden>Huỷ</button>
+            </div>
+            <details class="howto"><summary>Cách dùng</summary>
+              <p>Game không cho xoá AI từ mod (xoá là crash server), nên AI bị <b>giết</b> rồi dọn xác bằng lệnh của game; game và
+                các vùng tự sinh AI mới. Dino của người chơi (kể cả con offline) không bị đụng tới. Thông báo sửa ở tab Thông báo.</p>
+            </details>
+          </div>
+
+          <!-- players on the map -->
+          <div class="side-pane" data-pane="players" hidden>
+            <div class="az-row"><span class="step-hint">Bấm để tới vị trí</span>
+              <button type="button" class="btn-soft sm" id="map-clear-all" title="Chỉ ẩn trên trình duyệt này; vệt mới vẫn vẽ tiếp">Xóa mọi vệt</button></div>
+            <ul class="rank-list" id="map-list"></ul>
+          </div>
         </div>
       </div>
     </div>
@@ -2380,13 +2435,31 @@ function drawMap() {
       const [x, y] = scr(f.at);
       const count = st && typeof st.count === 'number' ? ` · ${st.count}/${st.limit ?? zn.max}` : '';
       drawText(ctx, `${zn.name}${count}`, x, y - 9, { font: '800 12px Inter, system-ui, sans-serif', color: on ? '#ffedd5' : '#e2e8f0' });
-      drawText(ctx, `bán kính ${zn.radiusM} m${on ? '' : ' · tắt'}`, x, y + 7, { font: '600 10.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
-      if (sel) {
+      drawText(ctx, `${zoneSize(zn)}${on ? '' : ' · tắt'}`, x, y + 7, { font: '600 10.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
+      if (sel && !az.drawing) {
         ctx.beginPath(); ctx.moveTo(x - 6, y + 20); ctx.lineTo(x + 6, y + 20); ctx.moveTo(x, y + 14); ctx.lineTo(x, y + 26);
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-        const [hx, hy] = zoneHandle(zn);
-        ctx.beginPath(); ctx.arc(hx, hy, 7, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fb923c'; ctx.stroke();
+        // Handles: the radius (circle), the two axes (ellipse), every corner (polygon).
+        for (const h of zoneHandles(zn)) {
+          const [hx, hy] = scr(toMap(h.at));
+          ctx.beginPath(); ctx.arc(hx, hy, h.key.startsWith('v') ? 5.5 : 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fb923c'; ctx.stroke();
+        }
+      }
+    }
+    // A polygon being drawn: its corners, the line to the pointer, the first corner to close on.
+    if (az.drawing) {
+      const pts = az.drawing.pts.map((p) => scr(toMap(p)));
+      const hov = az.drawing.hover ? scr(toMap(az.drawing.hover)) : null;
+      if (pts.length) {
+        ctx.beginPath();
+        pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+        if (hov) ctx.lineTo(hov[0], hov[1]);
+        ctx.setLineDash([6, 5]); ctx.lineWidth = 2.5; ctx.strokeStyle = '#fb923c'; ctx.stroke(); ctx.setLineDash([]);
+        pts.forEach(([px, py], i) => {
+          ctx.beginPath(); ctx.arc(px, py, i === 0 && pts.length >= 3 ? 8 : 5, 0, Math.PI * 2);
+          ctx.fillStyle = i === 0 ? '#fb923c' : '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
+        });
       }
     }
   }
@@ -2542,38 +2615,157 @@ function drawMap() {
 
 // --- AI zones (AIZones mod): drawn and edited on this map ---
 // az.draft is what the form shows and the map draws; saved with "Lưu vùng AI".
-const az = { data: null, draft: null, status: null, points: {}, speciesLabel: {}, speciesCls: {}, sel: null, placing: null, dirty: false, drag: null };
-const ZONE_DEFAULT = { radiusM: 300, species: ['Boar', 'Deer'], min: 3, max: 10, perTurnMin: 1, perTurnMax: 3, everySec: 60, spacingM: 40, growthMin: 0.75, growthMax: 1, enabled: true };
-const aiZoneShape = (zn) => ({ kind: 'circle', at: unitsOf({ x: zn.x, y: zn.y }), r: [zn.radiusM / 10, zn.radiusM / 10] });
-/** Screen point of the selected zone's resize handle (the zone's right edge). */
-function zoneHandle(zn) {
-  const f = aiZoneShape(zn);
-  const [cx, cy] = scr(f.at);
-  return [cx + rY(f.r[1]), cy];
+const az = { data: null, draft: null, status: null, points: {}, speciesLabel: {}, speciesCls: {}, sel: null, placing: null, dirty: false, drag: null, drawing: null };
+const ZONE_DEFAULT = { shape: 'circle', radiusM: 300, species: ['Boar', 'Deer'], min: 3, max: 10, perTurnMin: 1, perTurnMax: 3, everySec: 60, spacingM: 40, growthMin: 0.75, growthMax: 1, enabled: true };
+// Zone shapes, as bridge/src/zone-shape.ts: game units (cm), X/Y as the game has them.
+// A circle stays a circle; an ellipse and a polygon are drawn and tested as an outline.
+const ELLIPSE_SIDES = 36;
+const toMap = ([x, y]) => unitsOf({ x, y });
+const toGame = (p) => [Math.round(p[1] * 1000), Math.round(p[0] * 1000)];   // map units are [game Y, game X] / 1000
+function zoneOutline(zn) {
+  if (zn.shape === 'polygon' && zn.poly?.length >= 3) return zn.poly;
+  if (zn.shape === 'ellipse') {
+    const a = zn.radiusM * 100, b = (zn.radius2M ?? zn.radiusM) * 100, t = (zn.angleDeg ?? 0) * Math.PI / 180;
+    return Array.from({ length: ELLIPSE_SIDES }, (_, i) => {
+      const u = i / ELLIPSE_SIDES * Math.PI * 2, ex = a * Math.cos(u), ey = b * Math.sin(u);
+      return [zn.x + ex * Math.cos(t) - ey * Math.sin(t), zn.y + ex * Math.sin(t) + ey * Math.cos(t)];
+    });
+  }
+  return null;
 }
-/** What a press at (sx, sy) grabs on the selected zone: its edge handle (resize) or its inside (move). */
+function inPolyGame(poly, x, y) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+/** Is the game point (x, y) inside the zone — as the mod decides. */
+function zoneHas(zn, x, y) {
+  const o = zoneOutline(zn);
+  return o ? inPolyGame(o, x, y) : Math.hypot(x - zn.x, y - zn.y) <= zn.radiusM * 100;
+}
+const centreOf = (poly) => [Math.round(poly.reduce((s, p) => s + p[0], 0) / poly.length), Math.round(poly.reduce((s, p) => s + p[1], 0) / poly.length)];
+const reachM = (zn) => { const o = zoneOutline(zn); return o ? Math.ceil(Math.max(...o.map(([x, y]) => Math.hypot(x - zn.x, y - zn.y))) / 100) : zn.radiusM; };
+const aiZoneShape = (zn) => {
+  const o = zoneOutline(zn);
+  return o ? { kind: 'poly', at: unitsOf({ x: zn.x, y: zn.y }), pts: [o.map(toMap)] }
+    : { kind: 'circle', at: unitsOf({ x: zn.x, y: zn.y }), r: [zn.radiusM / 10, zn.radiusM / 10] };
+};
+/** "bán kính 300 m" / "bầu dục 400 × 100 m" / "đa giác 6 điểm" */
+function zoneSize(zn) {
+  if (zn.shape === 'ellipse') return `bầu dục ${zn.radiusM} × ${zn.radius2M} m`;
+  if (zn.shape === 'polygon') return `đa giác ${zn.poly?.length ?? 0} điểm · rộng ~${reachM(zn) * 2} m`;
+  return `bán kính ${zn.radiusM} m`;
+}
+/** The selected zone's handles, in game units: { key, at }. */
+function zoneHandles(zn) {
+  if (zn.shape === 'polygon' && zn.poly) return zn.poly.map((p, i) => ({ key: `v${i}`, at: p }));
+  if (zn.shape === 'ellipse') {
+    const t = (zn.angleDeg ?? 0) * Math.PI / 180, a = zn.radiusM * 100, b = zn.radius2M * 100;
+    return [{ key: 'a', at: [zn.x + a * Math.cos(t), zn.y + a * Math.sin(t)] },
+      { key: 'b', at: [zn.x - b * Math.sin(t), zn.y + b * Math.cos(t)] }];
+  }
+  return [{ key: 'r', at: [zn.x, zn.y + zn.radiusM * 100] }];
+}
+/** Screen point of the selected zone's first handle (kept for the old callers). */
+function zoneHandle(zn) { return scr(toMap(zoneHandles(zn)[0].at)); }
+/** What a press at (sx, sy) grabs on the selected zone: a handle, or its inside (move). */
 function zoneGrab(sx, sy) {
-  if (!lm.on.has('aizone') || !az.draft || !az.sel || az.placing) return null;
+  if (!lm.on.has('aizone') || !az.draft || !az.sel || az.placing || az.drawing) return null;
   const zn = az.draft.zones.find((z) => z.id === az.sel);
   if (!zn) return null;
-  const [hx, hy] = zoneHandle(zn);
-  if (Math.hypot(sx - hx, sy - hy) <= 12) return { mode: 'resize', zn };
-  const f = aiZoneShape(zn);
-  const pt = fromScr(sx, sy);
-  if (Math.hypot(pt[0] - f.at[0], pt[1] - f.at[1]) <= f.r[0]) return { mode: 'move', zn, off: [pt[0] - f.at[0], pt[1] - f.at[1]] };
+  for (const h of zoneHandles(zn)) {
+    const [hx, hy] = scr(toMap(h.at));
+    if (Math.hypot(sx - hx, sy - hy) <= 11) return { mode: 'handle', key: h.key, zn };
+  }
+  const [gx, gy] = toGame(fromScr(sx, sy));
+  if (zoneHas(zn, gx, gy)) return { mode: 'move', zn, off: [gx - zn.x, gy - zn.y] };
   return null;
 }
 function aiZoneAt(sx, sy) {
   if (!lm.on.has('aizone') || !az.draft || !lm.view) return null;
-  const pt = fromScr(sx, sy);
+  const [gx, gy] = toGame(fromScr(sx, sy));
   let best = null;
   for (const zn of az.draft.zones) {
-    const f = aiZoneShape(zn);
-    const d = Math.hypot(pt[0] - f.at[0], pt[1] - f.at[1]);
-    if (d <= f.r[0] && (!best || d < best.d)) best = { zn, d };
+    if (!zoneHas(zn, gx, gy)) continue;
+    const d = Math.hypot(gx - zn.x, gy - zn.y);
+    if (!best || d < best.d) best = { zn, d };
   }
   return best?.zn ?? null;
 }
+/** A drag on a handle: the new size / corner, from the pointer's game point. */
+function dragHandle(zn, key, gx, gy) {
+  const dx = gx - zn.x, dy = gy - zn.y;
+  const m = (v) => Math.min(5000, Math.max(50, Math.round(v / 100 / 10) * 10));
+  if (key === 'r') zn.radiusM = m(Math.hypot(dx, dy));
+  else if (key === 'a') { zn.radiusM = m(Math.hypot(dx, dy)); zn.angleDeg = Math.round(Math.atan2(dy, dx) * 180 / Math.PI); }
+  else if (key === 'b') { const t = (zn.angleDeg ?? 0) * Math.PI / 180; zn.radius2M = m(Math.abs(-Math.sin(t) * dx + Math.cos(t) * dy)); }
+  else if (key.startsWith('v')) zn.poly[Number(key.slice(1))] = [Math.round(gx), Math.round(gy)];
+}
+/** Switch a zone's shape, keeping it about the same place and size. */
+function setZoneShape(zn, shape) {
+  if (zn.shape === shape) return;
+  const reach = Math.max(50, Math.round(reachM(zn) / 10) * 10);
+  if (shape === 'polygon') {
+    // Start from the current outline, 8 corners, to be dragged into place (or drawn anew).
+    const o = zoneOutline(zn) ?? Array.from({ length: 8 }, (_, i) => [zn.x + zn.radiusM * 100 * Math.cos(i * Math.PI / 4), zn.y + zn.radiusM * 100 * Math.sin(i * Math.PI / 4)]);
+    const step = Math.max(1, Math.floor(o.length / 8));
+    zn.poly = o.filter((_, i) => i % step === 0).slice(0, 12).map(([x, y]) => [Math.round(x), Math.round(y)]);
+    delete zn.radius2M; delete zn.angleDeg;
+  } else if (shape === 'ellipse') {
+    zn.radiusM = reach; zn.radius2M = Math.max(50, Math.round(reach / 2 / 10) * 10); zn.angleDeg = 0;
+    delete zn.poly;
+  } else {
+    zn.radiusM = reach;
+    delete zn.poly; delete zn.radius2M; delete zn.angleDeg;
+  }
+  zn.shape = shape;
+  delete az.points[zn.id];
+}
+
+// --- drawing a polygon: click corners on the map; click the first one (or Enter) to close ---
+function startPolyDraw(zn) {
+  az.drawing = { id: zn.id, pts: [], hover: null };
+  az.placing = null;
+  renderAiZoneForm();
+  requestDraw();
+}
+function finishPolyDraw() {
+  const d = az.drawing;
+  if (!d) return;
+  const zn = az.draft.zones.find((z) => z.id === d.id);
+  az.drawing = null;
+  if (zn && d.pts.length >= 3) {
+    zn.shape = 'polygon';
+    zn.poly = d.pts;
+    [zn.x, zn.y] = centreOf(zn.poly);
+    delete zn.radius2M; delete zn.angleDeg;
+    delete az.points[zn.id];
+    markAz();
+  } else {
+    renderAiZoneForm();
+    requestDraw();
+  }
+}
+function addPolyCorner(sx, sy) {
+  const d = az.drawing;
+  if (d.pts.length >= 3) {
+    const [fx, fy] = scr(toMap(d.pts[0]));
+    if (Math.hypot(sx - fx, sy - fy) <= 12) { finishPolyDraw(); return; }
+  }
+  if (d.pts.length >= 40) return;
+  d.pts.push(toGame(fromScr(sx, sy)));
+  renderAiZoneForm();
+  requestDraw();
+}
+document.addEventListener('keydown', (e) => {
+  if (!az.drawing || currentTab() !== 'map') return;
+  if (e.key === 'Enter') { e.preventDefault(); finishPolyDraw(); }
+  else if (e.key === 'Escape') { az.drawing = null; renderAiZoneForm(); requestDraw(); }
+  else if (e.key === 'Backspace' && az.drawing.pts.length) { e.preventDefault(); az.drawing.pts.pop(); renderAiZoneForm(); requestDraw(); }
+});
 
 // The game's own AI around players (bridge/src/ai-ambient.ts): read over RCON, so not every 2 s.
 let ambientAt = 0;
@@ -2610,8 +2802,7 @@ function aiZoneOf(a) {
   const cls = String(a.c ?? '').split('.').pop();
   for (const zn of d.zones) {
     if (!zn.enabled || !zn.species.some((k) => az.speciesCls[k] === cls)) continue;
-    const dx = a.x - zn.x, dy = a.y - zn.y, r = zn.radiusM * 100;
-    if (dx * dx + dy * dy <= r * r) return zn;
+    if (zoneHas(zn, a.x, a.y)) return zn;
   }
   return null;
 }
@@ -2641,14 +2832,26 @@ function renderAiZones() {
 function renderAiZoneForm() {
   const zn = az.draft?.zones.find((z) => z.id === az.sel);
   $('az-edit').hidden = !zn;
-  $('az-add').textContent = az.placing === 'new' ? 'Bấm lên bản đồ để đặt tâm vùng mới… (bấm lại để huỷ)' : '+ Thêm vùng — bấm lên bản đồ để đặt tâm';
-  $('az-move').textContent = az.placing && az.placing !== 'new' ? 'Bấm lên bản đồ… (bấm lại để huỷ)' : 'Đặt lại tâm';
-  $('map-wrap').classList.toggle('placing', Boolean(az.placing));
+  $('az-add').textContent = az.placing === 'new' ? 'Huỷ' : '+ Vùng mới';
+  $('az-move').textContent = az.placing && az.placing !== 'new' ? 'Huỷ đặt tâm' : 'Đặt lại tâm';
+  $('map-wrap').classList.toggle('placing', Boolean(az.placing || az.drawing));
+  renderMapHint(zn);
   if (!zn) return;
+  const shape = zn.shape ?? 'circle';
+  for (const b of $('az-shape').querySelectorAll('button')) b.classList.toggle('on', b.dataset.shape === shape);
+  $('az-radius-l').hidden = shape === 'polygon';
+  $('az-radius-l').firstChild.textContent = shape === 'ellipse' ? 'Bán kính dọc (m)' : 'Bán kính (m)';
+  $('az-radius2-l').hidden = shape !== 'ellipse';
+  $('az-angle-l').hidden = shape !== 'ellipse';
+  $('az-poly-row').hidden = shape !== 'polygon';
+  $('az-poly-info').textContent = az.drawing ? `Đang vẽ: ${az.drawing.pts.length} điểm` : `${zn.poly?.length ?? 0} điểm · rộng ~${reachM(zn) * 2} m`;
+  $('az-redraw').textContent = az.drawing ? 'Xong' : 'Vẽ lại';
   const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
   set('az-name', zn.name);
   $('az-zenabled').checked = zn.enabled;
   set('az-radius', zn.radiusM);
+  set('az-radius2', zn.radius2M ?? '');
+  set('az-angle', zn.angleDeg ?? 0);
   set('az-min', zn.min); set('az-max', zn.max); set('az-ptmin', zn.perTurnMin); set('az-ptmax', zn.perTurnMax); set('az-every', zn.everySec); set('az-spacing', zn.spacingM);
   set('az-gmin', Math.round(zn.growthMin * 100)); set('az-gmax', Math.round(zn.growthMax * 100));
   const groups = [['animal', 'Thú'], ['dino', 'Khủng long']];
@@ -2680,6 +2883,72 @@ function placeAiZone(x, y) {
   az.placing = null;
   markAz();
 }
+$('az-shape').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-shape]');
+  const zn = az.draft?.zones.find((z) => z.id === az.sel);
+  if (!b || !zn) return;
+  az.drawing = null;
+  setZoneShape(zn, b.dataset.shape);
+  markAz();
+});
+$('az-redraw').addEventListener('click', () => {
+  const zn = az.draft?.zones.find((z) => z.id === az.sel);
+  if (!zn) return;
+  if (az.drawing) finishPolyDraw(); else startPolyDraw(zn);
+});
+
+/** The line over the map that says what a click / drag does right now. */
+function renderMapHint(zn) {
+  const el = $('map-hint');
+  let html = '';
+  if (az.drawing) {
+    const n = az.drawing.pts.length;
+    html = `<span>Vẽ đa giác: bấm lên bản đồ để thêm điểm (${n}/40)${n >= 3 ? ' · bấm điểm đầu hoặc <b>Enter</b> để xong' : ''} · <b>Backspace</b> bỏ điểm cuối · <b>Esc</b> huỷ</span>`
+      + ` <button type="button" data-hint="done"${n >= 3 ? '' : ' disabled'}>Xong</button><button type="button" data-hint="cancel">Huỷ</button>`;
+  } else if (az.placing === 'new') {
+    html = '<span>Bấm lên bản đồ để đặt tâm vùng mới</span> <button type="button" data-hint="cancel">Huỷ</button>';
+  } else if (az.placing) {
+    html = '<span>Bấm lên bản đồ để đặt lại tâm vùng</span> <button type="button" data-hint="cancel">Huỷ</button>';
+  } else if (zn && lm.on.has('aizone') && currentTab() === 'map') {
+    const how = zn.shape === 'polygon' ? 'kéo các điểm để chỉnh hình' : zn.shape === 'ellipse' ? 'kéo 2 núm để đổi độ dài và xoay' : 'kéo núm trên mép để đổi bán kính';
+    html = `<span><b>${esc(zn.name)}</b>: kéo bên trong để dời · ${how}${az.dirty ? ' · <span style="color:#fdba74">chưa lưu</span>' : ''}</span>`;
+  }
+  el.hidden = html === '';
+  if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; }
+}
+$('map-hint').addEventListener('click', (e) => {
+  const act = e.target.closest('button[data-hint]')?.dataset.hint;
+  if (act === 'done') finishPolyDraw();
+  else if (act === 'cancel') { az.drawing = null; az.placing = null; renderAiZoneForm(); requestDraw(); }
+});
+
+// --- the side panel's tabs (remembered per browser) and the layers pop-up ---
+function showSide(name) {
+  for (const b of document.querySelectorAll('.side-tabs button')) {
+    b.classList.toggle('on', b.dataset.side === name);
+    b.setAttribute('aria-selected', String(b.dataset.side === name));
+  }
+  for (const p of document.querySelectorAll('.map-side .side-pane')) p.hidden = p.dataset.pane !== name;
+  try { localStorage.setItem('map-side', name); } catch { /* private window: not remembered */ }
+}
+document.querySelector('.side-tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-side]');
+  if (b) showSide(b.dataset.side);
+});
+showSide((() => { try { return localStorage.getItem('map-side') || 'zones'; } catch { return 'zones'; } })());
+$('map-layers-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const open = $('map-layers-pop').hidden;
+  $('map-layers-pop').hidden = !open;
+  $('map-layers-btn').setAttribute('aria-expanded', String(open));
+});
+document.addEventListener('click', (e) => {
+  if (!$('map-layers-pop').hidden && !e.target.closest('#map-layers-pop, #map-layers-btn')) {
+    $('map-layers-pop').hidden = true;
+    $('map-layers-btn').setAttribute('aria-expanded', 'false');
+  }
+});
+
 $('az-add').addEventListener('click', () => {
   if (!az.draft) return;
   az.placing = az.placing === 'new' ? null : 'new';
@@ -2714,10 +2983,11 @@ $('az-edit').addEventListener('input', (e) => {
   } else {
     zn.name = $('az-name').value;
     zn.enabled = $('az-zenabled').checked;
-    zn.radiusM = n('az-radius');
+    if (zn.shape !== 'polygon') zn.radiusM = n('az-radius');
+    if (zn.shape === 'ellipse') { zn.radius2M = n('az-radius2'); zn.angleDeg = n('az-angle'); }
     zn.min = n('az-min'); zn.max = n('az-max'); zn.perTurnMin = n('az-ptmin'); zn.perTurnMax = n('az-ptmax'); zn.everySec = n('az-every'); zn.spacingM = n('az-spacing');
     zn.growthMin = n('az-gmin') / 100; zn.growthMax = n('az-gmax') / 100;
-    if (e.target.id === 'az-radius') delete az.points[zn.id];
+    if (['az-radius', 'az-radius2', 'az-angle'].includes(e.target.id)) delete az.points[zn.id];
   }
   markAz();
 });
@@ -3054,7 +3324,7 @@ function tipHtml(h) {
     const st = az.status?.zones?.[zn.id];
     const names = zn.species.map((k) => az.speciesLabel[k] ?? k).join(', ');
     return `<b>${esc(zn.name)}</b> — vùng AI${zn.enabled && az.draft.enabled ? '' : ' (tắt)'}<br>${esc(names)}<br>`
-      + `<span class="m">bán kính ${zn.radiusM} m · tối thiểu ${zn.min} · tối đa ${zn.max} khi có người<br>`
+      + `<span class="m">${zoneSize(zn)} · tối thiểu ${zn.min} · tối đa ${zn.max} khi có người<br>`
       + `mỗi lượt ${zn.perTurnMin === zn.perTurnMax ? zn.perTurnMin : `${zn.perTurnMin}–${zn.perTurnMax}`} con / ${zn.everySec} s · cách nhau ≥ ${zn.spacingM} m`
       + `${st && typeof st.count === 'number' ? `<br>đang có ${st.count} · ${st.occupied ? `có người${typeof st.nextTurn === 'number' ? `, lượt sau ${st.nextTurn} s` : ''}` : 'vắng người'}` : ''}`
       + `${st?.lastError ? `<br>gần nhất: ${esc(aiError(st.lastError))}` : ''}`
@@ -3106,7 +3376,7 @@ function showHover(sx, sy) {
   const g = (v) => Math.round(v * 1000).toLocaleString('en-US');
   $('map-coord').textContent = `${g(x)}, ${g(y)}`;
   const grab = zoneGrab(sx, sy);
-  $('map').style.cursor = az.placing ? 'crosshair' : grab?.mode === 'resize' ? 'ew-resize' : grab ? 'move' : h?.player || h?.azone ? 'pointer' : '';
+  $('map').style.cursor = az.placing || az.drawing ? 'crosshair' : grab?.mode === 'handle' ? 'grab' : grab ? 'move' : h?.player || h?.azone ? 'pointer' : '';
   if (changed) requestDraw();
 }
 
@@ -3136,22 +3406,22 @@ $('map').addEventListener('pointermove', (e) => {
   const [x, y] = localXY(e);
   if (lm.pointers.has(e.pointerId)) lm.pointers.set(e.pointerId, [x, y]);
   if (az.drag) {
-    // Move the zone (keeping where it was grabbed under the pointer) or pull its edge.
-    const pt = fromScr(x, y);
+    // Move the zone (keeping where it was grabbed under the pointer), or pull a handle.
+    const [gx, gy] = toGame(fromScr(x, y));
     const zn = az.drag.zn;
     if (az.drag.mode === 'move') {
-      const at = [pt[0] - az.drag.off[0], pt[1] - az.drag.off[1]];
-      zn.x = Math.round(at[1] * 1000); zn.y = Math.round(at[0] * 1000);   // map units are [game Y, game X] / 1000
+      const nx = Math.round(gx - az.drag.off[0]), ny = Math.round(gy - az.drag.off[1]);
+      if (zn.poly) zn.poly = zn.poly.map(([px, py]) => [px + nx - zn.x, py + ny - zn.y]);
+      zn.x = nx; zn.y = ny;
     } else {
-      const f = aiZoneShape(zn);
-      const r = Math.hypot(pt[0] - f.at[0], pt[1] - f.at[1]) * 10;         // map units -> metres
-      zn.radiusM = Math.min(5000, Math.max(50, Math.round(r / 10) * 10));
-      if (document.activeElement !== $('az-radius')) $('az-radius').value = zn.radiusM;
+      dragHandle(zn, az.drag.key, gx, gy);
     }
+    renderAiZoneForm();
     az.drag.moved = true;
     requestDraw();
     return;
   }
+  if (az.drawing) { az.drawing.hover = toGame(fromScr(x, y)); requestDraw(); }
   if (lm.pinch && lm.pointers.size === 2) {
     const [a, b] = [...lm.pointers.values()];
     const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -3175,7 +3445,11 @@ function endPointer(e) {
     const { moved, zn } = az.drag;
     az.drag = null;
     lm.pointers.delete(e.pointerId);
-    if (moved) { delete az.points[zn.id]; markAz(); }
+    if (moved) {
+      if (zn.poly) [zn.x, zn.y] = centreOf(zn.poly);
+      delete az.points[zn.id];
+      markAz();
+    }
     return;
   }
   const click = lm.drag && !lm.drag.moved && lm.pointers.size === 1;
@@ -3184,7 +3458,9 @@ function endPointer(e) {
   $('map').classList.remove('dragging');
   if (click && e.type === 'pointerup') {
     const [x, y] = localXY(e);
-    if (az.placing) {
+    if (az.drawing) {
+      addPolyCorner(x, y);
+    } else if (az.placing) {
       const [p0, p1] = fromScr(x, y);
       placeAiZone(Math.round(p1 * 1000), Math.round(p0 * 1000));   // map units are [game Y, game X] / 1000
     } else {

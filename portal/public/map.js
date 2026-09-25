@@ -244,7 +244,10 @@ export function createMap(root) {
     // AI zones the admins drew: where the server keeps AI (name, which kinds).
     if (st.on.has('aizone')) {
       for (const zn of st.zones) {
-        const f = { kind: 'circle', at: unitsOf(zn), r: [zn.radiusM / 10, zn.radiusM / 10] };
+        // A circle, or the outline the admin drew (ellipse / polygon, game units).
+        const f = Array.isArray(zn.outline) && zn.outline.length >= 3
+          ? { kind: 'poly', at: unitsOf(zn), pts: [zn.outline.map(([x, y]) => unitsOf({ x, y }))] }
+          : { kind: 'circle', at: unitsOf(zn), r: [zn.radiusM / 10, zn.radiusM / 10] };
         trace(ctx, f);
         ctx.fillStyle = hexA(LAYER.aizone.color, 0.14); ctx.fill();
         // A dark outline under a bright ring: the edge reads on any ground.

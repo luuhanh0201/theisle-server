@@ -4,7 +4,8 @@ import { randomBytes } from 'node:crypto';
 import { config } from './config.js';
 import { ValidationError } from './garage.js';
 import { AI_BY_KEY } from './ai-species.js';
-import type { GroundPoints } from './ground-points.js';
+import type { GroundPoints, Point } from './ground-points.js';
+import { boundRadiusCm, centreOf, insideZone, polyArea, zoneOutline, type Point2, type ZoneShape } from './zone-shape.js';
 
 /**
  * AI zones, drawn on the admin panel, run by the AIZones mod (mods/AIZones).
@@ -30,7 +31,16 @@ export interface AiZone {
   /** Centre, game units (cm). */
   x: number;
   y: number;
+  /** Circle radius; an ellipse's semi-axis along angleDeg; a polygon's reach from its centre (derived). */
   radiusM: number;
+  /** circle (default), ellipse or polygon — zone-shape.ts. */
+  shape: ZoneShape;
+  /** Ellipse: the other semi-axis (m). */
+  radius2M?: number;
+  /** Ellipse: direction of radiusM, degrees in the game's X/Y plane. */
+  angleDeg?: number;
+  /** Polygon: its corners, game units (cm); x/y is their centre. */
+  poly?: Point2[];
   species: string[];
   /** Always there, player or not. */
   min: number;
@@ -92,12 +102,37 @@ function validateZone(raw: unknown, i: number): AiZone {
   const growthMin = real(r['growthMin'], 0.1, 1, `${at}: growthMin`);
   const growthMax = real(r['growthMax'], 0.1, 1, `${at}: growthMax`);
   if (growthMin > growthMax) throw new ValidationError(`${at}: growthMin is above growthMax`);
+  const shape = r['shape'] ?? 'circle';
+  if (shape !== 'circle' && shape !== 'ellipse' && shape !== 'polygon') throw new ValidationError(`${at}: shape must be circle, ellipse or polygon`);
+  let x: number;
+  let y: number;
+  let radiusM: number;
+  const extra: Pick<AiZone, 'radius2M' | 'angleDeg' | 'poly'> = {};
+  if (shape === 'polygon') {
+    const raw = r['poly'];
+    if (!Array.isArray(raw) || raw.length < 3 || raw.length > 40) throw new ValidationError(`${at}: a polygon needs 3–40 corners`);
+    const poly = raw.map((p, i): Point2 => {
+      if (!Array.isArray(p) || p.length !== 2) throw new ValidationError(`${at}: corner ${i + 1} must be [x, y]`);
+      return [Math.round(real(p[0], -2_000_000, 2_000_000, `${at}: corner ${i + 1} x`)), Math.round(real(p[1], -2_000_000, 2_000_000, `${at}: corner ${i + 1} y`))];
+    });
+    if (polyArea(poly) < 50_00 * 50_00) throw new ValidationError(`${at}: the polygon is too small or its corners are on one line`);
+    [x, y] = centreOf(poly);
+    extra.poly = poly;
+    radiusM = Math.ceil(boundRadiusCm({ x, y, radiusM: 0, shape, poly }) / 100);
+    if (radiusM > 5000) throw new ValidationError(`${at}: the polygon reaches ${radiusM} m from its centre (5000 at most)`);
+  } else {
+    x = real(r['x'], -2_000_000, 2_000_000, `${at}: x`);
+    y = real(r['y'], -2_000_000, 2_000_000, `${at}: y`);
+    radiusM = int(r['radiusM'], 50, 5000, `${at}: radius (m)`);
+    if (shape === 'ellipse') {
+      extra.radius2M = int(r['radius2M'], 50, 5000, `${at}: radius2M`);
+      extra.angleDeg = Math.round(real(r['angleDeg'] ?? 0, -180, 180, `${at}: angleDeg`));
+    }
+  }
   return {
     id, name,
     enabled: r['enabled'] !== false,
-    x: real(r['x'], -2_000_000, 2_000_000, `${at}: x`),
-    y: real(r['y'], -2_000_000, 2_000_000, `${at}: y`),
-    radiusM: int(r['radiusM'], 50, 5000, `${at}: radius (m)`),
+    x, y, radiusM, shape, ...extra,
     species: species as string[],
     min, max, perTurnMin, perTurnMax, spacingM,
     everySec: int(r['everySec'], 10, 3600, `${at}: everySec`),
@@ -131,6 +166,14 @@ async function writeJson(path: string, value: unknown): Promise<void> {
   await rename(tmp, path);
 }
 
+/** Up to `max` ground points inside the zone's shape, spread over it. */
+export function zonePoints(z: AiZone, points: GroundPoints, max = 200): Point[] {
+  const inside = points.within(z.x, z.y, boundRadiusCm(z), 1_000_000).filter((p) => insideZone(z, p[0], p[1]));
+  if (inside.length <= max) return inside;
+  const step = inside.length / max;
+  return Array.from({ length: max }, (_, i) => inside[Math.floor(i * step)] as Point);
+}
+
 /** What the mod reads: species resolved to classes, radius in cm, the spawn points of each zone. */
 export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
   return {
@@ -138,7 +181,9 @@ export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
     globalMax: s.globalMax,
     zones: s.zones.map((z) => ({
       id: z.id, name: z.name, enabled: z.enabled, x: z.x, y: z.y,
-      radius: z.radiusM * 100,
+      // The circle around the shape, and the shape itself when it is not a circle.
+      radius: boundRadiusCm(z),
+      ...(zoneOutline(z) ? { poly: zoneOutline(z) } : {}),
       min: z.min, max: z.max, perTurnMin: z.perTurnMin, perTurnMax: z.perTurnMax, every: z.everySec,
       spacing: z.spacingM * 100,
       growthMin: z.growthMin, growthMax: z.growthMax,
@@ -146,7 +191,7 @@ export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
         const sp = AI_BY_KEY.get(k);
         return sp ? { key: sp.key, cls: sp.cls, pawn: sp.pawn, ctrl: sp.ctrl, kind: sp.kind, lift: sp.lift } : null;
       }).filter((sp) => sp !== null),
-      points: points.within(z.x, z.y, z.radiusM * 100, 200),
+      points: zonePoints(z, points),
     })),
   };
 }

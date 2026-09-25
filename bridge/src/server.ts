@@ -24,7 +24,7 @@ import { readVoiceSettings, saveVoiceSettings } from './voice-settings.js';
 import { speciesOfClassPath } from './catalog.js';
 import { maximaAt } from './species-stats.js';
 import { AI_SPECIES } from './ai-species.js';
-import { readAiZones, readAiZonesStatus, saveAiZones, type AiZonesSettings } from './ai-zones.js';
+import { readAiZones, readAiZonesStatus, saveAiZones, zonePoints, type AiZonesSettings } from './ai-zones.js';
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
@@ -690,7 +690,7 @@ async function handlePanel(
         species: AI_SPECIES.map(({ key, label, kind, cls }) => ({ key, label, kind, cls })),
         status: await readAiZonesStatus(),
         // How many spawn spots each zone has (0 = nobody has stood there yet).
-        points: Object.fromEntries(zones.zones.map((z) => [z.id, store.groundPoints.within(z.x, z.y, z.radiusM * 100, 200).length])),
+        points: Object.fromEntries(zones.zones.map((z) => [z.id, zonePoints(z, store.groundPoints).length])),
         groundPoints: store.groundPoints.size,
       });
       return;

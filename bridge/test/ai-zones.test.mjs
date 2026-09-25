@@ -103,3 +103,36 @@ test('status from the mod: read back, stale after a minute, null when none', asy
   assert.equal(fresh.zones.meadow.limit, 3);
   assert.equal((await readAiZonesStatus(2000)).stale, true);
 });
+
+test('shapes: an ellipse and a polygon — validated, sent to the mod as an outline, spots only inside', async () => {
+  const { insideZone, zoneOutline, boundRadiusCm } = await import('../dist/zone-shape.js');
+  // An ellipse 400 m along X, 100 m across, a beach.
+  const e = validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ shape: 'ellipse', radiusM: 400, radius2M: 100, angleDeg: 0 })] }).zones[0];
+  assert.equal(e.shape, 'ellipse');
+  assert.ok(insideZone(e, e.x + 39000, e.y), '390 m along the long axis: inside');
+  assert.ok(!insideZone(e, e.x, e.y + 15000), '150 m across: outside');
+  assert.equal(boundRadiusCm(e), 40000);
+  const turned = { ...e, angleDeg: 90 };
+  assert.ok(insideZone(turned, e.x, e.y + 39000) && !insideZone(turned, e.x + 39000, e.y), 'turned 90°');
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ shape: 'ellipse', radiusM: 400 })] }), /radius2M/);
+  // A polygon: an L-shaped strip; its centre and reach are worked out.
+  const L = [[0, 0], [60000, 0], [60000, 10000], [10000, 10000], [10000, 50000], [0, 50000]];
+  const p = validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ shape: 'polygon', poly: L, x: 999, y: 999 })] }).zones[0];
+  assert.deepEqual(p.poly, L);
+  assert.deepEqual([p.x, p.y], [23333, 20000], 'x/y = the corners\' centre, not what was sent');
+  assert.ok(insideZone(p, 5000, 40000) && !insideZone(p, 40000, 40000), 'inside the L, not in its missing corner');
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ shape: 'polygon', poly: [[0, 0], [1, 1]] })] }), /3–40 corners/);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ shape: 'polygon', poly: [[0, 0], [50000, 0], [100000, 0]] })] }), /too small|one line/);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ shape: 'star' })] }), /shape/);
+  // The mod gets the outline, the circle around it, and only the spots inside.
+  const g = new GroundPoints();
+  g.add(5000, 40000, 100, 'BP_Boar_C');     // in the L
+  g.add(40000, 40000, 100, 'BP_Boar_C');    // in its missing corner
+  const mod = modFile({ enabled: true, globalMax: 150, zones: [p] }, g).zones[0];
+  assert.deepEqual(mod.poly, L);
+  assert.equal(mod.radius, boundRadiusCm(p));
+  assert.deepEqual(mod.points.map((q) => q[0]), [5000]);
+  assert.equal(zoneOutline(zone()), null, 'a circle has no outline');
+  const c = modFile({ enabled: true, globalMax: 150, zones: [validateAiZones({ enabled: true, globalMax: 150, zones: [zone()] }).zones[0]] }, g).zones[0];
+  assert.equal(c.poly, undefined, 'a circle is sent as before');
+});

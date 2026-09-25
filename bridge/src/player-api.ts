@@ -7,6 +7,7 @@ import type { LifeRecord, PlayerStats, Store, TrailPoint } from './store.js';
 import type { Skin } from './events.js';
 import { readAiZones, readAiZonesStatus } from './ai-zones.js';
 import { AI_BY_KEY } from './ai-species.js';
+import { zoneOutline } from './zone-shape.js';
 import { primeBoard, type PrimeBoard } from './prime.js';
 import { livePlayer, type Live } from './live.js';
 import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoom } from './voice.js';
@@ -339,6 +340,8 @@ export async function handlePlayerApi(
     send(res, 200, {
       zones: !zones.enabled ? [] : zones.zones.filter((z) => z.enabled).map((z) => ({
         name: z.name, x: z.x, y: z.y, radiusM: z.radiusM,
+        // Not a circle: its outline (game units), which the map draws as is.
+        ...(zoneOutline(z) ? { outline: zoneOutline(z) } : {}),
         species: z.species.map((k) => AI_BY_KEY.get(k)?.label ?? k),
         count: status && !status.stale ? status.zones[z.id]?.count ?? null : null,
       })),
