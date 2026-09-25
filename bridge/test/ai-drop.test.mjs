@@ -20,7 +20,8 @@ test('validation: a SteamID, a known AI, 1–5 of them, 15–200 m, growth 10–
   assert.throws(() => validateDrop({ ...ok, steamId: 'abc' }));
   assert.throws(() => validateDrop({ ...ok, species: 'Dragon' }), /unknown AI/);
   assert.throws(() => validateDrop({ ...ok, count: 6 }), /count/);
-  assert.throws(() => validateDrop({ ...ok, distanceM: 5 }), /distanceM/);
+  assert.throws(() => validateDrop({ ...ok, distanceM: 1 }), /distanceM/);
+  assert.deepEqual(validateDrop({ ...ok, distanceM: 2 }).distanceM, 2, 'right beside the player is allowed');
   assert.throws(() => validateDrop({ ...ok, growth: 0 }), /growth/);
 });
 
@@ -58,4 +59,7 @@ test('queue: ids grow, what the mod ran or can no longer run is dropped; the out
   const after = JSON.parse(readFileSync(join(process.env.AI_ZONES_ROOT, 'drops.json'), 'utf8'));
   assert.deepEqual(after.drops.map((d) => d.id), [3]);
   await assert.rejects(queueDrop(ok, { x: 500000, y: 0 }, g, 1100), /no known ground/);
+  // Beside the player the mod places them around the player: no ground points needed.
+  const beside = await queueDrop({ ...ok, distanceM: 3 }, { x: 500000, y: 0 }, g, 1100);
+  assert.deepEqual(beside.spots, []);
 });

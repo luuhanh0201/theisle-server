@@ -16,13 +16,18 @@ import type { GroundPoints, Point } from './ground-points.js';
  *
  * The spots are picked here, from the ground points around where the player
  * is now (live file): places something really stood, about `distanceM`
- * away — never a guessed height. A drop is an admin's explicit act: it does
+ * away — never a guessed height. Closer than BESIDE_M the ground points
+ * (one per 25 m) are too coarse: the mod puts the AI on a circle around the
+ * player's own position at that moment (their height, plus the species'
+ * lift), and these spots are only its fallback. A drop is an admin's explicit act: it does
  * not wait for the server-wide AI cap, only the mod's own hard limit.
  */
 
 const DROP_TTL_SECONDS = 30;
 /** Nothing closer than this to the player: no dino landing on their head. */
 export const DROP_MIN_M = 10;
+/** Closer than this, the mod places the AI around the player itself. */
+export const BESIDE_M = 15;
 const SPOTS = 30;
 
 export interface DropRequest { steamId: string; species: string; count: number; distanceM: number; growth: number }
@@ -57,7 +62,7 @@ export function validateDrop(raw: unknown): DropRequest {
   const count = r['count'];
   if (typeof count !== 'number' || !Number.isInteger(count) || count < 1 || count > 5) throw new ValidationError('count must be a whole number 1–5');
   const distanceM = r['distanceM'];
-  if (typeof distanceM !== 'number' || !Number.isInteger(distanceM) || distanceM < 15 || distanceM > 200) throw new ValidationError('distanceM must be a whole number 15–200');
+  if (typeof distanceM !== 'number' || !Number.isInteger(distanceM) || distanceM < 2 || distanceM > 200) throw new ValidationError('distanceM must be a whole number 2–200');
   const growth = r['growth'];
   if (typeof growth !== 'number' || !Number.isFinite(growth) || growth < 0.1 || growth > 1) throw new ValidationError('growth must be a number 0.1–1');
   return { steamId, species, count, distanceM, growth };
@@ -69,7 +74,7 @@ export function validateDrop(raw: unknown): DropRequest {
  */
 export function dropSpots(points: GroundPoints, x: number, y: number, distanceM: number): Point[] {
   const target = distanceM * 100;
-  return points.within(x, y, target * 2, 2000)
+  return points.within(x, y, Math.max(target * 2, BESIDE_M * 100 * 2), 2000)
     .map((p) => ({ p, d: Math.hypot(p[0] - x, p[1] - y) }))
     .filter(({ d }) => d >= DROP_MIN_M * 100)
     .sort((a, b) => Math.abs(a.d - target) - Math.abs(b.d - target))
@@ -88,7 +93,7 @@ function serialized<T>(fn: () => Promise<T>): Promise<T> {
 /** Queue one drop. `at`: where the player is now (live file). */
 export function queueDrop(req: DropRequest, at: { x: number; y: number }, points: GroundPoints, nowS = Math.floor(Date.now() / 1000)): Promise<Drop> {
   const spots = dropSpots(points, at.x, at.y, req.distanceM);
-  if (spots.length === 0) {
+  if (spots.length === 0 && req.distanceM >= BESIDE_M) {
     return Promise.reject(new ValidationError(`no known ground within ${req.distanceM * 2} m of the player yet — try a larger distance`));
   }
   const s = AI_BY_KEY.get(req.species);

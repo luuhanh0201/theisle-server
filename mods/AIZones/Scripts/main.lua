@@ -419,6 +419,7 @@ local DONE_PATH    = "Mods/AIZones/Saved/drops.done.json"
 local DROP_MS      = 2000
 local DROP_NEAR_CM = 1000   -- never closer to the player than this (they may have moved since)
 local DROP_APART_CM = 1500  -- dropped AI this far apart from each other
+local BESIDE_CM    = 1500   -- asked closer than this: on a circle around the player (ground points are 25 m apart)
 local done = nil            -- { lastId, results }, loaded lazily
 
 local function readJsonFile(path)
@@ -466,7 +467,7 @@ local function runDrop(d)
     if sp == nil or type(d.spots) ~= "table" then return false, 0, "bad drop" end
     -- The bridge's spots, re-sorted around where the player is now: closest
     -- to the asked distance first, none on top of them, a little apart.
-    local want = num(d.distanceM, 15, 200, 30) * 100
+    local want = num(d.distanceM, 2, 200, 30) * 100
     local list = {}
     for _, pt in ipairs(d.spots) do
         if type(pt) == "table" and tonumber(pt[1]) and tonumber(pt[2]) and tonumber(pt[3]) then
@@ -475,10 +476,22 @@ local function runDrop(d)
         end
     end
     table.sort(list, function(a, b) return a.off < b.off end)
+    -- Right beside the player: evenly round them at the asked distance, at
+    -- their height (the lift puts the AI above the ground; it drops onto it).
+    -- The ground spots stay behind as a fallback.
+    local count0 = math.floor(num(d.count, 1, 5, 1))
+    if want < BESIDE_CM then
+        local start = math.random() * 2 * math.pi
+        for k = count0, 1, -1 do
+            local a = start + (k - 1) * 2 * math.pi / count0
+            table.insert(list, 1, { pt = { at.x + math.cos(a) * want, at.y + math.sin(a) * want, at.z }, off = 0, beside = true })
+        end
+    end
     local used, i = {}, 0
     local function nextSpot()
         while i < #list do
             i = i + 1
+            if list[i].beside then return list[i].pt end
             local pt, free = list[i].pt, true
             for _, u in ipairs(used) do
                 if near(u, pt[1], pt[2], DROP_APART_CM) then free = false; break end
@@ -489,7 +502,7 @@ local function runDrop(d)
     end
     local alive = 0
     for _ in pairs(ours) do alive = alive + 1 end
-    local count = math.min(math.floor(num(d.count, 1, 5, 1)), HARD_MAX - alive)
+    local count = math.min(count0, HARD_MAX - alive)
     if count <= 0 then return false, 0, "the mod's own limit (" .. HARD_MAX .. " AI) is reached" end
     local g = num(d.growth, 0.1, 1, 1)
     local asZone = { growthMin = g, growthMax = g }

@@ -875,11 +875,12 @@
               <div class="az-row"><label for="drop-species">Loại AI</label><select id="drop-species"></select></div>
               <div class="az-grid">
                 <label>Số con (1–5)<input id="drop-count" type="number" min="1" max="5" value="1"></label>
-                <label>Cách người chơi (m)<input id="drop-dist" type="number" min="15" max="200" step="5" value="40"></label>
+                <label>Cách người chơi (m)<input id="drop-dist" type="number" min="2" max="200" value="8"></label>
                 <label>Growth (%)<input id="drop-growth" type="number" min="10" max="100" step="5" value="100"></label>
               </div>
-              <div class="step-hint">Thả ở chỗ đã có người/AI từng đứng (không rơi xuống dưới đất), gần khoảng cách đã chọn,
-                các con cách nhau ≥ 15 m. Không tính vào tổng AI toàn server. Server không nhận trong 30 giây thì lệnh tự huỷ.</div>
+              <div class="step-hint">Dưới 15 m: thả ngay cạnh người chơi, chia đều vòng quanh họ, theo độ cao chỗ họ đang đứng
+                (con to có thể chen, đẩy nhau lúc xuất hiện). Từ 15 m: thả ở chỗ đã có người/AI từng đứng, các con cách nhau ≥ 15 m.
+                Không tính vào tổng AI toàn server. Server không nhận trong 30 giây thì lệnh tự huỷ.</div>
               <button type="button" class="btn" id="drop-go">Thả AI</button>
             </div>
           </section>

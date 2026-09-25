@@ -306,6 +306,26 @@ d = readDone()
 check("expired and offline: refused, nothing spawned", spawns() == 2 and d and d.lastId == 3
   and d.results[2].error == "expired" and d.results[3].ok == false, d and json.encode(d) or "no file")
 
+say("\n-- 5e. a drop right beside the player: round them, at their height --")
+local before = spawns()
+playerAt(100000)
+writeDrops({
+  { id = 4, steamId = "76561190000000001", count = 3, distanceM = 3, growth = 1, sp = rex, expiresAt = clock + 30, spots = {} },
+})
+drops.fn()
+local around, ok3 = {}, true
+for _, c in ipairs(H.calls) do
+  if c.what == "SpawnActor" and not c.args[1]:match("Controller$") then around[#around + 1] = c.args[2] end
+end
+for k = #around - 2, #around do
+  local p = around[k]
+  local dist = p and math.sqrt((p.X - 100000) ^ 2 + p.Y ^ 2)
+  if not (dist and math.abs(dist - 300) < 1 and p.Z == 100 + 300) then ok3 = false end
+end
+check("3 dropped 3 m around the player, at their height + lift", spawns() - before == 3 and ok3, tostring(spawns() - before))
+local p1, p2 = around[#around], around[#around - 1]
+check("…not on the same spot", p1 and p2 and (math.abs(p1.X - p2.X) > 1 or math.abs(p1.Y - p2.Y) > 1))
+
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
 
