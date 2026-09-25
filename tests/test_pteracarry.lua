@@ -31,12 +31,22 @@ local rex = H.makePawn({ class = "BlueprintGeneratedClass /Game/X/BP_Tyrannosaur
 local rc = H.makeCtrl("76561190000000003", rex, "Rex")
 H.attachController(rex, rc)
 _G.FindAllOf = function(c) if c == "PlayerController" then return { pc, tc, rc } end; return { ptera, troo, rex } end
+-- Capsules (half-heights), the carrier's velocity and heading, and the calls the carry makes.
+local function capsule(h) return { GetScaledCapsuleHalfHeight = function() return h end } end
+rawset(ptera, "CapsuleComponent", capsule(120))
+rawset(troo, "CapsuleComponent", capsule(80))
+rawset(ptera, "GetVelocity", function() return { X = 900, Y = 0, Z = -50 } end)
+rawset(ptera, "K2_GetActorRotation", function() return { Pitch = 10, Yaw = 45, Roll = 5 } end)
+for _, pawn in ipairs({ troo, rex }) do
+  rawset(pawn, "K2_SetActorLocationAndRotation", function(_, loc, rot, sweep, hit, tp) H.record("K2_SetActorLocationAndRotation", loc, rot, sweep, hit, tp) end)
+  rawset(pawn, "LaunchCharacter", function(_, v, xy, z) H.record("LaunchCharacter", v, xy, z) end)
+end
 
-writeSettings({ enabled = true, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 300 })
+writeSettings({ enabled = true, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 20 })
 dofile(RUN .. "/Mods/PteraCarry/Scripts/main.lua")
 local hold, hint
 for _, l in ipairs(H.gameLoops) do
-  if l.ms == 100 then hold = l elseif l.ms == 1000 then hint = l end
+  if l.ms == 50 then hold = l elseif l.ms == 1000 then hint = l end
 end
 check("hook registered, two game-thread loops", H.hooks["/Script/TheIsle.TICharacterBase:GrabPhysicsCharacter"] ~= nil and hold and hint)
 
@@ -60,10 +70,15 @@ check("carrier and target told", last(pc):find("Đang gắp Troodon (40 kg)", 1,
 check("the game's own picked-up flag set", H.countCalls("SetIsBeingPickedUp") == 1)
 ptera.__props.Loc = { X = 10000, Y = 2000, Z = 6000 }
 hold.fn()
-local moved = nil
-for _, c in ipairs(H.calls) do if c.what == "K2_SetActorLocation" then moved = c.args[1] end end
-check("put 3 m under the ptera, as a teleport", moved and moved.X == 10000 and moved.Y == 2000 and moved.Z == 5700, moved and (moved.X .. "," .. moved.Z))
-check("its fall speed cleared", H.countCalls("StopMovementImmediately") >= 1)
+local moved, rot, tp = nil, nil, nil
+for _, c in ipairs(H.calls) do if c.what == "K2_SetActorLocationAndRotation" then moved, rot, tp = c.args[1], c.args[2], c.args[5] end end
+-- 6000 - 120 (ptera half) - 20 (gap) - 80 (troodon half) = 5780: its top 20 cm under the ptera's feet.
+check("right under the ptera's feet, as a teleport", moved and moved.X == 10000 and moved.Y == 2000 and moved.Z == 5780 and tp == true,
+  moved and (moved.X .. "," .. moved.Y .. "," .. moved.Z))
+check("facing the ptera's way, level", rot and rot.Yaw == 45 and rot.Pitch == 0 and rot.Roll == 0)
+local launch = nil
+for _, c in ipairs(H.calls) do if c.what == "LaunchCharacter" then launch = c.args end end
+check("given the ptera's velocity, so it moves with it", launch and launch[1].X == 900 and launch[1].Z == -50 and launch[2] == true and launch[3] == true)
 check("never off the game thread", H.offThreadAccess == offBefore, table.concat(H.offThreadWhat, ","))
 
 say("\n-- 3. landing lets go (not in the first second) --")

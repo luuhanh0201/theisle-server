@@ -16,10 +16,13 @@
 --   * the nearest other player's dino within `grabMeters`, no heavier than
 --     `maxKg` (its GetWeight), is taken (the game's own grab call, when it
 --     happens, is taken too) — unless the carrier is cooling down
---   * every HOLD_MS, on the game thread, the target is put `belowCm` under
---     the Pteranodon (K2_SetActorLocation, teleport — as !unstuck does), its
---     fall speed cleared, and the game's own "being picked up" flag set
---     (SetIsBeingPickedUp) so its player cannot walk off
+--   * every HOLD_MS, on the game thread, the target is put right under the
+--     Pteranodon's feet — its top `belowCm` below the carrier's capsule
+--     bottom (both capsule half-heights read live), facing the same way
+--     (K2_SetActorLocationAndRotation, teleport — as !unstuck does) — and
+--     given the carrier's velocity (LaunchCharacter), so it moves with it
+--     between two updates instead of hanging back; the game's own "being
+--     picked up" flag is set (SetIsBeingPickedUp) so its player cannot walk off
 --   * it ends when the Pteranodon lands, its player types !drop, after
 --     `maxSeconds`, or when either leaves / dies. Let go in the air, the
 --     target falls — and takes the game's fall damage
@@ -43,7 +46,7 @@ local MOD = "PteraCarry"
 local SETTINGS_PATH = "Mods/PteraCarry/Saved/settings.json"
 local GRAB_HOOK = "/Script/TheIsle.TICharacterBase:GrabPhysicsCharacter"
 local PTERA = "BP_Pteranodon_C"
-local HOLD_MS = 100          -- how often a carried dino is put back under its carrier
+local HOLD_MS = 50           -- how often a carried dino is put back under its carrier
 local HINT_MS = 1000         -- how often flying Pteranodons look for something to grab
 local HINT_AGAIN_S = 30      -- one hint per carrier and target this often
 local SETTINGS_RELOAD_S = 5
@@ -53,7 +56,8 @@ local ASC_CLASS = "/Script/GameplayAbilities.AbilitySystemComponent"
 local KEY_HOOKS = { ASC_CLASS .. ":ServerTryActivateAbility", ASC_CLASS .. ":ServerSetInputPressed" }
 local LATCH = "Latch"        -- the ability Z + right mouse starts: TIGameplayAbilityTryLatch
 
-local DEFAULTS = { enabled = false, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 300, grabMeters = 8 }
+local DEFAULTS = { enabled = false, maxKg = 150, maxSeconds = 20, cooldown = 30, hintMeters = 10, belowCm = 20, grabMeters = 8 }
+local HALF_FALLBACK = 100    -- capsule half-height when it cannot be read (cm)
 
 --------------------------------------------------------------------------
 -- Settings (written by the bridge; read at most every few seconds)
@@ -83,7 +87,7 @@ local function readSettings()
         maxSeconds = num(d.maxSeconds, 3, 120, DEFAULTS.maxSeconds),
         cooldown   = num(d.cooldown, 0, 3600, DEFAULTS.cooldown),
         hintMeters = num(d.hintMeters, 0, 50, DEFAULTS.hintMeters),
-        belowCm    = num(d.belowCm, 100, 2000, DEFAULTS.belowCm),
+        belowCm    = num(d.belowCm, 0, 1000, DEFAULTS.belowCm),
         grabMeters = num(d.grabMeters, 2, 30, DEFAULTS.grabMeters),
     }
     return settings
@@ -133,6 +137,42 @@ end
 local function stopFall(pawn)
     pcall(function() pawn.CharacterMovement:StopMovementImmediately() end)
 end
+
+local function halfHeight(pawn)
+    local ok, h = pcall(function() return pawn.CapsuleComponent:GetScaledCapsuleHalfHeight() end)
+    return ok and type(h) == "number" and h > 0 and h or HALF_FALLBACK
+end
+
+local function velocityOf(pawn)
+    local ok, v = pcall(function() return pawn:GetVelocity() end)
+    if ok and v and type(v.X) == "number" then return { X = v.X, Y = v.Y, Z = v.Z } end
+    return nil
+end
+
+local function yawOf(pawn)
+    local ok, r = pcall(function() return pawn:K2_GetActorRotation() end)
+    return ok and r and type(r.Yaw) == "number" and r.Yaw or nil
+end
+
+--- Put `target` right under `carrier`'s feet, moving with it.
+local function hang(carrier, target, s)
+    local at = locOf(carrier)
+    if not at then return end
+    local z = at.Z - halfHeight(carrier) - s.belowCm - halfHeight(target)
+    local loc = { X = at.X, Y = at.Y, Z = z }
+    local yaw = yawOf(carrier)
+    local placed = false
+    if yaw then
+        placed = pcall(function()
+            target:K2_SetActorLocationAndRotation(loc, { Pitch = 0, Yaw = yaw, Roll = 0 }, false, {}, true)
+        end)
+    end
+    if not placed then pcall(function() target:K2_SetActorLocation(loc, false, {}, true) end) end
+    local v = velocityOf(carrier)
+    local launched = v and pcall(function() target:LaunchCharacter(v, true, true) end)
+    if not launched then stopFall(target) end
+end
+
 
 --- SteamID -> { ctrl, pawn } and pawn address -> SteamID, for this tick only.
 local function playersNow()
@@ -304,13 +344,7 @@ local function holdTick()
         elseif os.time() - c.startedAt >= MIN_CARRY_S and onGround(p.pawn) then
             finish(carrierId, "landed", players)
         else
-            local at = locOf(p.pawn)
-            if at then
-                pcall(function()
-                    t.pawn:K2_SetActorLocation({ X = at.X, Y = at.Y, Z = at.Z - s.belowCm }, false, {}, true)
-                end)
-                stopFall(t.pawn)
-            end
+            hang(p.pawn, t.pawn, s)
         end
     end
 end
