@@ -15,9 +15,13 @@
 --     `migrationNutrientPct` of them there, `massNutrientPct` in a mass
 --     migration, none outside (SetCanGiveNutrients — the game's own call;
 --     which ones is fixed by each actor's address, so it does not flicker)
---   * how many grow: the game's MigrationSpawnMultiplier for active / mass
---     areas; outside, `outsideAmountPct` of the plain areas' AmountToBeSpawned
---     and of the fruit trees' fruit counts
+--   * how many grow: at most `migrationMaxPerArea` / `massMaxPerArea` /
+--     `outsideMaxPerArea` plants in one area (the game's AmountToBeSpawned and
+--     MinimumZoneAmountToBeSpawned lowered to it; the game put 40, even 70, in
+--     a 25 m area), plus the game's MigrationSpawnMultiplier; plants above the
+--     cap are removed with the game's own DestroyPlant — the ones without
+--     nutrients first, TRIM_PER_ROUND a round; `outsideAmountPct` of the fruit
+--     trees' fruit counts
 --   * the game's own values are remembered and put back when it is turned off
 --   * checked every CONTROL_MS (plants keep growing back), one family per tick;
 --     numbers and booleans only; a flag against a crash loop, as for exports
@@ -259,7 +263,10 @@ local CONTROL_FLAG = DIR .. "control.running"
 local CONTROL_MS = 15000
 local SETTINGS_RELOAD_S = 10
 local CDEF = { control = false, migrationNutrientPct = 40, migrationMultiplier = 1,
-               massNutrientPct = 100, massMultiplier = 3, outsideAmountPct = 30 }
+               massNutrientPct = 100, massMultiplier = 3, outsideAmountPct = 30,
+               migrationMaxPerArea = 15, massMaxPerArea = 40, outsideMaxPerArea = 3 }
+local TRIM_PER_ROUND = 60
+local TRIM_FLAG = DIR .. "trim.running"
 
 local settings, settingsAt = CDEF, nil
 local function clamp(v, lo, hi, d)
@@ -284,6 +291,9 @@ local function readSettings()
         massNutrientPct = clamp(d.massNutrientPct, 0, 100, CDEF.massNutrientPct),
         massMultiplier = clamp(d.massMultiplier, 1, 20, CDEF.massMultiplier),
         outsideAmountPct = clamp(d.outsideAmountPct, 0, 100, CDEF.outsideAmountPct),
+        migrationMaxPerArea = clamp(d.migrationMaxPerArea, 1, 100, CDEF.migrationMaxPerArea),
+        massMaxPerArea = clamp(d.massMaxPerArea, 1, 200, CDEF.massMaxPerArea),
+        outsideMaxPerArea = clamp(d.outsideMaxPerArea, 0, 50, CDEF.outsideMaxPerArea),
     }
     return settings
 end
@@ -295,6 +305,7 @@ local activeRings = {}    -- rings of the active / mass areas, for fruits and pl
 local applied = false     -- the control has changed something that needs putting back
 local controlStage = 0
 local controlFirst = true
+local trimFirst = true       -- the first DestroyPlant round runs under its own crash flag
 
 local function remember(tbl, a, v) if tbl[a] == nil and v ~= nil then tbl[a] = v end end
 
@@ -361,9 +372,15 @@ local function controlSpawners(s, on)
                 if z.mass then setInt(sp, "MigrationSpawnMultiplier", s.massMultiplier)
                 elseif z.active then setInt(sp, "MigrationSpawnMultiplier", s.migrationMultiplier)
                 elseif orig.multiplier[a] then setInt(sp, "MigrationSpawnMultiplier", orig.multiplier[a]) end
-                if not z.migration and orig.amount[a] then
-                    setInt(sp, "AmountToBeSpawned", math.floor(orig.amount[a] * s.outsideAmountPct / 100 + 0.5))
-                    if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", math.floor(orig.minAmount[a] * s.outsideAmountPct / 100 + 0.5)) end
+                -- The most plants this area may hold now.
+                z.cap = z.mass and s.massMaxPerArea or z.active and s.migrationMaxPerArea
+                    or (not z.migration) and s.outsideMaxPerArea or nil
+                if z.cap ~= nil then
+                    if orig.amount[a] then setInt(sp, "AmountToBeSpawned", math.min(orig.amount[a], z.cap)) end
+                    if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", math.min(orig.minAmount[a], z.cap)) end
+                else
+                    if orig.amount[a] then setInt(sp, "AmountToBeSpawned", orig.amount[a]) end
+                    if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", orig.minAmount[a]) end
                 end
             else
                 if orig.multiplier[a] then setInt(sp, "MigrationSpawnMultiplier", orig.multiplier[a]) end
@@ -376,15 +393,22 @@ end
 
 local function controlPlants(s, on)
     local okA, all = pcall(function() return FindAllOf("TIEdiblePlant") or {} end)
-    local st = { plants = 0, plantsNutri = 0 }
+    local st = { plants = 0, plantsNutri = 0, trimmed = 0 }
+    local byArea = {}      -- area address -> { plants of this tick, nutrient-less first when trimmed }
     for _, p in ipairs(okA and all or {}) do
         local a = H.isValid(p) and addressOf(p)
         if a then
             st.plants = st.plants + 1
-            local want = true
+            local want, entry = true, nil
             if on then
-                local zone = nil
-                pcall(function() local sp = p.Spawner; if sp ~= nil and H.isValid(sp) then zone = zones[addressOf(sp)] end end)
+                local zone, za = nil, nil
+                pcall(function() local sp = p.Spawner; if sp ~= nil and H.isValid(sp) then za = addressOf(sp); zone = zones[za] end end)
+                if zone ~= nil and zone.cap ~= nil and not bool(p, "bWasConsumed") then
+                    local list = byArea[za] or { cap = zone.cap }
+                    byArea[za] = list
+                    entry = { p = p, a = a }
+                    list[#list + 1] = entry
+                end
                 local pct
                 if zone ~= nil then pct = pctFor(zone, s)
                 else local x, y = where(p); pct = x and pctAt(x, y, s) or 0 end
@@ -392,6 +416,7 @@ local function controlPlants(s, on)
             end
             setNutrients(p, want, bool(p, "bCanGiveNutrients"))
             if want then st.plantsNutri = st.plantsNutri + 1 end
+            if entry then entry.nutri = want end
             -- Fruit trees: fewer fruits outside the migration areas.
             if bool(p, "bIsStaticSpawner") then
                 remember(orig.fruitsMin, a, num(p, "MinAmountOfFruits"))
@@ -402,6 +427,26 @@ local function controlPlants(s, on)
                 if orig.fruitsMin[a] then setInt(p, "MinAmountOfFruits", math.floor(orig.fruitsMin[a] * k + 0.5)) end
                 if orig.fruitsMax[a] then setInt(p, "MaxAmountOfFruits", math.max(orig.fruitsMin[a] and math.floor(orig.fruitsMin[a] * k + 0.5) or 0, math.floor(orig.fruitsMax[a] * k + 0.5))) end
             end
+        end
+    end
+    -- Areas above their cap: remove the extra plants with the game's own
+    -- DestroyPlant, on plants found in this very tick; those without nutrients
+    -- go first, so the nutrient share stays as set.
+    local budget = TRIM_PER_ROUND
+    for _, list in pairs(byArea) do
+        local extra = #list - list.cap
+        if extra > 0 and budget > 0 then
+            table.sort(list, function(x, y) return (x.nutri and 1 or 0) < (y.nutri and 1 or 0) end)
+            if trimFirst then markRunning(true, TRIM_FLAG) end
+            for i = 1, math.min(extra, budget) do
+                local e = list[i]
+                if H.isValid(e.p) and pcall(function() e.p:DestroyPlant() end) then
+                    st.trimmed = st.trimmed + 1
+                    if e.nutri then st.plantsNutri = st.plantsNutri - 1 end
+                end
+            end
+            budget = budget - math.min(extra, budget)
+            if trimFirst then trimFirst = false; markRunning(false, TRIM_FLAG) end
         end
     end
     return st
@@ -448,6 +493,9 @@ local function controlStep()
             H.log(string.format("%s: control %s — %d/%d plants and %d/%d fruits give nutrients, %d active areas", MOD,
                 on and "on" or "off (game values put back)", stats.plantsNutri, stats.plants, stats.fruitsNutri, stats.fruits, #activeRings))
         end
+        if stats.trimmed > 0 then
+            H.log(string.format("%s: %d plants over their area's cap removed (DestroyPlant)", MOD, stats.trimmed))
+        end
         applied = on
     end
 end
@@ -459,6 +507,13 @@ if crashed then
     H.logError(MOD .. ": the last export did not finish (the server stopped during it) — exports are off. "
         .. "Delete " .. FLAG .. " to try again.")
 else
+    local trimCrashed = io.open(TRIM_FLAG, "r")
+    if trimCrashed then
+        trimCrashed:close()
+        TRIM_PER_ROUND = 0
+        H.logError(MOD .. ": the last trim (DestroyPlant) did not finish — plants are no longer removed, only capped. "
+            .. "Delete " .. TRIM_FLAG .. " to try again.")
+    end
     local controlCrashed = io.open(CONTROL_FLAG, "r")
     if controlCrashed then
         controlCrashed:close()

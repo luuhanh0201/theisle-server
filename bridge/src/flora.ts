@@ -17,7 +17,7 @@ export interface FloraSpawner {
   multiplier?: number; amount?: number; minAmount?: number; activations?: number;
 }
 export interface FloraPlant { c: string; x: number; y: number; n?: boolean; ft?: number; cp?: number; pp?: number; lp?: number; eaten?: boolean; s?: number }
-export interface FloraControl { on: boolean; t: number; active: number; plants: number; plantsNutri: number; fruits: number; fruitsNutri: number }
+export interface FloraControl { on: boolean; t: number; active: number; plants: number; plantsNutri: number; fruits: number; fruitsNutri: number; trimmed?: number }
 export interface Flora { t: number; stale: boolean; spawners: FloraSpawner[]; plants: FloraPlant[]; fruits: FloraPlant[]; control: FloraControl | null }
 
 const STALE_AFTER_S = 600;

@@ -103,7 +103,7 @@ check("in an active migration area: nutrients kept", inZone.bCanGiveNutrients ==
 check("in a plain area: leaves only", leaf.bCanGiveNutrients == false)
 check("a fruit inside the active area keeps them, one outside loses them", fruitIn.bCanGiveNutri == true and fruitOut.bCanGiveNutri == false)
 check("the active area grows more (multiplier 2)", mz.MigrationSpawnMultiplier == 2)
-check("the plain area grows fewer (30%)", plain.AmountToBeSpawned == 6 and plain.MinimumZoneAmountToBeSpawned == 3,
+check("the plain area capped (3 plants by default)", plain.AmountToBeSpawned == 3 and plain.MinimumZoneAmountToBeSpawned == 3,
   tostring(plain.AmountToBeSpawned))
 check("the fruit tree outside bears fewer (30%)", tree.MinAmountOfFruits == 1 and tree.MaxAmountOfFruits == 3,
   tostring(tree.MinAmountOfFruits) .. "/" .. tostring(tree.MaxAmountOfFruits))
@@ -121,6 +121,41 @@ clock = clock + 20
 round()
 check("off and put back: it then leaves the game alone", H.countCalls("SetCanGiveNutrients") == calls)
 check("never off the game thread (control)", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
+
+say("\n-- step 2b: at most N plants in an area — the game's amount capped, the extra removed (no-nutrient ones first) --")
+local crowd = {}
+local function plantAt(i, nutri)
+  local o = nutri(obj("BP_Fireweed_C", { K2_GetActorLocation = at(100 + i * 10, 100), bCanGiveNutrients = true, Spawner = mz }), "bCanGiveNutrients")
+  o.DestroyPlant = function(self) H.record("DestroyPlant"); self.destroyed = true; self.IsValid = function() return false end end
+  crowd[#crowd + 1] = o
+  return o
+end
+for i = 1, 6 do plantAt(i, nutri) end
+mz.AmountToBeSpawned, mz.MinimumZoneAmountToBeSpawned = 40, 40
+_G.FindAllOf = function(c)
+  if c == "TIEdibleSpawner" then return { mz, plain } end
+  if c == "TIEdiblePlant" then
+    local alive = {}
+    for _, o in ipairs(crowd) do if not o.destroyed then alive[#alive + 1] = o end end
+    return alive
+  end
+  if c == "TIFruitBase" then return {} end
+  return {}
+end
+settings({ control = true, migrationNutrientPct = 50, migrationMultiplier = 1, massNutrientPct = 100, massMultiplier = 3,
+  outsideAmountPct = 30, migrationMaxPerArea = 2, massMaxPerArea = 40, outsideMaxPerArea = 1 })
+H.calls = {}
+round()
+check("the area's game amount capped to 2", mz.AmountToBeSpawned == 2 and mz.MinimumZoneAmountToBeSpawned == 2, tostring(mz.AmountToBeSpawned))
+check("the plain area's to 1", plain.AmountToBeSpawned == 1, tostring(plain.AmountToBeSpawned))
+check("4 of the 6 removed with the game's DestroyPlant", H.countCalls("DestroyPlant") == 4, tostring(H.countCalls("DestroyPlant")))
+local kept, keptNutri = 0, 0
+for _, o in ipairs(crowd) do if not o.destroyed then kept = kept + 1; if o.bCanGiveNutrients then keptNutri = keptNutri + 1 end end end
+check("the ones without nutrients went first", kept == 2 and keptNutri >= 1, kept .. " kept, " .. keptNutri .. " with nutrients")
+check("the trim flag cleared", io.open("Mods/Flora/Saved/trim.running", "r") == nil)
+clock = clock + 20
+round()
+check("at the cap: nothing more removed", H.countCalls("DestroyPlant") == 4)
 os.remove(SET); os.remove(CFLAG)
 say(string.format("=== Flora: %d passed, %d failed ===", pass, fail))
 io.flush()

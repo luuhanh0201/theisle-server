@@ -16,16 +16,23 @@ export interface FloraSettings {
   /** Same, in a mass migration. */
   massNutrientPct: number;
   massMultiplier: number;
-  /** Outside the migration areas: this % of the plain areas' plants and of the fruit trees' fruits. */
+  /** Outside the migration areas: this % of the fruit trees' fruits. */
   outsideAmountPct: number;
+  /** The most plants one area may hold (the game put 40, even 70, in a 25 m area); extra ones are removed. */
+  migrationMaxPerArea: number;
+  massMaxPerArea: number;
+  /** …in a plain (non-migration) area. */
+  outsideMaxPerArea: number;
 }
 
 export const FLORA_DEFAULTS: FloraSettings = {
   control: false, migrationNutrientPct: 40, migrationMultiplier: 1, massNutrientPct: 100, massMultiplier: 3, outsideAmountPct: 30,
+  migrationMaxPerArea: 15, massMaxPerArea: 40, outsideMaxPerArea: 3,
 };
 
 const LIMITS: Record<Exclude<keyof FloraSettings, 'control'>, [number, number]> = {
   migrationNutrientPct: [0, 100], migrationMultiplier: [1, 10], massNutrientPct: [0, 100], massMultiplier: [1, 20], outsideAmountPct: [0, 100],
+  migrationMaxPerArea: [1, 100], massMaxPerArea: [1, 200], outsideMaxPerArea: [0, 50],
 };
 
 const path = (): string => join(config.floraRoot, 'settings.json');

@@ -1250,9 +1250,16 @@
             <input id="fl-mass-pct" type="number" min="0" max="100" step="5"></div>
           <div class="cfg-field"><label for="fl-mass-mul">Đại di cư: hệ số số cây<span class="mono">massMultiplier</span></label>
             <input id="fl-mass-mul" type="number" min="1" max="20" step="1"></div>
-          <div class="cfg-field"><label for="fl-out-pct">Ngoài vùng: % số cây / quả so với game<span class="mono">outsideAmountPct</span></label>
-            <input id="fl-out-pct" type="number" min="0" max="100" step="5">
-            <div class="step-hint">Áp cho vùng cây thường và số quả trên cây ăn quả. Cây ngoài vùng luôn không có chất.</div></div>
+          <div class="cfg-field"><label for="fl-mig-max">Di cư: tối đa cây mỗi khóm<span class="mono">migrationMaxPerArea</span></label>
+            <input id="fl-mig-max" type="number" min="1" max="100" step="1">
+            <div class="step-hint">Một khóm rộng ~25 m. Game để 15–40 (có khóm 70). Cây thừa bị gỡ dần (60 cây mỗi lượt, cây không chất trước).</div></div>
+          <div class="cfg-field"><label for="fl-mass-max">Đại di cư: tối đa cây mỗi khóm<span class="mono">massMaxPerArea</span></label>
+            <input id="fl-mass-max" type="number" min="1" max="200" step="1"></div>
+          <div class="cfg-field"><label for="fl-out-max">Ngoài vùng: tối đa cây mỗi khóm thường<span class="mono">outsideMaxPerArea</span></label>
+            <input id="fl-out-max" type="number" min="0" max="50" step="1">
+            <div class="step-hint">Cây ngoài vùng di cư luôn không có chất (chỉ là lá).</div></div>
+          <div class="cfg-field"><label for="fl-out-pct">Ngoài vùng: % số quả trên cây ăn quả<span class="mono">outsideAmountPct</span></label>
+            <input id="fl-out-pct" type="number" min="0" max="100" step="5"></div>
         </div>
         <div class="step-hint" id="fl-stats"></div>
         <div class="row"><button type="button" class="btn" id="fl-save">Lưu cài đặt</button></div>
@@ -5317,7 +5324,8 @@ let flDirty = false;
 function renderFloraSettings({ settings: s, control: c, t }) {
   const st = c
     ? `Lượt gần nhất (${ago(c.t)}): điều khiển <b>${c.on ? 'đang bật' : 'tắt'}</b> · ${c.active} vùng đang di cư · `
-      + `<b>${c.plantsNutri}/${c.plants}</b> cây và <b>${c.fruitsNutri}/${c.fruits}</b> quả đang có chất.`
+      + `<b>${c.plantsNutri}/${c.plants}</b> cây và <b>${c.fruitsNutri}/${c.fruits}</b> quả đang có chất`
+      + `${c.trimmed ? ` · vừa gỡ ${c.trimmed} cây vượt mức` : ''}.`
     : t ? `Dữ liệu cây: ${ago(t)} · chưa có lượt điều khiển nào (đang tắt).` : 'Chưa có dữ liệu từ mod Flora.';
   $('fl-stats').innerHTML = st;
   if (flDirty) return;
@@ -5325,8 +5333,9 @@ function renderFloraSettings({ settings: s, control: c, t }) {
   $('fl-mig-pct').value = s.migrationNutrientPct; $('fl-mig-mul').value = s.migrationMultiplier;
   $('fl-mass-pct').value = s.massNutrientPct; $('fl-mass-mul').value = s.massMultiplier;
   $('fl-out-pct').value = s.outsideAmountPct;
+  $('fl-mig-max').value = s.migrationMaxPerArea; $('fl-mass-max').value = s.massMaxPerArea; $('fl-out-max').value = s.outsideMaxPerArea;
 }
-for (const id of ['fl-control', 'fl-mig-pct', 'fl-mig-mul', 'fl-mass-pct', 'fl-mass-mul', 'fl-out-pct']) {
+for (const id of ['fl-control', 'fl-mig-pct', 'fl-mig-mul', 'fl-mass-pct', 'fl-mass-mul', 'fl-out-pct', 'fl-mig-max', 'fl-mass-max', 'fl-out-max']) {
   $(id).addEventListener('input', () => { flDirty = true; });
   $(id).addEventListener('change', () => { flDirty = true; });
 }
@@ -5335,6 +5344,7 @@ $('fl-save').addEventListener('click', () => withToken('lưu cài đặt thực 
   await adminFetch('/api/flora-settings', 'PUT', token, {
     control: $('fl-control').checked, migrationNutrientPct: n('fl-mig-pct'), migrationMultiplier: n('fl-mig-mul'),
     massNutrientPct: n('fl-mass-pct'), massMultiplier: n('fl-mass-mul'), outsideAmountPct: n('fl-out-pct'),
+    migrationMaxPerArea: n('fl-mig-max'), massMaxPerArea: n('fl-mass-max'), outsideMaxPerArea: n('fl-out-max'),
   });
   flDirty = false;
   toast('Đã lưu — mod áp dụng trong ~15 giây.');

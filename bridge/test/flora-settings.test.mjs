@@ -18,4 +18,6 @@ test('off until turned on; saved where the mod reads; limits', async () => {
   await assert.rejects(saveFloraSettings({ migrationNutrientPct: 101 }), /migrationNutrientPct/);
   await assert.rejects(saveFloraSettings({ massMultiplier: 0 }), /massMultiplier/);
   await assert.rejects(saveFloraSettings({ control: 'on' }), /control/);
+  await assert.rejects(saveFloraSettings({ migrationMaxPerArea: 0 }), /migrationMaxPerArea/);
+  assert.equal((await saveFloraSettings({ outsideMaxPerArea: 0 })).outsideMaxPerArea, 0, 'no plants at all outside is allowed');
 });
