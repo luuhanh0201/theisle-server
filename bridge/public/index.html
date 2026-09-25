@@ -553,6 +553,31 @@
   .audit-pager button { min-width: 34px; }
   .audit-pager button.on { background: var(--accent-2, #10b981); color: #fff; border-color: transparent; }
   .audit-pager .muted { margin-right: auto; }
+  .msg-timing { display: flex; flex-direction: column; gap: 14px; }
+  .msg-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13px; }
+  .msg-line > label { margin: 0; min-width: 230px; font-weight: 600; color: var(--text); }
+  .msg-line input[type=number] { width: 90px; }
+  .msg-line input#msg-marks { flex: 1; min-width: 220px; }
+  .msg-periodic { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .msg-periodic li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .msg-periodic li input[type=text] { flex: 1; min-width: 200px; }
+  .msg-periodic li input[type=number] { width: 80px; }
+  .msg-periodic li input[type=checkbox], .msg-item input[type=checkbox] { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
+  .msg-group { margin-bottom: 18px; }
+  .msg-item { display: grid; grid-template-columns: minmax(170px, 240px) 1fr; gap: 6px 14px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .msg-item .what { font-size: 13px; font-weight: 600; }
+  .msg-item .key { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+  .msg-item .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .msg-item .tag { font-size: 11px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted); }
+  .msg-item .tag.edited { color: #fb923c; border-color: #fb923c; }
+  .msg-item .tag.off { color: var(--kill, #ef4444); border-color: var(--kill, #ef4444); }
+  .msg-item textarea { min-height: 40px; resize: vertical; font-size: 13px; }
+  .msg-item textarea:disabled { opacity: .45; }
+  .msg-item .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; }
+  .msg-item .tools label { display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; color: var(--text); }
+  .msg-item .var { font-family: ui-monospace, monospace; font-size: 11.5px; padding: 1px 6px; border-radius: 6px; border: 1px dashed var(--border); background: none; color: var(--text); cursor: pointer; }
+  .msg-savebar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 0; background: var(--bg); }
+  @media (max-width: 700px) { .msg-item { grid-template-columns: 1fr; } .msg-line > label { min-width: 0; } }
   .az { display: flex; flex-direction: column; gap: 10px; }
   .az-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; font-size: 13px; }
   .az-row input[type=checkbox] { width: 15px; height: 15px; flex: none; accent-color: #fb923c; }
@@ -897,6 +922,37 @@
     <div data-view="chat" hidden>
       <div class="page-head"><div><h1>Chat</h1><p>Toàn bộ chat trong game, kể cả các lệnh <span class="mono">!</span>.</p></div></div>
       <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
+    </div>
+
+    <!-- Thông báo -->
+    <div data-view="messages" hidden>
+      <div class="page-head"><div><h1>Thông báo</h1><p>Mọi tin server gửi cho người chơi: sửa nội dung, tắt từng tin, đặt tần suất đếm ngược, thông báo định kỳ và dọn xác.</p></div></div>
+      <section class="card">
+        <div class="card-head"><h2>Tần suất</h2><span class="sub">chỉ gửi khi có người đang chơi</span></div>
+        <div class="card-body msg-timing">
+          <div class="msg-line"><label for="msg-marks">Mốc đếm ngược khi khởi động lại / tắt server</label>
+            <input id="msg-marks" placeholder="15p, 10p, 5p, 3p, 2p, 1p, 30s, 10s">
+            <div class="step-hint" style="flex-basis:100%">Phút (p) hoặc giây (s), cách nhau bằng dấu phẩy. Server báo ở mỗi mốc còn lại; thời gian đếm ngược tổng chọn lúc bấm khởi động lại (tab Server).</div></div>
+          <div class="msg-line"><label for="msg-cw-every">Tự dọn xác mỗi (phút)</label><input id="msg-cw-every" type="number" min="0" max="1440" step="5">
+            <label for="msg-cw-warn" style="min-width:0;font-weight:500">báo trước (giây)</label><input id="msg-cw-warn" type="number" min="0" max="600" step="10">
+            <div class="step-hint" style="flex-basis:100%">0 = tắt. Dùng lệnh RCON dọn xác của game; khi bấm "Dọn xác" bằng tay ở tab Server cũng báo "Đã dọn xác".</div></div>
+          <div>
+            <div class="group-label">Thông báo định kỳ</div>
+            <ul class="msg-periodic" id="msg-periodic"></ul>
+            <button type="button" class="btn-soft sm" id="msg-periodic-add" style="margin-top:8px">+ Thêm thông báo định kỳ</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Nội dung</h2><span class="sub" id="msg-count"></span>
+          <input type="search" id="msg-q" placeholder="Tìm tin…" style="margin-left:auto;max-width:220px"></div>
+        <div class="card-body">
+          <div class="step-hint" style="margin-bottom:10px">Bỏ tích <b>Gửi</b> để tắt hẳn một tin. <span class="mono">{tên}</span> được điền khi gửi — bấm để chèn.
+            Tin của mod đổi trong vòng vài giây, không cần restart. Ban/kick làm trong admin panel của game nên không có tin ở đây.</div>
+          <div id="msg-groups"></div>
+        </div>
+      </section>
+      <div class="msg-savebar"><span class="step-hint" id="msg-dirty"></span><button type="button" class="btn" id="msg-save">Lưu thông báo</button></div>
     </div>
 
     <!-- Server -->
@@ -1315,6 +1371,7 @@ const PATHS = {
   leaderboard: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
   map: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
+  messages: '<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
   garage: '<path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8M7 17h10"/>',
   damage: '<path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/>',
   death: '<path d="M12 3a8 8 0 0 0-5 14.2V20h10v-2.8A8 8 0 0 0 12 3z"/><path d="M10 20v-2M14 20v-2"/><circle cx="9" cy="11" r="1.4"/><circle cx="15" cy="11" r="1.4"/>',
@@ -1611,7 +1668,7 @@ function renderFeed(el, events, emptyText = 'Chưa có sự kiện') {
 
 const TABS = [
   ['overview', 'Tổng quan'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'],
-  ['map', 'Bản đồ'], ['chat', 'Chat'], ['garage', 'Gara'], ['server', 'Server'],
+  ['map', 'Bản đồ'], ['chat', 'Chat'], ['garage', 'Gara'], ['messages', 'Thông báo'], ['server', 'Server'],
 ];
 $('tabs').innerHTML = TABS.map(([id, label]) =>
   `<a href="#${id}" data-tab="${id}">${icon(id)}<span class="label">${label}</span><span class="count" id="count-${id}" hidden></span></a>`).join('');
@@ -2592,6 +2649,162 @@ $('az-save').addEventListener('click', () => withToken('lưu vùng AI', async (t
   az.dirty = false;
   toast('Đã lưu vùng AI — mod đọc lại trong vòng 10 giây.');
   await refreshAiZones();
+}));
+
+// --- messages: every text players get, and how often (bridge/src/messages.ts) ---
+
+const MSG_GROUPS = [
+  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['garage', 'Gara — cất dino'],
+  ['redeem', 'Gara — lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
+  ['admin', 'Admin'], ['hello', 'Chào mừng'],
+];
+const msgs = { data: null, draft: null, dirty: false, loadedAt: 0 };
+
+const fmtMark = (sec) => (sec >= 60 && sec % 60 === 0 ? `${sec / 60}p` : `${sec}s`);
+/** "15p, 30s, 90" -> seconds (a bare number is seconds); null when unreadable. */
+function parseMarks(text) {
+  const out = [];
+  for (const part of text.split(/[,;\s]+/).filter(Boolean)) {
+    const m = /^(\d+)\s*(p|ph|phút|m|min|s|g|giây)?$/i.exec(part);
+    if (!m) return null;
+    const n = Number(m[1]);
+    out.push(/^(p|ph|phút|m|min)$/i.test(m[2] ?? '') ? n * 60 : n);
+  }
+  return out;
+}
+
+async function loadMessagesTab() {
+  const d = await getJson('/api/messages');
+  msgs.data = d;
+  msgs.draft = { texts: { ...d.texts }, countdownMarks: [...d.countdownMarks], periodic: structuredClone(d.periodic), corpseWipe: { ...d.corpseWipe } };
+  msgs.dirty = false;
+  msgs.loadedAt = Date.now();
+  renderMessagesTab();
+}
+
+function markMsgs() {
+  msgs.dirty = true;
+  $('msg-dirty').innerHTML = '<b style="color:#fb923c">Có thay đổi chưa lưu.</b>';
+}
+
+function renderMessagesTab() {
+  const d = msgs.draft;
+  if (!d) return;
+  if (document.activeElement !== $('msg-marks')) $('msg-marks').value = d.countdownMarks.map(fmtMark).join(', ');
+  if (document.activeElement !== $('msg-cw-every')) $('msg-cw-every').value = d.corpseWipe.everyMin;
+  if (document.activeElement !== $('msg-cw-warn')) $('msg-cw-warn').value = d.corpseWipe.warnSec;
+  $('msg-periodic').innerHTML = d.periodic.length === 0 ? '<li class="step-hint">Chưa có thông báo định kỳ nào.</li>'
+    : d.periodic.map((p, i) => `<li data-i="${i}">
+        <input type="checkbox" data-f="enabled" ${p.enabled ? 'checked' : ''} title="Bật / tắt">
+        <input type="text" data-f="text" maxlength="300" value="${esc(p.text)}" placeholder="Nội dung, ví dụ: Discord của server: …">
+        <span class="step-hint">mỗi</span><input type="number" data-f="everyMin" min="5" max="1440" step="5" value="${p.everyMin}"><span class="step-hint">phút</span>
+        <button type="button" class="btn-ghost sm" data-f="del" style="color:var(--kill,#ef4444)">Xoá</button></li>`).join('');
+  $('msg-dirty').innerHTML = msgs.dirty ? '<b style="color:#fb923c">Có thay đổi chưa lưu.</b>' : '';
+  renderMessageList();
+}
+
+function renderMessageList() {
+  const d = msgs.draft;
+  const q = $('msg-q').value.trim().toLowerCase();
+  const cat = msgs.data.catalog.filter((m) => !q || [m.key, m.label, m.default, d.texts[m.key] ?? ''].some((v) => v.toLowerCase().includes(q)));
+  const edited = Object.keys(d.texts).length;
+  $('msg-count').textContent = `${msgs.data.catalog.length} tin · ${edited} đã sửa`;
+  $('msg-groups').innerHTML = MSG_GROUPS.map(([g, title]) => {
+    const items = cat.filter((m) => m.group === g);
+    if (items.length === 0) return '';
+    return `<div class="msg-group"><div class="group-label">${esc(title)}</div>${items.map((m) => {
+      const own = d.texts[m.key];
+      const off = own === '';
+      const text = own === undefined || off ? m.default : own;
+      return `<div class="msg-item" data-key="${esc(m.key)}">
+        <div><div class="what">${esc(m.label)}</div><div class="key">${esc(m.key)}</div>
+          <div class="tags">${off ? '<span class="tag off">đã tắt</span>' : own !== undefined ? '<span class="tag edited">đã sửa</span>' : ''}</div></div>
+        <div><textarea rows="1" maxlength="300" ${off ? 'disabled' : ''} aria-label="${esc(m.label)}">${esc(text)}</textarea>
+          <div class="tools"><label><input type="checkbox" data-f="send" ${off ? '' : 'checked'}> Gửi</label>
+            ${m.vars.map((v) => `<button type="button" class="var" data-var="${esc(v)}" title="Chèn">{${esc(v)}}</button>`).join('')}
+            ${own !== undefined ? '<button type="button" class="btn-ghost sm" data-f="reset" style="margin-left:auto">Về mặc định</button>' : ''}</div></div></div>`;
+    }).join('')}</div>`;
+  }).join('') || '<p class="step-hint">Không có tin nào khớp.</p>';
+}
+
+$('msg-q').addEventListener('input', () => { if (msgs.draft) renderMessageList(); });
+
+$('msg-groups').addEventListener('input', (e) => {
+  const item = e.target.closest('.msg-item');
+  if (!item || e.target.tagName !== 'TEXTAREA') return;
+  const def = msgs.data.catalog.find((m) => m.key === item.dataset.key);
+  const v = e.target.value.replace(/\s*\n\s*/g, ' ');
+  if (v === def.default) delete msgs.draft.texts[def.key]; else msgs.draft.texts[def.key] = v;
+  markMsgs();
+  const tags = item.querySelector('.tags');
+  tags.innerHTML = msgs.draft.texts[def.key] !== undefined ? '<span class="tag edited">đã sửa</span>' : '';
+});
+
+$('msg-groups').addEventListener('click', (e) => {
+  const item = e.target.closest('.msg-item');
+  if (!item) return;
+  const key = item.dataset.key;
+  const def = msgs.data.catalog.find((m) => m.key === key);
+  const area = item.querySelector('textarea');
+  if (e.target.dataset.var) {
+    // Insert {name} where the cursor is.
+    const ins = `{${e.target.dataset.var}}`;
+    const at = area.selectionStart ?? area.value.length;
+    area.value = area.value.slice(0, at) + ins + area.value.slice(area.selectionEnd ?? at);
+    area.dispatchEvent(new Event('input', { bubbles: true }));
+    area.focus();
+    area.setSelectionRange(at + ins.length, at + ins.length);
+    return;
+  }
+  if (e.target.dataset.f === 'send') {
+    if (e.target.checked) delete msgs.draft.texts[key]; else msgs.draft.texts[key] = '';
+    if (e.target.checked && area.value !== def.default) msgs.draft.texts[key] = area.value;
+  } else if (e.target.dataset.f === 'reset') {
+    delete msgs.draft.texts[key];
+  } else {
+    return;
+  }
+  markMsgs();
+  renderMessageList();
+});
+
+$('msg-marks').addEventListener('input', () => {
+  const marks = parseMarks($('msg-marks').value);
+  $('msg-marks').setCustomValidity(marks === null ? 'Ví dụ: 15p, 5p, 1p, 30s' : '');
+  if (marks !== null) { msgs.draft.countdownMarks = marks; markMsgs(); }
+});
+for (const id of ['msg-cw-every', 'msg-cw-warn']) {
+  $(id).addEventListener('input', () => {
+    msgs.draft.corpseWipe = { everyMin: Math.round(Number($('msg-cw-every').value) || 0), warnSec: Math.round(Number($('msg-cw-warn').value) || 0) };
+    markMsgs();
+  });
+}
+$('msg-periodic').addEventListener('input', (e) => {
+  const li = e.target.closest('li[data-i]');
+  if (!li) return;
+  const p = msgs.draft.periodic[Number(li.dataset.i)];
+  const f = e.target.dataset.f;
+  if (f === 'text') p.text = e.target.value;
+  else if (f === 'everyMin') p.everyMin = Math.round(Number(e.target.value) || 0);
+  else if (f === 'enabled') p.enabled = e.target.checked;
+  markMsgs();
+});
+$('msg-periodic').addEventListener('click', (e) => {
+  if (e.target.dataset.f !== 'del') return;
+  msgs.draft.periodic.splice(Number(e.target.closest('li').dataset.i), 1);
+  markMsgs();
+  renderMessagesTab();
+});
+$('msg-periodic-add').addEventListener('click', () => {
+  msgs.draft.periodic.push({ text: '', everyMin: 30, enabled: true });
+  markMsgs();
+  renderMessagesTab();
+  $('msg-periodic').querySelector('li:last-child input[type=text]')?.focus();
+});
+$('msg-save').addEventListener('click', () => withToken('lưu thông báo', async (token) => {
+  await adminFetch('/api/messages', 'PUT', token, msgs.draft);
+  toast('Đã lưu thông báo — tin của mod đổi trong vòng 5 giây.');
+  await loadMessagesTab();
 }));
 
 // --- drop AI next to a player (mod AIZones, bridge/src/ai-drop.ts) ---
@@ -4574,6 +4787,11 @@ async function refreshTab(tab) {
       break;
     case 'chat':
       renderChat((await getJson('/api/chat?limit=300')).events);
+      break;
+    case 'messages':
+      // Loaded once per visit: the 2 s refresh must not overwrite what is being typed.
+      if (!msgs.data || (!msgs.dirty && Date.now() - msgs.loadedAt > 30_000
+          && !document.activeElement?.closest?.('[data-view="messages"]'))) await loadMessagesTab();
       break;
     case 'server':
       await refreshServerTab();

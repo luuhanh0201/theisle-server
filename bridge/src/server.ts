@@ -26,6 +26,7 @@ import { maximaAt } from './species-stats.js';
 import { AI_SPECIES } from './ai-species.js';
 import { readAiZones, readAiZonesStatus, saveAiZones, type AiZonesSettings } from './ai-zones.js';
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
+import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
   listAll,
@@ -193,6 +194,24 @@ async function serverStatus(ctx: Ctx): Promise<unknown> {
   };
 }
 
+/** What a messages save changed: each text (old → new), then the timings. */
+function describeMessageChanges(before: MessagesSettings, after: MessagesSettings): string {
+  const parts: string[] = [];
+  for (const key of new Set([...Object.keys(before.texts), ...Object.keys(after.texts)])) {
+    const a = before.texts[key];
+    const b = after.texts[key];
+    if (a === b) continue;
+    const show = (v: string | undefined): string => (v === undefined ? '(mặc định)' : v === '' ? '(tắt)' : `"${v}"`);
+    parts.push(`${key}: ${show(a)} → ${show(b)}`);
+  }
+  const rest = describeChanges(
+    { countdownMarks: before.countdownMarks, corpseWipe: before.corpseWipe, periodic: before.periodic.map((p) => `${p.enabled ? '' : '(tắt) '}${p.everyMin}p: ${p.text}`) },
+    { countdownMarks: after.countdownMarks, corpseWipe: after.corpseWipe, periodic: after.periodic.map((p) => `${p.enabled ? '' : '(tắt) '}${p.everyMin}p: ${p.text}`) },
+  );
+  if (rest) parts.push(rest);
+  return parts.join(' · ');
+}
+
 /** What an AI zones save changed: the switches, then zones added, removed and changed. */
 function describeZoneChanges(before: AiZonesSettings, after: AiZonesSettings): string {
   const parts: string[] = [];
@@ -285,7 +304,8 @@ async function handlePanel(
       (path === '/api/voice-settings' && req.method === 'PUT') ||
       (path === '/api/panel-access' && req.method === 'PUT') ||
       (path === '/api/ai-zones' && req.method === 'PUT') ||
-      (path === '/api/ai-drop' && req.method === 'POST');
+      (path === '/api/ai-drop' && req.method === 'POST') ||
+      (path === '/api/messages' && req.method === 'PUT');
     if (!allowed) {
       sendJson(res, 404, { error: 'not found' });
       return;
@@ -333,6 +353,9 @@ async function handlePanel(
       try {
         const response = await rcon.run(name, body.args);
         if (!spec.read) await audit({ action: `rcon ${name}`, detail: body.args === undefined ? '' : String(body.args).slice(0, 120), ok: true });
+        // Corpses cleared by hand: players hear it, as with the scheduled wipe.
+        const done = name === 'wipeCorpses' ? renderMessage('corpses.done') : null;
+        if (done !== null) await rcon.run('announce', done).catch(() => undefined);
         sendJson(res, 200, { command: name, response });
       } catch (error) {
         if (error instanceof ValidationError) throw error;
@@ -354,6 +377,14 @@ async function handlePanel(
       const before = await readAiZones();
       const saved = await saveAiZones(await readJsonBody(req), store.groundPoints);
       await audit({ action: 'AI zones saved', detail: describeZoneChanges(before, saved) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/messages') {
+      const before = currentMessages();
+      const saved = await saveMessages(await readJsonBody(req));
+      await audit({ action: 'messages saved', detail: describeMessageChanges(before, saved) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
     }
@@ -619,6 +650,10 @@ async function handlePanel(
         points: Object.fromEntries(zones.zones.map((z) => [z.id, store.groundPoints.within(z.x, z.y, z.radiusM * 100, 200).length])),
         groundPoints: store.groundPoints.size,
       });
+      return;
+    }
+    case '/api/messages': {
+      sendJson(res, 200, { ...currentMessages(), catalog: MESSAGES });
       return;
     }
     case '/api/ai-drop': {

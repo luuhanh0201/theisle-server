@@ -31,6 +31,7 @@ end
 
 local H       = require("shared.isle.helpers")
 local Events  = require("shared.isle.events")
+local Msg     = require("shared.isle.messages")
 local Storage = require("garage.storage")
 local Capture = require("garage.capture")
 local Restore = require("garage.restore")
@@ -145,8 +146,10 @@ local function storeResult(steamId, pending, ok, reason)
     })
 end
 
+-- Texts editable on the admin panel (shared/messages.lua): key, default, vars.
 local function failMessage(reason)
-    return "Cất thất bại: " .. (REASON_VI[reason] or reason) .. ". Bạn có thể cất lại ngay."
+    local why = Msg.text("garage.reason." .. reason, REASON_VI[reason] or reason) or reason
+    return Msg.text("garage.failed", "Cất thất bại: {reason}. Bạn có thể cất lại ngay.", { reason = why })
 end
 
 --- End a pending store as failed; its countdown timer then finds nothing to do.
@@ -156,7 +159,8 @@ local function failStore(steamId, reason, c)
     pendingStore[steamId] = nil
     storeResult(steamId, pending, false, reason)
     c = c or findCtrl(steamId)
-    if c then H.safeNotify(c, failMessage(reason)) end
+    local text = failMessage(reason)
+    if c and text then H.safeNotify(c, text) end
     H.log(MOD .. ": store for " .. steamId .. " failed: " .. reason)
 end
 
@@ -168,7 +172,8 @@ local function finishStore(c, pawn, steamId, pending)
     local settings = Settings.read()
     local function failed(reason)
         storeResult(steamId, pending, false, reason)
-        H.safeNotify(c, failMessage(reason))
+        local text = failMessage(reason)
+        if text then H.safeNotify(c, text) end
     end
     if addressOf(pawn) ~= pending.address or speciesOf(pawn) ~= pending.class then
         failed("not_same_dino")
@@ -206,7 +211,7 @@ local function finishStore(c, pawn, steamId, pending)
         growth  = state.growth,
     })
     storeResult(steamId, pending, true, nil)
-    H.safeNotify(c, "Đã cất dino vào gara. Respawn đúng loài rồi lấy ra trên trang web.")
+    Msg.notify(c, "garage.stored", "Đã cất dino vào gara. Respawn đúng loài rồi lấy ra trên trang web.")
 end
 
 --- Start a store into the next free slot. `say` gets the immediate replies
@@ -215,28 +220,28 @@ end
 local function doStore(ctrl, steamId, say, cmdId)
     say = say or function(m) H.safeNotify(ctrl, m) end
     if pendingStore[steamId] then
-        say("Đang có một lần cất đang đếm ngược.")
+        Msg.say(say, "garage.busy", "Đang có một lần cất đang đếm ngược.")
         return false
     end
     local settings = Settings.read()
     local wait = cooldownLeft(steamId, settings)
     if wait then
-        say("Gara đang hồi: chờ " .. wait .. " giây.")
+        Msg.say(say, "garage.cooldown", "Gara đang hồi: chờ {seconds} giây.", { seconds = wait })
         return false
     end
 
     local pawn = H.livePawnFromCtrl(ctrl)
     if not pawn then
-        say("Bạn cần đang điều khiển dino để cất.")
+        Msg.say(say, "garage.noDino", "Bạn cần đang điều khiển dino để cất.")
         return false
     end
     if countSlots(steamId) >= settings.maxSlots then
-        say("Gara đã đầy (" .. settings.maxSlots .. " slot). Lấy bớt một con ra trước.")
+        Msg.say(say, "garage.full", "Gara đã đầy ({maxSlots} slot). Lấy bớt một con ra trước.", { maxSlots = settings.maxSlots })
         return false
     end
     local origin = locOf(pawn)
     if origin == nil then
-        say("Không đọc được vị trí dino. Thử lại.")
+        Msg.say(say, "garage.noLocation", "Không đọc được vị trí dino. Thử lại.")
         return false
     end
 
@@ -250,10 +255,10 @@ local function doStore(ctrl, steamId, say, cmdId)
     pendingStore[steamId] = pending
     local seconds = settings.storeCountdown
     if seconds > 0 then
-        say(string.format("Bắt đầu cất sau %d giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.", seconds))
+        Msg.say(say, "garage.countdown", "Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.", { seconds = seconds })
         if seconds > 10 then
             H.deferWithPlayer(ctrl, (seconds - 10) * 1000, function(c)
-                if pendingStore[steamId] == pending then H.safeNotify(c, "Còn 10 giây là cất xong — đứng yên.") end
+                if pendingStore[steamId] == pending then Msg.notify(c, "garage.tenSeconds", "Còn 10 giây là cất xong — đứng yên.") end
             end)
         end
     end
@@ -345,29 +350,29 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     end
     local wait = cooldownLeft(steamId, Settings.read())
     if wait then
-        say("Garage cooldown: wait " .. wait .. " s.")
+        Msg.say(say, "redeem.cooldown", "Garage cooldown: wait {seconds} s.", { seconds = wait })
         return false
     end
     slot = slot or Storage.mostRecent(steamId)
     if slot == nil then
-        say("Your garage is empty.")
+        Msg.say(say, "redeem.empty", "Your garage is empty.")
         return false
     end
     if not Storage.isValidSlot(slot) then
-        say("Unknown slot.")
+        Msg.say(say, "redeem.unknownSlot", "Unknown slot.")
         return false
     end
 
     local state = Storage.get(steamId, slot)
     if not state then
-        say("Slot '" .. slot .. "' is empty or unreadable.")
+        Msg.say(say, "redeem.slotEmpty", "Slot '{slot}' is empty or unreadable.", { slot = slot })
         return false
     end
     -- (checked again by Storage.take below; this one gives the clear message)
 
     local pawn = H.livePawnFromCtrl(ctrl)
     if not pawn then
-        say("Respawn first, then type !redeem.")
+        Msg.say(say, "redeem.noDino", "Respawn first, then type !redeem.")
         return false
     end
 
@@ -375,11 +380,11 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     -- anyone also running a nest-persistence mod.
     local current = speciesOf(pawn)
     if current == nil then
-        say("Could not identify your current dino. Try again.")
+        Msg.say(say, "redeem.unknownSpecies", "Could not identify your current dino. Try again.")
         return false
     end
     if current ~= state.classPath then
-        say("Wrong species — respawn as the one you stored.")
+        Msg.say(say, "redeem.wrongSpecies", "Wrong species — respawn as the one you stored.")
         return false
     end
 
@@ -388,7 +393,7 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     -- in the garage and in the world. Put back if the restore fails.
     local taken, token = Storage.take(steamId, slot)
     if not taken then
-        say("Slot '" .. slot .. "' could not be taken out (" .. tostring(token) .. ").")
+        Msg.say(say, "redeem.takeFailed", "Slot '{slot}' could not be taken out ({error}).", { slot = slot, error = tostring(token) })
         return false
     end
     state = taken
@@ -397,10 +402,13 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     if toStored and type(state.location) ~= "table" then
         -- Slots made in the admin panel (and old ones) have no stored spot.
         toStored = false
-        say("Slot '" .. slot .. "' has no stored position — restoring where you stand.")
+        Msg.say(say, "redeem.noStoredSpot", "Slot '{slot}' has no stored position — restoring where you stand.", { slot = slot })
     end
-    say("Restoring '" .. slot .. "'" .. (toStored and " at the spot you stored it" or "")
-        .. ". Hold still for a few seconds.")
+    if toStored then
+        Msg.say(say, "redeem.restoringStored", "Restoring '{slot}' at the spot you stored it. Hold still for a few seconds.", { slot = slot })
+    else
+        Msg.say(say, "redeem.restoring", "Restoring '{slot}'. Hold still for a few seconds.", { slot = slot })
+    end
 
     -- Deferred restore: the engine needs the pawn to settle after a spawn.
     H.deferWithPawn(ctrl, RESTORE_DELAY_MS, function(c, livePawn)
@@ -408,15 +416,15 @@ local function doRedeem(ctrl, steamId, slot, where, say)
         -- dino where it will stay.
         local moved = toStored and Restore.teleport(livePawn, state.location, state.rotation) or false
         if toStored and not moved then
-            H.safeNotify(c, "Could not move you to the stored spot — restoring here.")
+            Msg.notify(c, "redeem.moveFailed", "Could not move you to the stored spot — restoring here.")
         end
         Restore.apply(livePawn, state, function(ok)
             if ok then
                 lastGarageUse[steamId] = os.time()
-                H.safeNotify(c, "Restored '" .. slot .. "'. The slot is now empty.")
+                Msg.notify(c, "redeem.done", "Restored '{slot}'. The slot is now empty.", { slot = slot })
             else
                 Storage.putBack(token)
-                H.safeNotify(c, "Restore did not finish. Your slot is back in the garage.")
+                Msg.notify(c, "redeem.failed", "Restore did not finish. Your slot is back in the garage.")
             end
             Events.emit({
                 type    = "garage_redeem",
@@ -443,7 +451,7 @@ end
 H.onChat(function(ctrl, _steamId, msg)
     local cmd = H.parseCommand(msg)
     if cmd == "store" or cmd == "redeem" or cmd == "garage" then
-        H.safeNotify(ctrl, "Gara giờ dùng trên trang web của server (mục Gara): cất và lấy dino ở đó.")
+        Msg.notify(ctrl, "garage.useWeb", "Gara giờ dùng trên trang web của server (mục Gara): cất và lấy dino ở đó.")
     end
 end)
 

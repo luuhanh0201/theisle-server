@@ -14,6 +14,7 @@ if not package.path:find("Mods/?.lua", 1, true) then
 end
 
 local H = require("shared.isle.helpers")
+local Msg = require("shared.isle.messages")   -- texts editable on the admin panel
 
 local MOD = "HelloIsle"
 local GREET_DELAY_MS = 5000   -- let the client finish loading before we talk
@@ -32,7 +33,7 @@ RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(ctrlParam
     -- Rule 3/4: do not talk to the client from inside the hook — defer, and
     -- let deferWithPawn re-resolve the player when the timer fires.
     H.deferWithPawn(ctrl, GREET_DELAY_MS, function(c, _pawn)
-        H.safeNotify(c, "Welcome to the island. Type !ping to check the mods.")
+        Msg.notify(c, "hello.welcome", "Welcome to the island. Type !ping to check the mods.")
     end)
 end)
 
@@ -46,7 +47,7 @@ H.onChat(function(ctrl, steamId, msg)
     if cmd ~= "ping" then return end
 
     H.log(MOD .. ": !ping from " .. steamId)
-    H.safeNotify(ctrl, "pong — mods are alive")
+    Msg.notify(ctrl, "hello.pong", "pong — mods are alive")
 end)
 
 H.log(MOD .. ": loaded")

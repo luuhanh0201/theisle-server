@@ -12,6 +12,8 @@ import { readLiveState } from './live.js';
 import { VoiceRoom } from './voice.js';
 import { groundPointsPath, refreshModFile } from './ai-zones.js';
 import { pruneAudit } from './audit.js';
+import { loadMessages, syncModTexts } from './messages.js';
+import { Announcer } from './announcer.js';
 
 const store = new Store();
 const rcon = new Rcon(config.rcon);
@@ -26,6 +28,11 @@ await pruneAudit().catch((error: unknown) => console.error('[audit] prune failed
 // The AIZones mod writes its status next to zones.json; Lua cannot create
 // the directory, so it has to exist before the first zones are saved.
 await mkdir(config.aiZonesRoot, { recursive: true }).catch((error: unknown) => console.error('[ai-zones] cannot create', config.aiZonesRoot, error));
+
+// The players' texts and announcement timings set on the panel; the mods'
+// file is rewritten so it matches them (a fresh server has none).
+await loadMessages();
+await syncModTexts().catch((error: unknown) => console.error('[messages] cannot write', config.messagesModPath, error));
 
 // Ground points gathered before (AI positions are only ever seen live).
 await store.groundPoints.load(groundPointsPath());
@@ -67,6 +74,12 @@ setInterval(() => {
     .then(() => refreshModFile(store.groundPoints))
     .catch((error: unknown) => console.error('[ai-zones] refresh failed:', error));
 }, 10 * 60_000);
+
+// Periodic announcements and the corpse wipe (tab Thông báo).
+const announcer = new Announcer({ rcon, online: () => store.online().length });
+setInterval(() => {
+  announcer.tick().catch((error: unknown) => console.error('[announcer] tick failed:', error));
+}, 5_000);
 
 // Daily restart schedule: check often enough that the countdown starts on time.
 setInterval(() => {

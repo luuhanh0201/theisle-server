@@ -4,6 +4,7 @@ import { config } from './config.js';
 import type { ServiceControl, UnitState, Verb } from './service.js';
 import { ConflictError, ValidationError } from './garage.js';
 import { audit } from './audit.js';
+import { currentMessages, leftVars, renderMessage } from './messages.js';
 
 /**
  * Start / stop / restart the game server from the panel, politely:
@@ -62,8 +63,6 @@ export interface PowerDeps {
   pollMs?: number;
 }
 
-/** Announce when this many seconds are left. */
-const MARKS = [900, 600, 300, 180, 120, 60, 30, 10];
 const SAVE_SETTLE_MS = 5000;
 const MAX_COUNTDOWN_S = 30 * 60;
 
@@ -75,22 +74,12 @@ function realSleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-/** Bilingual in-game notice: "Server sẽ khởi động lại sau 5 phút / Server restarting in 5 min." */
-function notice(kind: Verb, seconds: number | null, reason = ''): string {
-  const stop = kind === 'stop';
-  let vn: string;
-  let en: string;
-  if (seconds === null) {
-    vn = stop ? 'Server đang tắt' : 'Server đang khởi động lại';
-    en = stop ? 'Server shutting down now' : 'Server restarting now';
-  } else {
-    const m = Math.round(seconds / 60);
-    const vnLeft = seconds >= 60 ? `${m} phút` : `${seconds} giây`;
-    const enLeft = seconds >= 60 ? `${m} min` : `${seconds} s`;
-    vn = `Server sẽ ${stop ? 'tắt' : 'khởi động lại'} sau ${vnLeft}`;
-    en = `Server ${stop ? 'shutting down' : 'restarting'} in ${enLeft}`;
-  }
-  return `${vn} / ${en}.${reason ? ' ' + reason : ''}`;
+/** The in-game notice, as edited on the panel (messages.ts): null = turned off. */
+function notice(kind: Verb, seconds: number | null, reason = ''): string | null {
+  const which = kind === 'stop' ? 'stop' : 'restart';
+  return seconds === null
+    ? renderMessage(`server.${which}.now`)
+    : renderMessage(`server.${which}.countdown`, { ...leftVars(seconds), reason });
 }
 
 export class Power {
@@ -161,8 +150,8 @@ export class Power {
     return true;
   }
 
-  async #announce(text: string): Promise<void> {
-    if (!this.#d.rcon.enabled) return;
+  async #announce(text: string | null): Promise<void> {
+    if (text === null || !this.#d.rcon.enabled) return;
     try {
       await this.#d.rcon.run('announce', text);
     } catch (error) {
@@ -177,7 +166,8 @@ export class Power {
       if (op.step === 'countdown') {
         const total = Math.round((op.runAt - now()) / 1000);
         await this.#announce(notice(op.kind, total, op.reason));
-        for (const mark of MARKS) {
+        // When to announce: the panel's marks, read when the countdown starts.
+        for (const mark of currentMessages().countdownMarks) {
           if (mark >= total) continue;
           await sleep(op.runAt - mark * 1000 - now(), signal);
           await this.#announce(notice(op.kind, mark));
@@ -223,9 +213,7 @@ export class Power {
     } catch (error) {
       if (signal.aborted) {
         op.step = 'cancelled';
-        await this.#announce(op.kind === 'stop'
-          ? 'Đã huỷ tắt server / Shutdown cancelled.'
-          : 'Đã huỷ khởi động lại server / Restart cancelled.');
+        await this.#announce(renderMessage(op.kind === 'stop' ? 'server.stop.cancelled' : 'server.restart.cancelled'));
         await audit({ action: `server ${op.kind} cancelled`, detail: detailOf(op), ok: true });
       } else {
         op.step = 'failed';
@@ -344,7 +332,7 @@ export async function scheduleTick(power: Power, nowMs = Date.now()): Promise<vo
     try {
       power.request('restart', {
         countdownSeconds: Math.max(0, Math.round((at.getTime() - nowMs) / 1000)),
-        reason: `Khởi động lại định kỳ ${key.slice(11)}`,
+        reason: renderMessage('server.scheduledReason', { time: key.slice(11) }) ?? '',
         source: 'schedule',
       });
     } catch (error) {

@@ -23,6 +23,7 @@ end
 
 local H    = require("shared.isle.helpers")
 local json = require("shared.isle.json")
+local Msg  = require("shared.isle.messages")   -- texts editable on the admin panel
 
 local MOD = "PlayerCommands"
 local SETTINGS_PATH = "Mods/PlayerCommands/Saved/settings.json"
@@ -156,37 +157,37 @@ end
 local function doSlay(ctrl, steamId, settings)
     local left = cooldownLeft("slay", steamId, settings.slayCooldown)
     if left then
-        H.safeNotify(ctrl, "!slay: chờ thêm " .. fmtWait(left) .. ".")
+        Msg.notify(ctrl, "cmd.slay.cooldown", "!slay: chờ thêm {wait}.", { wait = fmtWait(left) })
         return
     end
     local pawn = H.livePawnFromCtrl(ctrl)
     if not pawn then
-        H.safeNotify(ctrl, "!slay: bạn chưa điều khiển dino nào.")
+        Msg.notify(ctrl, "cmd.slay.noDino", "!slay: bạn chưa điều khiển dino nào.")
         return
     end
     if H.try(MOD .. ": slay SetHealth(0)", function() pawn:SetHealth(0) end) then
         lastUse.slay[steamId] = os.time()
-        H.safeNotify(ctrl, "Dino của bạn đã chết. Chọn loài để spawn lại.")
+        Msg.notify(ctrl, "cmd.slay.done", "Dino của bạn đã chết. Chọn loài để spawn lại.")
     else
-        H.safeNotify(ctrl, "!slay không thực hiện được, thử lại sau.")
+        Msg.notify(ctrl, "cmd.slay.failed", "!slay không thực hiện được, thử lại sau.")
     end
 end
 
 local function doUnstuck(ctrl, steamId, settings)
     local left = cooldownLeft("unstuck", steamId, settings.unstuckCooldown)
     if left then
-        H.safeNotify(ctrl, "!unstuck: chờ thêm " .. fmtWait(left) .. ".")
+        Msg.notify(ctrl, "cmd.unstuck.cooldown", "!unstuck: chờ thêm {wait}.", { wait = fmtWait(left) })
         return
     end
     local pawn = H.livePawnFromCtrl(ctrl)
     if not pawn then
-        H.safeNotify(ctrl, "!unstuck: bạn chưa điều khiển dino nào.")
+        Msg.notify(ctrl, "cmd.unstuck.noDino", "!unstuck: bạn chưa điều khiển dino nào.")
         return
     end
     local here = locationOf(pawn)
     local target = here and unstuckTarget(steamId, here)
     if not target then
-        H.safeNotify(ctrl, "!unstuck: chưa có điểm an toàn trên mặt đất — đi bộ trên mặt đất vài giây rồi thử lại.")
+        Msg.notify(ctrl, "cmd.unstuck.noSafeSpot", "!unstuck: chưa có điểm an toàn trên mặt đất — đi bộ trên mặt đất vài giây rồi thử lại.")
         return
     end
     local ok, moved = H.try(MOD .. ": unstuck K2_SetActorLocation", function()
@@ -194,9 +195,9 @@ local function doUnstuck(ctrl, steamId, settings)
     end)
     if ok and moved ~= false then
         lastUse.unstuck[steamId] = os.time()
-        H.safeNotify(ctrl, string.format("Đã đưa bạn về điểm an toàn cách %.0f m.", dist(here, target) / 100))
+        Msg.notify(ctrl, "cmd.unstuck.done", "Đã đưa bạn về điểm an toàn cách {meters} m.", { meters = string.format("%.0f", dist(here, target) / 100) })
     else
-        H.safeNotify(ctrl, "!unstuck không thực hiện được, thử lại sau.")
+        Msg.notify(ctrl, "cmd.unstuck.failed", "!unstuck không thực hiện được, thử lại sau.")
     end
 end
 
@@ -214,12 +215,12 @@ end
 local function doPrime(ctrl)
     local pawn = H.livePawnFromCtrl(ctrl)
     if not pawn then
-        H.safeNotify(ctrl, "!prime: bạn chưa điều khiển dino nào.")
+        Msg.notify(ctrl, "cmd.prime.noDino", "!prime: bạn chưa điều khiển dino nào.")
         return
     end
     local isPrime = callBool(pawn, "IsPrimeElder")
     local eligible = callBool(pawn, "GetIsEligiblePrimeElder")
-    H.safeNotify(ctrl, string.format("Prime elder: %s · Đủ điều kiện lên prime: %s.", yesNo(isPrime), yesNo(eligible)))
+    Msg.notify(ctrl, "cmd.prime.info", "Prime elder: {prime} · Đủ điều kiện lên prime: {eligible}.", { prime = yesNo(isPrime), eligible = yesNo(eligible) })
 end
 
 local VITALS = {
@@ -234,7 +235,7 @@ local VITALS = {
 local function doStatus(ctrl)
     local pawn = H.livePawnFromCtrl(ctrl)
     if not pawn then
-        H.safeNotify(ctrl, "!status: bạn chưa điều khiển dino nào.")
+        Msg.notify(ctrl, "cmd.status.noDino", "!status: bạn chưa điều khiển dino nào.")
         return
     end
     local okS, species = pcall(function() return pawn:GetClass():GetFName():ToString() end)
@@ -263,7 +264,7 @@ H.onChat(function(ctrl, steamId, msg)
     if not handler then return end
     local settings = readSettings()
     if settings.enabled[cmd] == false then
-        H.safeNotify(ctrl, "!" .. cmd .. " đang bị tắt trên server này.")
+        Msg.notify(ctrl, "cmd.disabled", "!{command} đang bị tắt trên server này.", { command = cmd })
         return
     end
     handler(ctrl, steamId, settings)

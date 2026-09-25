@@ -37,6 +37,7 @@
 local H      = require("shared.isle.helpers")
 local Events = require("shared.isle.events")
 local json   = require("shared.isle.json")
+local Msg    = require("shared.isle.messages")
 
 local I = {}
 
@@ -139,11 +140,11 @@ local function kill(cmd)
 
         local ok = H.try("inbox: SetHealth(0)", function() pawn:SetHealth(0) end)
         if ok then
-            local msg = "An admin removed your dino."
             if type(cmd.reason) == "string" and cmd.reason ~= "" then
-                msg = msg .. " Reason: " .. cmd.reason
+                Msg.notify(c, "admin.killReason", "An admin removed your dino. Reason: {reason}", { reason = cmd.reason })
+            else
+                Msg.notify(c, "admin.kill", "An admin removed your dino.")
             end
-            H.safeNotify(c, msg)
         end
         result(cmd, ok, {
             species = species and tostring(species) or nil,
