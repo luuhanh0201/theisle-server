@@ -163,10 +163,11 @@ end
 -- the stomach (GetMaxHunger at this growth): every captured dino's carb,
 -- protein and lipid sat below it (live slots, 2026-09-26).
 local DIET = { "CarbValue", "ProteinValue", "LipidValue" }
-local function fillNutrients(pawn, pct)
+local function fillNutrients(pawn, pct, stomach)
     pct = tonumber(pct)
     if pct == nil or pct <= 0 then return end
-    local okMax, max = pcall(function() return pawn:GetMaxHunger() end)
+    local okMax, max = true, stomach
+    if max == nil then okMax, max = pcall(function() return pawn:GetMaxHunger() end) end
     if not (okMax and type(max) == "number" and max > 0) then
         H.logError("restore: GetMaxHunger unavailable — nutrients not filled")
         return
@@ -262,6 +263,20 @@ function R.apply(pawn, state, onDone)
     -- without it.
     local prime = state.isPrime
     if prime == nil and state.prime == true then prime = true end
+    -- A slot with no captured stomach (admin-made): SetGrowth brings health
+    -- and stamina to the new growth but NOT the stomach, which kept the
+    -- hatchling's until the player logged in again (a Rex at 37 % with 16.5
+    -- instead of ~125: it could not eat, 2026-09-26). Stomach / max health is
+    -- the species' own ratio at any growth: read it from the fresh dino here,
+    -- set the stomach from it after the growth.
+    local stomachRatio = nil
+    if state.maxHunger == nil then
+        local okH, mh = pcall(function() return pawn:GetMaxHunger() end)
+        local okP, mhp = pcall(function() return pawn:GetMaxHealth() end)
+        if okH and okP and type(mh) == "number" and type(mhp) == "number" and mh > 0 and mhp > 0 then
+            stomachRatio = mh / mhp
+        end
+    end
     set(pawn, "SetGrowth", state.growth)
     applyVitals(pawn, state)
     if prime ~= nil then
@@ -292,10 +307,22 @@ function R.apply(pawn, state, onDone)
         -- Step 5 — re-apply vitals. Rule 1: SetGrowth above wiped them.
         applyVitals(pawn, state)
 
-        -- Admin-made slots carry no captured stomach: fill it to the max the
-        -- game reports for this dino at this growth (read after SetGrowth).
+        -- The stomach for this growth (see stomachRatio above).
+        local stomach = nil
+        if stomachRatio ~= nil then
+            local okP, mhp = pcall(function() return pawn:GetMaxHealth() end)
+            if okP and type(mhp) == "number" and mhp > 0 then
+                stomach = stomachRatio * mhp
+                set(pawn, "SetMaxHunger", stomach)
+                H.log(string.format("restore: stomach set to %.1f for this growth (%.3f of max health %.0f)", stomach, stomachRatio, mhp))
+            end
+        end
+
+        -- Admin-made slots carry no captured stomach: fill it to the max
+        -- for this dino at this growth.
         if type(state.fill) == "table" and state.fill.stomachFull then
-            local okMax, max = pcall(function() return pawn:GetMaxHunger() end)
+            local okMax, max = true, stomach
+            if max == nil then okMax, max = pcall(function() return pawn:GetMaxHunger() end) end
             if okMax and type(max) == "number" and max > 0 then
                 set(pawn, "SetHunger", max)
             else
@@ -305,7 +332,7 @@ function R.apply(pawn, state, onDone)
         -- …and no captured nutrients either: `nutrientPct` % of each. Pushed
         -- empty, the grown dino starved of nutrients and lost a prime
         -- condition for good (a Pteranodon, 2026-09-26).
-        if type(state.fill) == "table" then fillNutrients(pawn, state.fill.nutrientPct) end
+        if type(state.fill) == "table" then fillNutrients(pawn, state.fill.nutrientPct, stomach) end
 
         -- Step 6 — elder replication stacks, the lineage-tier counter.
         if state.elderStacks ~= nil and state.elderStacks > 0 then

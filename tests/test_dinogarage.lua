@@ -402,6 +402,30 @@ check("nutrients: nutrientPct of the stomach each (not pushed empty)", filled.Ca
       and filled.ProteinValue == 1567.5 and filled.LipidValue == 1567.5 and filled.bMalnutrition == false, json.encode(filled))
 check("…and pushed", H.countCalls("SetNutrientsStruct") >= 1)
 
+print("\n-- 15b. an admin-made slot: the stomach for the NEW growth (SetGrowth left the hatchling's) --")
+Storage.put(STEAM, "rexgift", { classPath = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C", growth = 0.37,
+  createdBy = "admin", fill = { stomachFull = true, nutrientPct = 50 } })
+local rex = H.makePawn({ growth = 0.25, mutation = "None", gasVitals = true })
+rex.__props.MaxHunger = 16.5
+local grown = false
+rawset(rex, "GetMaxHealth", function() return grown and 367 or 50 end)
+rawset(rex, "SetGrowth", function(_, v) H.record("SetGrowth", v); grown = true end)   -- the stomach stays 16.5
+useCtrl(H.makeCtrl(STEAM, rex))
+H.calls = {}
+send("redeem", { slot = "rexgift" })
+H.advance(3100); H.advance(600)
+local maxSet, fed
+for _, cl in ipairs(H.calls) do
+  if cl.what == "SetMaxHunger" then maxSet = cl.args[1] end
+  if cl.what == "SetHunger" then fed = cl.args[1] end
+end
+local want = 16.5 / 50 * 367
+check("stomach set from the species' ratio at the new growth", maxSet and math.abs(maxSet - want) < 0.01, tostring(maxSet))
+check("filled to that stomach, not the hatchling's 16.5", fed and math.abs(fed - want) < 0.01, tostring(fed))
+local carb
+for _, cl in ipairs(H.calls) do if cl.what == "field:CarbValue" then carb = cl.args[1] end end
+check("nutrients from that stomach too", carb and math.abs(carb - want / 2) < 0.01, tostring(carb))
+
 print("\n-- 16. nutrients are kept by their REAL field names --")
 for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
 writeSettings('{"cooldown":0,"storeCountdown":30}')
