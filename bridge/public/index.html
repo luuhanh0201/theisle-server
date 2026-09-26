@@ -521,6 +521,8 @@
   .subtabs a:hover { color: var(--text); }
   .subtabs a.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
   .subtabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dmg); }
+  .subtabs-inner { border: 0; background: none; padding: 0; margin: 0 0 14px; gap: 6px; }
+  .ops-sec { margin-top: 26px; scroll-margin-top: 16px; }
   .rd-verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
   .rd-verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
   .rd-verdict.ready .led { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
@@ -1405,7 +1407,8 @@
       <div class="page-head"><div><h1>Server</h1><p id="srv-sub">Bật, tắt, khởi động lại, thiết lập và cấu hình game server.</p></div></div>
       <nav class="subtabs" id="srv-subtabs" aria-label="Mục của trang Server"></nav>
 
-      <div data-sub-panel="status">
+      <div data-sub-panel="ops">
+      <div id="ops-status">
           <section class="card"><div class="card-body">
             <div id="srv-phase"></div>
             <div class="facts" id="srv-facts"></div>
@@ -1427,7 +1430,7 @@
           </section>
       </div>
 
-      <div data-sub-panel="schedule" hidden>
+      <div id="ops-schedule" class="ops-sec">
           <section class="card">
             <div class="card-head"><h2>Khởi động lại định kỳ</h2><span class="sub" id="sch-next"></span></div>
             <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
@@ -1449,7 +1452,7 @@
           </section>
       </div>
 
-      <div data-sub-panel="rcon" hidden>
+      <div id="ops-rcon" class="ops-sec">
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚡</span>
         <h2>RCON trực tiếp</h2><span class="sub">có hiệu lực ngay, không cần khởi động lại — mất khi server khởi động lại</span></div>
       <section class="card"><div class="card-body">
@@ -1499,9 +1502,12 @@
       </div></section>
       </div>
 
+      </div>
+
       <div data-sub-panel="cfg" hidden>
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚙</span>
         <h2 id="cfg-title">Cấu hình</h2><span class="sub">ghi vào Game.ini — có hiệu lực từ lần khởi động sau</span></div>
+      <nav class="subtabs subtabs-inner" id="cfg-groups" aria-label="Nhóm cấu hình game"></nav>
       <section class="card"><div class="card-body">
         <div id="cfg-pending" class="banner tone-dmg" hidden style="margin-bottom:14px">Cấu hình đã đổi sau lần khởi động gần nhất — cần <b>khởi động lại</b> để có hiệu lực.</div>
         <div id="cfg-error" class="warnbox" hidden style="margin-bottom:14px"></div>
@@ -5214,41 +5220,51 @@ function classOptions(selected) {
     ...creator.catalog.map((c) => dino(c.species)), ...selected]);
   return [...names].filter((n) => /^[A-Za-z0-9_]{2,64}$/.test(n)).sort();
 }
-// --- Server sub-tabs ------------------------------------------------------------
-// #server/<sub>: operation panels, then one tab per config group (cfg:<group>).
-// The config form is ONE form shown a group at a time, so edits in several
-// groups survive switching tabs and are saved together.
-const OPS_SUBS = [['status', 'Trạng thái'], ['schedule', 'Lịch khởi động lại'], ['rcon', 'RCON trực tiếp']];
-// The mods' own settings moved to their blocks (Gara, Thế giới, Tính năng mod, Quản trị).
-const EXTRA_CFG_SUBS = [];
+// --- Server sub-pages -----------------------------------------------------------
+// Two pages: #server/ops (Vận hành: status, restart schedule, RCON, one under
+// the other) and #server/cfg:<group> (Cấu hình game: Game.ini, a group at a
+// time). The config form is ONE form shown a group at a time, so edits in
+// several groups survive switching groups and are saved together.
+// Old addresses (#server/status, /schedule, /rcon) open Vận hành at that part.
+const SRV_SUBS = [['ops', 'Vận hành'], ['cfg', 'Cấu hình game']];
+const OPS_PARTS = ['status', 'schedule', 'rcon'];
+let lastCfgGroup = null;
 function currentSub() {
   const h = location.hash.slice(1);
-  const sub = h.startsWith('server/') ? decodeURIComponent(h.slice('server/'.length)) : 'status';
+  const sub = h.startsWith('server/') ? decodeURIComponent(h.slice('server/'.length)) : 'ops';
   const cfgGroups = Object.keys(cfgData?.groups ?? {});
-  if ([...OPS_SUBS, ...EXTRA_CFG_SUBS].some(([id]) => id === sub)) return sub;
+  if (sub === 'cfg' || sub === 'cfg:') return `cfg:${lastCfgGroup ?? cfgGroups[0] ?? ''}`;
   if (sub.startsWith('cfg:') && (cfgGroups.length === 0 || cfgGroups.includes(sub.slice(4)))) return sub;
-  return 'status';
+  return 'ops';
 }
 function renderSubtabs() {
   const cur = currentSub();
-  const btn = ([id, label]) => `<a href="#server/${encodeURIComponent(id)}" class="${id === cur ? 'on' : ''}">${esc(label)}${id.startsWith('cfg:') && cfgDirty && dirtyGroups.has(id.slice(4)) ? ' <span class="dot" title="Có thay đổi chưa lưu"></span>' : ''}</a>`;
-  // Game.ini groups, then the garage mod's own settings (a file of its own).
-  const cfgTabs = [...Object.entries(cfgData?.groups ?? {}).map(([g, t]) => [`cfg:${g}`, t]), ...EXTRA_CFG_SUBS];
-  $('srv-subtabs').innerHTML = `<div class="subtab-group"><span class="subtab-label">Vận hành</span>${OPS_SUBS.map(btn).join('')}</div>`
-    + (cfgTabs.length ? `<div class="subtab-group"><span class="subtab-label">Cấu hình game</span>${cfgTabs.map(btn).join('')}</div>` : '');
+  const page = cur.startsWith('cfg:') ? 'cfg' : 'ops';
+  const href = (id) => (id === 'cfg' ? `#server/${encodeURIComponent(`cfg:${lastCfgGroup ?? Object.keys(cfgData?.groups ?? {})[0] ?? ''}`)}` : '#server/ops');
+  const dot = ' <span class="dot" title="Có thay đổi chưa lưu"></span>';
+  const dirty = (id) => (id === 'cfg' ? cfgDirty : schDraft !== null);
+  $('srv-subtabs').innerHTML = SRV_SUBS.map(([id, label]) => `<a href="${href(id)}" class="${id === page ? 'on' : ''}">${esc(label)}${dirty(id) ? dot : ''}</a>`).join('');
+  $('cfg-groups').innerHTML = Object.entries(cfgData?.groups ?? {}).map(([g, t]) => `<a href="#server/${encodeURIComponent(`cfg:${g}`)}" class="${`cfg:${g}` === cur ? 'on' : ''}">${esc(t)}`
+    + `${cfgDirty && dirtyGroups.has(g) ? dot : ''}</a>`).join('');
 }
 function showSub() {
   const sub = currentSub();
-  const panel = sub.startsWith('cfg:') ? 'cfg' : sub;
+  const panel = sub.startsWith('cfg:') ? 'cfg' : 'ops';
   for (const el of document.querySelectorAll('[data-view="server"] [data-sub-panel]')) el.hidden = el.dataset.subPanel !== panel;
   if (panel === 'cfg') {
     const group = sub.slice(4);
+    if (group) lastCfgGroup = group;
     for (const g of document.querySelectorAll('#cfg-fields .cfg-group')) g.hidden = g.dataset.group !== group;
-    $('cfg-title').textContent = `Cấu hình · ${cfgData?.groups?.[group] ?? ''}`;
+    $('cfg-title').textContent = `Cấu hình game · ${cfgData?.groups?.[group] ?? ''}`;
   }
-  for (const a of document.querySelectorAll('#srv-subtabs a')) {
-    a.classList.toggle('on', a.getAttribute('href') === `#server/${encodeURIComponent(sub)}`);
-  }
+  const page = panel;
+  for (const a of document.querySelectorAll('#srv-subtabs a')) a.classList.toggle('on', a.getAttribute('href').startsWith(page === 'cfg' ? '#server/cfg' : '#server/ops'));
+  for (const a of document.querySelectorAll('#cfg-groups a')) a.classList.toggle('on', a.getAttribute('href') === `#server/${encodeURIComponent(sub)}`);
+}
+/** An old address (#server/schedule…) names a part of Vận hành: go there once the page is shown. */
+function scrollToOpsPart() {
+  const part = location.hash.slice(1).split('/')[1];
+  if (currentTab() === 'server' && OPS_PARTS.includes(part) && part !== 'status') $(`ops-${part}`)?.scrollIntoView({ block: 'start' });
 }
 
 const STEAM_LIST = new Set(['AdminsSteamIDs', 'WhitelistIDs', 'VIPs']);
@@ -5469,7 +5485,7 @@ $('perf-range').addEventListener('click', (e) => {
   for (const x of $('perf-range').querySelectorAll('button')) x.classList.toggle('on', x === b);
   refreshPerf(true);
 });
-window.addEventListener('resize', () => { if (perfData && currentSub() === 'perf') renderPerf(); });
+window.addEventListener('resize', () => { if (perfData && currentTab() === 'overview') renderPerf(); });
 
 // Evrima's server ticks at ~30; below 20 players notice rubber-banding, below 12 it is bad.
 function fpsState(fps) {
@@ -5833,7 +5849,7 @@ const getJson = (url) => fetch(url).then((r) => {
 // [block, sub-page (null = the whole block), is it changed?, its save, name]
 const DIRTY = [
   ['server', 'cfg', () => cfgDirty, () => $('cfg-form').requestSubmit(), 'Cấu hình game'],
-  ['server', 'schedule', () => schDraft !== null, () => $('sch-save').click(), 'Lịch khởi động lại'],
+  ['server', 'ops', () => schDraft !== null, () => $('sch-save').click(), 'Lịch khởi động lại'],
   ['garage', 'settings', () => gsDirty, () => $('gs-save').click(), 'Cài đặt gara'],
   ['mods', 'commands', () => pcDirty, () => $('pc-save').click(), 'Lệnh chat'],
   ['mods', 'ptera', () => ptDirty, () => $('pt-save').click(), 'Ptera gắp'],
@@ -5849,7 +5865,7 @@ function pageDirty(view, sub) { return dirtyNow().some(([v, s2]) => v === view &
 /** Where the page is now: [block, sub-page] as DIRTY names them. */
 function herePage() {
   const tab = currentTab();
-  if (tab === 'server') { const sub = currentSub(); return ['server', sub.startsWith('cfg:') ? 'cfg' : sub]; }
+  if (tab === 'server') return ['server', currentSub().startsWith('cfg:') ? 'cfg' : 'ops'];
   return [tab, SUBS[tab] ? currentSubOf(tab) : null];
 }
 function renderUnsaved() {
@@ -5879,6 +5895,11 @@ setInterval(() => {
     const nav = document.querySelector(`[data-subnav="${tab}"]`);
     const want = SUBS[tab].map(([id]) => (pageDirty(tab, id) ? '1' : '0')).join('');
     if (nav && nav.dataset.dots !== want) { nav.dataset.dots = want; renderSubnav(tab); }
+  }
+  if (tab === 'server') {
+    const nav = $('srv-subtabs');
+    const want = `${cfgDirty ? 1 : 0}${schDraft !== null ? 1 : 0}`;
+    if (nav.dataset.dots !== want) { nav.dataset.dots = want; renderSubtabs(); showSub(); }
   }
 }, 1000);
 // Leaving the panel (reload, close) with changes not saved: the browser asks first.
@@ -6003,6 +6024,7 @@ function showTab() {
     a.classList.toggle('active', a.dataset.tab === tab || (tab === 'player' && a.dataset.tab === 'players'));
   }
   window.scrollTo(0, 0);
+  scrollToOpsPart();
   // #garage/<SteamID>: the creator, filled in for that player.
   const who = /^garage\/(\d{17})$/.exec(h);
   if (who) {
