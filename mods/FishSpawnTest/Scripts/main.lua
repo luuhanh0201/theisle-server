@@ -1,4 +1,6 @@
--- FishSpawnTest — TEST SERVER ONLY (theisle-test, not in the live mods.txt).
+-- FishSpawnTest — on the LIVE server now (the test server is gone, 2026-09-26),
+-- but only around the owner's two admin accounts, and only while one of them
+-- SWIMS (CharacterMovement:IsSwimming) — nobody else's game is touched.
 --
 -- Can a mod spawn the game's fish, as AIZones spawns boars? FishFind step 3
 -- (2026-09-26) gave the classes: /Game/TheIsle/Core/AI/Characters/Fish/BP_*.
@@ -38,6 +40,7 @@ local DIR = "Mods/AIZones/Saved/"
 local FLAG = DIR .. "fishspawn6.flag"
 local OUT = DIR .. "fishspawn6.txt"
 local WAIT_FOR_PLAYER = true
+local ADMINS = { ["76561199248426579"] = true, ["76561199320940985"] = true }
 local USE_CONTROLLER = false
 local PAWN = "/Game/TheIsle/Core/AI/Characters/Fish/BP_Catfish.BP_Catfish_C"
 local CTRL = "/Script/TheIsle.TIAIFishController"
@@ -127,14 +130,6 @@ local function spawn(AT)
     end
 end
 
--- Only where the marker file exists (made on the test server only).
-local marker = io.open("Mods/FishSpawnTest/TEST_SERVER", "r")
-if not marker then
-    H.log(MOD .. ": not the test server (no Mods/FishSpawnTest/TEST_SERVER) — nothing to do")
-    return
-end
-marker:close()
-
 local already = io.open(FLAG, "r")
 if already then
     already:close()
@@ -145,14 +140,18 @@ else
         if started then return end
         local at = nil
         H.forEachPlayer(function(ctrl)
+            if at ~= nil or not ADMINS[H.safeSteamId(ctrl) or ""] then return end
             local pawn = H.livePawnFromCtrl(ctrl)
+            if not pawn then return end
+            local okS, swim = pcall(function() return pawn.CharacterMovement:IsSwimming() end)
+            if not (okS and swim == true) then return end
             local okL, v = pcall(function() return pawn:K2_GetActorLocation() end)
-            if at == nil and okL and v then at = { X = v.X, Y = v.Y, Z = v.Z } end
+            if okL and v then at = { X = v.X, Y = v.Y, Z = v.Z } end
         end)
         if at == nil then return end
         started = true
         out("player at (%.0f, %.0f, %.0f)", at.X, at.Y, at.Z)
         H.try(MOD .. ": spawn", function() spawn(at) end)
     end)
-    H.log(MOD .. ": loaded — spawns 3 catfish around the first player online (TEST SERVER)")
+    H.log(MOD .. ": loaded — spawns 3 catfish around an admin account once it swims")
 end
