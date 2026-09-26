@@ -409,6 +409,14 @@ writeZones({ enabled = true, globalMax = 60, ignoreOccupants = {}, zones = { str
 reader.fn()
 step(60)
 check("…and once it is not ignored: a turn", spawns() == 1, tostring(spawns()))
+fresh()
+local lake = {}
+for k, v in pairs(strip) do lake[k] = v end
+lake.water = true
+writeZones({ enabled = true, globalMax = 60, ignoreOccupants = { "BP_Dilo_C" }, zones = { lake } })
+reader.fn()
+step(60)
+check("a water zone: the ignored species fills it (a crocodile at a lake)", spawns() == 1, tostring(spawns()))
 
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))

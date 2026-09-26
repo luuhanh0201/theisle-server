@@ -1107,6 +1107,7 @@
                   <label>…đến (con)<input id="az-ptmax" type="number" min="1" max="5"></label>
                   <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
                 </div></details>
+              <label class="az-row"><input type="checkbox" id="az-water"> <span>Vùng nước <span class="muted">— ven hồ/sông: cá sấu (và loài "không kích vùng") cũng kích vùng này</span></span></label>
               <label class="az-row"><input type="checkbox" id="az-small"> <span>Chỉ dino nhỏ <span class="muted">— dino lớn bị cảnh báo rồi ong đốt (luật ở tab <b>Dino nhỏ</b>)</span></span></label>
               <details class="az-sec"><summary>Nâng cao</summary>
                 <div class="az-grid">
@@ -3088,7 +3089,7 @@ function drawMap() {
       const [x, y] = scr(f.at);
       const count = st && typeof st.count === 'number' ? ` · ${st.count}/${st.limit ?? zn.max}` : '';
       drawText(ctx, `${zn.name}${count}`, x, y - 9, { font: '800 12px Inter, system-ui, sans-serif', color: on ? '#ffedd5' : '#e2e8f0' });
-      drawText(ctx, `${zoneSize(zn)}${on ? '' : ' · tắt'}${zn.smallOnly && gd.draft?.enabled ? ' · 🐝 dino nhỏ' : ''}`, x, y + 7, { font: '600 10.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
+      drawText(ctx, `${zoneSize(zn)}${on ? '' : ' · tắt'}${zn.water ? ' · 💧 nước' : ''}${zn.smallOnly && gd.draft?.enabled ? ' · 🐝 dino nhỏ' : ''}`, x, y + 7, { font: '600 10.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
       if (sel && !az.drawing) {
         ctx.beginPath(); ctx.moveTo(x - 6, y + 20); ctx.lineTo(x + 6, y + 20); ctx.moveTo(x, y + 14); ctx.lineTo(x, y + 26);
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
@@ -3588,6 +3589,7 @@ function renderAiZoneForm() {
   set('az-name', zn.name);
   $('az-zenabled').checked = zn.enabled;
   $('az-small').checked = zn.smallOnly === true;
+  $('az-water').checked = zn.water === true;
   set('az-radius', zn.radiusM);
   set('az-radius2', zn.radius2M ?? '');
   set('az-angle', zn.angleDeg ?? 0);
@@ -3719,6 +3721,7 @@ $('az-edit').addEventListener('input', (e) => {
     zn.name = $('az-name').value;
     zn.enabled = $('az-zenabled').checked;
     zn.smallOnly = $('az-small').checked;
+    zn.water = $('az-water').checked;
     if (zn.shape !== 'polygon') zn.radiusM = n('az-radius');
     if (zn.shape === 'ellipse') { zn.radius2M = n('az-radius2'); zn.angleDeg = n('az-angle'); }
     zn.min = n('az-min'); zn.max = n('az-max'); zn.perTurnMin = n('az-ptmin'); zn.perTurnMax = n('az-ptmax'); zn.everySec = n('az-every'); zn.spacingM = n('az-spacing');

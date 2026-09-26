@@ -56,6 +56,8 @@ export interface AiZone {
   growthMax: number;
   /** Small dinos only: a player grown past its species' limit is warned, then stung (zone-guard.ts). */
   smallOnly: boolean;
+  /** A water zone (a lake, a river bank): the species in ignoreOccupants (a crocodile) fill it too. */
+  water: boolean;
 }
 
 export interface AiZonesSettings {
@@ -143,6 +145,7 @@ function validateZone(raw: unknown, i: number): AiZone {
     everySec: int(r['everySec'], 10, 3600, `${at}: everySec`),
     growthMin, growthMax,
     smallOnly: r['smallOnly'] === true,
+    water: r['water'] === true,
   };
 }
 
@@ -198,6 +201,7 @@ export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
       // The circle around the shape, and the shape itself when it is not a circle.
       radius: boundRadiusCm(z),
       ...(zoneOutline(z) ? { poly: zoneOutline(z) } : {}),
+      water: z.water === true,
       min: z.min, max: z.max, perTurnMin: z.perTurnMin, perTurnMax: z.perTurnMax, every: z.everySec,
       spacing: z.spacingM * 100,
       growthMin: z.growthMin, growthMax: z.growthMax,

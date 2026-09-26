@@ -318,7 +318,8 @@ local function tick()
                 and type(z.species) == "table" and #z.species > 0 then
             local radius = num(z.radius, 1000, 2000000, 20000)
             for _, p in ipairs(players) do
-                if not p.passive and inZone(z, radius, p) then zs.occupied = true; break end
+                -- A water zone (z.water) is filled by anyone, the ignored species too (a crocodile at a lake).
+                if (z.water == true or not p.passive) and inZone(z, radius, p) then zs.occupied = true; break end
             end
             active[#active + 1] = z
         end
