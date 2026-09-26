@@ -46,6 +46,9 @@ export const config = {
   /** Flora's Saved/ directory: the mod writes flora.json (the island's real plants) there. */
   floraRoot: env('FLORA_ROOT', join(garageRoot, '..', '..', 'Flora', 'Saved')),
 
+  /** FishControl's Saved/ directory: settings.json in, fish.json (live census) out. */
+  fishRoot: env('FISH_ROOT', join(garageRoot, '..', '..', 'FishControl', 'Saved')),
+
   /** PteraCarry's Saved/ directory: the panel writes its settings.json there. */
   pteraRoot: env('PTERA_ROOT', join(garageRoot, '..', '..', 'PteraCarry', 'Saved')),
 

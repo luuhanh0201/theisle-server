@@ -31,6 +31,7 @@ import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
 import { readFlora } from './flora.js';
 import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
+import { FISH_SPECIES, currentDisallowed, readFishCensus, readFishSettings, saveFish } from './fish-settings.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
@@ -314,6 +315,7 @@ async function handlePanel(
       (path === '/api/messages' && req.method === 'PUT') ||
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
+      (path === '/api/fish-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
       ((path === '/api/ai-reset' || path === '/api/ai-reset/cancel') && req.method === 'POST');
     if (!allowed) {
@@ -416,6 +418,18 @@ async function handlePanel(
         ok: after.live === null || after.live === body.on,
       });
       sendJson(res, 200, after);
+      return;
+    }
+
+    if (path === '/api/fish-settings') {
+      const before = await readFishSettings();
+      const saved = await saveFish(await readJsonBody(req), rcon);
+      await audit({
+        action: 'fish settings saved',
+        detail: `${describeChanges({ ...before }, { ...saved.settings }) || 'không đổi gì'} · DisallowedAIClasses: ${saved.disallowed.join(', ') || '(trống)'} · RCON: ${saved.rcon}`,
+        ok: true,
+      });
+      sendJson(res, 200, saved);
       return;
     }
 
@@ -708,6 +722,10 @@ async function handlePanel(
     }
     case '/api/ai-reset': {
       sendJson(res, 200, ctx.aiReset ? ctx.aiReset.status() : { current: null, last: null });
+      return;
+    }
+    case '/api/fish-settings': {
+      sendJson(res, 200, { settings: await readFishSettings(), species: FISH_SPECIES, census: await readFishCensus(), disallowed: await currentDisallowed() });
       return;
     }
     case '/api/flora-settings': {

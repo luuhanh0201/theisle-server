@@ -33,6 +33,7 @@ await pruneAudit().catch((error: unknown) => console.error('[audit] prune failed
 await mkdir(config.aiZonesRoot, { recursive: true }).catch((error: unknown) => console.error('[ai-zones] cannot create', config.aiZonesRoot, error));
 // Flora writes its export there, and Lua cannot create a directory either.
 await mkdir(config.floraRoot, { recursive: true }).catch((error: unknown) => console.error('[flora] cannot create', config.floraRoot, error));
+await mkdir(config.fishRoot, { recursive: true }).catch((error: unknown) => console.error('[fish] cannot create', config.fishRoot, error));
 
 // The players' texts and announcement timings set on the panel; the mods'
 // file is rewritten so it matches them (a fresh server has none).
