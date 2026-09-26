@@ -477,7 +477,7 @@
   .check-grid label { display: flex; align-items: center; gap: 8px; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text); font-weight: 600; cursor: pointer; font-size: 13px; }
   .check-grid input { width: 15px; height: 15px; accent-color: var(--accent-2); }
   .cfg-group { padding: 2px 0; }
-  .subtabs { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 0 0 18px; padding: 10px 12px; border: 1px solid var(--border);
+  .subtabs { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px 18px; margin: 0 0 18px; padding: 10px 12px; border: 1px solid var(--border);
     border-radius: var(--radius); background: var(--surface); }
   .subtab-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .subtab-label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
@@ -587,6 +587,16 @@
   .audit-pager button { min-width: 34px; }
   .audit-pager button.on { background: var(--accent-2, #10b981); color: #fff; border-color: transparent; }
   .audit-pager .muted { margin-right: auto; }
+  .unsaved-bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50; max-width: calc(100% - 32px);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; border-radius: 12px;
+    background: var(--surface); border: 1px solid #fb923c; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: 13px; }
+  .unsaved-bar a { color: #fb923c; }
+  .world-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .world-card ul { margin: 0 0 12px; padding-left: 18px; line-height: 1.7; font-size: 13.5px; }
+  .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ov-alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .ov-alerts .banner { display: flex; align-items: center; gap: 10px; }
+  .ov-alerts .banner a { margin-left: auto; }
   .msg-timing { display: flex; flex-direction: column; gap: 14px; }
   .msg-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13px; }
   .msg-line > label { margin: 0; min-width: 230px; font-weight: 600; color: var(--text); }
@@ -768,37 +778,40 @@
   <main>
     <!-- Tổng quan -->
     <div data-view="overview">
-      <div class="page-head">
-        <div><h1>Tổng quan</h1><p>Mọi thứ đang diễn ra trên server, cập nhật mỗi 2 giây.</p></div>
-      </div>
+      <div class="page-head"><div><h1>Tổng quan</h1><p>Tình trạng server, hiệu năng và mọi diễn biến — cập nhật mỗi 2 giây.</p></div></div>
       <div class="kpis" id="kpis"></div>
-      <details class="notice">
-        <summary><svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-          Giới hạn của game — số liệu nào có thể thiếu</summary>
-        <p>Chỉ đếm được damage do người chơi đánh trực tiếp người chơi. Ngã, chết đuối, chảy máu và damage
-          từ AI không sinh hook nào trong game nên <b>không thể ghi nhận</b>.</p>
-        <p>Chết, spawn, phiên chơi và mốc growth được suy ra từ trạng thái giữa hai lần chụp (mỗi 5 giây),
-          nên có thể trễ tới 5s và đôi khi không quy được ai là người giết.</p>
-      </details>
-      <div class="grid split">
+      <div class="ov-alerts" id="ov-alerts"></div>
         <section class="card">
-          <div class="card-head"><h2>Người chơi</h2><span class="sub" id="players-sub"></span></div>
-          <div class="card-body table-wrap">
-            <table>
-              <thead><tr>
-                <th>Người chơi</th><th>HP</th><th class="hide-sm">Growth</th><th>K / D</th>
-                <th class="hide-sm">Damage</th><th class="hide-sm">Giờ chơi</th>
-              </tr></thead>
-              <tbody id="players"></tbody>
-            </table>
+          <div class="card-head perf-head"><h2>Hiệu năng server</h2>
+            <span class="sub">ServerFPS (tick của game), CPU và RAM theo thời gian — đo mỗi 10 giây, giữ 7 ngày</span>
+            <div class="seg" id="perf-range" role="group" aria-label="Khoảng thời gian" style="margin-left:auto">
+              <button type="button" data-range="1h">1 giờ</button><button type="button" data-range="6h" class="on">6 giờ</button>
+              <button type="button" data-range="24h">24 giờ</button><button type="button" data-range="7d">7 ngày</button>
+            </div></div>
+          <div class="card-body">
+            <div class="perf-tiles" id="perf-tiles"></div>
+            <div class="perf-charts" id="perf-charts"></div>
+            <details style="margin-top:12px"><summary class="muted" style="cursor:pointer;font-size:12.5px">Xem số liệu dạng bảng</summary>
+              <div class="table-wrap" style="max-height:320px;overflow:auto;margin-top:8px"><table id="perf-table"></table></div></details>
           </div>
         </section>
+        <section class="card" style="margin-top:18px">
+          <div class="card-head"><h2>Sức chứa theo số người online</h2>
+            <span class="sub">server đã chạy thế nào ở từng mức người chơi (7 ngày gần nhất) — FPS thấp là mức 5 % tệ nhất</span></div>
+          <div class="card-body table-wrap"><table class="cap-table" id="perf-capacity"></table>
+            <p class="step-hint" style="margin-top:10px" id="perf-cap-hint"></p></div>
+        </section>
+      <div class="grid split" style="margin-top:18px">
         <section class="card">
           <div class="card-head"><h2>Diễn biến</h2></div>
           <div class="card-body">
             <div class="chips" id="feed-filter" style="margin-bottom:10px"></div>
             <ul class="feed" id="feed"></ul>
           </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>Thao tác nhanh</h2></div>
+          <div class="card-body quick" id="ov-quick"></div>
         </section>
       </div>
     </div>
@@ -839,15 +852,41 @@
       </div></section>
     </div>
 
-    <!-- Killfeed -->
-    <div data-view="killfeed" hidden>
-      <div class="page-head"><div><h1>Killfeed</h1><p>Mọi cái chết, kèm người giết, loài, growth và vị trí.</p></div></div>
-      <section class="card"><div class="card-body"><ul class="feed tall" id="killfeed"></ul></div></section>
-    </div>
+    <!-- Người chơi -->
+    <div data-view="players" hidden>
+      <div class="page-head"><div><h1>Người chơi</h1><p>Ai đang chơi, ai giết ai, bảng xếp hạng và chat trong game.</p></div></div>
+      <nav class="subtabs" data-subnav="players" aria-label="Mục của Người chơi"></nav>
 
-    <!-- Xếp hạng -->
-    <div data-view="leaderboard" hidden>
-      <div class="page-head"><div><h1>Xếp hạng</h1><p>Tính từ toàn bộ log hiện có trên server.</p></div></div>
+      <div data-sub="players:list">
+      <details class="notice">
+        <summary><svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          Giới hạn của game — số liệu nào có thể thiếu</summary>
+        <p>Chỉ đếm được damage do người chơi đánh trực tiếp người chơi. Ngã, chết đuối, chảy máu và damage
+          từ AI không sinh hook nào trong game nên <b>không thể ghi nhận</b>.</p>
+        <p>Chết, spawn, phiên chơi và mốc growth được suy ra từ trạng thái giữa hai lần chụp (mỗi 5 giây),
+          nên có thể trễ tới 5s và đôi khi không quy được ai là người giết.</p>
+      </details>
+        <section class="card">
+          <div class="card-head"><h2>Người chơi</h2><span class="sub" id="players-sub"></span></div>
+          <div class="card-body table-wrap">
+            <table>
+              <thead><tr>
+                <th>Người chơi</th><th>HP</th><th class="hide-sm">Growth</th><th>K / D</th>
+                <th class="hide-sm">Damage</th><th class="hide-sm">Giờ chơi</th>
+              </tr></thead>
+              <tbody id="players"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div data-sub="players:killfeed" hidden>
+
+      <section class="card"><div class="card-body"><ul class="feed tall" id="killfeed"></ul></div></section>
+      </div>
+
+      <div data-sub="players:leaderboard" hidden>
+
       <div class="grid boards" id="boards"></div>
       <section class="card" style="margin-top:18px">
         <div class="card-head"><h2>Con mồi lớn nhất theo loài</h2></div>
@@ -858,6 +897,13 @@
           </table>
         </div>
       </section>
+      </div>
+
+      <div data-sub="players:chat" hidden>
+
+      <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
+      </div>
+
     </div>
 
     <!-- Bản đồ -->
@@ -984,7 +1030,7 @@
             </div>
             <details class="howto"><summary>Cách dùng</summary>
               <p>Game không cho xoá AI từ mod (xoá là crash server), nên AI bị <b>giết</b> rồi dọn xác bằng lệnh của game; game và
-                các vùng tự sinh AI mới. Dino của người chơi (kể cả con offline) không bị đụng tới. Thông báo sửa ở tab Thông báo.</p>
+                các vùng tự sinh AI mới. Dino của người chơi (kể cả con offline) không bị đụng tới. Nội dung thông báo sửa ở <a href="#mods/messages">Tính năng mod → Thông báo</a>.</p>
             </details>
           </div>
 
@@ -998,241 +1044,16 @@
       </div>
     </div>
 
-    <!-- Chat -->
-    <div data-view="chat" hidden>
-      <div class="page-head"><div><h1>Chat</h1><p>Toàn bộ chat trong game, kể cả các lệnh <span class="mono">!</span>.</p></div></div>
-      <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
-    </div>
+    <!-- Thế giới -->
+    <div data-view="world" hidden>
+      <div class="page-head"><div><h1>Thế giới</h1><p>AI, di cư, ngày đêm, thực vật và cá trên đảo — tóm tắt, và nơi chỉnh từng thứ.</p></div></div>
+      <nav class="subtabs" data-subnav="world" aria-label="Mục của Thế giới"></nav>
 
-    <!-- Thông báo -->
-    <div data-view="messages" hidden>
-      <div class="page-head"><div><h1>Thông báo</h1><p>Mọi tin server gửi cho người chơi: sửa nội dung, tắt từng tin, đặt tần suất đếm ngược, thông báo định kỳ và dọn xác.</p></div></div>
-      <section class="card">
-        <div class="card-head"><h2>Tần suất</h2><span class="sub">chỉ gửi khi có người đang chơi</span></div>
-        <div class="card-body msg-timing">
-          <div class="msg-line"><label for="msg-marks">Mốc đếm ngược khi khởi động lại / tắt server</label>
-            <input id="msg-marks" placeholder="15p, 10p, 5p, 3p, 2p, 1p, 30s, 10s">
-            <div class="step-hint" style="flex-basis:100%">Phút (p) hoặc giây (s), cách nhau bằng dấu phẩy. Server báo ở mỗi mốc còn lại; thời gian đếm ngược tổng chọn lúc bấm khởi động lại (tab Server).</div></div>
-          <div class="msg-line"><label for="msg-cw-every">Tự dọn xác mỗi (phút)</label><input id="msg-cw-every" type="number" min="0" max="1440" step="5">
-            <label for="msg-cw-warn" style="min-width:0;font-weight:500">báo trước (giây)</label><input id="msg-cw-warn" type="number" min="0" max="600" step="10">
-            <div class="step-hint" style="flex-basis:100%">0 = tắt. Dùng lệnh RCON dọn xác của game; khi bấm "Dọn xác" bằng tay ở tab Server cũng báo "Đã dọn xác".</div></div>
-          <div>
-            <div class="group-label">Thông báo định kỳ</div>
-            <ul class="msg-periodic" id="msg-periodic"></ul>
-            <button type="button" class="btn-soft sm" id="msg-periodic-add" style="margin-top:8px">+ Thêm thông báo định kỳ</button>
-          </div>
-        </div>
-      </section>
-      <section class="card">
-        <div class="card-head"><h2>Nội dung</h2><span class="sub" id="msg-count"></span>
-          <input type="search" id="msg-q" placeholder="Tìm tin…" style="margin-left:auto;max-width:220px"></div>
-        <div class="card-body">
-          <div class="step-hint" style="margin-bottom:10px">Bỏ tích <b>Gửi</b> để tắt hẳn một tin. <span class="mono">{tên}</span> được điền khi gửi — bấm để chèn.
-            Tin của mod đổi trong vòng vài giây, không cần restart. Ban/kick làm trong admin panel của game nên không có tin ở đây.</div>
-          <div id="msg-groups"></div>
-        </div>
-      </section>
-      <div class="msg-savebar"><span class="step-hint" id="msg-dirty"></span><button type="button" class="btn" id="msg-save">Lưu thông báo</button></div>
-    </div>
-
-    <!-- Server -->
-    <div data-view="server" hidden>
-      <div class="page-head"><div><h1>Server</h1><p id="srv-sub">Bật, tắt, khởi động lại, thiết lập và cấu hình game server.</p></div></div>
-      <nav class="subtabs" id="srv-subtabs" aria-label="Mục của trang Server"></nav>
-
-      <div data-sub-panel="status">
-          <section class="card"><div class="card-body">
-            <div id="srv-phase"></div>
-            <div class="facts" id="srv-facts"></div>
-            <div class="power-buttons">
-              <button type="button" class="btn-soft" id="srv-start">▶ Bật server</button>
-              <button type="button" class="btn-soft" id="srv-restart">↻ Khởi động lại</button>
-              <button type="button" class="btn-danger" id="srv-stop">■ Tắt server</button>
-            </div>
-            <div id="srv-op"></div>
-          </div></section>
-          <section class="card" style="margin-top:18px">
-            <div class="card-head"><h2>Sẵn sàng trên game</h2><span class="sub" id="rd-sub"></span></div>
-            <div class="card-body">
-              <div id="rd-verdict" class="rd-verdict"></div>
-              <ul class="rd-list" id="rd-checks"></ul>
-              <div class="step-hint" id="rd-join" style="margin-top:10px"></div>
-              <div class="step-hint" style="margin-top:6px">Danh sách server trong game do máy chủ của Warp Hosting (<span class="mono">api.warphosting.com.au</span>) cung cấp và chỉ trả cho game client có vé Steam — panel không đọc được danh sách đó. Thay vào đó panel kiểm tra mọi điều kiện để server được liệt kê và vào được: tiến trình, mod, map, đăng nhập EOS, các cổng, và máy chủ danh sách còn hoạt động. Đủ hết = server hiện trong game (sau khi khởi động có thể mất 2–5 phút để danh sách cập nhật). Người chơi vào được là bằng chứng chắc chắn nhất.</div>
-            </div>
-          </section>
+      <div data-sub="world:overview">
+      <div class="world-cards" id="world-cards"></div>
       </div>
 
-      <div data-sub-panel="schedule" hidden>
-          <section class="card">
-            <div class="card-head"><h2>Khởi động lại định kỳ</h2><span class="sub" id="sch-next"></span></div>
-            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-              <div class="time-chips" id="sch-times"></div>
-              <div class="row">
-                <input type="time" id="sch-add-time" aria-label="Giờ">
-                <button type="button" class="btn-soft" id="sch-add">+ Thêm giờ</button>
-              </div>
-              <div class="row">
-                <label for="sch-countdown" style="margin:0;flex:none">Báo trước</label>
-                <select id="sch-countdown">
-                  <option value="0">không báo</option><option value="1">1 phút</option><option value="5">5 phút</option>
-                  <option value="10">10 phút</option><option value="15">15 phút</option><option value="30">30 phút</option>
-                </select>
-                <button type="button" class="btn" id="sch-save">Lưu lịch</button>
-              </div>
-              <div class="step-hint">Giờ theo múi giờ của VPS (<span id="sch-tz"></span>). Người chơi được báo đếm ngược qua RCON.</div>
-            </div>
-          </section>
-      </div>
-
-      <div data-sub-panel="rcon" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚡</span>
-        <h2>RCON trực tiếp</h2><span class="sub">có hiệu lực ngay, không cần khởi động lại — mất khi server khởi động lại</span></div>
-      <section class="card"><div class="card-body">
-        <div id="rcon-off" class="banner tone-dmg" hidden style="margin-bottom:14px">RCON chưa được cấu hình trên bridge (RCON_PASSWORD trống) — các thao tác dưới đây sẽ không chạy.</div>
-        <div class="rcon-grid">
-          <div>
-            <h3>Thông báo toàn server</h3>
-            <div class="row"><input id="rc-announce" maxlength="200" placeholder="vd: Sự kiện săn Rex lúc 21h!"><button type="button" class="btn-soft" data-rcon="announce" data-arg="rc-announce">Gửi</button></div>
-          </div>
-          <div>
-            <h3>Thao tác nhanh</h3>
-            <div class="row"><button type="button" class="btn-soft" data-rcon="save">💾 Lưu game</button>
-              <button type="button" class="btn-soft" data-rcon="wipeCorpses" data-confirm="Dọn toàn bộ xác trên map?">🧹 Dọn xác</button></div>
-            <div class="step-hint" style="margin-top:6px">Dọn xác <b>định kỳ</b> (mỗi N phút, có báo trước) và thông báo định kỳ:
-              đặt ở tab <a href="#messages">Thông báo → Tần suất</a>.</div>
-          </div>
-          <div>
-            <h3>Bật / tắt</h3>
-            <div class="step-hint" style="margin-bottom:8px">Game không báo trạng thái hiện tại — mỗi lần bấm là <b>đảo</b> trạng thái. Kiểm tra lại bằng "Thông tin server".</div>
-            <div class="row" id="rc-toggles"></div>
-          </div>
-          <div>
-            <h3>AI</h3>
-            <div class="row"><input id="rc-density" type="number" min="0" max="100" step="0.1" placeholder="mật độ, vd 1"><button type="button" class="btn-soft" data-rcon="adjustAiDensity" data-arg="rc-density">Đặt mật độ</button></div>
-            <div class="row" style="margin-top:8px"><input id="rc-ai-classes" placeholder="loài AI cần tắt, cách nhau dấu phẩy"><button type="button" class="btn-soft" data-rcon="disableAiClasses" data-arg="rc-ai-classes">Tắt AI loài</button></div>
-          </div>
-          <div>
-            <h3>Loài được chơi (tạm thời)</h3>
-            <div class="row"><input id="rc-class" placeholder="vd: Carnotaurus"><button type="button" class="btn-soft" data-rcon="addPlayable" data-arg="rc-class">Cho phép</button>
-              <button type="button" class="btn-soft" data-rcon="removePlayable" data-arg="rc-class">Cấm</button></div>
-            <div class="step-hint" style="margin-top:6px">Mất khi server khởi động lại — muốn giữ lâu dài thì đặt ở <a href="#server/cfg%3Aspawn">Cấu hình game → Loài &amp; điểm spawn</a>.</div>
-          </div>
-          <div>
-            <h3>Whitelist</h3>
-            <div class="row"><input id="rc-wl" placeholder="SteamID64, cách nhau dấu phẩy"><button type="button" class="btn-soft" data-rcon="addWhitelistIds" data-arg="rc-wl">Thêm</button>
-              <button type="button" class="btn-soft" data-rcon="removeWhitelistIds" data-arg="rc-wl">Bỏ</button></div>
-          </div>
-        </div>
-        <h3 style="color:var(--text);font-size:13px;margin:20px 0 8px">Xem</h3>
-        <div class="row" style="margin-bottom:10px">
-          <button type="button" class="btn-soft" data-rcon="serverDetails">Thông tin server</button>
-          <button type="button" class="btn-soft" data-rcon="getPlayerList">Người chơi</button>
-          <button type="button" class="btn-soft" data-rcon="getPlayables">Loài được chơi</button>
-          <button type="button" class="btn-soft" data-rcon="getQueueStatus">Hàng chờ</button>
-        </div>
-        <pre class="out" id="rc-out">Kết quả RCON hiện ở đây.</pre>
-      </div></section>
-      </div>
-
-      <div data-sub-panel="cfg" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚙</span>
-        <h2 id="cfg-title">Cấu hình</h2><span class="sub">ghi vào Game.ini — có hiệu lực từ lần khởi động sau</span></div>
-      <section class="card"><div class="card-body">
-        <div id="cfg-pending" class="banner tone-dmg" hidden style="margin-bottom:14px">Cấu hình đã đổi sau lần khởi động gần nhất — cần <b>khởi động lại</b> để có hiệu lực.</div>
-        <div id="cfg-error" class="warnbox" hidden style="margin-bottom:14px"></div>
-        <form id="cfg-form" autocomplete="off" style="display:flex;flex-direction:column;gap:16px">
-          <div id="cfg-fields" style="display:flex;flex-direction:column;gap:12px"></div>
-          <div class="row">
-            <button type="submit" class="btn">Lưu cấu hình</button>
-            <button type="button" class="btn-soft" id="cfg-save-restart">Lưu &amp; khởi động lại…</button>
-            <button type="button" class="link-btn" id="cfg-reset">Bỏ thay đổi</button>
-          </div>
-          <div class="step-hint">Nút Lưu ghi <b>mọi nhóm</b> cấu hình cùng lúc (nhóm có chấm cam là nhóm đang có thay đổi chưa lưu). Mật khẩu server, RCON, các cổng, map, EOS và danh sách admin vẫn do file <span class="mono">.env</span> quản lý (deploy) — sửa sai những mục đó có thể khoá mất panel. Mọi mục trong các nhóm do panel quản lý: deploy và mỗi lần server khởi động đều giữ đúng giá trị panel đã lưu.
-            Danh sách key lấy từ chính server (bản 0.21.784). Nhãn <span class="cfg-unverified">chưa xác minh</span> = game đọc key này theo tên nhưng panel chưa đọc ngược được giá trị để kiểm chứng.</div>
-        </form>
-      </div></section>
-      </div>
-
-      <div data-sub-panel="garage-settings" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-gar" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🦖</span>
-        <h2>Cấu hình · Gara</h2><span class="sub">lưu riêng, không nằm trong Game.ini</span></div>
-      <section class="card">
-        <div class="card-head"><h2>Cài đặt gara</h2><span class="sub">người chơi cất / lấy dino trên trang web (mục Gara) — có hiệu lực ngay, không cần khởi động lại</span></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-          <div class="row" style="align-items:end">
-            <div style="flex:1;min-width:260px"><label for="gs-redeem-at">Khi lấy dino ra, dino xuất hiện ở</label>
-              <select id="gs-redeem-at">
-                <option value="current">Chỗ người chơi đang đứng</option>
-                <option value="stored">Điểm đã cất (vị trí lúc bắt đầu cất)</option>
-                <option value="choice">Người chơi tự chọn trên web</option>
-              </select></div>
-          </div>
-          <div class="cfg-grid">
-            <div class="cfg-field"><label for="gs-max-slots">Số slot mỗi người chơi<span class="mono">maxSlots</span></label>
-              <input id="gs-max-slots" type="number" min="1" max="20" step="1">
-              <div class="step-hint">Tối đa bao nhiêu dino một người được cất (slot admin tạo cũng tính). Slot tự đánh số 1, 2, 3… Mặc định 2.</div></div>
-            <div class="cfg-field"><label for="gs-countdown">Đếm ngược khi cất (giây)<span class="mono">storeCountdown</span></label>
-              <input id="gs-countdown" type="number" min="0" max="300" step="1">
-              <div class="step-hint">Từ lúc bấm Cất tới khi dino vào gara. Trong lúc đếm người chơi phải đứng trong 5 m, không gây / chịu sát thương, nếu không thì cất thất bại (không tính thời gian hồi). Mặc định 30.</div></div>
-            <div class="cfg-field"><label for="gs-cooldown">Chờ giữa hai lần dùng gara (giây)<span class="mono">cooldown</span></label>
-              <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
-              <div class="step-hint">Sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người (cất thất bại không tính). Mặc định 60.</div></div>
-          </div>
-          <div class="row"><button type="button" class="btn" id="gs-save">Lưu cài đặt</button></div>
-          <div class="step-hint" id="gs-help"></div>
-        </div>
-      </section>
-      </div>
-
-      <div data-sub-panel="commands-settings" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⌨</span>
-        <h2>Cấu hình · Lệnh người chơi</h2><span class="sub">lưu riêng, có hiệu lực ngay — không cần khởi động lại</span></div>
-      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
-        <div class="cfg-grid">
-          <div class="cfg-field"><label for="pc-slay-cd">Chờ giữa hai lần !slay (giây)<span class="mono">slayCooldown</span></label>
-            <input id="pc-slay-cd" type="number" min="0" max="86400" step="1">
-            <div class="step-hint"><span class="mono">!slay</span> — chết ngay dino đang chơi. Mặc định 300.</div></div>
-          <div class="cfg-field"><label for="pc-unstuck-cd">Chờ giữa hai lần !unstuck (giây)<span class="mono">unstuckCooldown</span></label>
-            <input id="pc-unstuck-cd" type="number" min="0" max="86400" step="1">
-            <div class="step-hint"><span class="mono">!unstuck</span> — về điểm gần nhất dino vừa đứng trên mặt đất (cách ≥ 3 m, nâng 0,5 m — không thả từ trên cao). Mặc định 600.</div></div>
-        </div>
-        <div>
-          <label>Lệnh đang bật</label>
-          <div class="check-grid" id="pc-enabled"></div>
-          <div class="step-hint" style="margin-top:6px"><span class="mono">!prime</span> — dino có phải prime elder / đủ điều kiện prime không · <span class="mono">!status</span> — loài, growth, máu, stamina, đói, khát, huyết, oxy.</div>
-        </div>
-        <div class="row"><button type="button" class="btn" id="pc-save">Lưu cài đặt</button></div>
-      </div></section>
-      </div>
-
-      <div data-sub-panel="ptera-carry" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🦅</span>
-        <h2>Cấu hình · Ptera gắp</h2><span class="sub">mod PteraCarry · lưu riêng, có hiệu lực trong vài giây</span></div>
-      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
-        <div class="step-hint">Pteranodon đang bay, tới sát dino của người chơi khác và giữ <b>Z + chuột phải</b> (phím bám) → gắp và mang con đó
-          ngay dưới mình. Thả khi <b>đáp xuống</b>, gõ <span class="mono">!drop</span>, hết thời gian, hoặc một trong hai thoát / chết.
-          Thả trên cao thì con mồi rơi và chịu sát thương rơi như game. Chỉ gắp dino người chơi (không gắp AI).
-          Nội dung tin nhắn sửa ở tab <a href="#messages">Thông báo → Ptera gắp</a>.</div>
-        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="pt-enabled" style="width:auto"> <b>Bật Ptera gắp</b></label>
-        <div class="cfg-grid">
-          <div class="cfg-field"><label for="pt-maxkg">Cân nặng tối đa gắp được (kg)<span class="mono">maxKg</span></label>
-            <input id="pt-maxkg" type="number" min="1" max="20000" step="5">
-            <div class="step-hint">Theo cân nặng game báo cho con mồi. Ptera trưởng thành nặng 90 kg; Troodon trưởng thành ~40 kg.</div></div>
-          <div class="cfg-field"><label for="pt-maxsec">Mang tối đa (giây)<span class="mono">maxSeconds</span></label>
-            <input id="pt-maxsec" type="number" min="3" max="120" step="1"></div>
-          <div class="cfg-field"><label for="pt-cooldown">Chờ giữa hai lần gắp (giây)<span class="mono">cooldown</span></label>
-            <input id="pt-cooldown" type="number" min="0" max="3600" step="5"></div>
-          <div class="cfg-field"><label for="pt-hint">Nhắc "có thể gắp" khi cách (m, 0 = tắt)<span class="mono">hintMeters</span></label>
-            <input id="pt-hint" type="number" min="0" max="50" step="1"></div>
-          <div class="cfg-field"><label for="pt-grab">Tầm gắp (m)<span class="mono">grabMeters</span></label>
-            <input id="pt-grab" type="number" min="2" max="30" step="1">
-            <div class="step-hint">Bấm Z + chuột phải khi đang bay → gắp dino người chơi gần nhất trong tầm này (nếu đủ nhẹ).</div></div>
-        </div>
-        <div class="row"><button type="button" class="btn" id="pt-save">Lưu cài đặt</button></div>
-      </div></section>
-      </div>
-
-      <div data-sub-panel="flora-settings" hidden>
+      <div data-sub="world:flora" hidden>
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🌿</span>
         <h2>Cấu hình · Thực vật</h2><span class="sub">mod Flora · có hiệu lực trong ~15 giây, không cần restart</span></div>
       <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
@@ -1266,7 +1087,7 @@
       </div></section>
       </div>
 
-      <div data-sub-panel="fish-settings" hidden>
+      <div data-sub="world:fish" hidden>
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🐟</span>
         <h2>Cấu hình · Cá</h2><span class="sub">mod FishControl · mật độ có hiệu lực trong ~30 giây</span></div>
       <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
@@ -1289,78 +1110,15 @@
       </div></section>
       </div>
 
-      <div data-sub-panel="voice-settings" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🎙</span>
-        <h2>Cấu hình · Voice gần</h2><span class="sub">lưu riêng, có hiệu lực ngay</span></div>
-      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
-        <div class="step-hint" id="vs-status"></div>
-        <div class="cfg-grid">
-          <div class="cfg-field"><label for="vs-name-mode">Người chơi thấy gì về người đang nói gần họ<span class="mono">nameMode</span></label>
-            <select id="vs-name-mode">
-              <option value="name">Hiện tên trong game</option>
-              <option value="id">Chỉ hiện mã (#A3F9)</option>
-              <option value="none">Không hiện gì</option>
-            </select>
-            <div class="step-hint" id="vs-help"></div></div>
-        </div>
-        <div class="row"><button type="button" class="btn" id="vs-save">Lưu cài đặt</button></div>
-      </div></section>
-      </div>
-
-      <div data-sub-panel="panel-access" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🔒</span>
-        <h2>Truy cập admin panel</h2><span class="sub">có hiệu lực ngay</span></div>
-      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
-        <div class="step-hint" id="pa-status"></div>
-        <div class="cfg-field"><label for="pa-ips">Địa chỉ IP được vào panel qua web<span class="mono">mỗi dòng một IP, hoặc một dải: 1.2.3.0/24, 2405:4802:1d32:eec0::/64</span></label>
-          <textarea id="pa-ips" rows="5" spellcheck="false" class="mono"></textarea></div>
-        <div class="row" style="gap:8px">
-          <button type="button" class="btn-ghost" id="pa-add-me" hidden>Thêm IP của tôi</button>
-          <button type="button" class="btn" id="pa-save">Lưu danh sách</button>
-        </div>
-      </div></section>
-      </div>
-
-      <div data-sub-panel="perf" hidden>
-        <section class="card">
-          <div class="card-head perf-head"><h2>Hiệu năng server</h2>
-            <span class="sub">ServerFPS (tick của game), CPU và RAM theo thời gian — đo mỗi 10 giây, giữ 7 ngày</span>
-            <div class="seg" id="perf-range" role="group" aria-label="Khoảng thời gian" style="margin-left:auto">
-              <button type="button" data-range="1h">1 giờ</button><button type="button" data-range="6h" class="on">6 giờ</button>
-              <button type="button" data-range="24h">24 giờ</button><button type="button" data-range="7d">7 ngày</button>
-            </div></div>
-          <div class="card-body">
-            <div class="perf-tiles" id="perf-tiles"></div>
-            <div class="perf-charts" id="perf-charts"></div>
-            <details style="margin-top:12px"><summary class="muted" style="cursor:pointer;font-size:12.5px">Xem số liệu dạng bảng</summary>
-              <div class="table-wrap" style="max-height:320px;overflow:auto;margin-top:8px"><table id="perf-table"></table></div></details>
-          </div>
-        </section>
-        <section class="card" style="margin-top:18px">
-          <div class="card-head"><h2>Sức chứa theo số người online</h2>
-            <span class="sub">server đã chạy thế nào ở từng mức người chơi (7 ngày gần nhất) — FPS thấp là mức 5 % tệ nhất</span></div>
-          <div class="card-body table-wrap"><table class="cap-table" id="perf-capacity"></table>
-            <p class="step-hint" style="margin-top:10px" id="perf-cap-hint"></p></div>
-        </section>
-      </div>
-      <div data-sub-panel="audit" hidden>
-        <section class="card">
-          <div class="card-head"><h2>Nhật ký admin</h2><span class="sub">mọi thay đổi và mọi lượt đăng nhập panel · giữ 7 ngày rồi tự xoá</span>
-            <input type="search" id="audit-q" placeholder="Tìm: tên, SteamID, thao tác…" style="margin-left:auto;max-width:260px"></div>
-          <div class="card-body">
-            <div class="audit-table-wrap"><table class="audit-table">
-              <thead><tr><th>Thời gian</th><th>Admin</th><th>Thao tác</th><th>Thay đổi</th></tr></thead>
-              <tbody id="srv-audit"></tbody>
-            </table></div>
-            <div class="audit-pager" id="audit-pager"></div>
-          </div>
-        </section>
-      </div>
     </div>
 
     <!-- Gara -->
     <div data-view="garage" hidden>
-      <div class="page-head"><div><h1>Gara</h1><p>Dino người chơi đã cất, và tạo dino thẳng vào gara của ai đó.</p></div></div>
+      <div class="page-head"><div><h1>Gara</h1><p>Dino người chơi đã cất, tạo dino thẳng vào gara của ai đó, và cài đặt gara.</p></div></div>
+      <nav class="subtabs" data-subnav="garage" aria-label="Mục của Gara"></nav>
+
+      <div data-sub="garage:stored">
+
       <section class="card" style="margin-bottom:18px">
         <div class="card-head"><h2>Dino đang cất</h2><span class="sub" id="garage-sub"></span></div>
         <div class="card-body"><div class="slot-grid" id="garage"></div></div>
@@ -1469,8 +1227,300 @@
           </form>
         </div>
       </section>
+      </div>
+
+      <div data-sub="garage:settings" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-gar" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🦖</span>
+        <h2>Cấu hình · Gara</h2><span class="sub">lưu riêng, không nằm trong Game.ini</span></div>
+      <section class="card">
+        <div class="card-head"><h2>Cài đặt gara</h2><span class="sub">người chơi cất / lấy dino trên trang web (mục Gara) — có hiệu lực ngay, không cần khởi động lại</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+          <div class="row" style="align-items:end">
+            <div style="flex:1;min-width:260px"><label for="gs-redeem-at">Khi lấy dino ra, dino xuất hiện ở</label>
+              <select id="gs-redeem-at">
+                <option value="current">Chỗ người chơi đang đứng</option>
+                <option value="stored">Điểm đã cất (vị trí lúc bắt đầu cất)</option>
+                <option value="choice">Người chơi tự chọn trên web</option>
+              </select></div>
+          </div>
+          <div class="cfg-grid">
+            <div class="cfg-field"><label for="gs-max-slots">Số slot mỗi người chơi<span class="mono">maxSlots</span></label>
+              <input id="gs-max-slots" type="number" min="1" max="20" step="1">
+              <div class="step-hint">Tối đa bao nhiêu dino một người được cất (slot admin tạo cũng tính). Slot tự đánh số 1, 2, 3… Mặc định 2.</div></div>
+            <div class="cfg-field"><label for="gs-countdown">Đếm ngược khi cất (giây)<span class="mono">storeCountdown</span></label>
+              <input id="gs-countdown" type="number" min="0" max="300" step="1">
+              <div class="step-hint">Từ lúc bấm Cất tới khi dino vào gara. Trong lúc đếm người chơi phải đứng trong 5 m, không gây / chịu sát thương, nếu không thì cất thất bại (không tính thời gian hồi). Mặc định 30.</div></div>
+            <div class="cfg-field"><label for="gs-cooldown">Chờ giữa hai lần dùng gara (giây)<span class="mono">cooldown</span></label>
+              <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
+              <div class="step-hint">Sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người (cất thất bại không tính). Mặc định 60.</div></div>
+          </div>
+          <div class="row"><button type="button" class="btn" id="gs-save">Lưu cài đặt</button></div>
+          <div class="step-hint" id="gs-help"></div>
+        </div>
+      </section>
+      </div>
+
     </div>
+
+    <!-- Tính năng mod -->
+    <div data-view="mods" hidden>
+      <div class="page-head"><div><h1>Tính năng mod</h1><p>Những gì các mod của server thêm cho người chơi: lệnh chat, Ptera gắp, voice gần, và nội dung mọi thông báo.</p></div></div>
+      <nav class="subtabs" data-subnav="mods" aria-label="Mục của Tính năng mod"></nav>
+
+      <div data-sub="mods:commands">
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⌨</span>
+        <h2>Cấu hình · Lệnh người chơi</h2><span class="sub">lưu riêng, có hiệu lực ngay — không cần khởi động lại</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="cfg-grid">
+          <div class="cfg-field"><label for="pc-slay-cd">Chờ giữa hai lần !slay (giây)<span class="mono">slayCooldown</span></label>
+            <input id="pc-slay-cd" type="number" min="0" max="86400" step="1">
+            <div class="step-hint"><span class="mono">!slay</span> — chết ngay dino đang chơi. Mặc định 300.</div></div>
+          <div class="cfg-field"><label for="pc-unstuck-cd">Chờ giữa hai lần !unstuck (giây)<span class="mono">unstuckCooldown</span></label>
+            <input id="pc-unstuck-cd" type="number" min="0" max="86400" step="1">
+            <div class="step-hint"><span class="mono">!unstuck</span> — về điểm gần nhất dino vừa đứng trên mặt đất (cách ≥ 3 m, nâng 0,5 m — không thả từ trên cao). Mặc định 600.</div></div>
+        </div>
+        <div>
+          <label>Lệnh đang bật</label>
+          <div class="check-grid" id="pc-enabled"></div>
+          <div class="step-hint" style="margin-top:6px"><span class="mono">!prime</span> — dino có phải prime elder / đủ điều kiện prime không · <span class="mono">!status</span> — loài, growth, máu, stamina, đói, khát, huyết, oxy.</div>
+        </div>
+        <div class="row"><button type="button" class="btn" id="pc-save">Lưu cài đặt</button></div>
+      </div></section>
+      </div>
+
+      <div data-sub="mods:ptera" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🦅</span>
+        <h2>Cấu hình · Ptera gắp</h2><span class="sub">mod PteraCarry · lưu riêng, có hiệu lực trong vài giây</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="step-hint">Pteranodon đang bay, tới sát dino của người chơi khác và giữ <b>Z + chuột phải</b> (phím bám) → gắp và mang con đó
+          ngay dưới mình. Thả khi <b>đáp xuống</b>, gõ <span class="mono">!drop</span>, hết thời gian, hoặc một trong hai thoát / chết.
+          Thả trên cao thì con mồi rơi và chịu sát thương rơi như game. Chỉ gắp dino người chơi (không gắp AI).
+          Nội dung tin nhắn sửa ở tab <a href="#mods/messages">Thông báo → Ptera gắp</a>.</div>
+        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="pt-enabled" style="width:auto"> <b>Bật Ptera gắp</b></label>
+        <div class="cfg-grid">
+          <div class="cfg-field"><label for="pt-maxkg">Cân nặng tối đa gắp được (kg)<span class="mono">maxKg</span></label>
+            <input id="pt-maxkg" type="number" min="1" max="20000" step="5">
+            <div class="step-hint">Theo cân nặng game báo cho con mồi. Ptera trưởng thành nặng 90 kg; Troodon trưởng thành ~40 kg.</div></div>
+          <div class="cfg-field"><label for="pt-maxsec">Mang tối đa (giây)<span class="mono">maxSeconds</span></label>
+            <input id="pt-maxsec" type="number" min="3" max="120" step="1"></div>
+          <div class="cfg-field"><label for="pt-cooldown">Chờ giữa hai lần gắp (giây)<span class="mono">cooldown</span></label>
+            <input id="pt-cooldown" type="number" min="0" max="3600" step="5"></div>
+          <div class="cfg-field"><label for="pt-hint">Nhắc "có thể gắp" khi cách (m, 0 = tắt)<span class="mono">hintMeters</span></label>
+            <input id="pt-hint" type="number" min="0" max="50" step="1"></div>
+          <div class="cfg-field"><label for="pt-grab">Tầm gắp (m)<span class="mono">grabMeters</span></label>
+            <input id="pt-grab" type="number" min="2" max="30" step="1">
+            <div class="step-hint">Bấm Z + chuột phải khi đang bay → gắp dino người chơi gần nhất trong tầm này (nếu đủ nhẹ).</div></div>
+        </div>
+        <div class="row"><button type="button" class="btn" id="pt-save">Lưu cài đặt</button></div>
+      </div></section>
+      </div>
+
+      <div data-sub="mods:voice" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🎙</span>
+        <h2>Cấu hình · Voice gần</h2><span class="sub">lưu riêng, có hiệu lực ngay</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="step-hint" id="vs-status"></div>
+        <div class="cfg-grid">
+          <div class="cfg-field"><label for="vs-name-mode">Người chơi thấy gì về người đang nói gần họ<span class="mono">nameMode</span></label>
+            <select id="vs-name-mode">
+              <option value="name">Hiện tên trong game</option>
+              <option value="id">Chỉ hiện mã (#A3F9)</option>
+              <option value="none">Không hiện gì</option>
+            </select>
+            <div class="step-hint" id="vs-help"></div></div>
+        </div>
+        <div class="row"><button type="button" class="btn" id="vs-save">Lưu cài đặt</button></div>
+      </div></section>
+      </div>
+
+      <div data-sub="mods:messages" hidden>
+
+      <section class="card">
+        <div class="card-head"><h2>Tần suất</h2><span class="sub">chỉ gửi khi có người đang chơi</span></div>
+        <div class="card-body msg-timing">
+          <div class="msg-line"><label for="msg-marks">Mốc đếm ngược khi khởi động lại / tắt server</label>
+            <input id="msg-marks" placeholder="15p, 10p, 5p, 3p, 2p, 1p, 30s, 10s">
+            <div class="step-hint" style="flex-basis:100%">Phút (p) hoặc giây (s), cách nhau bằng dấu phẩy. Server báo ở mỗi mốc còn lại; thời gian đếm ngược tổng chọn lúc bấm khởi động lại (tab Server).</div></div>
+          <div class="msg-line"><label for="msg-cw-every">Tự dọn xác mỗi (phút)</label><input id="msg-cw-every" type="number" min="0" max="1440" step="5">
+            <label for="msg-cw-warn" style="min-width:0;font-weight:500">báo trước (giây)</label><input id="msg-cw-warn" type="number" min="0" max="600" step="10">
+            <div class="step-hint" style="flex-basis:100%">0 = tắt. Dùng lệnh RCON dọn xác của game; khi bấm "Dọn xác" bằng tay ở tab Server cũng báo "Đã dọn xác".</div></div>
+          <div>
+            <div class="group-label">Thông báo định kỳ</div>
+            <ul class="msg-periodic" id="msg-periodic"></ul>
+            <button type="button" class="btn-soft sm" id="msg-periodic-add" style="margin-top:8px">+ Thêm thông báo định kỳ</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Nội dung</h2><span class="sub" id="msg-count"></span>
+          <input type="search" id="msg-q" placeholder="Tìm tin…" style="margin-left:auto;max-width:220px"></div>
+        <div class="card-body">
+          <div class="step-hint" style="margin-bottom:10px">Bỏ tích <b>Gửi</b> để tắt hẳn một tin. <span class="mono">{tên}</span> được điền khi gửi — bấm để chèn.
+            Tin của mod đổi trong vòng vài giây, không cần restart. Ban/kick làm trong admin panel của game nên không có tin ở đây.</div>
+          <div id="msg-groups"></div>
+        </div>
+      </section>
+      <div class="msg-savebar"><span class="step-hint" id="msg-dirty"></span><button type="button" class="btn" id="msg-save">Lưu thông báo</button></div>
+      </div>
+
+    </div>
+
+    <!-- Server -->
+    <div data-view="server" hidden>
+      <div class="page-head"><div><h1>Server</h1><p id="srv-sub">Bật, tắt, khởi động lại, thiết lập và cấu hình game server.</p></div></div>
+      <nav class="subtabs" id="srv-subtabs" aria-label="Mục của trang Server"></nav>
+
+      <div data-sub-panel="status">
+          <section class="card"><div class="card-body">
+            <div id="srv-phase"></div>
+            <div class="facts" id="srv-facts"></div>
+            <div class="power-buttons">
+              <button type="button" class="btn-soft" id="srv-start">▶ Bật server</button>
+              <button type="button" class="btn-soft" id="srv-restart">↻ Khởi động lại</button>
+              <button type="button" class="btn-danger" id="srv-stop">■ Tắt server</button>
+            </div>
+            <div id="srv-op"></div>
+          </div></section>
+          <section class="card" style="margin-top:18px">
+            <div class="card-head"><h2>Sẵn sàng trên game</h2><span class="sub" id="rd-sub"></span></div>
+            <div class="card-body">
+              <div id="rd-verdict" class="rd-verdict"></div>
+              <ul class="rd-list" id="rd-checks"></ul>
+              <div class="step-hint" id="rd-join" style="margin-top:10px"></div>
+              <div class="step-hint" style="margin-top:6px">Danh sách server trong game do máy chủ của Warp Hosting (<span class="mono">api.warphosting.com.au</span>) cung cấp và chỉ trả cho game client có vé Steam — panel không đọc được danh sách đó. Thay vào đó panel kiểm tra mọi điều kiện để server được liệt kê và vào được: tiến trình, mod, map, đăng nhập EOS, các cổng, và máy chủ danh sách còn hoạt động. Đủ hết = server hiện trong game (sau khi khởi động có thể mất 2–5 phút để danh sách cập nhật). Người chơi vào được là bằng chứng chắc chắn nhất.</div>
+            </div>
+          </section>
+      </div>
+
+      <div data-sub-panel="schedule" hidden>
+          <section class="card">
+            <div class="card-head"><h2>Khởi động lại định kỳ</h2><span class="sub" id="sch-next"></span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="time-chips" id="sch-times"></div>
+              <div class="row">
+                <input type="time" id="sch-add-time" aria-label="Giờ">
+                <button type="button" class="btn-soft" id="sch-add">+ Thêm giờ</button>
+              </div>
+              <div class="row">
+                <label for="sch-countdown" style="margin:0;flex:none">Báo trước</label>
+                <select id="sch-countdown">
+                  <option value="0">không báo</option><option value="1">1 phút</option><option value="5">5 phút</option>
+                  <option value="10">10 phút</option><option value="15">15 phút</option><option value="30">30 phút</option>
+                </select>
+                <button type="button" class="btn" id="sch-save">Lưu lịch</button>
+              </div>
+              <div class="step-hint">Giờ theo múi giờ của VPS (<span id="sch-tz"></span>). Người chơi được báo đếm ngược qua RCON.</div>
+            </div>
+          </section>
+      </div>
+
+      <div data-sub-panel="rcon" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚡</span>
+        <h2>RCON trực tiếp</h2><span class="sub">có hiệu lực ngay, không cần khởi động lại — mất khi server khởi động lại</span></div>
+      <section class="card"><div class="card-body">
+        <div id="rcon-off" class="banner tone-dmg" hidden style="margin-bottom:14px">RCON chưa được cấu hình trên bridge (RCON_PASSWORD trống) — các thao tác dưới đây sẽ không chạy.</div>
+        <div class="rcon-grid">
+          <div>
+            <h3>Thông báo toàn server</h3>
+            <div class="row"><input id="rc-announce" maxlength="200" placeholder="vd: Sự kiện săn Rex lúc 21h!"><button type="button" class="btn-soft" data-rcon="announce" data-arg="rc-announce">Gửi</button></div>
+          </div>
+          <div>
+            <h3>Thao tác nhanh</h3>
+            <div class="row"><button type="button" class="btn-soft" data-rcon="save">💾 Lưu game</button>
+              <button type="button" class="btn-soft" data-rcon="wipeCorpses" data-confirm="Dọn toàn bộ xác trên map?">🧹 Dọn xác</button></div>
+            <div class="step-hint" style="margin-top:6px">Dọn xác <b>định kỳ</b> (mỗi N phút, có báo trước) và thông báo định kỳ:
+              đặt ở <a href="#mods/messages">Tính năng mod → Thông báo → Tần suất</a>.</div>
+          </div>
+          <div>
+            <h3>Bật / tắt</h3>
+            <div class="step-hint" style="margin-bottom:8px">Game không báo trạng thái hiện tại — mỗi lần bấm là <b>đảo</b> trạng thái. Kiểm tra lại bằng "Thông tin server".</div>
+            <div class="row" id="rc-toggles"></div>
+          </div>
+          <div>
+            <h3>AI</h3>
+            <div class="row"><input id="rc-density" type="number" min="0" max="100" step="0.1" placeholder="mật độ, vd 1"><button type="button" class="btn-soft" data-rcon="adjustAiDensity" data-arg="rc-density">Đặt mật độ</button></div>
+            <div class="row" style="margin-top:8px"><input id="rc-ai-classes" placeholder="loài AI cần tắt, cách nhau dấu phẩy"><button type="button" class="btn-soft" data-rcon="disableAiClasses" data-arg="rc-ai-classes">Tắt AI loài</button></div>
+          </div>
+          <div>
+            <h3>Loài được chơi (tạm thời)</h3>
+            <div class="row"><input id="rc-class" placeholder="vd: Carnotaurus"><button type="button" class="btn-soft" data-rcon="addPlayable" data-arg="rc-class">Cho phép</button>
+              <button type="button" class="btn-soft" data-rcon="removePlayable" data-arg="rc-class">Cấm</button></div>
+            <div class="step-hint" style="margin-top:6px">Mất khi server khởi động lại — muốn giữ lâu dài thì đặt ở <a href="#server/cfg%3Aspawn">Cấu hình game → Loài &amp; điểm spawn</a>.</div>
+          </div>
+          <div>
+            <h3>Whitelist</h3>
+            <div class="row"><input id="rc-wl" placeholder="SteamID64, cách nhau dấu phẩy"><button type="button" class="btn-soft" data-rcon="addWhitelistIds" data-arg="rc-wl">Thêm</button>
+              <button type="button" class="btn-soft" data-rcon="removeWhitelistIds" data-arg="rc-wl">Bỏ</button></div>
+          </div>
+        </div>
+        <h3 style="color:var(--text);font-size:13px;margin:20px 0 8px">Xem</h3>
+        <div class="row" style="margin-bottom:10px">
+          <button type="button" class="btn-soft" data-rcon="serverDetails">Thông tin server</button>
+          <button type="button" class="btn-soft" data-rcon="getPlayerList">Người chơi</button>
+          <button type="button" class="btn-soft" data-rcon="getPlayables">Loài được chơi</button>
+          <button type="button" class="btn-soft" data-rcon="getQueueStatus">Hàng chờ</button>
+        </div>
+        <pre class="out" id="rc-out">Kết quả RCON hiện ở đây.</pre>
+      </div></section>
+      </div>
+
+      <div data-sub-panel="cfg" hidden>
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚙</span>
+        <h2 id="cfg-title">Cấu hình</h2><span class="sub">ghi vào Game.ini — có hiệu lực từ lần khởi động sau</span></div>
+      <section class="card"><div class="card-body">
+        <div id="cfg-pending" class="banner tone-dmg" hidden style="margin-bottom:14px">Cấu hình đã đổi sau lần khởi động gần nhất — cần <b>khởi động lại</b> để có hiệu lực.</div>
+        <div id="cfg-error" class="warnbox" hidden style="margin-bottom:14px"></div>
+        <form id="cfg-form" autocomplete="off" style="display:flex;flex-direction:column;gap:16px">
+          <div id="cfg-fields" style="display:flex;flex-direction:column;gap:12px"></div>
+          <div class="row">
+            <button type="submit" class="btn">Lưu cấu hình</button>
+            <button type="button" class="btn-soft" id="cfg-save-restart">Lưu &amp; khởi động lại…</button>
+            <button type="button" class="link-btn" id="cfg-reset">Bỏ thay đổi</button>
+          </div>
+          <div class="step-hint">Nút Lưu ghi <b>mọi nhóm</b> cấu hình cùng lúc (nhóm có chấm cam là nhóm đang có thay đổi chưa lưu). Mật khẩu server, RCON, các cổng, map, EOS và danh sách admin vẫn do file <span class="mono">.env</span> quản lý (deploy) — sửa sai những mục đó có thể khoá mất panel. Mọi mục trong các nhóm do panel quản lý: deploy và mỗi lần server khởi động đều giữ đúng giá trị panel đã lưu.
+            Danh sách key lấy từ chính server (bản 0.21.784). Nhãn <span class="cfg-unverified">chưa xác minh</span> = game đọc key này theo tên nhưng panel chưa đọc ngược được giá trị để kiểm chứng.</div>
+        </form>
+      </div></section>
+      </div>
+    </div>
+
+    <!-- Quản trị -->
+    <div data-view="admin" hidden>
+      <div class="page-head"><div><h1>Quản trị</h1><p>Ai được vào panel, và nhật ký mọi thao tác của admin.</p></div></div>
+      <nav class="subtabs" data-subnav="admin" aria-label="Mục của Quản trị"></nav>
+
+      <div data-sub="admin:access">
+      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🔒</span>
+        <h2>Truy cập admin panel</h2><span class="sub">có hiệu lực ngay</span></div>
+      <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="step-hint" id="pa-status"></div>
+        <div class="cfg-field"><label for="pa-ips">Địa chỉ IP được vào panel qua web<span class="mono">mỗi dòng một IP, hoặc một dải: 1.2.3.0/24, 2405:4802:1d32:eec0::/64</span></label>
+          <textarea id="pa-ips" rows="5" spellcheck="false" class="mono"></textarea></div>
+        <div class="row" style="gap:8px">
+          <button type="button" class="btn-ghost" id="pa-add-me" hidden>Thêm IP của tôi</button>
+          <button type="button" class="btn" id="pa-save">Lưu danh sách</button>
+        </div>
+      </div></section>
+      </div>
+
+      <div data-sub="admin:audit" hidden>
+        <section class="card">
+          <div class="card-head"><h2>Nhật ký admin</h2><span class="sub">mọi thay đổi và mọi lượt đăng nhập panel · giữ 7 ngày rồi tự xoá</span>
+            <input type="search" id="audit-q" placeholder="Tìm: tên, SteamID, thao tác…" style="margin-left:auto;max-width:260px"></div>
+          <div class="card-body">
+            <div class="audit-table-wrap"><table class="audit-table">
+              <thead><tr><th>Thời gian</th><th>Admin</th><th>Thao tác</th><th>Thay đổi</th></tr></thead>
+              <tbody id="srv-audit"></tbody>
+            </table></div>
+            <div class="audit-pager" id="audit-pager"></div>
+          </div>
+        </section>
+      </div>
+
+    </div>
+
   </main>
+  <div class="unsaved-bar" id="unsaved-bar" hidden></div>
 </div>
 
 <div class="modal-back" id="modal" hidden>
@@ -1552,6 +1602,10 @@ const PATHS = {
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
 };
 const icon = (name) => `<svg class="i" viewBox="0 0 24 24">${PATHS[name] ?? ''}</svg>`;
+PATHS.players = PATHS.users;
+PATHS.world = '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>';
+PATHS.mods = '<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3h7z"/>';
+PATHS.admin = '<path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>';
 PATHS.server = '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>';
 PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>';
 
@@ -1833,9 +1887,10 @@ function renderFeed(el, events, emptyText = 'Chưa có sự kiện') {
 
 // --- navigation ---------------------------------------------------------------
 
+// One block per job. Inside a block, sub-pages (SUBS) at #<block>/<sub>.
 const TABS = [
-  ['overview', 'Tổng quan'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'],
-  ['map', 'Bản đồ'], ['chat', 'Chat'], ['garage', 'Gara'], ['messages', 'Thông báo'], ['server', 'Server'],
+  ['overview', 'Tổng quan'], ['players', 'Người chơi'], ['map', 'Bản đồ'], ['world', 'Thế giới'],
+  ['garage', 'Gara'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['admin', 'Quản trị'],
 ];
 $('tabs').innerHTML = TABS.map(([id, label]) =>
   `<a href="#${id}" data-tab="${id}">${icon(id)}<span class="label">${label}</span><span class="count" id="count-${id}" hidden></span></a>`).join('');
@@ -4853,8 +4908,9 @@ function classOptions(selected) {
 // #server/<sub>: operation panels, then one tab per config group (cfg:<group>).
 // The config form is ONE form shown a group at a time, so edits in several
 // groups survive switching tabs and are saved together.
-const OPS_SUBS = [['status', 'Trạng thái'], ['perf', 'Hiệu năng'], ['schedule', 'Lịch khởi động lại'], ['rcon', 'RCON trực tiếp'], ['audit', 'Lịch sử thao tác']];
-const EXTRA_CFG_SUBS = [['garage-settings', 'Gara'], ['commands-settings', 'Lệnh người chơi'], ['ptera-carry', 'Ptera gắp'], ['flora-settings', 'Thực vật'], ['fish-settings', 'Cá'], ['voice-settings', 'Voice gần'], ['panel-access', 'Truy cập panel']];
+const OPS_SUBS = [['status', 'Trạng thái'], ['schedule', 'Lịch khởi động lại'], ['rcon', 'RCON trực tiếp']];
+// The mods' own settings moved to their blocks (Gara, Thế giới, Tính năng mod, Quản trị).
+const EXTRA_CFG_SUBS = [];
 function currentSub() {
   const h = location.hash.slice(1);
   const sub = h.startsWith('server/') ? decodeURIComponent(h.slice('server/'.length)) : 'status';
@@ -4874,7 +4930,7 @@ function renderSubtabs() {
 function showSub() {
   const sub = currentSub();
   const panel = sub.startsWith('cfg:') ? 'cfg' : sub;
-  for (const el of document.querySelectorAll('[data-sub-panel]')) el.hidden = el.dataset.subPanel !== panel;
+  for (const el of document.querySelectorAll('[data-view="server"] [data-sub-panel]')) el.hidden = el.dataset.subPanel !== panel;
   if (panel === 'cfg') {
     const group = sub.slice(4);
     for (const g of document.querySelectorAll('#cfg-fields .cfg-group')) g.hidden = g.dataset.group !== group;
@@ -5062,18 +5118,10 @@ function renderReadiness(r) {
 }
 
 async function refreshServerTab() {
-  const [status, , cfg, readiness] = await Promise.all([
+  const [status, cfg, readiness] = await Promise.all([
     getJson('/api/server/status'),
-    loadAudit(),
     cfgDirty ? Promise.resolve(null) : getJson('/api/game-config'),
     getJson('/api/server/readiness'),
-    getJson('/api/garage-settings').then(renderGarageSettings),
-    getJson('/api/commands-settings').then(renderCommandsSettings),
-    getJson('/api/ptera-carry').then(renderPteraSettings),
-    getJson('/api/flora-settings').then(renderFloraSettings),
-    getJson('/api/fish-settings').then(renderFishSettings),
-    getJson('/api/voice-settings').then(renderVoiceSettings),
-    getJson('/api/panel-access').then(renderPanelAccess),
     refreshCatalog(),
     buildToggles(),
   ]);
@@ -5081,7 +5129,6 @@ async function refreshServerTab() {
   renderReadiness(readiness);
 
   if (cfg && !cfgDirty) renderConfig(cfg);
-  if (currentSub() === 'perf') await refreshPerf();
 }
 
 // --- performance (Server → Hiệu năng) ---------------------------------------------
@@ -5472,29 +5519,188 @@ const getJson = (url) => fetch(url).then((r) => {
   return r.json();
 });
 
+// --- unsaved changes: one bar for every settings page ------------------------------
+// [block, sub-page (null = the whole block), is it changed?, its save, name]
+const DIRTY = [
+  ['server', 'cfg', () => cfgDirty, () => $('cfg-form').requestSubmit(), 'Cấu hình game'],
+  ['server', 'schedule', () => schDraft !== null, () => $('sch-save').click(), 'Lịch khởi động lại'],
+  ['garage', 'settings', () => gsDirty, () => $('gs-save').click(), 'Cài đặt gara'],
+  ['mods', 'commands', () => pcDirty, () => $('pc-save').click(), 'Lệnh chat'],
+  ['mods', 'ptera', () => ptDirty, () => $('pt-save').click(), 'Ptera gắp'],
+  ['mods', 'voice', () => vsDirty, () => $('vs-save').click(), 'Voice gần'],
+  ['mods', 'messages', () => msgs.dirty, () => $('msg-save').click(), 'Thông báo'],
+  ['world', 'flora', () => flDirty, () => $('fl-save').click(), 'Thực vật'],
+  ['world', 'fish', () => fsDirty, () => $('fs-save').click(), 'Cá'],
+  ['admin', 'access', () => paDirty, () => $('pa-save').click(), 'Truy cập panel'],
+  ['map', null, () => az.dirty, () => $('az-save').click(), 'Vùng AI'],
+];
+const dirtyNow = () => DIRTY.filter(([, , is]) => { try { return is(); } catch { return false; } });
+function pageDirty(view, sub) { return dirtyNow().some(([v, s2]) => v === view && s2 === sub); }
+/** Where the page is now: [block, sub-page] as DIRTY names them. */
+function herePage() {
+  const tab = currentTab();
+  if (tab === 'server') { const sub = currentSub(); return ['server', sub.startsWith('cfg:') ? 'cfg' : sub]; }
+  return [tab, SUBS[tab] ? currentSubOf(tab) : null];
+}
+function renderUnsaved() {
+  const all = dirtyNow();
+  const bar = $('unsaved-bar');
+  if (all.length === 0) { bar.hidden = true; return; }
+  const [view, sub] = herePage();
+  const here = all.find(([v, s2]) => v === view && s2 === sub);
+  const others = all.filter((d) => d !== here);
+  const link = ([v, s2, , , name]) => `<a href="#${v}${s2 ? `/${s2}` : ''}">${esc(name)}</a>`;
+  const html = (here ? `<span>Trang này có thay đổi <b>chưa lưu</b>.</span><button type="button" class="btn sm" data-unsaved="save">Lưu</button>` : '')
+    + (others.length ? `<span class="muted">${here ? 'Còn' : 'Có thay đổi chưa lưu ở'}: ${others.map(link).join(', ')}</span>` : '');
+  if (bar.dataset.html !== html) { bar.dataset.html = html; bar.innerHTML = html; }
+  bar.hidden = false;
+}
+$('unsaved-bar').addEventListener('click', (e) => {
+  if (e.target.closest('[data-unsaved="save"]')) {
+    const [view, sub] = herePage();
+    dirtyNow().find(([v, s2]) => v === view && s2 === sub)?.[3]();
+  }
+});
+setInterval(() => {
+  renderUnsaved();
+  const tab = currentTab();
+  if (SUBS[tab]) {
+    // Keep the dots on the sub-tabs in step with what is changed.
+    const nav = document.querySelector(`[data-subnav="${tab}"]`);
+    const want = SUBS[tab].map(([id]) => (pageDirty(tab, id) ? '1' : '0')).join('');
+    if (nav && nav.dataset.dots !== want) { nav.dataset.dots = want; renderSubnav(tab); }
+  }
+}, 1000);
+// Leaving the panel (reload, close) with changes not saved: the browser asks first.
+window.addEventListener('beforeunload', (e) => { if (dirtyNow().length) { e.preventDefault(); e.returnValue = ''; } });
+
+// --- Tổng quan: alerts and shortcuts --------------------------------------------------
+let ovStatusAt = 0;
+async function renderOverviewExtras() {
+  if (Date.now() - ovStatusAt < 10_000) return;
+  ovStatusAt = Date.now();
+  try {
+    const [st, health] = await Promise.all([getJson('/api/server/status'), getJson('/api/health')]);
+    const alerts = [];
+    if (st.phase && st.phase !== 'running') alerts.push([st.phase === 'failed' || st.phase === 'stopped' ? 'critical' : 'warning', `Server: ${esc(PHASE_VN[st.phase] ?? st.phase)}.`, '#server/status', 'Mở Server']);
+    if (st.operation) alerts.push(['warning', `Đang ${esc(st.operation.kind === 'stop' ? 'tắt' : 'khởi động lại')} server (${esc(st.operation.step)}).`, '#server/status', 'Xem']);
+    else if (st.schedule?.next && st.schedule.next - Date.now() / 1000 < 1800) {
+      alerts.push(['warning', `Khởi động lại định kỳ lúc ${new Date(st.schedule.next * 1000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`, '#server/schedule', 'Lịch']);
+    }
+    if (health.lastEventAt && Date.now() / 1000 - health.lastEventAt > 600 && st.phase === 'running' && health.online > 0) {
+      alerts.push(['warning', `Mod chưa ghi sự kiện nào từ ${esc(ago(health.lastEventAt))} — mod có thể lỗi.`, '#server/status', 'Kiểm tra']);
+    }
+    $('ov-alerts').innerHTML = alerts.map(([tone, text, href, act]) =>
+      `<div class="banner tone-${tone === 'critical' ? 'dmg' : 'gar'}">${icon('warn')}<span>${text}</span><a class="btn-soft sm" href="${href}">${esc(act)}</a></div>`).join('');
+  } catch { /* the next refresh tries again */ }
+  const q = [
+    ['#server/status', 'Khởi động lại / tắt (có đếm ngược)'], ['#server/rcon', 'Thông báo toàn server'],
+    ['#map', 'Vùng AI · thả AI · làm mới AI'], ['#world/flora', 'Thực vật'], ['#world/fish', 'Cá'],
+    ['#garage/stored', 'Tạo dino vào gara'], ['#mods/messages', 'Sửa thông báo'], ['#admin/audit', 'Nhật ký admin'],
+  ];
+  if (!$('ov-quick').dataset.done) {
+    $('ov-quick').dataset.done = '1';
+    $('ov-quick').innerHTML = q.map(([href, label]) => `<a class="btn-soft" href="${href}">${esc(label)}</a>`).join('');
+  }
+}
+
+// --- Thế giới → Tổng quan: what the island is like now, and where to change it -----------
+async function renderWorldCards() {
+  const [zones, ambient, flora, floraCfg, fish, cfg] = await Promise.all([
+    getJson('/api/ai-zones').catch(() => null), getJson('/api/ai-ambient').catch(() => null),
+    getJson('/api/map/flora').catch(() => null), getJson('/api/flora-settings').catch(() => null),
+    getJson('/api/fish-settings').catch(() => null), getJson('/api/game-config').catch(() => null),
+  ]);
+  const eff = (k) => cfg?.settings?.[k] ?? cfg?.effective?.[k];
+  const onOff = (v) => (v === true ? 'bật' : v === false ? 'tắt' : '?');
+  const f = flora?.flora;
+  const active = f ? f.spawners.filter((s) => s.active).length : null;
+  const mass = f ? f.spawners.filter((s) => s.mass).length : null;
+  const c = floraCfg?.control;
+  const card = (title, lines, href, act) => `<section class="card world-card"><div class="card-head"><h2>${title}</h2></div>`
+    + `<div class="card-body"><ul>${lines.filter(Boolean).map((l) => `<li>${l}</li>`).join('')}</ul>`
+    + `<a class="btn-soft sm" href="${href}">${esc(act)}</a></div></section>`;
+  $('world-cards').innerHTML = [
+    card('AI', [
+      zones?.status && !zones.status.stale ? `AI đang sống: <b>${zones.status.total ?? '?'}</b> / ${zones.status.cap ?? zones.globalMax}` : 'Mod vùng AI chưa báo số liệu',
+      zones ? `Vùng AI: <b>${zones.enabled ? 'bật' : 'tắt'}</b> · ${zones.zones.length} vùng` : '',
+      ambient ? `AI game tự sinh quanh người chơi: <b>${onOff(ambient.live ?? ambient.ini)}</b>` : '',
+      `Mật độ AI của game: ${eff('AIDensity') ?? '?'} · cấm: ${esc((eff('DisallowedAIClasses') ?? []).join(', ') || 'không')}`,
+    ], '#map', 'Vùng AI trên bản đồ'),
+    card('Di cư', [
+      active !== null ? `Khóm cây đang di cư: <b>${active}</b> · đại di cư: <b>${mass}</b>` : 'Chưa có dữ liệu cây',
+      `Di cư: <b>${onOff(eff('bEnableMigration'))}</b> · đại di cư: <b>${onOff(eff('bEnableMassMigration'))}</b> · tuần tra: <b>${onOff(eff('bEnablePatrolZones'))}</b>`,
+    ], '#server/cfg%3Amigration', 'Cấu hình di cư'),
+    card('Ngày đêm', [
+      `Ngày <b>${eff('ServerDayLengthMinutes') ?? '?'}</b> phút · đêm <b>${eff('ServerNightLengthMinutes') ?? '?'}</b> phút`,
+    ], '#server/cfg%3Aworld', 'Cấu hình ngày đêm'),
+    card('Thực vật', [
+      c ? `<b>${c.plantsNutri}/${c.plants}</b> cây và <b>${c.fruitsNutri}/${c.fruits}</b> quả có chất` : f ? `${f.plants.length} cây, ${f.fruits.length} quả` : 'Chưa có dữ liệu',
+      floraCfg ? `Điều khiển: <b>${floraCfg.settings.control ? 'bật' : 'tắt'}</b> · tối đa ${floraCfg.settings.migrationMaxPerArea} cây/khóm di cư` : '',
+    ], '#world/flora', 'Cài đặt thực vật'),
+    card('Cá', [
+      fish ? `Điều khiển: <b>${fish.settings.control ? 'bật' : 'tắt'}</b> · ${fish.settings.perPlayer} / người · ${fish.settings.species.length}/6 loài` : '',
+      fish?.census ? `Lượt đếm ${esc(ago(fish.census.t))}: <b>${fish.census.total}</b> cá` : 'Chưa có lượt đếm (cần người chơi online)',
+    ], '#world/fish', 'Cài đặt cá'),
+  ].join('');
+}
+
+const SUBS = {
+  players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat']],
+  world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
+  garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
+  mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['voice', 'Voice gần'], ['messages', 'Thông báo']],
+  admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin']],
+};
+// Where the pages of the old layout went: bookmarks and old links still land.
+const MOVED = {
+  killfeed: 'players/killfeed', leaderboard: 'players/leaderboard', chat: 'players/chat', messages: 'mods/messages',
+  'server/perf': 'overview', 'server/audit': 'admin/audit', 'server/panel-access': 'admin/access',
+  'server/garage-settings': 'garage/settings', 'server/commands-settings': 'mods/commands', 'server/ptera-carry': 'mods/ptera',
+  'server/voice-settings': 'mods/voice', 'server/flora-settings': 'world/flora', 'server/fish-settings': 'world/fish',
+};
+
 function currentTab() {
-  const h = location.hash.slice(1);
-  if (h.startsWith('player/')) return 'player';
-  if (h.startsWith('garage/')) return 'garage';
-  if (h.startsWith('server/')) return 'server';
-  if (h.startsWith('map/')) return 'map';
-  return document.querySelector(`[data-view="${CSS.escape(h)}"]`) ? h : 'overview';
+  const v = location.hash.slice(1).split('/')[0];
+  if (v === 'player') return 'player';
+  return v && document.querySelector(`[data-view="${CSS.escape(v)}"]`) ? v : 'overview';
+}
+/** The sub-page of a block shown now (its first one when the address names none). */
+function currentSubOf(view) {
+  const subs = SUBS[view];
+  if (!subs) return null;
+  const [v, ...rest] = location.hash.slice(1).split('/');
+  const want = v === view ? decodeURIComponent(rest.join('/')) : '';
+  return subs.some(([id]) => id === want) ? want : subs[0][0];
+}
+function renderSubnav(view) {
+  const nav = document.querySelector(`[data-subnav="${view}"]`);
+  if (!nav) return;
+  const cur = currentSubOf(view);
+  nav.innerHTML = SUBS[view].map(([id, label]) => `<a href="#${view}/${id}" class="${id === cur ? 'on' : ''}">${esc(label)}`
+    + `${pageDirty(view, id) ? ' <span class="dot" title="Có thay đổi chưa lưu"></span>' : ''}</a>`).join('');
+  for (const el of document.querySelectorAll(`[data-sub^="${view}:"]`)) el.hidden = el.dataset.sub !== `${view}:${cur}`;
 }
 
 function showTab() {
+  const h = location.hash.slice(1);
+  if (MOVED[h] !== undefined) { location.replace(`#${MOVED[h]}`); return; }
   const tab = currentTab();
   if (tab === 'server') { renderSubtabs(); showSub(); }
+  if (SUBS[tab]) renderSubnav(tab);
   for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== tab;
   for (const a of document.querySelectorAll('#tabs a')) {
-    a.classList.toggle('active', a.dataset.tab === tab || (tab === 'player' && a.dataset.tab === 'overview'));
+    a.classList.toggle('active', a.dataset.tab === tab || (tab === 'player' && a.dataset.tab === 'players'));
   }
   window.scrollTo(0, 0);
-  const h = location.hash.slice(1);
-  if (h.startsWith('garage/')) {
-    $('f-steam').value = decodeURIComponent(h.slice('garage/'.length));
+  // #garage/<SteamID>: the creator, filled in for that player.
+  const who = /^garage\/(\d{17})$/.exec(h);
+  if (who) {
+    $('f-steam').value = who[1];
     requestAnimationFrame(() => $('creator-card').scrollIntoView({ behavior: 'smooth' }));
   }
   refresh();
+  renderUnsaved();
 }
 window.addEventListener('hashchange', showTab);
 $('back').addEventListener('click', () => (history.length > 1 ? history.back() : (location.hash = 'overview')));
@@ -5503,7 +5709,7 @@ async function refreshTab(tab) {
   switch (tab) {
     case 'overview': {
       const q = feedFilter ? `&type=${encodeURIComponent(feedFilter)}` : '';
-      const [players, feed] = await Promise.all([getJson('/api/players'), getJson(`/api/feed?limit=150${q}`)]);
+      const [players, feed] = await Promise.all([getJson('/api/players'), getJson(`/api/feed?limit=150${q}`), refreshPerf(), renderOverviewExtras()]);
       renderKpis(players.players);
       renderPlayers(players.players);
       renderFeed($('feed'), feed.events);
@@ -5524,11 +5730,40 @@ async function refreshTab(tab) {
       }
       break;
     }
-    case 'killfeed':
-      renderFeed($('killfeed'), (await getJson('/api/killfeed?limit=200')).events, 'Chưa có ai chết');
+    case 'players': {
+      const sub = currentSubOf('players');
+      if (sub === 'list') {
+        const players = await getJson('/api/players');
+        renderKpis(players.players);
+        renderPlayers(players.players);
+      } else if (sub === 'killfeed') {
+        renderFeed($('killfeed'), (await getJson('/api/killfeed?limit=200')).events, 'Chưa có ai chết');
+      } else if (sub === 'leaderboard') {
+        renderLeaderboard(await getJson('/api/leaderboard'));
+      } else {
+        renderChat((await getJson('/api/chat?limit=300')).events);
+      }
       break;
-    case 'leaderboard':
-      renderLeaderboard(await getJson('/api/leaderboard'));
+    }
+    case 'world':
+      await Promise.all([
+        getJson('/api/flora-settings').then(renderFloraSettings),
+        getJson('/api/fish-settings').then(renderFishSettings),
+        currentSubOf('world') === 'overview' ? renderWorldCards() : null,
+      ]);
+      break;
+    case 'mods':
+      await Promise.all([
+        getJson('/api/commands-settings').then(renderCommandsSettings),
+        getJson('/api/ptera-carry').then(renderPteraSettings),
+        getJson('/api/voice-settings').then(renderVoiceSettings),
+        // Loaded once per visit: the 2 s refresh must not overwrite what is being typed.
+        currentSubOf('mods') === 'messages' && (!msgs.data || (!msgs.dirty && Date.now() - msgs.loadedAt > 30_000
+          && !document.activeElement?.closest?.('[data-sub="mods:messages"]'))) ? loadMessagesTab() : null,
+      ]);
+      break;
+    case 'admin':
+      await Promise.all([loadAudit(), getJson('/api/panel-access').then(renderPanelAccess)]);
       break;
     case 'map':
       {
@@ -5536,19 +5771,12 @@ async function refreshTab(tab) {
         renderMap(m.players, m.ai ?? null);
       }
       break;
-    case 'chat':
-      renderChat((await getJson('/api/chat?limit=300')).events);
-      break;
-    case 'messages':
-      // Loaded once per visit: the 2 s refresh must not overwrite what is being typed.
-      if (!msgs.data || (!msgs.dirty && Date.now() - msgs.loadedAt > 30_000
-          && !document.activeElement?.closest?.('[data-view="messages"]'))) await loadMessagesTab();
-      break;
     case 'server':
       await refreshServerTab();
       break;
     case 'garage': {
-      const [garage, health] = await Promise.all([getJson('/api/garage'), getJson('/api/health'), refreshCreator()]);
+      const [garage, health] = await Promise.all([getJson('/api/garage'), getJson('/api/health'), refreshCreator(),
+        getJson('/api/garage-settings').then(renderGarageSettings)]);
       renderGarage(garage);
       garageWritesEnabled = health.writesEnabled;
       renderOverwrite();
