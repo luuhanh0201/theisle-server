@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 const root = mkdtempSync(join(tmpdir(), 'bans-test-'));
 process.env.DATA_DIR = root;
-const { parseBans, parseGameTime, formatGameTime, durationText, banVars, BanWatcher, validateBan, validateBanEdit, banPlayer, PERMANENT_HOURS,
+const { readBans, parseBans, parseGameTime, formatGameTime, durationText, banVars, BanWatcher, validateBan, validateBanEdit, banPlayer, PERMANENT_HOURS,
   readReasons, saveReasons, DEFAULT_REASONS } = await import('../dist/bans.js');
 const { banLine, banChangeLine } = await import('../dist/discord.js');
 after(() => rmSync(root, { recursive: true, force: true }));
@@ -82,6 +82,22 @@ test('unban and edit: the game file changed (a copy kept), and kept so when the 
   await w2.tick();
   assert.equal(JSON.parse(readFileSync(path, 'utf8')).bannedPlayerData.length, 1);
   await assert.rejects(w.change({ steamId: '76561190000000009', bannedTime: '2026.09.26-10.56.54', action: 'unban', by: 'x' }), /không thấy/);
+});
+
+test('a UTF-16 file (a Vietnamese name, as the game writes it): read, and written back as UTF-16', async () => {
+  const path = join(root, 'utf16.json');
+  const doc = { bannedPlayerData: [{ steamId: '76561199248426579', playerName: 'T-Rex Nổi Loạn', banReason: 'Hack / cheat',
+    bannedTime: '2026.09.26-11.20.09', endBanTime: '2026.09.26-12.20.09', bannerName: 'Rcon', bannerSteamId: 'Rcon' }] };
+  writeFileSync(path, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(JSON.stringify(doc, null, '\t'), 'utf16le')]));
+  const [b] = await readBans(path);
+  assert.equal(b.name, 'T-Rex Nổi Loạn');
+  assert.equal(b.endsAt - b.bannedAt, 3600);
+  const w = new BanWatcher(() => undefined, { path });
+  await w.tick();
+  await w.change({ steamId: '76561199248426579', bannedTime: '2026.09.26-11.20.09', action: 'edit', by: 'x', banReason: 'Thử — đã xong' });
+  const raw = readFileSync(path);
+  assert.deepEqual([...raw.subarray(0, 2)], [0xff, 0xfe], 'still UTF-16 with its BOM');
+  assert.equal(JSON.parse(raw.subarray(2).toString('utf16le')).bannedPlayerData[0].banReason, 'Thử — đã xong');
 });
 
 test('edit requests and times', () => {

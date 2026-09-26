@@ -26,6 +26,9 @@ import { renderMessage } from './messages.js';
  * back is not a new ban). A restart makes the game load the edited file.
  *
  * The times in the file are the VPS's local time ("2026.09.26-10.56.54").
+ * Its encoding is the game's choice: UTF-8, or UTF-16 LE with a BOM as soon
+ * as a name is not plain ASCII ("T-Rex Nổi Loạn", 2026-09-26) — read either
+ * way, written back in the one it was in.
  */
 
 export interface Ban {
@@ -98,9 +101,24 @@ export function parseBans(text: string): Ban[] {
   });
 }
 
+export type GameEncoding = 'utf8' | 'utf8bom' | 'utf16le';
+
+/** The game's file as text, and how it was encoded. */
+export function decodeGameFile(buf: Buffer): { text: string; enc: GameEncoding } {
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return { text: buf.subarray(2).toString('utf16le'), enc: 'utf16le' };
+  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return { text: buf.subarray(3).toString('utf8'), enc: 'utf8bom' };
+  return { text: buf.toString('utf8'), enc: 'utf8' };
+}
+
+export function encodeGameFile(text: string, enc: GameEncoding): Buffer {
+  if (enc === 'utf16le') return Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, 'utf16le')]);
+  if (enc === 'utf8bom') return Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text, 'utf8')]);
+  return Buffer.from(text, 'utf8');
+}
+
 export async function readBans(path = config.game.bansPath): Promise<Ban[]> {
   try {
-    return parseBans(await readFile(path, 'utf8'));
+    return parseBans(decodeGameFile(await readFile(path)).text);
   } catch {
     return [];
   }
@@ -169,20 +187,20 @@ async function readEdits(): Promise<BanEdit[]> {
   }
 }
 
-async function writeAtomic(path: string, text: string): Promise<void> {
+async function writeAtomic(path: string, text: string | Buffer): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const tmp = `${path}.tmp`;
   await writeFile(tmp, text, 'utf8');
   await rename(tmp, path);
 }
 
-/** A copy of the game's file as it was, then the new one in its place (tabs, as the game writes it). */
-async function writeGameFile(path: string, before: string, doc: GameDoc): Promise<void> {
+/** A copy of the game's file as it was, then the new one in its place (tabs and encoding as the game wrote it). */
+async function writeGameFile(path: string, before: Buffer, enc: GameEncoding, doc: GameDoc): Promise<void> {
   await mkdir(backupDir(), { recursive: true });
-  await writeFile(join(backupDir(), `PlayerBans.${Date.now()}.json`), before, 'utf8');
+  await writeFile(join(backupDir(), `PlayerBans.${Date.now()}.json`), before);
   const old = (await readdir(backupDir())).filter((n) => n.startsWith('PlayerBans.')).sort();
   for (const n of old.slice(0, Math.max(0, old.length - KEEP_BACKUPS))) await unlink(join(backupDir(), n)).catch(() => undefined);
-  await writeAtomic(path, JSON.stringify(doc, null, '\t'));
+  await writeAtomic(path, encodeGameFile(JSON.stringify(doc, null, '\t'), enc));
 }
 
 /**
@@ -211,14 +229,15 @@ export class BanWatcher {
     return run;
   }
 
-  async #load(): Promise<{ text: string; doc: GameDoc } | null> {
-    let text: string;
-    try { text = await readFile(this.#path, 'utf8'); } catch { return null; }
+  async #load(): Promise<{ raw: Buffer; enc: GameEncoding; text: string; doc: GameDoc } | null> {
+    let buf: Buffer;
+    try { buf = await readFile(this.#path); } catch { return null; }
+    const { text, enc } = decodeGameFile(buf);
     let raw: unknown;
     try { raw = JSON.parse(text); } catch { return null; }     // being written by the game: next time
     const list = (raw as { bannedPlayerData?: unknown } | null)?.bannedPlayerData;
     if (!Array.isArray(list)) return null;
-    return { text, doc: raw as GameDoc };
+    return { raw: buf, enc, text, doc: raw as GameDoc };
   }
 
   async #editsNow(): Promise<BanEdit[]> {
@@ -232,7 +251,7 @@ export class BanWatcher {
     return this.#serial(async () => {
       const got = await this.#load();
       if (got === null) return;
-      if (applyEdits(got.doc, await this.#editsNow())) await writeGameFile(this.#path, got.text, got.doc);
+      if (applyEdits(got.doc, await this.#editsNow())) await writeGameFile(this.#path, got.raw, got.enc, got.doc);
       const bans = parseBans(JSON.stringify(got.doc));
       const now = new Set(bans.map((b) => key(b.steamId, b.bannedTime)));
       if (this.#known !== null) for (const b of bans) if (!this.#known.has(key(b.steamId, b.bannedTime))) this.#onBan(b);
@@ -252,7 +271,7 @@ export class BanWatcher {
       this.#edits = [...edits, merged];
       await writeAtomic(editsPath(), JSON.stringify(this.#edits, null, 2));
       applyEdits(got.doc, this.#edits);
-      await writeGameFile(this.#path, got.text, got.doc);
+      await writeGameFile(this.#path, got.raw, got.enc, got.doc);
       const after = parseBans(JSON.stringify(got.doc)).find((b) => b.steamId === edit.steamId && b.bannedTime === edit.bannedTime) ?? null;
       if (after === null) this.#known?.delete(key(edit.steamId, edit.bannedTime));
       return { before, after };
