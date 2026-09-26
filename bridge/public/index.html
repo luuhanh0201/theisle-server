@@ -1652,6 +1652,46 @@
 
       </div>
 
+      <div data-sub-panel="data" hidden>
+        <div class="banner tone-dmg" id="bk-phase" hidden style="margin-bottom:14px"></div>
+        <section class="card">
+          <div class="card-head"><h2>Backup dữ liệu người chơi</h2><span class="sub">dino · gara · thống kê · ban</span>
+            <button type="button" class="btn" id="bk-now" style="margin-left:auto">Backup ngay</button></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="row" style="align-items:center;gap:14px">
+              <label class="az-row" style="justify-content:flex-start;gap:8px;flex:none"><input type="checkbox" class="switch" id="bk-auto"> Tự backup mỗi lần khởi động lại định kỳ (lúc server đã tắt)</label>
+              <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none">Giữ <input id="bk-keep" type="number" min="1" max="60" style="width:70px"> bản gần nhất</label>
+              <button type="button" class="btn-soft sm" id="bk-save" style="flex:none">Lưu</button>
+            </div>
+            <div class="audit-table-wrap"><table class="audit-table">
+              <thead><tr><th>File</th><th>Loại</th><th>Lúc</th><th>Dung lượng</th><th></th></tr></thead>
+              <tbody id="bk-list"></tbody></table></div>
+            <div class="step-hint">Lưu trên VPS (<span class="mono">/home/isle/backups/panel</span>), tải về máy bằng nút Tải. Bấm tay khi server đang chạy:
+              file save được chép lại nếu game ghi dở trong lúc chép; bản chắc chắn nhất là bản tự động lúc khởi động lại định kỳ.</div>
+          </div>
+        </section>
+        <section class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Chuyển sang VPS khác</h2></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="row" style="align-items:center"><button type="button" class="btn-soft" id="bk-export" style="flex:none">Xuất cài đặt</button>
+              <span class="step-hint" style="margin:0">Cài đặt panel, mod, Game.ini/Engine.ini và các file <span class="mono">.env</span> (mật khẩu, token, webhook) —
+                <b>giữ kín như mật khẩu</b>.</span></div>
+            <div class="row" style="align-items:center"><input type="file" id="bk-file" accept=".tar.gz,.gz,application/gzip" style="flex:1">
+              <button type="button" class="btn-soft" id="bk-upload" style="flex:none">Khôi phục từ file</button></div>
+            <div class="step-hint">Trên VPS mới (đã cài server + panel như cũ): tải lên file <b>xuất cài đặt</b> rồi file <b>backup dữ liệu</b>. Cần tắt server trước;
+              panel tự backup dữ liệu hiện có trước khi ghi đè, rồi tự khởi động lại.</div>
+          </div>
+        </section>
+        <section class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Xoá dữ liệu để bắt đầu mới</h2></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="check-grid" id="bk-parts"></div>
+            <div class="row"><button type="button" class="btn-danger solid" id="bk-wipe" style="flex:none">Xoá dữ liệu…</button></div>
+            <div class="step-hint">Cần tắt server trước. Luôn tự backup đầy đủ trước khi xoá (khôi phục lại được). Cài đặt panel, mod, game và cài đặt gara được giữ nguyên.</div>
+          </div>
+        </section>
+      </div>
+
       <div data-sub-panel="cfg" hidden>
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚙</span>
         <h2 id="cfg-title">Cấu hình</h2><span class="sub">ghi vào Game.ini — có hiệu lực từ lần khởi động sau</span></div>
@@ -5319,7 +5359,7 @@ const PHASE_VN = {
   stopped: 'Đã tắt', failed: 'Lỗi — unit failed', unknown: 'Không rõ trạng thái',
 };
 const STEP_VN = {
-  countdown: 'Đếm ngược', saving: 'Lưu game', stopping: 'Đang tắt', restarting: 'Khởi động lại',
+  countdown: 'Đếm ngược', saving: 'Lưu game', stopping: 'Đang tắt', restarting: 'Khởi động lại', backup: 'Backup dữ liệu',
   starting: 'Đang bật', waiting: 'Chờ mod nạp', done: 'Xong', failed: 'Thất bại', cancelled: 'Đã huỷ',
 };
 const KIND_VN = { start: 'Bật server', stop: 'Tắt server', restart: 'Khởi động lại' };
@@ -5915,7 +5955,7 @@ function classOptions(selected) {
 // time). The config form is ONE form shown a group at a time, so edits in
 // several groups survive switching groups and are saved together.
 // Old addresses (#server/status, /schedule, /rcon) open Vận hành at that part.
-const SRV_SUBS = [['ops', 'Vận hành'], ['cfg', 'Cấu hình game']];
+const SRV_SUBS = [['ops', 'Vận hành'], ['cfg', 'Cấu hình game'], ['data', 'Dữ liệu']];
 const OPS_PARTS = ['status', 'schedule', 'rcon'];
 let lastCfgGroup = null;
 function currentSub() {
@@ -5924,22 +5964,24 @@ function currentSub() {
   const cfgGroups = Object.keys(cfgData?.groups ?? {});
   if (sub === 'cfg' || sub === 'cfg:') return `cfg:${lastCfgGroup ?? cfgGroups[0] ?? ''}`;
   if (sub.startsWith('cfg:') && (cfgGroups.length === 0 || cfgGroups.includes(sub.slice(4)))) return sub;
+  if (sub === 'data') return 'data';
   return 'ops';
 }
 function renderSubtabs() {
   const cur = currentSub();
-  const page = cur.startsWith('cfg:') ? 'cfg' : 'ops';
-  const href = (id) => (id === 'cfg' ? `#server/${encodeURIComponent(`cfg:${lastCfgGroup ?? Object.keys(cfgData?.groups ?? {})[0] ?? ''}`)}` : '#server/ops');
+  const page = cur.startsWith('cfg:') ? 'cfg' : cur;
+  const href = (id) => (id === 'cfg' ? `#server/${encodeURIComponent(`cfg:${lastCfgGroup ?? Object.keys(cfgData?.groups ?? {})[0] ?? ''}`)}` : `#server/${id}`);
   const dot = ' <span class="dot" title="Có thay đổi chưa lưu"></span>';
-  const dirty = (id) => (id === 'cfg' ? cfgDirty : schDraft !== null);
+  const dirty = (id) => (id === 'cfg' ? cfgDirty : id === 'ops' ? schDraft !== null : false);
   $('srv-subtabs').innerHTML = SRV_SUBS.map(([id, label]) => `<a href="${href(id)}" class="${id === page ? 'on' : ''}">${esc(label)}${dirty(id) ? dot : ''}</a>`).join('');
   $('cfg-groups').innerHTML = Object.entries(cfgData?.groups ?? {}).map(([g, t]) => `<a href="#server/${encodeURIComponent(`cfg:${g}`)}" class="${`cfg:${g}` === cur ? 'on' : ''}">${esc(t)}`
     + `${cfgDirty && dirtyGroups.has(g) ? dot : ''}</a>`).join('');
 }
 function showSub() {
   const sub = currentSub();
-  const panel = sub.startsWith('cfg:') ? 'cfg' : 'ops';
+  const panel = sub.startsWith('cfg:') ? 'cfg' : sub;
   for (const el of document.querySelectorAll('[data-view="server"] [data-sub-panel]')) el.hidden = el.dataset.subPanel !== panel;
+  if (panel === 'data') loadBackups().catch(() => undefined);
   if (panel === 'cfg') {
     const group = sub.slice(4);
     if (group) lastCfgGroup = group;
@@ -5947,7 +5989,7 @@ function showSub() {
     $('cfg-title').textContent = `Cấu hình game · ${cfgData?.groups?.[group] ?? ''}`;
   }
   const page = panel;
-  for (const a of document.querySelectorAll('#srv-subtabs a')) a.classList.toggle('on', a.getAttribute('href').startsWith(page === 'cfg' ? '#server/cfg' : '#server/ops'));
+  for (const a of document.querySelectorAll('#srv-subtabs a')) a.classList.toggle('on', a.getAttribute('href').startsWith(page === 'cfg' ? '#server/cfg' : `#server/${page}`));
   for (const a of document.querySelectorAll('#cfg-groups a')) a.classList.toggle('on', a.getAttribute('href') === `#server/${encodeURIComponent(sub)}`);
 }
 /** An old address (#server/schedule…) names a part of Vận hành: go there once the page is shown. */
@@ -6169,6 +6211,100 @@ $('dd-save').addEventListener('click', () => withToken('lưu cảnh báo DDoS', 
   toast('Đã lưu cảnh báo DDoS.');
   await loadDdos();
 }));
+
+// --- Server → Dữ liệu: backups, moving VPS, a fresh start (bridge/src/backup.ts) ---
+let bkLoaded = false;
+const bkSize = (b) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+const BK_REASON = { manual: 'bấm tay', scheduled: 'tự động (restart định kỳ)', 'before-wipe': 'trước khi xoá', 'before-restore': 'trước khi khôi phục' };
+async function loadBackups() {
+  const d = await getJson('/api/backups');
+  const stopped = d.phase === 'stopped';
+  $('bk-phase').hidden = stopped;
+  $('bk-phase').innerHTML = 'Xoá dữ liệu và khôi phục chỉ làm được khi <b>server đã tắt</b> — tắt ở <a href="#server/ops">Server → Vận hành</a>.';
+  for (const id of ['bk-wipe', 'bk-upload']) $(id).disabled = !stopped;
+  if (!bkLoaded) {
+    $('bk-auto').checked = d.settings.atScheduledRestart;
+    $('bk-keep').value = d.settings.keep;
+    $('bk-parts').innerHTML = d.parts.map((p) => `<label><input type="checkbox" data-bk-part="${esc(p.key)}" checked> ${esc(p.label)}</label>`).join('');
+    bkLoaded = true;
+  }
+  $('bk-list').innerHTML = d.backups.map((b) => `<tr>
+      <td class="mono" style="font-size:12px;max-width:260px;overflow-wrap:anywhere">${esc(b.name)}</td>
+      <td>${b.kind === 'data' ? 'Dữ liệu' : '<b>Cài đặt + bí mật</b>'}${b.reason && b.kind === 'data' ? `<br><span class="muted" style="font-size:12px">${esc(BK_REASON[b.reason] ?? b.reason)}</span>` : ''}</td>
+      <td>${esc(dateTime(b.createdAt))}</td><td>${bkSize(b.size)}</td>
+      <td style="white-space:nowrap"><a class="btn-soft sm" href="/api/backups/file/${encodeURIComponent(b.name)}" download>Tải</a>
+        <button type="button" class="btn-soft sm" data-bk-restore="${esc(b.name)}"${stopped ? '' : ' disabled title="Tắt server trước"'}>Khôi phục</button>
+        <button type="button" class="btn-ghost sm" data-bk-del="${esc(b.name)}" style="color:var(--kill,#ef4444)">Xoá</button></td></tr>`).join('')
+    || '<tr><td colspan="5" class="muted">Chưa có bản backup nào.</td></tr>';
+}
+$('bk-now').addEventListener('click', () => withToken('backup dữ liệu', async (token) => {
+  const b = await adminFetch('/api/backups', 'POST', token, {});
+  toast(`Đã backup: ${b.name} (${bkSize(b.size)}).`);
+  await loadBackups();
+}));
+$('bk-save').addEventListener('click', () => withToken('lưu cài đặt backup', async (token) => {
+  await adminFetch('/api/backup-settings', 'PUT', token, { atScheduledRestart: $('bk-auto').checked, keep: Math.round(Number($('bk-keep').value)) });
+  toast('Đã lưu.');
+}));
+$('bk-export').addEventListener('click', () => withToken('xuất cài đặt', async (token) => {
+  const b = await adminFetch('/api/backups/export-settings', 'POST', token, {});
+  toast(b.skipped?.length ? `Đã xuất (không đọc được: ${b.skipped.join(', ')}). Đang tải…` : 'Đã xuất cài đặt. Đang tải…');
+  const a = document.createElement('a');
+  a.href = `/api/backups/file/${encodeURIComponent(b.name)}`; a.download = b.name; document.body.append(a); a.click(); a.remove();
+  await loadBackups();
+}));
+async function doRestore(token, url, body) {
+  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/gzip', 'x-admin-token': token }, body });
+  if (res.status === 401) { toLogin(); throw new Error('Phiên đăng nhập đã hết — đăng nhập lại'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  toast(`Đã khôi phục ${data.kind === 'settings' ? 'cài đặt' : 'dữ liệu'} (${data.files} file). Panel khởi động lại trong vài giây…`);
+  setTimeout(() => location.reload(), 6000);
+}
+$('bk-list').addEventListener('click', (e) => {
+  const r = e.target.closest('[data-bk-restore]')?.dataset.bkRestore;
+  const del = e.target.closest('[data-bk-del]')?.dataset.bkDel;
+  if (r) {
+    confirmAction({
+      title: 'Khôi phục bản backup này?',
+      body: `<p>Ghi đè bằng <span class="mono">${esc(r)}</span>.</p><p>Dữ liệu hiện có được <b>tự backup trước</b>. Sau đó panel tự khởi động lại.</p>`,
+      okLabel: 'Khôi phục', withReason: false, danger: true,
+      run: (token) => doRestore(token, `/api/backups/restore?name=${encodeURIComponent(r)}`, undefined),
+    });
+  } else if (del) {
+    confirmAction({
+      title: 'Xoá bản backup?', body: `<p>Xoá hẳn file <span class="mono">${esc(del)}</span> trên VPS.</p>`, okLabel: 'Xoá', withReason: false, danger: true,
+      run: async (token) => { await adminFetch(`/api/backups/file/${encodeURIComponent(del)}`, 'DELETE', token); toast('Đã xoá.'); await loadBackups(); },
+    });
+  }
+});
+$('bk-upload').addEventListener('click', () => {
+  const f = $('bk-file').files?.[0];
+  if (!f) { toast('Chọn file backup (.tar.gz) trước.', 'err'); return; }
+  confirmAction({
+    title: 'Khôi phục từ file?',
+    body: `<p>Khôi phục từ <b>${esc(f.name)}</b> (${bkSize(f.size)}).</p><p>Dữ liệu hiện có được <b>tự backup trước</b>. Sau đó panel tự khởi động lại.</p>`,
+    okLabel: 'Khôi phục', withReason: false, danger: true,
+    run: (token) => doRestore(token, '/api/backups/restore', f),
+  });
+});
+$('bk-wipe').addEventListener('click', () => {
+  const parts = [...document.querySelectorAll('#bk-parts [data-bk-part]')].filter((c) => c.checked).map((c) => c.dataset.bkPart);
+  if (!parts.length) { toast('Chọn ít nhất một phần.', 'err'); return; }
+  const labels = [...document.querySelectorAll('#bk-parts [data-bk-part]')].filter((c) => c.checked).map((c) => c.parentElement.textContent.trim());
+  confirmAction({
+    title: 'Xoá dữ liệu để bắt đầu mới?',
+    body: `<p>Xoá: <b>${esc(labels.join(', '))}</b>.</p><p>Panel <b>tự backup đầy đủ trước</b> (khôi phục lại được), rồi tự khởi động lại.</p>`,
+    okLabel: 'Xoá dữ liệu', withReason: false, danger: true,
+    text: { label: 'Gõ XOA DU LIEU để xác nhận', value: '' },
+    run: async (token, _reason, typed) => {
+      if (typed.trim() !== 'XOA DU LIEU') throw new Error('Gõ đúng: XOA DU LIEU');
+      const r = await adminFetch('/api/backups/wipe', 'POST', token, { parts, confirm: 'XOA DU LIEU' });
+      toast(`Đã xoá (${r.wiped.join(', ')}). Backup trước khi xoá: ${r.backup}. Panel khởi động lại…`);
+      setTimeout(() => location.reload(), 6000);
+    },
+  });
+});
 
 async function refreshServerTab() {
   const [status, cfg, readiness] = await Promise.all([
@@ -6595,7 +6731,7 @@ function pageDirty(view, sub) { return dirtyNow().some(([v, s2]) => v === view &
 /** Where the page is now: [block, sub-page] as DIRTY names them. */
 function herePage() {
   const tab = currentTab();
-  if (tab === 'server') return ['server', currentSub().startsWith('cfg:') ? 'cfg' : 'ops'];
+  if (tab === 'server') { const s = currentSub(); return ['server', s.startsWith('cfg:') ? 'cfg' : s]; }
   return [tab, SUBS[tab] ? currentSubOf(tab) : null];
 }
 function renderUnsaved() {

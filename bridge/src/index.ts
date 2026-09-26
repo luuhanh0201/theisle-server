@@ -5,6 +5,7 @@ import { Store } from './store.js';
 import { startServer } from './server.js';
 import { Rcon } from './rcon.js';
 import { Power, scheduleTick } from './power.js';
+import { createDataBackup, defaultRoots, prune, readBackupSettings } from './backup.js';
 import { systemdService } from './service.js';
 import { Notifier } from './notify.js';
 import { Metrics } from './metrics.js';
@@ -33,6 +34,16 @@ const power = new Power({
   service: systemdService(),
   rcon,
   modsLoadedAt: () => store.modsLoadedAt(),
+  // The daily restart: a data backup while the game is down (backup.ts).
+  pause: {
+    wanted: async (op) => op.source === 'schedule' && (await readBackupSettings()).atScheduledRestart,
+    run: async () => {
+      const roots = defaultRoots();
+      const b = await createDataBackup(roots, 'scheduled');
+      await prune(roots, (await readBackupSettings()).keep);
+      console.info(`[backup] ${b.name} (${b.size} bytes)`);
+    },
+  },
 });
 // The admin log keeps 7 days: drop what is older now (then hourly, on write).
 await pruneAudit().catch((error: unknown) => console.error('[audit] prune failed:', error));

@@ -22,7 +22,7 @@ import { currentMessages, leftVars, renderMessage } from './messages.js';
 export type Phase = 'stopped' | 'starting' | 'running' | 'stopping' | 'failed' | 'unknown';
 export type Source = 'admin' | 'schedule' | 'config';
 export type Step =
-  | 'countdown' | 'saving' | 'stopping' | 'restarting' | 'starting' | 'waiting'
+  | 'countdown' | 'saving' | 'stopping' | 'restarting' | 'backup' | 'starting' | 'waiting'
   | 'done' | 'failed' | 'cancelled';
 
 export interface Operation {
@@ -58,6 +58,12 @@ export interface PowerDeps {
   modsLoadedAt: () => number | null;
   now?: () => number;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  /**
+   * Work to do while the game is DOWN during a restart (the daily backup,
+   * backup.ts): when wanted(op), the restart is a stop, then run(op), then a
+   * start. A failure of run() is reported and the server still starts.
+   */
+  pause?: { wanted(op: Operation): Promise<boolean>; run(op: Operation): Promise<void> };
   /** How long to wait for the mods after a start, and how often to look. */
   readyTimeoutMs?: number;
   pollMs?: number;
@@ -95,6 +101,7 @@ export class Power {
       sleep: realSleep,
       readyTimeoutMs: 10 * 60_000,
       pollMs: 5000,
+      pause: { wanted: async () => false, run: async () => undefined },
       ...deps,
     };
   }
@@ -189,8 +196,21 @@ export class Power {
         }
         await this.#announce(notice(op.kind, null));
       }
-      op.step = op.kind === 'stop' ? 'stopping' : op.kind === 'start' ? 'starting' : 'restarting';
-      await this.#d.service.run(op.kind);
+      if (op.kind === 'restart' && await this.#d.pause.wanted(op).catch(() => false)) {
+        op.step = 'stopping';
+        await this.#d.service.run('stop');
+        op.step = 'backup';
+        try {
+          await this.#d.pause.run(op);
+        } catch (error) {
+          op.message = (op.message ? op.message + ' · ' : '') + `backup failed: ${(error as Error).message}`;
+        }
+        op.step = 'starting';
+        await this.#d.service.run('start');
+      } else {
+        op.step = op.kind === 'stop' ? 'stopping' : op.kind === 'start' ? 'starting' : 'restarting';
+        await this.#d.service.run(op.kind);
+      }
 
       // --- wait until players can join ------------------------------------
       if (op.kind !== 'stop') {

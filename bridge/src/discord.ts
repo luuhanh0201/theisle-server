@@ -257,7 +257,7 @@ export function auditLine(a: AuditEntry): LogLine {
 }
 
 const PHASE_TEXT: Record<string, string> = {
-  running: '✅ Server đã chạy — vào được', starting: '🔄 Server đang khởi động…', stopping: '⏳ Server đang tắt…',
+  running: '✅ Server đã hoạt động, hãy chuẩn bị cho chuyến sinh tồn của bạn', starting: '🔄 Server đang khởi động…', stopping: '⏳ Server đang tắt…',
   stopped: '⏹️ Server đã tắt', failed: '⚠️ Server gặp lỗi và dừng (crash?)',
 };
 /** A change of the game server's state (null when it says nothing new). */

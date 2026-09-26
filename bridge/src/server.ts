@@ -33,6 +33,12 @@ import { DISCORD_KINDS, banChangeLine, publicView, type DiscordLog } from './dis
 import { registerCommands } from './relay.js';
 import { saveDdos, type DdosSettings, type DdosWatch } from './ddos.js';
 import {
+  DATA_PARTS, backupPath, createDataBackup, defaultRoots, deleteBackup, exportSettings, listBackups, prune, readBackupSettings,
+  restore, saveBackupSettings, wipe, type DataPart,
+} from './backup.js';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { stat as statFile, unlink as unlinkFile } from 'node:fs/promises';
+import {
   PERMANENT_HOURS, banPlayer, banVars, durationText, formatGameTime, parseGameTime, readBans, readReasons, saveReasons, validateBan, validateBanEdit,
   type BanWatcher,
 } from './bans.js';
@@ -313,6 +319,24 @@ async function handlePanel(
     sendJson(res, 200, { url: c.url });
     return;
   }
+  if (path === '/api/backups' && req.method === 'GET') {
+    const roots = defaultRoots();
+    sendJson(res, 200, { backups: await listBackups(roots), settings: await readBackupSettings(), parts: DATA_PARTS, phase: (await ctx.power.status()).phase });
+    return;
+  }
+  const backupFile = /^\/api\/backups\/file\/([^/]+)$/.exec(path);
+  if (backupFile && req.method === 'GET') {
+    const file = backupPath(defaultRoots(), decodeURIComponent(backupFile[1] as string));
+    const s = await statFile(file).catch(() => null);
+    if (!s) { sendJson(res, 404, { error: 'không có bản backup này' }); return; }
+    await audit({ action: 'backup downloaded', detail: String(backupFile[1]), ok: true });
+    res.writeHead(200, {
+      'content-type': 'application/gzip', 'content-length': String(s.size), 'cache-control': 'no-store',
+      'content-disposition': `attachment; filename="${decodeURIComponent(backupFile[1] as string)}"`,
+    });
+    createReadStream(file).pipe(res);
+    return;
+  }
   if (path === '/api/discord' && req.method === 'GET') {
     if (!ctx.discord) { sendJson(res, 503, { error: 'Discord log is not running' }); return; }
     await ctx.discord.refreshInfo();
@@ -363,6 +387,10 @@ async function handlePanel(
       (path === '/api/discord/test' && req.method === 'POST') ||
       (path === '/api/discord/register-commands' && req.method === 'POST') ||
       (path === '/api/ddos' && req.method === 'PUT') ||
+      (path === '/api/backups' && req.method === 'POST') ||
+      (path === '/api/backup-settings' && req.method === 'PUT') ||
+      ((path === '/api/backups/export-settings' || path === '/api/backups/wipe' || path === '/api/backups/restore') && req.method === 'POST') ||
+      (/^\/api\/backups\/file\/[^/]+$/.test(path) && req.method === 'DELETE') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
       (path === '/api/fish-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
@@ -581,6 +609,88 @@ async function handlePanel(
       await audit({ action: 'ban reasons saved', detail: describeChanges({ reasons: before }, { reasons: saved }) || 'không đổi gì', ok: true });
       sendJson(res, 200, { reasons: saved });
       return;
+    }
+
+    if (path.startsWith('/api/backup')) {
+      const roots = defaultRoots();
+      // After a wipe or a restore the bridge starts again: its memory (stats,
+      // bans, settings) must be read afresh. systemd brings it back (Restart=on-failure).
+      const restartBridge = (): void => { setTimeout(() => process.exit(75), 1500); };
+      const gameStopped = async (): Promise<boolean> => (await ctx.power.status()).phase === 'stopped';
+      if (path === '/api/backups') {
+        const b = await createDataBackup(roots, 'manual');
+        const pruned = await prune(roots, (await readBackupSettings()).keep);
+        await audit({ action: 'backup made', detail: `${b.name} (${Math.round(b.size / 1024)} KB)${pruned ? ` · xoá ${pruned} bản cũ` : ''}`, ok: true });
+        sendJson(res, 200, b);
+        return;
+      }
+      if (path === '/api/backup-settings') {
+        const saved = await saveBackupSettings(await readJsonBody(req));
+        await audit({ action: 'backup settings saved', detail: `tự backup khi restart định kỳ: ${saved.atScheduledRestart ? 'bật' : 'tắt'} · giữ ${saved.keep} bản`, ok: true });
+        sendJson(res, 200, saved);
+        return;
+      }
+      if (path === '/api/backups/export-settings') {
+        const b = await exportSettings(roots);
+        await audit({ action: 'settings exported', detail: `${b.name}${b.skipped.length ? ` · không đọc được: ${b.skipped.join(', ')}` : ''}`, ok: true });
+        sendJson(res, 200, b);
+        return;
+      }
+      const del = /^\/api\/backups\/file\/([^/]+)$/.exec(path);
+      if (del) {
+        const name = decodeURIComponent(del[1] as string);
+        await deleteBackup(roots, name);
+        await audit({ action: 'backup deleted', detail: name, ok: true });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+      if (!(await gameStopped())) { sendJson(res, 409, { error: 'Tắt server trước (Server → Vận hành → Tắt server), rồi làm lại.' }); return; }
+      if (path === '/api/backups/wipe') {
+        const body = (await readJsonBody(req)) as { parts?: unknown; confirm?: unknown };
+        if (body.confirm !== 'XOA DU LIEU') throw new ValidationError('gõ đúng "XOA DU LIEU" để xác nhận');
+        const parts = Array.isArray(body.parts) ? body.parts.filter((p): p is DataPart => DATA_PARTS.some((d) => d.key === p)) : [];
+        if (parts.length === 0) throw new ValidationError('chọn ít nhất một phần để xoá');
+        const b = await createDataBackup(roots, 'before-wipe');
+        const done = await wipe(roots, parts);
+        await audit({ action: 'server data wiped', detail: `${done.join(', ')} · backup trước: ${b.name}`, ok: true });
+        sendJson(res, 200, { ok: true, wiped: done, backup: b.name });
+        restartBridge();
+        return;
+      }
+      if (path === '/api/backups/restore') {
+        // From a backup on the VPS (?name=…) or from a file sent in the body (moving VPS).
+        const name = url.searchParams.get('name');
+        let archive: string;
+        let uploaded = false;
+        if (name) {
+          archive = backupPath(roots, name);
+        } else {
+          archive = `${roots.backups}/upload-${Date.now()}.tar.gz`;
+          uploaded = true;
+          await new Promise<void>((resolve, reject) => {
+            let size = 0;
+            const out = createWriteStream(archive, { mode: 0o600 });
+            req.on('data', (chunk: Buffer) => {
+              size += chunk.length;
+              if (size > 1024 * 1024 * 1024) { req.destroy(); reject(new ValidationError('file quá lớn (tối đa 1 GB)')); }
+            });
+            req.pipe(out);
+            out.on('finish', () => resolve());
+            out.on('error', reject);
+            req.on('error', reject);
+          });
+        }
+        try {
+          const before = await createDataBackup(roots, 'before-restore');
+          const r = await restore(roots, archive);
+          await audit({ action: 'backup restored', detail: `${name ?? 'file tải lên'} · ${r.kind} (${r.parts.join(', ')}, ${r.files} file) · backup trước: ${before.name}`, ok: true });
+          sendJson(res, 200, { ok: true, ...r, backup: before.name });
+        } finally {
+          if (uploaded) await unlinkFile(archive).catch(() => undefined);
+        }
+        restartBridge();
+        return;
+      }
     }
 
     if (path === '/api/ddos') {

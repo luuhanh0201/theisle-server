@@ -47,7 +47,7 @@ test('lines: what each event says; player text cannot format or ping', () => {
   assert.equal(phaseLine('running', 'running', 1, false), null);
   assert.match(phaseLine('running', 'starting', 1, false).text, /bất ngờ/);
   assert.match(phaseLine('running', 'stopping', 1, true).text, /đang tắt/);
-  assert.match(phaseLine('starting', 'running', 1, false).text, /đã chạy/);
+  assert.match(phaseLine('starting', 'running', 1, false).text, /Server đã hoạt động/);
 });
 
 function fakeDiscord() {
