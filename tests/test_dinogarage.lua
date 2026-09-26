@@ -509,6 +509,36 @@ check("an event and a message", #eventsOf("prime_fix") == 1 and eventsOf("prime_
 trike.__prime.bPrimeCondition5 = false
 fixLoop.fn()
 check("once only", trike.__prime.bPrimeCondition5 == false and #eventsOf("prime_fix") == 1)
+
+-- primeAt: every condition was there, so past 75 % it would have been prime.
+local function primeAsked()
+  for _, c in ipairs(H.calls) do if c.what == "ServerSetPrimeEligible" and c.args[1] == true then return true end end
+  return false
+end
+local ff2 = assert(io.open("Mods/DinoGarage/Saved/prime-fixes.json", "w"))
+ff2:write(json.encode({ fixes = {
+  { id = "young", steamId = STEAM, species = "BP_Allosaurus_C", minGrowth = 0.6, maxGrowth = 1, primeAt = 0.75,
+    primeData = { cond1 = true, cond6 = true, eligible = true }, expiresAt = clock + 3600 },
+} }))
+ff2:close()
+H.calls = {}
+local young = H.makePawn({ growth = 0.70, class = "BlueprintGeneratedClass /Game/BP_Allosaurus.BP_Allosaurus_C" })
+useCtrl(H.makeCtrl(STEAM, young))
+fixLoop.fn()
+check("below primeAt: the conditions, no prime asked (the game decides at 75 %)", young.__prime.bPrimeCondition6 == true and not primeAsked())
+os.remove("Mods/DinoGarage/Saved/prime-fixes.done.json")
+-- (the mod keeps what it applied in memory: a fresh id for the grown case)
+ff2 = assert(io.open("Mods/DinoGarage/Saved/prime-fixes.json", "w"))
+ff2:write(json.encode({ fixes = {
+  { id = "grown", steamId = STEAM, species = "BP_Allosaurus_C", minGrowth = 0.6, maxGrowth = 1, primeAt = 0.75,
+    primeData = { cond1 = true, cond6 = true, eligible = true }, expiresAt = clock + 3600 },
+} }))
+ff2:close()
+H.calls = {}
+local grown = H.makePawn({ growth = 0.82, class = "BlueprintGeneratedClass /Game/BP_Allosaurus.BP_Allosaurus_C" })
+useCtrl(H.makeCtrl(STEAM, grown))
+fixLoop.fn()
+check("past primeAt: prime asked too (it would have turned prime at 75 %)", grown.__prime.bPrimeCondition6 == true and primeAsked())
 os.remove("Mods/DinoGarage/Saved/prime-fixes.json"); os.remove("Mods/DinoGarage/Saved/prime-fixes.done.json")
 
 say("")

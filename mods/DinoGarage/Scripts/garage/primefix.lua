@@ -12,7 +12,9 @@
             { "fixes": [ { id, steamId, species ("BP_Triceratops_C"),
                            minGrowth, maxGrowth,
                            primeData { cond1..cond10, eligible }, prime,
-                           expiresAt } ] }
+                           primeAt, expiresAt } ] }
+    primeAt (e.g. 0.75): the dino had every condition, so it would have
+    turned prime at that growth — applied at or past it, prime is asked too.
         Saved/prime-fixes.done.json  written here: { "done": { "<id>": t } }
 
     A fix waits (up to expiresAt) until that player plays that species within
@@ -107,7 +109,9 @@ function P.poll()
                 for k, v in pairs(type(fix.primeData) == "table" and fix.primeData or {}) do
                     if v == true then give[k] = true end
                 end
-                local wrote, isPrime = Restore.applyPrime(pawn, give, fix.prime == true)
+                local primeAt = tonumber(fix.primeAt)
+                local askPrime = fix.prime == true or (primeAt ~= nil and g >= primeAt)
+                local wrote, isPrime = Restore.applyPrime(pawn, give, askPrime)
                 done[fix.id] = now
                 changed = true
                 H.log(string.format("primefix: %s for %s (%s %.2f) — %d conditions, prime %s",

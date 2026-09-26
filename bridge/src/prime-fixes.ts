@@ -24,6 +24,9 @@ export interface PrimeFix {
   maxGrowth: number;
   primeData: Record<string, boolean>;
   prime: boolean;
+  /** The dino had every condition: applied at or past this growth (0.75,
+   * when the game decides), prime is asked too. Null: never. */
+  primeAt: number | null;
   createdAt: number;
   expiresAt: number;
   note: string;
@@ -52,8 +55,9 @@ const SPECIES_RE = /^BP_[A-Za-z0-9]+_C$/;
 const CONDS_RE = /^[01]{10}$/;
 
 /**
- * Add one fix. `conditions`: the ten conditions as "1010101100" (condition 1
- * first), as the events show them; `eligible` defaults to what the game had.
+ * Add one fix — or, with the `id` of one not applied yet, replace it.
+ * `conditions`: the ten conditions as "1010101100" (condition 1 first), as
+ * the events show them; `eligible` defaults to what the game had.
  */
 export async function addPrimeFix(raw: unknown, nowS = Math.floor(Date.now() / 1000)): Promise<PrimeFix> {
   const r = (raw ?? {}) as Record<string, unknown>;
@@ -71,23 +75,33 @@ export async function addPrimeFix(raw: unknown, nowS = Math.floor(Date.now() / 1
   if (r.eligible !== undefined && typeof r.eligible !== 'boolean') throw new ValidationError('eligible must be true or false');
   if (!(Number.isInteger(days) && days >= 1 && days <= 30)) throw new ValidationError('days must be 1–30');
   if (conditions === null && r.prime !== true) throw new ValidationError('nothing to give back: conditions or prime');
+  const primeAt = r.primeAt === undefined || r.primeAt === null ? null : Number(r.primeAt);
+  if (primeAt !== null && !(primeAt > 0 && primeAt <= 1)) throw new ValidationError('primeAt must be a growth within 0–1');
 
   const primeData: Record<string, boolean> = {};
   if (conditions !== null) [...conditions].forEach((c, i) => { primeData[`cond${i + 1}`] = c === '1'; });
   if (typeof r.eligible === 'boolean') primeData.eligible = r.eligible;
 
   const fixes = await readFixes();
+  let replacing: PrimeFix | null = null;
+  if (r.id !== undefined) {
+    replacing = fixes.find((f) => f.id === r.id) ?? null;
+    if (replacing === null) throw new ValidationError(`no fix ${String(r.id)}`);
+    if ((await listPrimeFixes()).find((f) => f.id === r.id)?.doneAt != null) throw new ValidationError(`fix ${String(r.id)} is already applied`);
+  }
   const fix: PrimeFix = {
-    id: `fix-${nowS.toString(36)}-${fixes.length + 1}`,
+    id: replacing?.id ?? `fix-${nowS.toString(36)}-${fixes.length + 1}`,
     steamId, species, minGrowth, maxGrowth, primeData,
     prime: r.prime === true,
-    createdAt: nowS,
+    primeAt,
+    createdAt: replacing?.createdAt ?? nowS,
     expiresAt: nowS + days * 86400,
     note: typeof r.note === 'string' ? r.note.slice(0, 200) : '',
   };
   await mkdir(config.garageRoot, { recursive: true });
   const tmp = `${fixesPath()}.tmp`;
-  await writeFile(tmp, JSON.stringify({ fixes: [...fixes, fix] }, null, 2), 'utf8');
+  const next = replacing ? fixes.map((f) => (f.id === fix.id ? fix : f)) : [...fixes, fix];
+  await writeFile(tmp, JSON.stringify({ fixes: next }, null, 2), 'utf8');
   await rename(tmp, fixesPath());
   return fix;
 }

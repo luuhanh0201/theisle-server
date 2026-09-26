@@ -43,3 +43,20 @@ test('refused: bad ids, species, growth, conditions, nothing to give', async () 
   await assert.rejects(() => addPrimeFix({ ...trike, conditions: null }), /nothing to give back/);
   await assert.rejects(() => addPrimeFix({ ...trike, days: 90 }), /1–30/);
 });
+
+test('primeAt, and replacing a fix not applied yet (an applied one is kept)', async () => {
+  const f = await addPrimeFix({ ...trike, maxGrowth: 0.74 }, 2000);
+  const up = await addPrimeFix({ ...trike, id: f.id, maxGrowth: 1, primeAt: 0.75 }, 3000);
+  assert.equal(up.id, f.id);
+  assert.equal(up.createdAt, 2000);
+  assert.equal(up.maxGrowth, 1);
+  assert.equal(up.primeAt, 0.75);
+  const all = await listPrimeFixes();
+  assert.equal(all.filter((x) => x.id === f.id).length, 1, 'replaced, not added');
+  await assert.rejects(() => addPrimeFix({ ...trike, id: 'nope' }), /no fix/);
+  await assert.rejects(() => addPrimeFix({ ...trike, primeAt: 2 }), /primeAt/);
+  const done = JSON.parse(readFileSync(join(root, 'DinoGarage', 'Saved', 'prime-fixes.done.json'), 'utf8'));
+  done.done[f.id] = 9;
+  writeFileSync(join(root, 'DinoGarage', 'Saved', 'prime-fixes.done.json'), JSON.stringify(done));
+  await assert.rejects(() => addPrimeFix({ ...trike, id: f.id }), /already applied/);
+});

@@ -750,11 +750,12 @@ async function handlePanel(
     }
 
     if (path === '/api/prime-fixes') {
-      const fix = await addPrimeFix(await readJsonBody(req));
+      const body = (await readJsonBody(req)) as { id?: unknown } | null;
+      const fix = await addPrimeFix(body);
       const conds = Object.entries(fix.primeData).filter(([k, v]) => k.startsWith('cond') && v).map(([k]) => k.slice(4)).join(',');
       await audit({
-        action: 'prime fix added',
-        detail: `${fix.steamId} · ${fix.species} ${Math.round(fix.minGrowth * 100)}–${Math.round(fix.maxGrowth * 100)}% · điều kiện ${conds || '—'}${fix.prime ? ' · prime' : ''}${fix.note ? ' · ' + fix.note : ''}`,
+        action: body?.id !== undefined ? 'prime fix updated' : 'prime fix added',
+        detail: `${fix.id} · ${fix.steamId} · ${fix.species} ${Math.round(fix.minGrowth * 100)}–${Math.round(fix.maxGrowth * 100)}% · điều kiện ${conds || '—'}${fix.prime ? ' · prime' : ''}${fix.primeAt !== null ? ` · prime nếu ≥ ${Math.round(fix.primeAt * 100)}%` : ''}${fix.note ? ' · ' + fix.note : ''}`,
         ok: true,
       });
       sendJson(res, 200, fix);
