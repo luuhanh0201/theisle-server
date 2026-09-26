@@ -165,6 +165,8 @@ local function failStore(steamId, reason, c)
     H.log(MOD .. ": store for " .. steamId .. " failed: " .. reason)
 end
 
+local CORPSE_GROWTH = 0.25   -- a stored dino's corpse: a hatchling's
+
 --- Runs when the countdown ends: capture, save, remove the dino — all in
 --- this one tick, so there is no moment where both the slot and the live
 --- dino exist (a player quitting in between used to keep both).
@@ -195,6 +197,12 @@ local function finishStore(c, pawn, steamId, pending)
     if not ok then
         failed("save_failed")
         return
+    end
+    -- The corpse left behind is a hatchling's, not the stored dino's: shrunk
+    -- to CORPSE_GROWTH first (the slot already holds the real growth), so a
+    -- store does not leave a grown dino's worth of meat to eat.
+    if H.isValid(pawn) then
+        H.try(MOD .. ": SetGrowth(corpse)", function() pawn:SetGrowth(CORPSE_GROWTH) end)
     end
     local killed = H.isValid(pawn) and H.try(MOD .. ": SetHealth(0)", function() pawn:SetHealth(0) end)
     if not killed then

@@ -112,7 +112,14 @@ local okDecode, state = pcall(json.decode, raw)
 check("slot file is valid JSON", okDecode, tostring(state))
 if okDecode then
   check("version = 1", state.version == 1, tostring(state.version))
-  check("growth captured", state.growth == 0.9, tostring(state.growth))
+  check("growth captured (the real one, before the corpse shrink)", state.growth == 0.9, tostring(state.growth))
+  local shrunkAt, killedAt
+  for i, c in ipairs(H.calls) do
+    if c.what == "SetGrowth" and shrunkAt == nil then shrunkAt = i; check("corpse shrunk to 25 %", c.args[1] == 0.25, tostring(c.args[1])) end
+    if c.what == "SetHealth" and c.args[1] == 0 then killedAt = i end
+  end
+  check("shrunk, then killed: the corpse is a hatchling's", shrunkAt ~= nil and killedAt ~= nil and shrunkAt < killedAt,
+        tostring(shrunkAt) .. " / " .. tostring(killedAt))
   check("health captured through GetHealth()", state.health == 100, tostring(state.health))
   check("stamina/hunger/thirst captured", state.stamina == 80 and state.hunger == 70
         and state.thirst == 65, tostring(state.stamina))
