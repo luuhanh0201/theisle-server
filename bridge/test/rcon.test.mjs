@@ -6,7 +6,12 @@ import { createServer } from 'node:net';
 import { Rcon, RCON_COMMANDS, encodeArgs } from '../dist/rcon.js';
 
 const received = [];
+let connections = 0;
+const open = new Set();
 const server = createServer((sock) => {
+  connections++;
+  open.add(sock);
+  sock.on('close', () => open.delete(sock));
   let authed = false;
   sock.on('data', (buf) => {
     if (!authed) {
@@ -29,9 +34,15 @@ const server = createServer((sock) => {
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
-after(() => server.close());
+// Each client keeps its connection: close them all, then the server.
+const made = [];
+after(() => { for (const r of made) r.close(); for (const sock of open) sock.destroy(); server.close(); });
 
-const rcon = (password = 'secret') => new Rcon({ host: '127.0.0.1', port, password, idleMs: 80, timeoutMs: 2000 });
+const rcon = (password = 'secret') => {
+  const r = new Rcon({ host: '127.0.0.1', port, password, idleMs: 80, timeoutMs: 2000 });
+  made.push(r);
+  return r;
+};
 
 test('login, then a command with a \\n terminator', async () => {
   assert.equal(await rcon().run('serverDetails'), 'ServerDetails: Gateway 3/100');
@@ -67,6 +78,27 @@ test('wrong password and disabled RCON are errors', async () => {
 test('nothing listening is an error, not a hang', async () => {
   const dead = new Rcon({ host: '127.0.0.1', port: 1, password: 'x', idleMs: 50, timeoutMs: 1000 });
   await assert.rejects(() => dead.run('save'), /connection failed/);
+});
+
+test('one connection for many commands (the game never closes the ones we end)', async () => {
+  const r = rcon();
+  const before = connections;
+  await r.run('save');
+  await r.run('serverDetails');
+  await r.directMessage('76561198000000001', 'hi');
+  assert.equal(connections - before, 1, 'logged in once, kept');
+  r.close();
+});
+
+test('the game closed it (a restart): the next command opens a new one', async () => {
+  const r = rcon();
+  const before = connections;
+  assert.equal(await r.run('serverDetails'), 'ServerDetails: Gateway 3/100');
+  for (const sock of open) sock.destroy();
+  await new Promise((res) => setTimeout(res, 50));
+  assert.equal(await r.run('serverDetails'), 'ServerDetails: Gateway 3/100');
+  assert.equal(connections - before, 2);
+  r.close();
 });
 
 test('argument validation', () => {

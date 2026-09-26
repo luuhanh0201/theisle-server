@@ -1,4 +1,4 @@
-import { connect } from 'node:net';
+import { connect, type Socket } from 'node:net';
 import { ValidationError } from './garage.js';
 
 /**
@@ -115,6 +115,14 @@ export function encodeArgs(kind: ArgKind, raw: unknown): string {
   }
 }
 
+/** The kept RCON connection: whoever waits on it gets its data and its end. */
+interface RconConnection {
+  socket: Socket;
+  ready: Promise<void>;
+  onData: ((chunk: Buffer) => void) | null;
+  onGone: (() => void) | null;
+}
+
 export class Rcon {
   #queue: Promise<unknown> = Promise.resolve();
   readonly #opts: Required<RconOptions>;
@@ -169,77 +177,101 @@ export class Rcon {
     return run;
   }
 
-  #session(opcode: number, args: string, terminator: string): Promise<string> {
+  /**
+   * ONE connection, logged in once and kept: the game never closes its side of
+   * an RCON connection the client ends, so a connection per command left one
+   * dead socket (CLOSE-WAIT) in the game per command — 422 after 3 h on
+   * 2026-09-26, and the server's FPS fell from 30 to 4 with them. It is only
+   * replaced when the game closes it (a restart) or it fails.
+   */
+  #conn: RconConnection | null = null;
+
+  #connection(): Promise<RconConnection> {
+    if (this.#conn !== null && !this.#conn.socket.destroyed) {
+      const c = this.#conn;
+      return c.ready.then(() => c);
+    }
     const { host, port, password, idleMs, timeoutMs } = this.#opts;
-    return new Promise<string>((resolve, reject) => {
-      const socket = connect({ host, port });
-      let phase: 'auth' | 'command' = 'auth';
+    const socket = connect({ host, port });
+    const conn: RconConnection = { socket, ready: Promise.resolve(), onData: null, onGone: null };
+    this.#conn = conn;
+    const gone = (): void => {
+      if (this.#conn === conn) this.#conn = null;
+      const g = conn.onGone;
+      conn.onGone = null;
+      g?.();
+    };
+    conn.ready = new Promise<void>((resolve, reject) => {
+      let buffer = '';
+      let idle: NodeJS.Timeout | null = null;
+      let done = false;
+      const end = (error: Error | null): void => {
+        if (done) return;
+        done = true;
+        if (idle) clearTimeout(idle);
+        clearTimeout(hard);
+        if (error) { socket.destroy(); gone(); reject(error); } else resolve();
+      };
+      const hard = setTimeout(() => end(new RconError(`RCON did not answer the login within ${timeoutMs}ms`)), timeoutMs);
+      const check = (): void => {
+        if (/password accepted/i.test(buffer)) end(null);
+        else end(new RconError('RCON rejected the password'));
+      };
+      conn.onData = (chunk) => {
+        buffer += chunk.toString('utf8');
+        if (/password accepted/i.test(buffer)) { end(null); return; }
+        if (idle) clearTimeout(idle);
+        idle = setTimeout(check, idleMs);
+      };
+      conn.onGone = () => end(new RconError('RCON closed the connection during login'));
+      socket.on('connect', () => {
+        socket.write(Buffer.concat([Buffer.from([0x01]), Buffer.from(password, 'utf8')]));
+        idle = setTimeout(check, idleMs);
+      });
+      socket.on('error', (error) => { end(new RconError(`RCON connection failed: ${error.message}`)); socket.destroy(); gone(); });
+    });
+    // Data with no command waiting (a late reply) is dropped.
+    socket.on('data', (chunk: Buffer) => conn.onData?.(chunk));
+    socket.on('close', gone);
+    return conn.ready.then(() => { conn.onData = null; conn.onGone = null; return conn; });
+  }
+
+  #session(opcode: number, args: string, terminator: string): Promise<string> {
+    const { idleMs, timeoutMs } = this.#opts;
+    return this.#connection().then((conn) => new Promise<string>((resolve) => {
       let buffer = '';
       let idle: NodeJS.Timeout | null = null;
       let finished = false;
-
-      const finish = (error: Error | null, value = ''): void => {
+      const finish = (): void => {
         if (finished) return;
         finished = true;
         if (idle) clearTimeout(idle);
         clearTimeout(hard);
-        socket.destroy();
-        if (error) reject(error);
-        else resolve(value);
+        conn.onData = null;
+        conn.onGone = null;
+        resolve(buffer.trim());
       };
-      const hard = setTimeout(() => {
-        // A command that never answers is not an error: many opcodes do not.
-        if (phase === 'command') finish(null, buffer.trim());
-        else finish(new RconError(`RCON did not answer the login within ${timeoutMs}ms`));
-      }, timeoutMs);
-
-      const sendCommand = (): void => {
-        phase = 'command';
-        buffer = '';
-        socket.write(Buffer.concat([Buffer.from([0x02, opcode]), Buffer.from(args, 'utf8')]));
-        armIdle();
-      };
-      const onAuthDone = (): void => {
-        if (!/password accepted/i.test(buffer)) {
-          finish(new RconError('RCON rejected the password'));
-          return;
-        }
-        sendCommand();
-      };
+      // A command that never answers is not an error: many opcodes do not.
+      const hard = setTimeout(finish, timeoutMs);
       const armIdle = (): void => {
         if (idle) clearTimeout(idle);
-        idle = setTimeout(() => {
-          if (phase === 'auth') onAuthDone();
-          else finish(null, buffer.trim());
-        }, idleMs);
+        idle = setTimeout(finish, idleMs);
       };
-
-      socket.on('connect', () => {
-        socket.write(Buffer.concat([Buffer.from([0x01]), Buffer.from(password, 'utf8')]));
-        armIdle();
-      });
-      socket.on('data', (chunk: Buffer) => {
+      conn.onData = (chunk) => {
         buffer += chunk.toString('utf8');
-        if (phase === 'auth') {
-          if (/password accepted/i.test(buffer)) onAuthDone();
-          else armIdle();
-          return;
-        }
-        if (buffer.endsWith(terminator) && terminator !== '\n\n') {
-          finish(null, buffer.trim());
-          return;
-        }
-        if (terminator === '\n\n' && buffer.includes('\n\n')) {
-          finish(null, buffer.trim());
-          return;
-        }
+        if (terminator !== '\n\n' && buffer.endsWith(terminator)) { finish(); return; }
+        if (terminator === '\n\n' && buffer.includes('\n\n')) { finish(); return; }
         armIdle();
-      });
-      socket.on('error', (error) => finish(new RconError(`RCON connection failed: ${error.message}`)));
-      socket.on('close', () => {
-        if (phase === 'auth') finish(new RconError('RCON closed the connection during login'));
-        else finish(null, buffer.trim());
-      });
-    });
+      };
+      conn.onGone = finish;
+      conn.socket.write(Buffer.concat([Buffer.from([0x02, opcode]), Buffer.from(args, 'utf8')]));
+      armIdle();
+    }));
+  }
+
+  /** Close the kept connection (the bridge is stopping). */
+  close(): void {
+    this.#conn?.socket.destroy();
+    this.#conn = null;
   }
 }
