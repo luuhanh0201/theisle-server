@@ -161,11 +161,11 @@ export const MANAGED: Record<string, ManagedKey> = {
     label: 'Chu kỳ sinh AI (giây)', help: 'Bao lâu server kiểm tra để sinh thêm AI.' },
   DisallowedAIClasses: { section: S, group: 'ai', type: 'list', item: NAME, max: 100,
     itemHelp: 'tên AI, vd. Boar', label: 'Cấm loài AI',
-    // Dryosaurus: also an AI the game spawns (herds of 2, seen on the live map
-    // 2026-09-26), not only a playable.
-    suggest: ['Boar', 'Chicken', 'Compsognathus', 'Crab', 'Deer', 'Dryosaurus', 'Frog', 'Goat', 'Lizard',
+    // Dryosaurus, Gallimimus: also AI the game spawns (seen on the live map
+    // 2026-09-26), not only playables.
+    suggest: ['Boar', 'Chicken', 'Compsognathus', 'Crab', 'Deer', 'Dryosaurus', 'Frog', 'Gallimimus', 'Goat', 'Lizard',
       'Psittacosaurus', 'Pterodactylus', 'Rabbit', 'Seaturtle'],
-    help: 'Loài AI được tick sẽ không sinh ra.' },
+    help: 'Loài được tick: game không tự sinh nữa. Chỉ chặn AI game tự sinh — loài của vùng AI chọn riêng trong từng vùng (Bản đồ → Vùng AI).' },
   bSpawnAmbientFauna: { section: S, group: 'ai', type: 'bool', default: false,
     label: 'Sinh động vật môi trường', help: 'Thú nhỏ trang trí (chim, côn trùng…).' },
   bSpawnPlants: { section: S, group: 'ai', type: 'bool', default: true,
