@@ -396,6 +396,11 @@ H.advance(3100); H.advance(600)
 local lastHunger
 for _, cl in ipairs(H.calls) do if cl.what == "SetHunger" then lastHunger = cl.args[1] end end
 check("stomach set to the game's max for this dino", lastHunger == 3135, tostring(lastHunger))
+local filled = {}
+for _, cl in ipairs(H.calls) do if cl.what:match("^field:") then filled[cl.what:sub(7)] = cl.args[1] end end
+check("nutrients: nutrientPct of the stomach each (not pushed empty)", filled.CarbValue == 1567.5
+      and filled.ProteinValue == 1567.5 and filled.LipidValue == 1567.5 and filled.bMalnutrition == false, json.encode(filled))
+check("…and pushed", H.countCalls("SetNutrientsStruct") >= 1)
 
 print("\n-- 16. nutrients are kept by their REAL field names --")
 for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
@@ -481,7 +486,7 @@ check("a 5 s game-thread loop", fixLoop ~= nil)
 local ff = assert(io.open("Mods/DinoGarage/Saved/prime-fixes.json", "w"))
 ff:write(json.encode({ fixes = {
   { id = "fix1", steamId = STEAM, species = "BP_Triceratops_C", minGrowth = 0.55, maxGrowth = 0.65,
-    primeData = { cond1 = true, cond3 = true, cond5 = true, cond7 = true, cond8 = true, eligible = true },
+    primeData = { cond1 = true, cond2 = false, cond3 = true, cond5 = true, cond7 = true, cond8 = true, eligible = true },
     prime = false, expiresAt = clock + 3600 },
   { id = "old", steamId = STEAM, species = "BP_Triceratops_C", minGrowth = 0, maxGrowth = 1,
     primeData = { cond6 = true }, expiresAt = clock - 1 },
@@ -492,9 +497,11 @@ useCtrl(H.makeCtrl(STEAM, wrong))
 fixLoop.fn()
 check("another species: waits", wrong.__prime.bPrimeCondition5 == false and #eventsOf("prime_fix") == 0)
 local trike = H.makePawn({ growth = 0.60, class = "BlueprintGeneratedClass /Game/BP_Triceratops.BP_Triceratops_C" })
+trike.__prime.bPrimeCondition2 = true   -- gained since: a fix never takes it away
 local trikeCtrl = H.makeCtrl(STEAM, trike)
 useCtrl(trikeCtrl)
 fixLoop.fn()
+check("progress gained since is kept (only given, never taken)", trike.__prime.bPrimeCondition2 == true)
 check("the right dino: conditions given back", trike.__prime.bPrimeCondition5 == true and trike.__prime.bIsEligiblePrime == true)
 check("an expired fix is not applied", trike.__prime.bPrimeCondition6 == false)
 check("an event and a message", #eventsOf("prime_fix") == 1 and eventsOf("prime_fix")[1].id == "fix1"

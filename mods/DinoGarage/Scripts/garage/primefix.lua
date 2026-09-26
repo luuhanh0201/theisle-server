@@ -102,7 +102,12 @@ function P.poll()
         if not (cls and okG and type(g) == "number") then return end
         for _, fix in ipairs(fixes) do
             if cls == fix.species and g >= tonumber(fix.minGrowth) and g <= tonumber(fix.maxGrowth) then
-                local wrote, isPrime = Restore.applyPrime(pawn, fix.primeData, fix.prime == true)
+                -- Given back only: a condition the dino has gained since stays.
+                local give = {}
+                for k, v in pairs(type(fix.primeData) == "table" and fix.primeData or {}) do
+                    if v == true then give[k] = true end
+                end
+                local wrote, isPrime = Restore.applyPrime(pawn, give, fix.prime == true)
                 done[fix.id] = now
                 changed = true
                 H.log(string.format("primefix: %s for %s (%s %.2f) — %d conditions, prime %s",

@@ -57,8 +57,8 @@ export interface NewSlotSpec {
   elderStacks?: number;
   /** Fill the stomach to the game's max for this dino on redeem (default true). */
   stomachFull?: boolean;
-  /** Nutrient level to give, % of the dino's max (default 50). Applied once
-   * the nutrient maxima are confirmed on the live server. */
+  /** Nutrient level to give (carb, protein, lipid), % of the dino's max —
+   * its stomach, GetMaxHunger (restore.lua). Default 50. */
   nutrientPct?: number;
   /** Slot key -> mutation FName, e.g. { Slot1: "MUT_Hematophagy" }. */
   mutations?: Record<string, string>;

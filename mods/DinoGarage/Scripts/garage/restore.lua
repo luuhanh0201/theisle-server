@@ -159,6 +159,32 @@ local function applyNutrients(pawn, state)
     end)
 end
 
+--- An admin-made dino's nutrients: `pct` % of the max of each. The max is
+-- the stomach (GetMaxHunger at this growth): every captured dino's carb,
+-- protein and lipid sat below it (live slots, 2026-09-26).
+local DIET = { "CarbValue", "ProteinValue", "LipidValue" }
+local function fillNutrients(pawn, pct)
+    pct = tonumber(pct)
+    if pct == nil or pct <= 0 then return end
+    local okMax, max = pcall(function() return pawn:GetMaxHunger() end)
+    if not (okMax and type(max) == "number" and max > 0) then
+        H.logError("restore: GetMaxHunger unavailable — nutrients not filled")
+        return
+    end
+    local ok, struct = pcall(function() return pawn.NutrientsStruct end)
+    if not ok or struct == nil then
+        H.logError("restore: NutrientsStruct unreadable — nutrients not filled")
+        return
+    end
+    local v = max * math.min(pct, 100) / 100
+    for _, field in ipairs(DIET) do
+        H.try("restore: nutrient " .. field, function() struct[field] = v end)
+    end
+    H.try("restore: nutrient bMalnutrition", function() struct.bMalnutrition = false end)
+    H.try("restore: SetNutrientsStruct", function() pawn:SetNutrientsStruct(struct, true) end)
+    H.log(string.format("restore: nutrients filled to %d%% of %.0f", math.floor(pct), max))
+end
+
 -- Put the dino a little above the stored point, so terrain that streamed in
 -- slightly higher does not swallow its feet.
 local TELEPORT_LIFT = 30
@@ -276,6 +302,10 @@ function R.apply(pawn, state, onDone)
                 H.logError("restore: GetMaxHunger unavailable — stomach not filled")
             end
         end
+        -- …and no captured nutrients either: `nutrientPct` % of each. Pushed
+        -- empty, the grown dino starved of nutrients and lost a prime
+        -- condition for good (a Pteranodon, 2026-09-26).
+        if type(state.fill) == "table" then fillNutrients(pawn, state.fill.nutrientPct) end
 
         -- Step 6 — elder replication stacks, the lineage-tier counter.
         if state.elderStacks ~= nil and state.elderStacks > 0 then
