@@ -1,7 +1,7 @@
 {
   "name": "xomgay-launcher",
   "productName": "Xóm Gáy Launcher",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "description": "Xóm Gáy Launcher: the player portal (garage, live map, leaderboard, skin) and proximity voice with a push-to-talk key that works in game.",
   "author": "Xóm Gáy",
