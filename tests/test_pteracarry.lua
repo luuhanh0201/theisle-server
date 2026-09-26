@@ -57,6 +57,12 @@ local function last(ctrl) local m = ctrl._messages; return m[#m] or "" end
 say("\n-- 1. a hint when a light player is within reach --")
 hint.fn()
 check("the ptera is told it can grab the Troodon (40 kg), not the Rex", last(pc):find("Có thể gắp Troodon (40 kg)", 1, true) ~= nil, last(pc))
+local logged = table.concat(H.log, "\n")
+check("the pick-up flags census: one line per species and kind, read-only",
+  logged:find("PteraCarry flags: BP_Troodon_C (player) bBlockPickUp=", 1, true) ~= nil, logged:sub(-300))
+local lines0 = #H.log
+hint.fn()
+check("…not again before FLAGS_EVERY_S", #H.log == lines0)
 local n = #pc._messages
 hint.fn()
 check("…once, not every second", #pc._messages == n)

@@ -31,6 +31,11 @@ export interface MessageDef {
   default: string;
   /** The {names} it may use. */
   vars: string[];
+  /**
+   * Not sent unless the admin turns it on (panel: tick "Gửi"): `default` is
+   * then only the suggested wording. An admin's text = on, none = off.
+   */
+  offByDefault?: boolean;
 }
 
 const REASONS: Array<[string, string, string]> = [
@@ -62,13 +67,13 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'ai.reset.done', group: 'ai', label: 'Đã làm mới AI', default: 'Đã làm mới AI ({count} con) / AI has been reset.', vars: ['count'] },
   { key: 'ai.reset.cancelled', group: 'ai', label: 'Huỷ làm mới AI', default: 'Đã huỷ làm mới AI / AI reset cancelled.', vars: [] },
   // --- Pteranodon carry (mods/PteraCarry) ---
-  { key: 'ptera.carry.hint', group: 'ptera', label: 'Gợi ý: có con gắp được ở gần', default: 'Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.', vars: ['species', 'kg'] },
-  { key: 'ptera.carry.start', group: 'ptera', label: 'Bắt đầu gắp (cho Ptera)', default: 'Đang gắp {species} ({kg} kg). Đáp xuống hoặc gõ !drop để thả (tối đa {seconds} giây).', vars: ['species', 'kg', 'seconds'] },
-  { key: 'ptera.carry.victim', group: 'ptera', label: 'Bị gắp (cho con bị gắp)', default: 'Bạn đang bị một Pteranodon gắp đi!', vars: [] },
-  { key: 'ptera.carry.dropped', group: 'ptera', label: 'Đã thả (cho Ptera)', default: 'Đã thả {species}.', vars: ['species'] },
-  { key: 'ptera.carry.released', group: 'ptera', label: 'Được thả (cho con bị gắp)', default: 'Pteranodon đã thả bạn ra.', vars: [] },
-  { key: 'ptera.carry.tooHeavy', group: 'ptera', label: 'Quá nặng', default: '{species} nặng {kg} kg — Pteranodon chỉ gắp được tới {max} kg.', vars: ['species', 'kg', 'max'] },
-  { key: 'ptera.carry.cooldown', group: 'ptera', label: 'Đang hồi', default: 'Gắp đang hồi: chờ {seconds} giây.', vars: ['seconds'] },
+  { key: 'ptera.carry.hint', group: 'ptera', label: 'Gợi ý: có con gắp được ở gần', default: 'Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.', vars: ['species', 'kg'], offByDefault: true },
+  { key: 'ptera.carry.start', group: 'ptera', label: 'Bắt đầu gắp (cho Ptera)', default: 'Đang gắp {species} ({kg} kg). Đáp xuống hoặc gõ !drop để thả (tối đa {seconds} giây).', vars: ['species', 'kg', 'seconds'], offByDefault: true },
+  { key: 'ptera.carry.victim', group: 'ptera', label: 'Bị gắp (cho con bị gắp)', default: 'Bạn đang bị một Pteranodon gắp đi!', vars: [], offByDefault: true },
+  { key: 'ptera.carry.dropped', group: 'ptera', label: 'Đã thả (cho Ptera)', default: 'Đã thả {species}.', vars: ['species'], offByDefault: true },
+  { key: 'ptera.carry.released', group: 'ptera', label: 'Được thả (cho con bị gắp)', default: 'Pteranodon đã thả bạn ra.', vars: [], offByDefault: true },
+  { key: 'ptera.carry.tooHeavy', group: 'ptera', label: 'Quá nặng', default: '{species} nặng {kg} kg — Pteranodon chỉ gắp được tới {max} kg.', vars: ['species', 'kg', 'max'], offByDefault: true },
+  { key: 'ptera.carry.cooldown', group: 'ptera', label: 'Đang hồi', default: 'Gắp đang hồi: chờ {seconds} giây.', vars: ['seconds'], offByDefault: true },
   { key: 'ptera.carry.nothing', group: 'ptera', label: '!drop khi không gắp gì', default: 'Bạn không gắp con nào.', vars: [] },
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
@@ -181,8 +186,13 @@ export function validateMessages(raw: unknown): MessagesSettings {
     const def = MESSAGE_BY_KEY.get(key);
     if (!def) throw new ValidationError(`unknown message "${key}"`);
     const text = cleanText(v, key, def.vars);
-    // The default itself is not an edit: kept out, so a later new default applies.
-    if (text !== def.default) texts[key] = text;
+    if (def.offByDefault) {
+      // Off unless the admin wrote a text (the suggested one counts): "" = off = none.
+      if (text !== '') texts[key] = text;
+    } else if (text !== def.default) {
+      // The default itself is not an edit: kept out, so a later new default applies.
+      texts[key] = text;
+    }
   }
   const marksRaw = r['countdownMarks'] ?? MESSAGES_DEFAULTS.countdownMarks;
   if (!Array.isArray(marksRaw) || marksRaw.length > 20) throw new ValidationError('countdownMarks must be a list of at most 20');
@@ -226,7 +236,7 @@ export async function loadMessages(): Promise<MessagesSettings> {
 export function renderMessage(key: string, vars: Record<string, string | number> = {}, s: MessagesSettings = current): string | null {
   const def = MESSAGE_BY_KEY.get(key);
   if (!def) throw new Error(`unknown message ${key}`);
-  const text = s.texts[key] ?? def.default;
+  const text = s.texts[key] ?? (def.offByDefault ? '' : def.default);
   if (text === '') return null;
   return text.replace(/\{(\w+)\}/g, (all, name: string) => (vars[name] === undefined ? all : String(vars[name])))
     .replace(/\s+/g, ' ').trim();
@@ -245,11 +255,20 @@ async function writeJson(path: string, value: unknown): Promise<void> {
   await rename(tmp, path);
 }
 
-/** What the mods read: only their own texts (the bridge renders the rest). */
+/**
+ * What the mods read: only their own texts (the bridge renders the rest). A
+ * message off by default and not turned on is written as "" (= do not send):
+ * the mod only knows its default text.
+ */
 export function modTexts(s: MessagesSettings): { texts: Record<string, string> } {
-  return {
-    texts: Object.fromEntries(Object.entries(s.texts).filter(([k]) => !BRIDGE_GROUPS.has((MESSAGE_BY_KEY.get(k) as MessageDef).group))),
-  };
+  const texts: Record<string, string> = {};
+  for (const def of MESSAGES) {
+    if (BRIDGE_GROUPS.has(def.group)) continue;
+    const own = s.texts[def.key];
+    if (own !== undefined) texts[def.key] = own;
+    else if (def.offByDefault) texts[def.key] = '';
+  }
+  return { texts };
 }
 
 export async function saveMessages(raw: unknown): Promise<MessagesSettings> {

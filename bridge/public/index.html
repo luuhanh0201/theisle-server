@@ -3624,11 +3624,15 @@ function renderMessageList() {
     if (items.length === 0) return '';
     return `<div class="msg-group"><div class="group-label">${esc(title)}</div>${items.map((m) => {
       const own = d.texts[m.key];
-      const off = own === '';
-      const text = own === undefined || off ? m.default : own;
+      // Off by default (m.offByDefault): no text of the admin's = not sent.
+      const off = own === '' || (m.offByDefault && own === undefined);
+      const text = own === undefined || own === '' ? m.default : own;
+      const tag = m.offByDefault && own === undefined ? '<span class="tag off">mặc định tắt</span>'
+        : off ? '<span class="tag off">đã tắt</span>'
+        : own !== undefined ? `<span class="tag edited">${m.offByDefault ? 'đã bật' : 'đã sửa'}</span>` : '';
       return `<div class="msg-item" data-key="${esc(m.key)}">
         <div><div class="what">${esc(m.label)}</div><div class="key">${esc(m.key)}</div>
-          <div class="tags">${off ? '<span class="tag off">đã tắt</span>' : own !== undefined ? '<span class="tag edited">đã sửa</span>' : ''}</div></div>
+          <div class="tags">${tag}</div></div>
         <div><textarea rows="1" maxlength="300" ${off ? 'disabled' : ''} aria-label="${esc(m.label)}">${esc(text)}</textarea>
           <div class="tools"><label><input type="checkbox" data-f="send" ${off ? '' : 'checked'}> Gửi</label>
             ${m.vars.map((v) => `<button type="button" class="var" data-var="${esc(v)}" title="Chèn">{${esc(v)}}</button>`).join('')}
@@ -3644,10 +3648,11 @@ $('msg-groups').addEventListener('input', (e) => {
   if (!item || e.target.tagName !== 'TEXTAREA') return;
   const def = msgs.data.catalog.find((m) => m.key === item.dataset.key);
   const v = e.target.value.replace(/\s*\n\s*/g, ' ');
-  if (v === def.default) delete msgs.draft.texts[def.key]; else msgs.draft.texts[def.key] = v;
+  // Off by default: the text itself, even the suggested one, is what turns it on.
+  if (v === def.default && !def.offByDefault) delete msgs.draft.texts[def.key]; else msgs.draft.texts[def.key] = v;
   markMsgs();
   const tags = item.querySelector('.tags');
-  tags.innerHTML = msgs.draft.texts[def.key] !== undefined ? '<span class="tag edited">đã sửa</span>' : '';
+  tags.innerHTML = msgs.draft.texts[def.key] !== undefined ? `<span class="tag edited">${def.offByDefault ? 'đã bật' : 'đã sửa'}</span>` : '';
 });
 
 $('msg-groups').addEventListener('click', (e) => {
@@ -3668,7 +3673,8 @@ $('msg-groups').addEventListener('click', (e) => {
   }
   if (e.target.dataset.f === 'send') {
     if (e.target.checked) delete msgs.draft.texts[key]; else msgs.draft.texts[key] = '';
-    if (e.target.checked && area.value !== def.default) msgs.draft.texts[key] = area.value;
+    if (e.target.checked && (area.value !== def.default || def.offByDefault)) msgs.draft.texts[key] = area.value;
+    if (!e.target.checked && def.offByDefault) delete msgs.draft.texts[key];
   } else if (e.target.dataset.f === 'reset') {
     delete msgs.draft.texts[key];
   } else {

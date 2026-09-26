@@ -26,8 +26,15 @@
 --   * it ends when the Pteranodon lands, its player types !drop, after
 --     `maxSeconds`, or when either leaves / dies. Let go in the air, the
 --     target falls — and takes the game's fall damage
---   * a flying Pteranodon near a light enough player is told it can grab
---     (a server message: a mod cannot draw the game's own prompt)
+--   * a flying Pteranodon near a light enough player is told it can grab —
+--     a server message (a mod cannot draw the game's own prompt), OFF by
+--     default like every carry message (the popup did not suit; the admin
+--     turns one on in the panel's Thông báo)
+--   * the game's own prompt (Z + right mouse, like "hold E to eat") shows for
+--     AI only. Whether its "can be picked up" flag is what keeps players out:
+--     every FLAGS_EVERY_S while players are online (FLAGS_RUNS times), the flags bBlockPickUp /
+--     bBeingPickedUp (two booleans, read-only) are logged once per species,
+--     player and AI apart — "PteraCarry flags:" in UE4SS.log
 --
 -- Safety (docs/lua-safety-rules.md): the hook only queues the two addresses;
 -- everything else runs on the game thread, re-resolving both players by
@@ -50,6 +57,9 @@ local HOLD_MS = 50           -- how often a carried dino is put back under its c
 local HINT_MS = 1000         -- how often flying Pteranodons look for something to grab
 local HINT_AGAIN_S = 30      -- one hint per carrier and target this often
 local SETTINGS_RELOAD_S = 5
+local FLAGS_EVERY_S = 300    -- the pick-up flags census (read-only), while players are online
+local FLAGS_MAX_PAWNS = 400
+local FLAGS_RUNS = 12         -- then it stops (an hour of play is enough to see every kind)
 local MIN_CARRY_S = 1        -- a carrier "landing" in the first second is the take-off itself
 
 local ASC_CLASS = "/Script/GameplayAbilities.AbilitySystemComponent"
@@ -375,6 +385,43 @@ local function hintTick()
     end
 end
 
+--- Read-only: the game's pick-up flags, per species, players and AI apart
+--- (logged once per species+kind+values). Booleans only (lua-safety-rules).
+local flagsSeen, flagsAt, flagsRuns = {}, 0, 0
+local function boolOf(pawn, name)
+    local ok, v = pcall(function() return pawn[name] end)
+    if ok and type(v) == "boolean" then return tostring(v) end
+    return "?"
+end
+local function flagsCensus()
+    local now = os.time()
+    if flagsRuns >= FLAGS_RUNS or now - flagsAt < FLAGS_EVERY_S then return end
+    local _, byAddr = playersNow()
+    if next(byAddr) == nil then return end
+    flagsAt = now
+    flagsRuns = flagsRuns + 1
+    local ok, all = pcall(function() return FindAllOf("TICharacterBase") or {} end)
+    if not ok then return end
+    local counts, order = {}, {}
+    for i, pawn in ipairs(all) do
+        if i > FLAGS_MAX_PAWNS then break end
+        local a = addressOf(pawn)
+        local cls = a and classOf(pawn)
+        if cls then
+            local key = string.format("%s (%s) bBlockPickUp=%s bBeingPickedUp=%s", cls, byAddr[a] and "player" or "AI",
+                boolOf(pawn, "bBlockPickUp"), boolOf(pawn, "bBeingPickedUp"))
+            if not counts[key] then order[#order + 1] = key end
+            counts[key] = (counts[key] or 0) + 1
+        end
+    end
+    for _, key in ipairs(order) do
+        if not flagsSeen[key] then
+            flagsSeen[key] = true
+            H.log(string.format("%s flags: %s x%d", MOD, key, counts[key]))
+        end
+    end
+end
+
 --------------------------------------------------------------------------
 -- Start
 --------------------------------------------------------------------------
@@ -412,5 +459,5 @@ H.onChat(function(ctrl, steamId, msg)
 end)
 
 H.every(HOLD_MS, MOD .. " hold", holdTick)
-H.every(HINT_MS, MOD .. " hints", hintTick)
+H.every(HINT_MS, MOD .. " hints", function() hintTick(); flagsCensus() end)
 H.log(MOD .. ": loaded — " .. (readSettings().enabled and "on" or "off (turn it on in the panel)"))

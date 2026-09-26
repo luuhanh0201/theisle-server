@@ -73,10 +73,20 @@ test('render: the admin\'s text or the default, vars filled, an empty {reason} l
   assert.equal(renderMessage('corpses.done', {}, s), 'Xác đã được dọn!');
 });
 
+test('off by default: not sent until the admin writes a text (the suggested one counts)', () => {
+  assert.equal(MESSAGE_BY_KEY.get('ptera.carry.hint').offByDefault, true);
+  assert.equal(renderMessage('ptera.carry.victim', {}, validateMessages({})), null);
+  const def = MESSAGE_BY_KEY.get('ptera.carry.victim').default;
+  const on = validateMessages({ texts: { 'ptera.carry.victim': def, 'ptera.carry.hint': '' } });
+  assert.deepEqual(on.texts, { 'ptera.carry.victim': def }, 'the default text kept (= on), "" dropped (= off)');
+  assert.equal(renderMessage('ptera.carry.victim', {}, on), def);
+});
+
 test('save: kept for the bridge, the mods get only their own texts; loaded back at start', async () => {
   await saveMessages({ texts: { 'garage.stored': 'Cất rồi!', 'server.stop.now': 'Tắt đây' }, countdownMarks: [300, 60] });
   const mod = JSON.parse(readFileSync(process.env.MESSAGES_MOD_PATH, 'utf8'));
-  assert.deepEqual(mod, { texts: { 'garage.stored': 'Cất rồi!' } });
+  const offs = Object.fromEntries(MESSAGES.filter((m) => m.offByDefault).map((m) => [m.key, '']));
+  assert.deepEqual(mod, { texts: { 'garage.stored': 'Cất rồi!', ...offs } }, 'the ones off by default are written off');
   await loadMessages();
   assert.deepEqual(currentMessages().countdownMarks, [300, 60]);
   assert.equal(renderMessage('server.stop.now'), 'Tắt đây');
