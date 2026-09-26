@@ -1,0 +1,18 @@
+# Cloudflare Worker: the Discord relay (relay/README.md).
+# Secrets (not here): BRIDGE_SECRET — `wrangler secret put BRIDGE_SECRET`.
+name = "theisle-discord-relay"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Every minute: is the server still sending its heartbeat?
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+# The Discord application's public key (Developer Portal → General Information): not a secret.
+DISCORD_PUBLIC_KEY = ""
+
+# KV_ID is filled in by `wrangler kv namespace create STATE` (relay/README.md).
+[[kv_namespaces]]
+binding = "STATE"
+id = "KV_ID"

@@ -20,6 +20,8 @@ import { AiReset } from './ai-reset.js';
 import { dropResult, enqueueAiCommand } from './ai-drop.js';
 import { DiscordLog, auditLine, banLine, lineOf, phaseLine, plain } from './discord.js';
 import { BanWatcher, banVars } from './bans.js';
+import { alertWebhookOf, sendHeartbeat } from './relay.js';
+import { readLive } from './gameini.js';
 import { renderMessage } from './messages.js';
 import { auditListeners } from './audit.js';
 
@@ -116,6 +118,28 @@ setInterval(() => {
 setInterval(() => {
   discord.tick().catch((error: unknown) => console.error('[discord] send failed:', error));
 }, 2_000);
+
+// The relay off the VPS (relay/): a heartbeat every 2 minutes (relay.ts).
+async function heartbeat(): Promise<void> {
+  const relay = discord.settings.relay;
+  if (!relay) return;
+  const [st, live, cfg] = await Promise.all([power.status(), readLiveState(), readLive().catch(() => null)]);
+  const fresh = live !== null && !live.stale;
+  const setting = (k: string): unknown => cfg?.settings[k] ?? cfg?.effective[k];
+  const online = store.online();
+  await sendHeartbeat(relay, {
+    serverName: typeof setting('ServerName') === 'string' ? setting('ServerName') as string : 'Server',
+    phase: st.phase,
+    online: online.length,
+    maxPlayers: typeof setting('MaxPlayerCount') === 'number' ? setting('MaxPlayerCount') as number : null,
+    players: online.map((p) => p.name ?? p.steamId),
+    fps: fresh ? live.fps : null,
+    ai: fresh && live.ai && !live.ai.stale ? live.ai.count : null,
+    alertWebhook: alertWebhookOf(discord.settings),
+  }, discord.relayState);
+}
+setInterval(() => { heartbeat().catch((error: unknown) => console.error('[relay] heartbeat failed:', error)); }, 120_000);
+setTimeout(() => { heartbeat().catch(() => undefined); }, 15_000);
 
 
 

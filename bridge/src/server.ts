@@ -30,6 +30,7 @@ import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readSanctuaries, readZoneGuard, saveZoneGuard, syncZoneGuard } from './zone-guard.js';
 import { DISCORD_KINDS, banChangeLine, publicView, type DiscordLog } from './discord.js';
+import { registerCommands } from './relay.js';
 import {
   PERMANENT_HOURS, banPlayer, banVars, durationText, formatGameTime, parseGameTime, readBans, readReasons, saveReasons, validateBan, validateBanEdit,
   type BanWatcher,
@@ -352,6 +353,7 @@ async function handlePanel(
       ((path === '/api/bans/unban' || path === '/api/bans/edit') && req.method === 'POST') ||
       (path === '/api/ban-reasons' && req.method === 'PUT') ||
       (path === '/api/discord/test' && req.method === 'POST') ||
+      (path === '/api/discord/register-commands' && req.method === 'POST') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
       (path === '/api/fish-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
@@ -572,6 +574,15 @@ async function handlePanel(
       return;
     }
 
+    if (path === '/api/discord/register-commands') {
+      const body = (await readJsonBody(req)) as { appId?: unknown; botToken?: unknown };
+      const done = await registerCommands(body.appId, body.botToken);
+      // The token is used for this one call and never written anywhere.
+      await audit({ action: 'Discord slash commands registered', detail: `app ${String(body.appId)} · ${done.join(', ')}`, ok: true });
+      sendJson(res, 200, { ok: true, commands: done });
+      return;
+    }
+
     if (path === '/api/discord' || path === '/api/discord/test') {
       if (!ctx.discord) { sendJson(res, 503, { error: 'Discord log is not running' }); return; }
       if (path === '/api/discord/test') {
@@ -584,7 +595,7 @@ async function handlePanel(
       const saved = await ctx.discord.save(await readJsonBody(req));
       await ctx.discord.refreshInfo(true);
       // Never the URLs in the audit: names and routes only.
-      const view = (s: typeof saved): Record<string, unknown> => ({ enabled: s.enabled, channels: s.channels.map((c) => c.name), routes: s.routes });
+      const view = (s: typeof saved): Record<string, unknown> => ({ enabled: s.enabled, channels: s.channels.map((c) => c.name), routes: s.routes, relay: s.relay?.url ?? null });
       await audit({ action: 'Discord log saved', detail: describeChanges(view(before), view(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, { ...(publicView(saved) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
       return;

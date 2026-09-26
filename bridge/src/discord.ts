@@ -51,8 +51,10 @@ export interface DiscordSettings {
   enabled: boolean;
   channels: DiscordChannel[];
   routes: Partial<Record<DiscordKind, string>>;
+  /** The relay off the VPS (relay/, a Cloudflare Worker): heartbeat, outage alerts, /status. */
+  relay: { url: string; secret: string } | null;
 }
-export const DISCORD_DEFAULTS: DiscordSettings = { enabled: false, channels: [], routes: {} };
+export const DISCORD_DEFAULTS: DiscordSettings = { enabled: false, channels: [], routes: {}, relay: null };
 
 const WEBHOOK_RE = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/(\d{15,22})\/([\w-]{20,100})$/;
 const MAX_CHANNELS = 10;
@@ -105,7 +107,22 @@ export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_
     if (typeof v !== 'string' || !ids.has(v)) throw new ValidationError(`${k}: unknown channel`);
     routes[k as DiscordKind] = v;
   }
-  return { enabled: r['enabled'], channels, routes };
+  // The relay: its URL, and the secret shared with it (kept when not sent again).
+  let relay: DiscordSettings['relay'] = null;
+  const rr = r['relay'];
+  if (rr !== undefined && rr !== null) {
+    if (typeof rr !== 'object') throw new ValidationError('relay must be an object');
+    const o = rr as Record<string, unknown>;
+    const url = typeof o['url'] === 'string' ? o['url'].trim().replace(/\/+$/, '') : '';
+    if (url !== '') {
+      if (!/^https:\/\/[a-z0-9.-]+(?::\d+)?(?:\/[\w.-]*)*$/i.test(url)) throw new ValidationError('trạm: URL phải là https://…');
+      const sent = typeof o['secret'] === 'string' ? o['secret'].trim() : '';
+      const secret = sent !== '' ? sent : before.relay?.secret ?? '';
+      if (!/^[\w-]{24,200}$/.test(secret)) throw new ValidationError('trạm: mã bí mật cần 24–200 ký tự chữ/số');
+      relay = { url, secret };
+    }
+  }
+  return { enabled: r['enabled'], channels, routes, relay };
 }
 
 export async function readDiscord(): Promise<DiscordSettings> {
@@ -118,7 +135,10 @@ export async function readDiscord(): Promise<DiscordSettings> {
 
 /** What the panel sees: the URLs only as hints. */
 export function publicView(s: DiscordSettings): unknown {
-  return { enabled: s.enabled, routes: s.routes, channels: s.channels.map((c) => ({ id: c.id, name: c.name, hint: maskUrl(c.url) })) };
+  return {
+    enabled: s.enabled, routes: s.routes, channels: s.channels.map((c) => ({ id: c.id, name: c.name, hint: maskUrl(c.url) })),
+    relay: s.relay ? { url: s.relay.url, hasSecret: true } : null,
+  };
 }
 
 async function writePrivate(path: string, value: unknown): Promise<void> {
@@ -256,6 +276,8 @@ export class DiscordLog {
   #state = new Map<string, ChannelState>();
   #dropped = 0;
   readonly #info = new Map<string, WebhookInfo>();
+  /** The relay's heartbeat: last sent, last error (relay.ts). */
+  readonly relayState: { lastOkAt: number | null; lastError: string | null } = { lastOkAt: null, lastError: null };
   #saveTimer: NodeJS.Timeout | null = null;
   #sending = false;
   readonly #since: number;
@@ -302,7 +324,7 @@ export class DiscordLog {
     this.#persistSoon();
   }
 
-  status(): { queued: number; dropped: number; channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> } {
+  status(): { queued: number; dropped: number; relay: { lastOkAt: number | null; lastError: string | null }; channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> } {
     const channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> = {};
     for (const c of this.#settings.channels) {
       const st = this.#state.get(c.id);
@@ -312,7 +334,7 @@ export class DiscordLog {
         webhook: this.#info.get(c.url) ?? null,
       };
     }
-    return { queued: this.#queue.length, dropped: this.#dropped, channels };
+    return { queued: this.#queue.length, dropped: this.#dropped, relay: { ...this.relayState }, channels };
   }
 
   /** Ask Discord for each webhook's name and channel (at most every 10 minutes each). */

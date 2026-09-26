@@ -1682,7 +1682,36 @@
               <select id="dc-all" style="width:180px"></select></span></div>
           <div class="card-body"><div class="dc-routes" id="dc-routes"></div></div>
         </section>
+        <section class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Trạm ngoài VPS</h2><span class="sub">Cloudflare Worker · báo mất kết nối, lệnh /status /online</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="step-hint">Bridge gửi nhịp tim lên trạm mỗi 2 phút. Trạm nằm ngoài VPS: VPS sập / mất mạng / bị DDoS thì trạm tự báo
+              <b>"Mất kết nối"</b> vào kênh của log "Server bật / tắt / lỗi" (không có thì kênh đầu tiên), có lại thì báo <b>"Kết nối lại"</b>;
+              lệnh <b>/status</b>, <b>/online</b> trong Discord vẫn trả lời.</div>
+            <div class="cfg-field"><label for="dc-relay-url">URL của trạm</label>
+              <input id="dc-relay-url" type="text" autocomplete="off" spellcheck="false" placeholder="https://theisle-discord-relay.<tên>.workers.dev"></div>
+            <div class="cfg-field"><label for="dc-relay-secret">Mã bí mật chung với trạm (BRIDGE_SECRET)</label>
+              <span class="dc-url-wrap"><input id="dc-relay-secret" class="dc-url masked" type="text" name="dc-relay-secret" autocomplete="off" spellcheck="false"
+                data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+                <button type="button" class="dc-eye" data-eye="dc-relay-secret" title="Hiện / ẩn" aria-label="Hiện / ẩn">👁</button></span></div>
+            <div class="step-hint" id="dc-relay-status"></div>
+          </div>
+        </section>
         <div class="row" style="margin-top:16px"><button type="button" class="btn" id="dc-save">Lưu Discord</button></div>
+        <section class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Đăng ký lệnh /status /online</h2><span class="sub">làm một lần</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="step-hint">Lấy ở <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a> → ứng dụng của bạn.
+              Bot token chỉ dùng cho lần đăng ký này, <b>không được lưu</b> ở đâu cả.</div>
+            <div class="row">
+              <input id="dc-app-id" inputmode="numeric" placeholder="Application ID" aria-label="Application ID" autocomplete="off">
+              <span class="dc-url-wrap" style="flex:2"><input id="dc-bot-token" class="dc-url masked" type="text" placeholder="Bot token" aria-label="Bot token" autocomplete="off"
+                spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+                <button type="button" class="dc-eye" data-eye="dc-bot-token" title="Hiện / ẩn" aria-label="Hiện / ẩn">👁</button></span>
+              <button type="button" class="btn-soft" id="dc-register" style="flex:none">Đăng ký lệnh</button>
+            </div>
+          </div>
+        </section>
       </div>
 
     </div>
@@ -5429,7 +5458,8 @@ async function loadDiscord(rebuild = false) {
   const d = await getJson('/api/discord');
   dc.data = d;
   if (!dc.draft || (rebuild && !dc.dirty)) {
-    dc.draft = { enabled: d.enabled, routes: { ...d.routes }, channels: d.channels.map((c) => ({ id: c.id, name: c.name, hint: c.hint, url: '' })) };
+    dc.draft = { enabled: d.enabled, routes: { ...d.routes }, channels: d.channels.map((c) => ({ id: c.id, name: c.name, hint: c.hint, url: '' })),
+      relay: { url: d.relay?.url ?? '', secret: '', hasSecret: d.relay?.hasSecret === true } };
     renderDiscord();
   } else {
     renderDiscordStatus();
@@ -5439,6 +5469,10 @@ function renderDiscordStatus() {
   const d = dc.data;
   if (!d) return;
   const st = d.status;
+  const rs = st.relay ?? {};
+  $('dc-relay-status').innerHTML = !dc.draft.relay?.url ? 'Chưa đặt trạm.'
+    : rs.lastError ? `<span style="color:var(--kill)">Lỗi: ${esc(rs.lastError)}</span>`
+    : rs.lastOkAt ? `Nhịp tim gửi được lúc ${esc(dateTime(rs.lastOkAt))}.` : 'Chưa gửi nhịp tim nào (gửi mỗi 2 phút sau khi lưu).';
   $('dc-status').innerHTML = !dc.draft.enabled ? 'Đang tắt — không gửi gì.'
     : dc.draft.channels.length === 0 ? 'Chưa có kênh nào: thêm webhook ở dưới.'
     : `Đang gửi · ${st.queued} tin đang chờ${st.dropped ? ` · đã bỏ ${st.dropped} tin (hàng chờ đầy)` : ''}.`;
@@ -5467,6 +5501,8 @@ function renderDiscord() {
   const d = dc.draft;
   if (!d || !dc.data) return;
   $('dc-enabled').checked = d.enabled;
+  if (document.activeElement !== $('dc-relay-url')) $('dc-relay-url').value = d.relay.url;
+  $('dc-relay-secret').placeholder = d.relay.hasSecret ? 'đã đặt — dán mã mới để đổi' : 'dán mã bí mật (24+ ký tự)';
   $('dc-channels').innerHTML = d.channels.map((c) => `<div class="dc-ch" data-dc="${esc(c.id)}">
       <input class="nm" data-f="name" maxlength="40" value="${esc(c.name)}" placeholder="Tên kênh (vd. killfeed)" aria-label="Tên kênh">
       <span class="dc-url-wrap">
@@ -5489,6 +5525,21 @@ function renderDiscord() {
 }
 function markDc() { dc.dirty = true; }
 $('dc-enabled').addEventListener('change', () => { dc.draft.enabled = $('dc-enabled').checked; markDc(); renderDiscordStatus(); });
+$('dc-relay-url').addEventListener('input', () => { dc.draft.relay.url = $('dc-relay-url').value.trim(); markDc(); });
+$('dc-relay-secret').addEventListener('input', () => { dc.draft.relay.secret = $('dc-relay-secret').value.trim(); markDc(); });
+for (const b of document.querySelectorAll('[data-eye]')) {
+  b.addEventListener('click', () => {
+    const input = $(b.dataset.eye);
+    const show = input.classList.contains('masked');
+    input.classList.toggle('masked', !show);
+    b.classList.toggle('on', show);
+  });
+}
+$('dc-register').addEventListener('click', () => withToken('đăng ký lệnh Discord', async (token) => {
+  const r = await adminFetch('/api/discord/register-commands', 'POST', token, { appId: $('dc-app-id').value.trim(), botToken: $('dc-bot-token').value.trim() });
+  $('dc-bot-token').value = '';
+  toast(`Đã đăng ký ${r.commands.join(', ')} — vài phút sau sẽ hiện trong Discord.`);
+}));
 $('dc-add').addEventListener('click', () => {
   if (!dc.draft) return;
   dc.draft.channels.push({ id: newId(), name: '', hint: '', url: '' });
@@ -5554,10 +5605,13 @@ $('dc-all').addEventListener('change', () => {
   renderDiscord();
 });
 $('dc-save').addEventListener('click', () => withToken('lưu Discord', async (token) => {
+  const r = dc.draft.relay;
   const body = { enabled: dc.draft.enabled, routes: dc.draft.routes,
-    channels: dc.draft.channels.map((c) => ({ id: c.id, name: c.name, ...(c.url ? { url: c.url } : {}) })) };
+    channels: dc.draft.channels.map((c) => ({ id: c.id, name: c.name, ...(c.url ? { url: c.url } : {}) })),
+    relay: r.url ? { url: r.url, ...(r.secret ? { secret: r.secret } : {}) } : null };
   await adminFetch('/api/discord', 'PUT', token, body);
   dc.dirty = false;
+  $('dc-relay-secret').value = '';
   toast('Đã lưu Discord.');
   await loadDiscord(true);
 }));
