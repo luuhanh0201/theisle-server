@@ -29,6 +29,7 @@ import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readSanctuaries, readZoneGuard, saveZoneGuard, syncZoneGuard } from './zone-guard.js';
+import { DISCORD_KINDS, publicView, type DiscordLog } from './discord.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
 import { readFlora } from './flora.js';
 import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
@@ -182,6 +183,7 @@ export interface Ctx {
   metrics?: Metrics;
   voice?: VoiceRoom;
   aiReset?: AiReset;
+  discord?: DiscordLog;
 }
 
 /** Everything the Server tab shows, in one call. */
@@ -279,6 +281,11 @@ async function handlePanel(
     });
     return;
   }
+  if (path === '/api/discord' && req.method === 'GET') {
+    if (!ctx.discord) { sendJson(res, 503, { error: 'Discord log is not running' }); return; }
+    sendJson(res, 200, { ...(publicView(ctx.discord.settings) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
+    return;
+  }
   if (path === '/api/panel-access' && req.method === 'GET') {
     sendJson(res, 200, { ...await readAccess(), yourIp: login.ip, yourRule: login.ip ? ruleFor(login.ip) : null, webEnabled: config.panel.baseUrl !== null });
     return;
@@ -316,6 +323,8 @@ async function handlePanel(
       (path === '/api/messages' && req.method === 'PUT') ||
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
       (path === '/api/zone-guard' && req.method === 'PUT') ||
+      (path === '/api/discord' && req.method === 'PUT') ||
+      (path === '/api/discord/test' && req.method === 'POST') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
       (path === '/api/fish-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
@@ -483,6 +492,23 @@ async function handlePanel(
         ok: true,
       });
       sendJson(res, 202, { id: queued.id, spots: queued.spots.length });
+      return;
+    }
+
+    if (path === '/api/discord' || path === '/api/discord/test') {
+      if (!ctx.discord) { sendJson(res, 503, { error: 'Discord log is not running' }); return; }
+      if (path === '/api/discord/test') {
+        const body = (await readJsonBody(req)) as { channel?: unknown };
+        const error = await ctx.discord.test(String(body.channel ?? ''), name ?? 'admin');
+        sendJson(res, error === null ? 200 : 502, error === null ? { ok: true } : { error });
+        return;
+      }
+      const before = ctx.discord.settings;
+      const saved = await ctx.discord.save(await readJsonBody(req));
+      // Never the URLs in the audit: names and routes only.
+      const view = (s: typeof saved): Record<string, unknown> => ({ enabled: s.enabled, channels: s.channels.map((c) => c.name), routes: s.routes });
+      await audit({ action: 'Discord log saved', detail: describeChanges(view(before), view(saved)) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { ...(publicView(saved) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
       return;
     }
 

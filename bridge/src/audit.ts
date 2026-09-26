@@ -33,6 +33,9 @@ export interface AuditEntry {
   byName?: string | null;
 }
 
+/** Told of every audit line written (the Discord log: discord.ts). */
+export const auditListeners: Array<(entry: AuditEntry) => void> = [];
+
 export const RETAIN_DAYS = 7;
 const RETAIN_S = RETAIN_DAYS * 86_400;
 const PRUNE_EVERY_S = 3_600;
@@ -56,6 +59,9 @@ export async function audit(entry: Omit<AuditEntry, 't' | 'by' | 'byId' | 'byNam
   } catch (error) {
     // Losing an audit line must not fail the action it describes.
     console.error('[audit] could not write:', error);
+  }
+  for (const listener of auditListeners) {
+    try { listener(line); } catch (error) { console.error('[audit] listener failed:', error); }
   }
   console.info(`[audit] ${line.by ? `${line.by}: ` : ''}${line.action}${line.detail ? ` (${line.detail})` : ''}: ${line.ok ? 'ok' : `FAILED ${line.error ?? ''}`}`);
 }

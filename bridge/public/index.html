@@ -532,6 +532,16 @@
   .gd-sanct { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 10px; }
   .gd-sanct label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin: 0; cursor: pointer; }
   .gd-sanct .go { margin-left: auto; border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12px; padding: 0 2px; }
+  .dc-channels { display: flex; flex-direction: column; gap: 10px; }
+  .dc-ch { display: grid; grid-template-columns: minmax(120px, 180px) 1fr auto auto; gap: 8px; align-items: center; }
+  .dc-ch .st { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: -4px; }
+  .dc-ch .st.err { color: var(--kill); }
+  .dc-routes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px 24px; }
+  .dc-routes .g { grid-column: 1 / -1; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+  .dc-route { display: flex; align-items: center; gap: 10px; }
+  .dc-route > span { flex: 1; font-size: 13px; }
+  .dc-route .cs-btn, .dc-route select { width: 190px; flex: none; }
+  @media (max-width: 640px) { .dc-ch { grid-template-columns: 1fr auto auto; } .dc-ch input.nm { grid-column: 1 / -1; } }
   .ops-sec { margin-top: 26px; scroll-margin-top: 16px; }
   .rd-verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
   .rd-verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
@@ -1566,7 +1576,7 @@
 
     <!-- Quản trị -->
     <div data-view="admin" hidden>
-      <div class="page-head"><div><h1>Quản trị</h1><p>Ai được vào panel, và nhật ký mọi thao tác của admin.</p></div></div>
+      <div class="page-head"><div><h1>Quản trị</h1><p>Ai được vào panel, nhật ký mọi thao tác của admin, và log gửi lên Discord.</p></div></div>
       <nav class="subtabs" data-subnav="admin" aria-label="Mục của Quản trị"></nav>
 
       <div data-sub="admin:access">
@@ -1595,6 +1605,32 @@
             <div class="audit-pager" id="audit-pager"></div>
           </div>
         </section>
+      </div>
+
+      <div data-sub="admin:discord" hidden>
+        <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">💬</span>
+          <h2>Log lên Discord</h2><span class="sub">gửi bằng webhook, có hiệu lực ngay</span></div>
+        <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+          <label class="az-row" style="justify-content:flex-start;gap:8px"><input type="checkbox" id="dc-enabled"> <b>Bật gửi log lên Discord</b></label>
+          <div class="step-hint" id="dc-status"></div>
+        </div></section>
+        <section class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Kênh Discord</h2><span class="sub">mỗi kênh một webhook</span>
+            <button type="button" class="btn-soft sm" id="dc-add" style="margin-left:auto">+ Thêm kênh</button></div>
+          <div class="card-body"><div class="dc-channels" id="dc-channels"></div>
+            <details class="howto" style="margin-top:10px"><summary>Lấy URL webhook thế nào?</summary>
+              <p>Trong Discord: bấm ⚙ <b>Chỉnh sửa kênh</b> → <b>Tích hợp</b> → <b>Webhook</b> → <b>Webhook mới</b> → <b>Sao chép URL webhook</b>, rồi dán vào ô ở trên.
+                Mỗi kênh (vd. #killfeed, #chat-log, #admin-log) một webhook. URL là bí mật: panel chỉ lưu trên server, không bao giờ hiện lại đầy đủ.</p>
+              <p>Log được xếp hàng trên server: Discord hoặc mạng gặp sự cố (kể cả khi VPS bị DDoS) thì log gửi bù sau, giữ đúng giờ gốc.</p>
+            </details></div>
+        </section>
+        <section class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Loại log → kênh</h2>
+            <span class="row" style="margin-left:auto;gap:8px;flex:none;align-items:center"><span class="muted" style="font-size:12.5px">Tất cả vào</span>
+              <select id="dc-all" style="width:180px"></select></span></div>
+          <div class="card-body"><div class="dc-routes" id="dc-routes"></div></div>
+        </section>
+        <div class="row" style="margin-top:16px"><button type="button" class="btn" id="dc-save">Lưu Discord</button></div>
       </div>
 
     </div>
@@ -5320,6 +5356,119 @@ function renderAudit(data) {
   const nums = around.map((p) => { const gap = p - prev > 1 ? '<span class="muted">…</span>' : ''; prev = p; return gap + btn(p); }).join('');
   $('audit-pager').innerHTML = `<span class="muted">${total} dòng · trang ${page}/${pages}</span>${btn(page - 1, '‹')}${nums}${btn(page + 1, '›')}`;
 }
+// --- Quản trị → Discord: the log sent by webhook (bridge/src/discord.ts) ---
+const dc = { data: null, draft: null, dirty: false };
+const newId = () => Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, '') || 'c' + Date.now().toString(36);
+/** Every 2 s while the page is open: the status only; the form is (re)built the first time and after a save. */
+async function loadDiscord(rebuild = false) {
+  const d = await getJson('/api/discord');
+  dc.data = d;
+  if (!dc.draft || (rebuild && !dc.dirty)) {
+    dc.draft = { enabled: d.enabled, routes: { ...d.routes }, channels: d.channels.map((c) => ({ id: c.id, name: c.name, hint: c.hint, url: '' })) };
+    renderDiscord();
+  } else {
+    renderDiscordStatus();
+  }
+}
+function renderDiscordStatus() {
+  const d = dc.data;
+  if (!d) return;
+  const st = d.status;
+  $('dc-status').innerHTML = !dc.draft.enabled ? 'Đang tắt — không gửi gì.'
+    : dc.draft.channels.length === 0 ? 'Chưa có kênh nào: thêm webhook ở dưới.'
+    : `Đang gửi · ${st.queued} tin đang chờ${st.dropped ? ` · đã bỏ ${st.dropped} tin (hàng chờ đầy)` : ''}.`;
+  for (const row of $('dc-channels').querySelectorAll('[data-dc]')) {
+    const cs = st.channels[row.dataset.dc];
+    const el = row.querySelector('.st');
+    if (!cs) { el.textContent = 'chưa lưu'; el.className = 'st'; continue; }
+    el.className = `st${cs.lastError ? ' err' : ''}`;
+    el.textContent = [cs.lastError ? `Lỗi: ${cs.lastError}` : cs.lastOkAt ? `Gửi được lúc ${dateTime(cs.lastOkAt)}` : 'Chưa gửi gì',
+      cs.queued ? `${cs.queued} tin đang chờ` : ''].filter(Boolean).join(' · ');
+  }
+}
+function renderDiscord() {
+  const d = dc.draft;
+  if (!d || !dc.data) return;
+  $('dc-enabled').checked = d.enabled;
+  $('dc-channels').innerHTML = d.channels.map((c) => `<div class="dc-ch" data-dc="${esc(c.id)}">
+      <input class="nm" data-f="name" maxlength="40" value="${esc(c.name)}" placeholder="Tên kênh (vd. killfeed)" aria-label="Tên kênh">
+      <input data-f="url" type="password" autocomplete="off" spellcheck="false" value="${esc(c.url)}"
+        placeholder="${esc(c.hint ? `${c.hint} — dán URL mới để đổi` : 'Dán URL webhook: https://discord.com/api/webhooks/…')}" aria-label="URL webhook">
+      <button type="button" class="btn-soft sm" data-f="test">Thử</button>
+      <button type="button" class="btn-ghost sm" data-f="del" style="color:var(--kill,#ef4444)">Xoá</button>
+      <div class="st"></div></div>`).join('') || '<p class="step-hint">Chưa có kênh. Bấm <b>+ Thêm kênh</b>.</p>';
+  const opts = (cur) => `<option value="">— không gửi —</option>${d.channels.map((c) => `<option value="${esc(c.id)}"${c.id === cur ? ' selected' : ''}>${esc(c.name || '(chưa đặt tên)')}</option>`).join('')}`;
+  $('dc-all').innerHTML = `<option value="">Chọn kênh…</option>${d.channels.map((c) => `<option value="${esc(c.id)}">${esc(c.name || '(chưa đặt tên)')}</option>`).join('')}`;
+  let group = null;
+  $('dc-routes').innerHTML = dc.data.kinds.map((k) => {
+    const head = k.group !== group ? `<div class="g">${esc(k.group)}</div>` : '';
+    group = k.group;
+    return `${head}<label class="dc-route"><span>${esc(k.label)}</span><select data-dc-kind="${esc(k.key)}">${opts(d.routes[k.key])}</select></label>`;
+  }).join('');
+  renderDiscordStatus();
+}
+function markDc() { dc.dirty = true; }
+$('dc-enabled').addEventListener('change', () => { dc.draft.enabled = $('dc-enabled').checked; markDc(); renderDiscordStatus(); });
+$('dc-add').addEventListener('click', () => {
+  if (!dc.draft) return;
+  dc.draft.channels.push({ id: newId(), name: '', hint: '', url: '' });
+  markDc();
+  renderDiscord();
+  $('dc-channels').querySelector('.dc-ch:last-child input')?.focus();
+});
+$('dc-channels').addEventListener('input', (e) => {
+  const row = e.target.closest('[data-dc]');
+  const c = row && dc.draft.channels.find((x) => x.id === row.dataset.dc);
+  if (!c || !e.target.dataset.f) return;
+  c[e.target.dataset.f] = e.target.value.trim();
+  markDc();
+  if (e.target.dataset.f === 'name') {
+    // The channel names in the route lists follow.
+    for (const sel of document.querySelectorAll(`#dc-routes option[value="${CSS.escape(c.id)}"], #dc-all option[value="${CSS.escape(c.id)}"]`)) sel.textContent = c.name || '(chưa đặt tên)';
+  }
+});
+$('dc-channels').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-dc]');
+  const f = e.target.dataset.f;
+  if (!row || (f !== 'del' && f !== 'test')) return;
+  const id = row.dataset.dc;
+  if (f === 'del') {
+    dc.draft.channels = dc.draft.channels.filter((c) => c.id !== id);
+    for (const k of Object.keys(dc.draft.routes)) if (dc.draft.routes[k] === id) delete dc.draft.routes[k];
+    markDc();
+    renderDiscord();
+    return;
+  }
+  if (dc.dirty) { toast('Lưu trước rồi mới thử (kênh này chưa lưu).', 'err'); return; }
+  withToken('thử kênh Discord', async (token) => {
+    await adminFetch('/api/discord/test', 'POST', token, { channel: id });
+    toast('Đã gửi tin thử — xem trong kênh Discord.');
+    await loadDiscord();
+  });
+});
+$('dc-routes').addEventListener('change', (e) => {
+  const k = e.target.dataset.dcKind;
+  if (!k) return;
+  if (e.target.value) dc.draft.routes[k] = e.target.value; else delete dc.draft.routes[k];
+  markDc();
+});
+$('dc-all').addEventListener('change', () => {
+  const id = $('dc-all').value;
+  if (!id) return;
+  for (const k of dc.data.kinds) dc.draft.routes[k.key] = id;
+  $('dc-all').value = '';
+  markDc();
+  renderDiscord();
+});
+$('dc-save').addEventListener('click', () => withToken('lưu Discord', async (token) => {
+  const body = { enabled: dc.draft.enabled, routes: dc.draft.routes,
+    channels: dc.draft.channels.map((c) => ({ id: c.id, name: c.name, ...(c.url ? { url: c.url } : {}) })) };
+  await adminFetch('/api/discord', 'PUT', token, body);
+  dc.dirty = false;
+  toast('Đã lưu Discord.');
+  await loadDiscord(true);
+}));
+
 async function loadAudit() {
   const q = audits.q ? `&q=${encodeURIComponent(audits.q)}` : '';
   const data = await getJson(`/api/server/audit?page=${audits.page}&limit=30${q}`);
@@ -6020,6 +6169,7 @@ const DIRTY = [
   ['world', 'flora', () => flDirty, () => $('fl-save').click(), 'Thực vật'],
   ['world', 'fish', () => fsDirty, () => $('fs-save').click(), 'Cá'],
   ['admin', 'access', () => paDirty, () => $('pa-save').click(), 'Truy cập panel'],
+  ['admin', 'discord', () => dc.dirty, () => $('dc-save').click(), 'Discord'],
   ['map', null, () => az.dirty || gd.dirty, () => { if (az.dirty) $('az-save').click(); if (gd.dirty) $('gd-save').click(); }, 'Vùng AI / Dino nhỏ'],
 ];
 const dirtyNow = () => DIRTY.filter(([, , is]) => { try { return is(); } catch { return false; } });
@@ -6143,7 +6293,7 @@ const SUBS = {
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
   mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['voice', 'Voice gần'], ['messages', 'Thông báo']],
-  admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin']],
+  admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin'], ['discord', 'Discord']],
 };
 // Where the pages of the old layout went: bookmarks and old links still land.
 const MOVED = {
@@ -6257,7 +6407,8 @@ async function refreshTab(tab) {
       ]);
       break;
     case 'admin':
-      await Promise.all([loadAudit(), getJson('/api/panel-access').then(renderPanelAccess)]);
+      await Promise.all([loadAudit(), getJson('/api/panel-access').then(renderPanelAccess),
+        currentSubOf('admin') === 'discord' ? loadDiscord() : null]);
       break;
     case 'map':
       {

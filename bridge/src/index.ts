@@ -18,6 +18,8 @@ import { syncZoneGuard } from './zone-guard.js';
 import { Announcer } from './announcer.js';
 import { AiReset } from './ai-reset.js';
 import { dropResult, enqueueAiCommand } from './ai-drop.js';
+import { DiscordLog, auditLine, lineOf, phaseLine } from './discord.js';
+import { auditListeners } from './audit.js';
 
 const store = new Store();
 const rcon = new Rcon(config.rcon);
@@ -89,7 +91,31 @@ const aiReset = new AiReset({
   result: dropResult,
 });
 
-startServer({ store, power, rcon, metrics, aiReset, ...(voice ? { voice } : {}) });
+// The log on Discord (panel → Quản trị → Discord): feed entries, admin actions,
+// announcements and the server's state, sent out by webhook (discord.ts).
+const discord = new DiscordLog({ startedAt: Math.floor(Date.now() / 1000) });
+await discord.load();
+store.onFeed = (entry) => discord.post(lineOf(entry));
+auditListeners.push((entry) => discord.post(auditLine(entry)));
+rcon.onRun = (name, args) => {
+  if (name === 'announce' && typeof args === 'string') discord.post({ kind: 'announce', t: Math.floor(Date.now() / 1000), text: `📢 ${args}` });
+};
+let lastPhase: string | null = null;
+let plannedUntil = 0;
+setInterval(() => {
+  void power.status().then((st) => {
+    const now = Date.now();
+    // A stop or restart the panel / schedule is doing (and a minute after) is not a crash.
+    if (power.current !== null) plannedUntil = now + 60_000;
+    discord.post(phaseLine(lastPhase, st.phase, Math.floor(now / 1000), now < plannedUntil));
+    if (st.phase !== 'unknown') lastPhase = st.phase;
+  }).catch(() => undefined);
+}, 10_000);
+setInterval(() => {
+  discord.tick().catch((error: unknown) => console.error('[discord] send failed:', error));
+}, 2_000);
+
+startServer({ store, power, rcon, metrics, aiReset, discord, ...(voice ? { voice } : {}) });
 
 // AI zones: keep the ground points on disk and hand the mod the points found
 // since (a zone drawn where nobody had been yet gets spots as people go there).

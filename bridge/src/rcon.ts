@@ -127,10 +127,16 @@ export class Rcon {
     return this.#opts.password !== '';
   }
 
+  /** Told of every named command run (the Discord log shows the announcements: discord.ts). */
+  onRun: ((name: string, args: unknown) => void) | null = null;
+
   /** Run a named command from RCON_COMMANDS. */
   run(name: string, rawArgs?: unknown): Promise<string> {
     const cmd = RCON_COMMANDS[name];
     if (cmd === undefined) return Promise.reject(new ValidationError(`unknown RCON command: ${name}`));
+    if (this.onRun !== null) {
+      try { this.onRun(name, rawArgs); } catch (error) { console.error('[rcon] listener failed:', error); }
+    }
     let args: string;
     try {
       args = encodeArgs(cmd.args, rawArgs);

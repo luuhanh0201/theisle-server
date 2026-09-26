@@ -182,6 +182,8 @@ export class Store {
   readonly #recentRemoval = new Map<string, { t: number; cause: 'garage' | 'admin' }>();
   #nextId = 1;
   #lastEventAt: number | null = null;
+  /** Told of every feed entry as it is added (the Discord log: discord.ts). Replays included — the listener filters. */
+  onFeed: ((entry: FeedEntry) => void) | null = null;
   #modsLoadedAt: number | null = null;
 
   apply(event: GameEvent): void {
@@ -698,6 +700,9 @@ export class Store {
   #push(event: FeedInput, involved: string[]): FeedEntry {
     const entry: FeedEntry = { ...event, id: this.#nextId++ };
     pushBounded(this.#feed, entry, config.feedSize);
+    if (this.onFeed !== null) {
+      try { this.onFeed(entry); } catch (error) { console.error('[store] feed listener failed:', error); }
+    }
 
     for (const steamId of new Set(involved)) {
       if (steamId === 'ai') continue;
