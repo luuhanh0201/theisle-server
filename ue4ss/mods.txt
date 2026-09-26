@@ -37,8 +37,8 @@ FishControl : 0
 ZoneGuard : 1
 ; One-off: guessed fish class paths (StaticFindObject only), flag-guarded.
 FishFind : 0
-; One-off, live: 3 catfish around an admin account that swims (fishspawn6.txt).
-FishSpawnTest : 1
+; Done 2026-09-26: a fish a mod spawns is removed by the game within 10 s (fishspawn7.txt).
+FishSpawnTest : 0
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,
