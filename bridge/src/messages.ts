@@ -67,7 +67,9 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'ai.reset.done', group: 'ai', label: 'Đã làm mới AI', default: 'Đã làm mới AI ({count} con) / AI has been reset.', vars: ['count'] },
   { key: 'ai.reset.cancelled', group: 'ai', label: 'Huỷ làm mới AI', default: 'Đã huỷ làm mới AI / AI reset cancelled.', vars: [] },
   // --- bans (bans.ts): every ban in the game's list, from the panel or the game's own admin panel ---
-  { key: 'ban.announce', group: 'ban', label: 'Thông báo toàn server khi có người bị ban', default: '⛔ {name} đã bị ban {duration}. Lý do: {reason}', vars: ['name', 'reason', 'duration', 'until', 'by'] },
+  { key: 'ban.announce', group: 'ban', label: 'Thông báo toàn server khi có người bị ban', default: '⛔ {name} đã bị ban {duration}. Lý do: {reason}', vars: ['name', 'reason', 'duration', 'until', 'since', 'by'] },
+  { key: 'ban.unban', group: 'ban', label: 'Thông báo toàn server khi gỡ ban', default: '✅ {name} đã được gỡ ban.', vars: ['name', 'reason', 'by'], offByDefault: true },
+  { key: 'ban.edit', group: 'ban', label: 'Thông báo toàn server khi sửa ban (thời hạn / lý do)', default: '✏️ Ban của {name} đổi thành {duration} (hết hạn {until}). Lý do: {reason}', vars: ['name', 'reason', 'duration', 'until', 'since', 'by'], offByDefault: true },
   { key: 'ban.player', group: 'ban', label: 'Tin riêng cho người bị ban (gửi ngay trước khi bị kick, chỉ khi ban từ panel)', default: 'Bạn đã bị ban {duration}. Lý do: {reason}. Khiếu nại: vào Discord của server.', vars: ['name', 'reason', 'duration', 'until'] },
   // --- Pteranodon carry (mods/PteraCarry) ---
   { key: 'ptera.carry.hint', group: 'ptera', label: 'Gợi ý: có con gắp được ở gần', default: 'Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.', vars: ['species', 'kg'], offByDefault: true },

@@ -39,7 +39,7 @@ export const DISCORD_KINDS: ReadonlyArray<{ key: DiscordKind; group: string; lab
   { key: 'mutation', group: 'Dino', label: 'Mutation mới' },
   { key: 'garage', group: 'Dino', label: 'Gara: cất / lấy dino' },
   { key: 'adminKill', group: 'Quản trị', label: 'Admin xoá dino' },
-  { key: 'ban', group: 'Quản trị', label: 'Ban (lý do, thời hạn, người ban)' },
+  { key: 'ban', group: 'Quản trị', label: 'Ban, gỡ ban, sửa ban (lý do, ngày, người làm)' },
   { key: 'admin', group: 'Quản trị', label: 'Nhật ký admin (mọi thao tác trên panel)' },
   { key: 'server', group: 'Server', label: 'Server bật / tắt / lỗi' },
   { key: 'announce', group: 'Server', label: 'Thông báo toàn server (RCON)' },
@@ -183,9 +183,27 @@ export function lineOf(e: FeedEntry): LogLine | null {
 export function banLine(b: { steamId: string; name: string; reason: string; bannedAt: number | null }, vars: Record<string, string>): LogLine {
   return {
     kind: 'ban', t: b.bannedAt ?? Math.floor(Date.now() / 1000),
-    text: `⛔ **${plain(b.name)}**${idOf(b.steamId)} bị ban **${plain(vars['duration'] ?? '')}** bởi ${plain(vars['by'] ?? '?')}`
-      + `\nLý do: ${plain(b.reason || '(không ghi)')}\nHết hạn: ${plain(vars['until'] ?? '')}`,
+    text: `⛔ **${plain(b.name)}**${idOf(b.steamId)} bị ban **${plain(vars['duration'] ?? '')}** — bởi ${plain(vars['by'] ?? '?')}`
+      + `\n**Lý do:** ${plain(b.reason || '(không ghi)')}`
+      + `\n**Ban lúc:** ${plain(vars['since'] ?? '?')} · **Hết hạn:** ${plain(vars['until'] ?? '?')}`,
   };
+}
+
+/** A ban unbanned (after = null) or changed from the panel: what it was, what it is, who did it. */
+export function banChangeLine(before: { steamId: string; name: string; reason: string }, beforeVars: Record<string, string>,
+  after: { reason: string } | null, afterVars: Record<string, string> | null, by: string): LogLine {
+  const t = Math.floor(Date.now() / 1000);
+  if (after === null || afterVars === null) {
+    return { kind: 'ban', t, text: `✅ Gỡ ban **${plain(before.name)}**${idOf(before.steamId)} — bởi ${plain(by)}`
+      + `\n**Lý do ban cũ:** ${plain(before.reason || '(không ghi)')}\n**Ban lúc:** ${plain(beforeVars['since'] ?? '?')} · **Hết hạn cũ:** ${plain(beforeVars['until'] ?? '?')}` };
+  }
+  const lines = [`✏️ Sửa ban **${plain(before.name)}**${idOf(before.steamId)} — bởi ${plain(by)}`];
+  if (beforeVars['until'] !== afterVars['until']) {
+    lines.push(`**Thời hạn:** ${plain(beforeVars['duration'] ?? '')} (hết ${plain(beforeVars['until'] ?? '')}) → **${plain(afterVars['duration'] ?? '')}** (hết ${plain(afterVars['until'] ?? '')})`);
+  }
+  if (before.reason !== after.reason) lines.push(`**Lý do:** ${plain(before.reason || '(không ghi)')} → **${plain(after.reason || '(không ghi)')}**`);
+  lines.push(`**Ban lúc:** ${plain(afterVars['since'] ?? '?')}`);
+  return { kind: 'ban', t, text: lines.join('\n') };
 }
 
 export function auditLine(a: AuditEntry): LogLine {

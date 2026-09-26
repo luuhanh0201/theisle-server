@@ -2,13 +2,15 @@
 // each new ban once, and a ban from the panel (DM, BanPlayer in hours, kick).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const root = mkdtempSync(join(tmpdir(), 'bans-test-'));
 process.env.DATA_DIR = root;
-const { parseBans, parseGameTime, durationText, banVars, BanWatcher, validateBan, banPlayer, PERMANENT_HOURS, readReasons, saveReasons, DEFAULT_REASONS } = await import('../dist/bans.js');
+const { parseBans, parseGameTime, formatGameTime, durationText, banVars, BanWatcher, validateBan, validateBanEdit, banPlayer, PERMANENT_HOURS,
+  readReasons, saveReasons, DEFAULT_REASONS } = await import('../dist/bans.js');
+const { banLine, banChangeLine } = await import('../dist/discord.js');
 after(() => rmSync(root, { recursive: true, force: true }));
 
 // As the game wrote it on 2026-09-26 for "ZZTestBan,76561190000000009,panel test ban,90".
@@ -34,17 +36,75 @@ test('the game\'s list: times, 90 hours, permanent, who', () => {
 });
 
 test('watcher: the first read is the baseline, each new ban once', async () => {
-  let text = FILE;
+  const path = join(root, 'watch.json');
+  writeFileSync(path, FILE);
   const seen = [];
-  const w = new BanWatcher((b) => seen.push(b.name), async () => parseBans(text));
+  const w = new BanWatcher((b) => seen.push(b.name), { path });
   await w.tick();
   assert.deepEqual(seen, [], 'old bans are not announced again after a restart');
   const d = JSON.parse(FILE);
   d.bannedPlayerData.push({ steamId: '76561199000000002', playerName: 'Troll', banReason: 'Spam', bannedTime: '2026.09.26-12.00.00', endBanTime: '2026.09.27-12.00.00', bannerName: 'Rcon' });
-  text = JSON.stringify(d);
+  writeFileSync(path, JSON.stringify(d));
   await w.tick();
   await w.tick();
   assert.deepEqual(seen, ['Troll']);
+});
+
+test('unban and edit: the game file changed (a copy kept), and kept so when the game writes its own list back', async () => {
+  const path = join(root, 'PlayerBans.json');
+  writeFileSync(path, FILE);
+  const seen = [];
+  const w = new BanWatcher((b) => seen.push(b.name), { path });
+  await w.tick();
+  const { before, after } = await w.change({ steamId: '76561190000000009', bannedTime: '2026.09.26-10.56.54', action: 'unban', by: 'Hạnh' });
+  assert.equal(before.name, 'ZZTestBan');
+  assert.equal(after, null);
+  let now = JSON.parse(readFileSync(path, 'utf8'));
+  assert.deepEqual(now.bannedPlayerData.map((b) => b.playerName), ['Rex']);
+  assert.match(readFileSync(path, 'utf8'), /^\{\n\t"bannedPlayerData"/, 'tabs, as the game writes it');
+  assert.ok(readdirSync(join(root, 'ban-backups')).some((n) => n.startsWith('PlayerBans.')), 'the file as it was is kept');
+
+  const end = parseGameTime('2026.09.28-11.00.00');
+  await w.change({ steamId: '76561199000000001', bannedTime: '2026.09.26-11.00.00', action: 'edit', by: 'Hạnh', endBanTime: formatGameTime(end), banReason: 'Hack (xác nhận)' });
+  now = JSON.parse(readFileSync(path, 'utf8'));
+  assert.equal(now.bannedPlayerData[0].endBanTime, '2026.09.28-11.00.00');
+  assert.equal(now.bannedPlayerData[0].banReason, 'Hack (xác nhận)');
+
+  // The game writes its own (old) list back: the edits are put back, the unbanned one is not a new ban.
+  writeFileSync(path, FILE);
+  await w.tick();
+  now = JSON.parse(readFileSync(path, 'utf8'));
+  assert.deepEqual(now.bannedPlayerData.map((b) => [b.playerName, b.endBanTime, b.banReason]), [['Rex', '2026.09.28-11.00.00', 'Hack (xác nhận)']]);
+  assert.deepEqual(seen, []);
+  // …also for a new watcher (a bridge restart): the edits are on disk.
+  writeFileSync(path, FILE);
+  const w2 = new BanWatcher(() => assert.fail('not a new ban'), { path });
+  await w2.tick();
+  assert.equal(JSON.parse(readFileSync(path, 'utf8')).bannedPlayerData.length, 1);
+  await assert.rejects(w.change({ steamId: '76561190000000009', bannedTime: '2026.09.26-10.56.54', action: 'unban', by: 'x' }), /không thấy/);
+});
+
+test('edit requests and times', () => {
+  assert.equal(formatGameTime(parseGameTime('2026.09.30-04.56.54')), '2026.09.30-04.56.54');
+  assert.throws(() => validateBanEdit({ steamId: '1', bannedTime: 'x', reason: 'a' }), /which ban/);
+  assert.throws(() => validateBanEdit({ steamId: '1', bannedTime: '2026.09.26-11.00.00', endsAt: parseGameTime('2026.09.26-10.00.00') }), /after the ban/);
+  assert.throws(() => validateBanEdit({ steamId: '1', bannedTime: '2026.09.26-11.00.00' }), /nothing/);
+  assert.equal(validateBanEdit({ steamId: '1', bannedTime: '2026.09.26-11.00.00', endsAt: 'permanent' }).endsAt, 'permanent');
+  assert.equal(validateBanEdit({ steamId: '1', bannedTime: '2026.09.26-11.00.00', reason: ' a, b ' }).reason, 'a b');
+});
+
+test('Discord: the whole reason and both dates; unban and edit say what changed', () => {
+  const [a] = parseBans(FILE);
+  const line = banLine(a, banVars(a));
+  assert.match(line.text, /\*\*Lý do:\*\* panel test ban/);
+  assert.match(line.text, /\*\*Ban lúc:\*\* 10\\:56 26\/09\/2026/);
+  assert.match(line.text, /\*\*Hết hạn:\*\* 04\\:56 30\/09\/2026/);
+  const un = banChangeLine(a, banVars(a), null, null, 'Hạnh');
+  assert.match(un.text, /Gỡ ban \*\*ZZTestBan\*\*.*Hạnh/);
+  const b2 = { ...a, reason: 'mới', endsAt: a.bannedAt + 24 * 3600 };
+  const ed = banChangeLine(a, banVars(a), b2, banVars(b2), 'Hạnh');
+  assert.match(ed.text, /90 giờ.*→ \*\*1 ngày\*\*/);
+  assert.match(ed.text, /panel test ban → \*\*mới\*\*/);
 });
 
 test('a ban from the panel: checked, the player told, BanPlayer in hours without commas, then kicked', async () => {

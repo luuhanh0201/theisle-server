@@ -117,6 +117,8 @@ setInterval(() => {
   discord.tick().catch((error: unknown) => console.error('[discord] send failed:', error));
 }, 2_000);
 
+
+
 // Every new ban in the game's list (panel or the game's own admin panel): told
 // to the server and logged on Discord (bans.ts).
 const bans = new BanWatcher((b) => {
@@ -131,7 +133,7 @@ setInterval(() => {
 }, 10_000);
 void bans.tick();
 
-startServer({ store, power, rcon, metrics, aiReset, discord, ...(voice ? { voice } : {}) });
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ...(voice ? { voice } : {}) });
 
 // AI zones: keep the ground points on disk and hand the mod the points found
 // since (a zone drawn where nobody had been yet gets spots as people go there).

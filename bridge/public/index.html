@@ -997,9 +997,11 @@
         <section class="card" style="margin-top:16px"><div class="card-head"><h2>Danh sách ban</h2><span class="sub" id="ban-count"></span></div>
           <div class="card-body">
             <div class="audit-table-wrap"><table class="audit-table">
-              <thead><tr><th>Người chơi</th><th>Lý do</th><th>Thời hạn</th><th>Ban lúc</th><th>Hết hạn</th><th>Người ban</th></tr></thead>
+              <thead><tr><th>Người chơi</th><th>Lý do</th><th>Thời hạn</th><th>Ban lúc</th><th>Hết hạn</th><th>Người ban</th><th></th></tr></thead>
               <tbody id="ban-list"></tbody></table></div>
-            <div class="step-hint" style="margin-top:8px">Lấy từ danh sách ban của game (PlayerBans.json). RCON không có lệnh gỡ ban: gỡ trong bảng admin của game.</div>
+            <div class="step-hint" style="margin-top:8px">Lấy từ danh sách ban của game (PlayerBans.json). Gỡ ban / sửa: RCON không có lệnh này nên panel sửa
+              thẳng danh sách của game (có sao lưu trước, và tự áp lại nếu game ghi đè). Game có áp dụng ngay khi đang chạy hay không <b>chưa kiểm chứng</b> —
+              chắc chắn có hiệu lực sau lần khởi động lại server kế tiếp.</div>
           </div></section>
       </div>
 
@@ -5553,8 +5555,10 @@ async function loadBans() {
       <td><b>${esc(b.name)}</b><br><span class="mono muted" style="font-size:11.5px">${esc(b.steamId)}</span></td>
       <td>${esc(b.reason || '(không ghi)')}</td><td>${esc(b.duration)}${b.active ? '' : ' · <i>hết hạn</i>'}</td>
       <td>${b.bannedAt ? esc(dateTime(b.bannedAt)) : '—'}</td><td>${b.permanent ? 'không' : b.endsAt ? esc(dateTime(b.endsAt)) : '—'}</td>
-      <td>${esc(b.by === 'Rcon' ? 'panel / RCON' : b.by)}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="muted">Chưa ai bị ban.</td></tr>';
+      <td>${esc(b.by === 'Rcon' ? 'panel / RCON' : b.by)}</td>
+      <td style="white-space:nowrap">${b.active ? `<button type="button" class="btn-soft sm" data-ban-edit="${esc(b.steamId)}|${esc(b.bannedTime)}">Sửa</button>
+        <button type="button" class="btn-ghost sm" data-ban-unban="${esc(b.steamId)}|${esc(b.bannedTime)}" style="color:var(--kill,#ef4444)">Gỡ ban</button>` : ''}</td></tr>`).join('')
+    || '<tr><td colspan="7" class="muted">Chưa ai bị ban.</td></tr>';
   renderBanPreview();
 }
 function banForm() {
@@ -5592,7 +5596,7 @@ $('ban-go').addEventListener('click', () => {
   confirmAction({
     title: `Ban ${f.name || f.steamId}?`,
     body: `<p>Ban <b>${esc(f.name || f.steamId)}</b> <span class="mono">${esc(f.steamId)}</span> — <b>${esc(dur)}</b>.</p><p>Lý do: ${esc(f.reason)}</p>
-      <p class="muted">Không gỡ được bằng panel (RCON không có lệnh gỡ ban) — gỡ trong bảng admin của game.</p>`,
+      <p class="muted">Gỡ hoặc sửa sau ở danh sách ban bên dưới.</p>`,
     okLabel: 'Ban', withReason: false, danger: true,
     run: async (token) => {
       const r = await adminFetch('/api/bans', 'POST', token, { steamId: f.steamId, name: f.name, reason: f.reason, hours: f.hours });
@@ -5601,6 +5605,54 @@ $('ban-go').addEventListener('click', () => {
       await loadBans();
     },
   });
+});
+const banOf = (ref) => { const [steamId, bannedTime] = ref.split('|'); return bans.data?.bans.find((b) => b.steamId === steamId && b.bannedTime === bannedTime); };
+$('ban-list').addEventListener('click', (e) => {
+  const un = e.target.closest('[data-ban-unban]')?.dataset.banUnban;
+  const ed = e.target.closest('[data-ban-edit]')?.dataset.banEdit;
+  const b = banOf(un ?? ed ?? '');
+  if (!b) return;
+  if (un) {
+    confirmAction({
+      title: `Gỡ ban ${b.name}?`,
+      body: `<p>Gỡ ban <b>${esc(b.name)}</b> <span class="mono">${esc(b.steamId)}</span>.</p><p>Lý do ban: ${esc(b.reason || '(không ghi)')}<br>Ban lúc ${esc(dateTime(b.bannedAt))} · ${esc(b.duration)}</p>
+        <p class="muted">Chắc chắn có hiệu lực sau lần khởi động lại server kế tiếp.</p>`,
+      okLabel: 'Gỡ ban', withReason: false, danger: false,
+      run: async (token) => {
+        await adminFetch('/api/bans/unban', 'POST', token, { steamId: b.steamId, bannedTime: b.bannedTime });
+        toast(`Đã gỡ ban ${b.name}.`);
+        await loadBans();
+      },
+    });
+    return;
+  }
+  const opts = [['keep', 'Giữ nguyên'], ['1', '1 giờ nữa'], ['6', '6 giờ nữa'], ['24', '1 ngày nữa'], ['72', '3 ngày nữa'], ['168', '7 ngày nữa'],
+    ['720', '30 ngày nữa'], ['perm', 'Vĩnh viễn'], ['at', 'Chọn ngày giờ…']];
+  confirmAction({
+    title: `Sửa ban ${b.name}`,
+    body: `<p><b>${esc(b.name)}</b> <span class="mono">${esc(b.steamId)}</span> — ban lúc ${esc(dateTime(b.bannedAt))}, hiện: <b>${esc(b.duration)}</b>${b.permanent ? '' : ` (hết ${esc(dateTime(b.endsAt))})`}</p>
+      <div class="cfg-field" style="margin-top:10px"><label for="be-mode">Hết hạn</label><select id="be-mode">${opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+        <input id="be-at" type="datetime-local" hidden style="margin-top:6px"></div>
+      <div class="cfg-field" style="margin-top:10px"><label for="be-reason">Lý do</label><textarea id="be-reason" rows="2" maxlength="200">${esc(b.reason)}</textarea></div>`,
+    okLabel: 'Lưu', withReason: false, danger: false,
+    run: async (token) => {
+      const mode = $('be-mode').value;
+      const body = { steamId: b.steamId, bannedTime: b.bannedTime };
+      if (mode === 'perm') body.endsAt = 'permanent';
+      else if (mode === 'at') {
+        const t = Math.floor(new Date($('be-at').value).getTime() / 1000);
+        if (!Number.isFinite(t)) throw new Error('Chọn ngày giờ hết hạn.');
+        body.endsAt = t;
+      } else if (mode !== 'keep') body.endsAt = Math.floor(Date.now() / 1000) + Number(mode) * 3600;
+      const reason = $('be-reason').value.trim();
+      if (reason !== b.reason) body.reason = reason;
+      if (body.endsAt === undefined && body.reason === undefined) throw new Error('Chưa đổi gì.');
+      await adminFetch('/api/bans/edit', 'POST', token, body);
+      toast(`Đã sửa ban ${b.name}.`);
+      await loadBans();
+    },
+  });
+  $('be-mode').addEventListener('change', () => { $('be-at').hidden = $('be-mode').value !== 'at'; });
 });
 $('ban-reasons').addEventListener('input', () => { banReasonsDirty = true; });
 $('ban-reasons-save').addEventListener('click', () => withToken('lưu mẫu lý do ban', async (token) => {

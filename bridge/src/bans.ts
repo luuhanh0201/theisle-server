@@ -1,5 +1,5 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { config } from './config.js';
 import { ValidationError } from './garage.js';
 import { renderMessage } from './messages.js';
@@ -16,13 +16,22 @@ import { renderMessage } from './messages.js';
  * Banning from the panel is RCON BanPlayer (0x20, "Name,SteamID,Reason,Time"):
  * Time is in HOURS (90 → 90 h later, checked); 0 ends at once, so "permanent"
  * is PERMANENT_HOURS. Before it the player gets "ban.player" (DirectMessage),
- * after it a KickPlayer (0x30). There is no unban over RCON.
+ * after it a KickPlayer (0x30).
+ *
+ * Unban and edit (time, reason): RCON has neither, so the bridge edits the
+ * game's file — a copy of it first (DATA_DIR/ban-backups), same format — and
+ * REMEMBERS the edit (DATA_DIR/ban-edits.json). Whether the game re-reads the
+ * file while running is not verified; if it writes its own list back over
+ * the edit, the next read puts the edit back (and an unbanned entry coming
+ * back is not a new ban). A restart makes the game load the edited file.
  *
  * The times in the file are the VPS's local time ("2026.09.26-10.56.54").
  */
 
 export interface Ban {
   steamId: string;
+  /** The game's own text of the ban time: with the SteamID, what names this ban. */
+  bannedTime: string;
   name: string;
   reason: string;
   /** Unix seconds. */
@@ -46,6 +55,17 @@ export const DEFAULT_REASONS = [
 ];
 
 const reasonsPath = (): string => join(config.dataDir, 'ban-reasons.json');
+const editsPath = (): string => join(config.dataDir, 'ban-edits.json');
+const backupDir = (): string => join(config.dataDir, 'ban-backups');
+const KEEP_BACKUPS = 30;
+const KEEP_EDITS_S = 60 * 86_400;
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+/** unix seconds → "2026.09.26-10.56.54" (VPS local time), as the game writes it. */
+export function formatGameTime(t: number): string {
+  const d = new Date(t * 1000);
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}-${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`;
+}
 
 /** "2026.09.26-10.56.54" (VPS local time) → unix seconds. */
 export function parseGameTime(s: unknown): number | null {
@@ -68,6 +88,7 @@ export function parseBans(text: string): Ban[] {
     const endsAt = parseGameTime(o['endBanTime']);
     return [{
       steamId: o['steamId'],
+      bannedTime: typeof o['bannedTime'] === 'string' ? o['bannedTime'] : '',
       name: typeof o['playerName'] === 'string' ? o['playerName'] : o['steamId'],
       reason: typeof o['banReason'] === 'string' ? o['banReason'] : '',
       bannedAt, endsAt,
@@ -93,36 +114,173 @@ export function durationText(b: Pick<Ban, 'bannedAt' | 'endsAt' | 'permanent'>):
   if (h >= 24 && h % 24 === 0) return `${h / 24} ngày`;
   return `${h} giờ`;
 }
-const untilText = (b: Ban): string => (b.permanent || b.endsAt === null ? 'không hết hạn'
-  : new Date(b.endsAt * 1000).toLocaleString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' }));
+/** "26/09/2026 10:56" (Vietnam time). */
+export const dateText = (t: number | null): string => (t === null ? '?'
+  : new Date(t * 1000).toLocaleString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
+const untilText = (b: Pick<Ban, 'permanent' | 'endsAt'>): string => (b.permanent || b.endsAt === null ? 'không hết hạn' : dateText(b.endsAt));
 
 export const banVars = (b: Ban): Record<string, string> => ({
-  name: b.name, reason: b.reason || '(không ghi)', duration: durationText(b), until: untilText(b), by: b.by === 'Rcon' ? 'admin' : b.by,
+  name: b.name, reason: b.reason || '(không ghi)', duration: durationText(b), until: untilText(b), since: dateText(b.bannedAt),
+  by: b.by === 'Rcon' ? 'admin' : b.by,
 });
 
-const key = (b: Ban): string => `${b.steamId}|${b.bannedAt ?? ''}`;
+const key = (steamId: string, bannedTime: string): string => `${steamId}|${bannedTime}`;
+
+// --- edits the bridge makes to the game's list ------------------------------------
+
+export interface BanEdit {
+  steamId: string;
+  bannedTime: string;
+  action: 'unban' | 'edit';
+  /** edit: the new end, as the game writes times; and / or the new reason. */
+  endBanTime?: string;
+  banReason?: string;
+  at: number;
+  by: string;
+}
+
+type GameEntry = Record<string, unknown>;
+interface GameDoc { bannedPlayerData: GameEntry[] }
+
+/** Put the edits into the game's document; true when it changed. */
+export function applyEdits(doc: GameDoc, edits: readonly BanEdit[]): boolean {
+  let changed = false;
+  const byKey = new Map(edits.map((e) => [key(e.steamId, e.bannedTime), e]));
+  const kept: GameEntry[] = [];
+  for (const entry of doc.bannedPlayerData) {
+    const e = byKey.get(key(String(entry['steamId']), String(entry['bannedTime'])));
+    if (e?.action === 'unban') { changed = true; continue; }
+    if (e?.action === 'edit') {
+      if (e.endBanTime !== undefined && entry['endBanTime'] !== e.endBanTime) { entry['endBanTime'] = e.endBanTime; changed = true; }
+      if (e.banReason !== undefined && entry['banReason'] !== e.banReason) { entry['banReason'] = e.banReason; changed = true; }
+    }
+    kept.push(entry);
+  }
+  doc.bannedPlayerData = kept;
+  return changed;
+}
+
+async function readEdits(): Promise<BanEdit[]> {
+  try {
+    const r = JSON.parse(await readFile(editsPath(), 'utf8')) as unknown;
+    return Array.isArray(r) ? r as BanEdit[] : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeAtomic(path: string, text: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  const tmp = `${path}.tmp`;
+  await writeFile(tmp, text, 'utf8');
+  await rename(tmp, path);
+}
+
+/** A copy of the game's file as it was, then the new one in its place (tabs, as the game writes it). */
+async function writeGameFile(path: string, before: string, doc: GameDoc): Promise<void> {
+  await mkdir(backupDir(), { recursive: true });
+  await writeFile(join(backupDir(), `PlayerBans.${Date.now()}.json`), before, 'utf8');
+  const old = (await readdir(backupDir())).filter((n) => n.startsWith('PlayerBans.')).sort();
+  for (const n of old.slice(0, Math.max(0, old.length - KEEP_BACKUPS))) await unlink(join(backupDir(), n)).catch(() => undefined);
+  await writeAtomic(path, JSON.stringify(doc, null, '\t'));
+}
 
 /**
- * Watches the game's list: each new ban once (the first read is the baseline:
- * a restart does not announce the old ones again).
+ * The game's list, watched: each new ban told once (the first read is the
+ * baseline: a restart does not announce the old ones again), the bridge's
+ * edits kept applied.
  */
 export class BanWatcher {
   #known: Set<string> | null = null;
-  readonly #read: () => Promise<Ban[]>;
+  #edits: BanEdit[] | null = null;
+  #busy: Promise<void> = Promise.resolve();
+  readonly #path: string;
   readonly #onBan: (b: Ban) => void;
+  readonly #now: () => number;
 
-  constructor(onBan: (b: Ban) => void, read: () => Promise<Ban[]> = () => readBans()) {
+  constructor(onBan: (b: Ban) => void, opts: { path?: string; now?: () => number } = {}) {
     this.#onBan = onBan;
-    this.#read = read;
+    this.#path = opts.path ?? config.game.bansPath;
+    this.#now = opts.now ?? (() => Math.floor(Date.now() / 1000));
   }
 
-  async tick(): Promise<void> {
-    const bans = await this.#read();
-    const now = new Set(bans.map(key));
-    if (this.#known === null) { this.#known = now; return; }
-    for (const b of bans) if (!this.#known.has(key(b))) this.#onBan(b);
-    this.#known = now;
+  /** One at a time: a tick and an edit never write the file together. */
+  #serial<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.#busy.then(fn);
+    this.#busy = run.then(() => undefined, () => undefined);
+    return run;
   }
+
+  async #load(): Promise<{ text: string; doc: GameDoc } | null> {
+    let text: string;
+    try { text = await readFile(this.#path, 'utf8'); } catch { return null; }
+    let raw: unknown;
+    try { raw = JSON.parse(text); } catch { return null; }     // being written by the game: next time
+    const list = (raw as { bannedPlayerData?: unknown } | null)?.bannedPlayerData;
+    if (!Array.isArray(list)) return null;
+    return { text, doc: raw as GameDoc };
+  }
+
+  async #editsNow(): Promise<BanEdit[]> {
+    if (this.#edits === null) this.#edits = await readEdits();
+    const keep = this.#edits.filter((e) => this.#now() - e.at < KEEP_EDITS_S);
+    if (keep.length !== this.#edits.length) { this.#edits = keep; await writeAtomic(editsPath(), JSON.stringify(keep, null, 2)); }
+    return this.#edits;
+  }
+
+  tick(): Promise<void> {
+    return this.#serial(async () => {
+      const got = await this.#load();
+      if (got === null) return;
+      if (applyEdits(got.doc, await this.#editsNow())) await writeGameFile(this.#path, got.text, got.doc);
+      const bans = parseBans(JSON.stringify(got.doc));
+      const now = new Set(bans.map((b) => key(b.steamId, b.bannedTime)));
+      if (this.#known !== null) for (const b of bans) if (!this.#known.has(key(b.steamId, b.bannedTime))) this.#onBan(b);
+      this.#known = now;
+    });
+  }
+
+  /** Unban, or change the end / reason, of one ban; the ban as it was, and as it is now (null when unbanned). */
+  change(edit: Omit<BanEdit, 'at'>): Promise<{ before: Ban; after: Ban | null }> {
+    return this.#serial(async () => {
+      const got = await this.#load();
+      if (got === null) throw new ValidationError('không đọc được danh sách ban của game');
+      const before = parseBans(got.text).find((b) => b.steamId === edit.steamId && b.bannedTime === edit.bannedTime);
+      if (!before) throw new ValidationError('không thấy lần ban này (đã hết / đã gỡ?)');
+      const edits = (await this.#editsNow()).filter((e) => key(e.steamId, e.bannedTime) !== key(edit.steamId, edit.bannedTime));
+      const merged: BanEdit = { ...edit, at: this.#now() };
+      this.#edits = [...edits, merged];
+      await writeAtomic(editsPath(), JSON.stringify(this.#edits, null, 2));
+      applyEdits(got.doc, this.#edits);
+      await writeGameFile(this.#path, got.text, got.doc);
+      const after = parseBans(JSON.stringify(got.doc)).find((b) => b.steamId === edit.steamId && b.bannedTime === edit.bannedTime) ?? null;
+      if (after === null) this.#known?.delete(key(edit.steamId, edit.bannedTime));
+      return { before, after };
+    });
+  }
+}
+
+/** What the panel sends to change a ban: the new end (unix, or permanent) and / or reason. */
+export function validateBanEdit(raw: unknown): { steamId: string; bannedTime: string; endsAt?: number | 'permanent'; reason?: string } {
+  if (typeof raw !== 'object' || raw === null) throw new ValidationError('body must be an object');
+  const r = raw as Record<string, unknown>;
+  const steamId = typeof r['steamId'] === 'string' ? r['steamId'] : '';
+  const bannedTime = typeof r['bannedTime'] === 'string' ? r['bannedTime'] : '';
+  if (steamId === '' || parseGameTime(bannedTime) === null) throw new ValidationError('which ban? steamId and bannedTime are needed');
+  const out: { steamId: string; bannedTime: string; endsAt?: number | 'permanent'; reason?: string } = { steamId, bannedTime };
+  if (r['endsAt'] === 'permanent') out.endsAt = 'permanent';
+  else if (r['endsAt'] !== undefined) {
+    const t = r['endsAt'];
+    if (typeof t !== 'number' || !Number.isInteger(t) || t <= (parseGameTime(bannedTime) as number)) throw new ValidationError('the end must be after the ban');
+    out.endsAt = t;
+  }
+  if (r['reason'] !== undefined) {
+    const reason = field(String(r['reason'])).slice(0, 200);
+    if (reason === '') throw new ValidationError('cần ghi lý do');
+    out.reason = reason;
+  }
+  if (out.endsAt === undefined && out.reason === undefined) throw new ValidationError('nothing to change');
+  return out;
 }
 
 // --- banning from the panel --------------------------------------------------
@@ -155,7 +313,7 @@ export async function banPlayer(rcon: RconBan, req: BanRequest, online: boolean,
   if (online) {
     const nowS = Math.floor(Date.now() / 1000);
     const vars = banVars({
-      steamId: req.steamId, name: req.name, reason: req.reason, by: 'admin', bannedAt: nowS,
+      steamId: req.steamId, bannedTime: '', name: req.name, reason: req.reason, by: 'admin', bannedAt: nowS,
       endsAt: nowS + req.hours * 3600, permanent: req.hours >= PERMANENT_HOURS,
     });
     const text = renderMessage('ban.player', vars);

@@ -29,8 +29,11 @@ import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readSanctuaries, readZoneGuard, saveZoneGuard, syncZoneGuard } from './zone-guard.js';
-import { DISCORD_KINDS, publicView, type DiscordLog } from './discord.js';
-import { PERMANENT_HOURS, banPlayer, durationText, readBans, readReasons, saveReasons, validateBan } from './bans.js';
+import { DISCORD_KINDS, banChangeLine, publicView, type DiscordLog } from './discord.js';
+import {
+  PERMANENT_HOURS, banPlayer, banVars, durationText, formatGameTime, parseGameTime, readBans, readReasons, saveReasons, validateBan, validateBanEdit,
+  type BanWatcher,
+} from './bans.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
 import { readFlora } from './flora.js';
 import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
@@ -185,6 +188,7 @@ export interface Ctx {
   voice?: VoiceRoom;
   aiReset?: AiReset;
   discord?: DiscordLog;
+  bans?: BanWatcher;
 }
 
 /** Everything the Server tab shows, in one call. */
@@ -333,6 +337,7 @@ async function handlePanel(
       (path === '/api/zone-guard' && req.method === 'PUT') ||
       (path === '/api/discord' && req.method === 'PUT') ||
       (path === '/api/bans' && req.method === 'POST') ||
+      ((path === '/api/bans/unban' || path === '/api/bans/edit') && req.method === 'POST') ||
       (path === '/api/ban-reasons' && req.method === 'PUT') ||
       (path === '/api/discord/test' && req.method === 'POST') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
@@ -516,6 +521,34 @@ async function handlePanel(
       }
       await audit({ action: 'player banned', detail: `${ban.name} (${ban.steamId}) · ${ban.hours >= PERMANENT_HOURS ? 'vĩnh viễn' : `${ban.hours} giờ`} · ${ban.reason}${online ? ' · đã kick' : ''}`, ok: true });
       sendJson(res, 200, { ok: true, kicked: online });
+      return;
+    }
+
+    if (path === '/api/bans/unban' || path === '/api/bans/edit') {
+      if (!ctx.bans) { sendJson(res, 503, { error: 'ban list is not watched' }); return; }
+      const body = await readJsonBody(req);
+      const unban = path === '/api/bans/unban';
+      const e = unban ? validateBanEdit({ ...(body as object), reason: 'x' }) : validateBanEdit(body);
+      const who = name ?? 'admin';
+      const { before, after } = await ctx.bans.change(unban
+        ? { steamId: e.steamId, bannedTime: e.bannedTime, action: 'unban', by: who }
+        : {
+          steamId: e.steamId, bannedTime: e.bannedTime, action: 'edit', by: who,
+          ...(e.endsAt === undefined ? {} : { endBanTime: formatGameTime(e.endsAt === 'permanent' ? (parseGameTime(e.bannedTime) as number) + PERMANENT_HOURS * 3600 : e.endsAt) }),
+          ...(e.reason === undefined ? {} : { banReason: e.reason }),
+        });
+      const bVars: Record<string, string> = { ...banVars(before), by: who };
+      const aVars: Record<string, string> | null = after === null ? null : { ...banVars(after), by: who };
+      ctx.discord?.post(banChangeLine(before, bVars, after, aVars, who));
+      const text = renderMessage(after === null ? 'ban.unban' : 'ban.edit', aVars ?? bVars);
+      if (text !== null && ctx.rcon.enabled) await ctx.rcon.run('announce', text).catch(() => undefined);
+      await audit({
+        action: after === null ? 'player unbanned' : 'ban changed',
+        detail: after === null ? `${before.name} (${before.steamId}) · lý do cũ: ${before.reason}`
+          : `${before.name} (${before.steamId}) · ${bVars['duration']} → ${aVars?.['duration']} (hết ${aVars?.['until']})${before.reason !== after.reason ? ` · lý do: ${after.reason}` : ''}`,
+        ok: true,
+      });
+      sendJson(res, 200, { ok: true, ban: after });
       return;
     }
 
