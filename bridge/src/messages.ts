@@ -125,7 +125,7 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'cmd.unstuck.noDino', group: 'commands', label: '!unstuck: chưa có dino', default: '!unstuck: bạn chưa điều khiển dino nào.', vars: [] },
   { key: 'cmd.unstuck.noSafeSpot', group: 'commands', label: '!unstuck: chưa có điểm an toàn', default: '!unstuck: chưa có điểm an toàn trên mặt đất — đi bộ trên mặt đất vài giây rồi thử lại.', vars: [] },
   { key: 'cmd.unstuck.failed', group: 'commands', label: '!unstuck: lỗi', default: '!unstuck không thực hiện được, thử lại sau.', vars: [] },
-  { key: 'cmd.prime.info', group: 'commands', label: '!prime: kết quả', default: 'Prime elder: {prime} · Đủ điều kiện lên prime: {eligible}.', vars: ['prime', 'eligible'] },
+  { key: 'cmd.prime.info', group: 'commands', label: '!prime: kết quả', default: 'Nhiệm vụ prime: {done}/10 xong (cần {needed}) · Đủ điều kiện: {eligible} · Prime: {status} · Growth {growth}.', vars: ['done', 'needed', 'eligible', 'status', 'prime', 'growth'] },
   { key: 'cmd.prime.noDino', group: 'commands', label: '!prime: chưa có dino', default: '!prime: bạn chưa điều khiển dino nào.', vars: [] },
   { key: 'cmd.status.noDino', group: 'commands', label: '!status: chưa có dino', default: '!status: bạn chưa điều khiển dino nào.', vars: [] },
   { key: 'cmd.disabled', group: 'commands', label: 'Lệnh đang bị tắt', default: '!{command} đang bị tắt trên server này.', vars: ['command'] },

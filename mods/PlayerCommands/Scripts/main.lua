@@ -254,7 +254,26 @@ local function doPrime(ctrl)
     end
     local isPrime = callBool(pawn, "IsPrimeElder")
     local eligible = callBool(pawn, "GetIsEligiblePrimeElder")
-    Msg.notify(ctrl, "cmd.prime.info", "Prime elder: {prime} · Đủ điều kiện lên prime: {eligible}.", { prime = yesNo(isPrime), eligible = yesNo(eligible) })
+    -- The ten conditions the game keeps (EligiblePrimeElderData); 5 make a
+    -- dino eligible (every reading on this server, bridge/src/prime.ts).
+    local done = nil
+    local okD, data = pcall(function() return pawn.EligiblePrimeElderData end)
+    if okD and data ~= nil then
+        done = 0
+        for i = 1, 10 do
+            local okC, v = pcall(function() return data["bPrimeCondition" .. i] end)
+            if okC and v == true then done = done + 1 end
+        end
+    end
+    local growth = H.readVital(pawn, "GetGrowth", { "Growth" }, "growth")
+    local status
+    if isPrime == true then status = "đã là Prime 👑"
+    elseif growth and growth >= 0.75 then status = "không (đã qua mốc 75%)"
+    else status = "chưa — game xét ở 75% growth" end
+    Msg.notify(ctrl, "cmd.prime.info",
+        "Nhiệm vụ prime: {done}/10 xong (cần {needed}) · Đủ điều kiện: {eligible} · Prime: {status} · Growth {growth}.",
+        { done = done ~= nil and tostring(done) or "?", needed = "5", eligible = yesNo(eligible), prime = yesNo(isPrime),
+          status = status, growth = growth and string.format("%.0f%%", growth * 100) or "?" })
 end
 
 local VITALS = {

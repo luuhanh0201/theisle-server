@@ -1,29 +1,32 @@
 /**
  * The ten prime-elder conditions (pawn.EligiblePrimeElderData.bPrimeCondition1..10).
  *
- * The game names them only by number. Meanings below come from community
- * guides (theisle.info "Prime & Prime Elder", Afterthought's elder-system
- * guide), which disagree on count and order — so each is marked verified:
- * false until a flip is observed in play (StatsLogger sends a "prime" event
- * whenever a condition changes). The order here is the one that fits the live
- * reading of 2026-09-24: a fresh Tyrannosaurus with conditions 3, 8, 9 met —
- * perfect diet (all three nutrients present) and the two "never" conditions,
- * which start met — and 10 (small species) not met.
+ * The game names them only by number. Labels checked against this server's
+ * own readings (StatsLogger "prime" events, 2026-09-26/27, ~170 readings,
+ * set against where each dino stood on the map when a condition turned on):
+ *   1 on inside a Sanctuary, young · 3 on anywhere (diet) · 5 on for several
+ *   players in the same second (a Mass Migration starting) · 7, 8 on from the
+ *   start (7 lost after a long starvation) · 10 on from the start for a few
+ *   species · 2, 4 never seen on · 6 and 9 seen too rarely to be sure.
+ * `verified: false` = the label is the community guides' guess.
  */
 export interface PrimeCondition { n: number; label: string; passive: boolean; verified: boolean }
 
 export const PRIME_CONDITIONS: PrimeCondition[] = [
-  { n: 1, label: 'Vào Sanctuary khi còn juvenile', passive: false, verified: false },
-  { n: 2, label: 'Được nở từ tổ của người chơi khác (nested in)', passive: false, verified: false },
-  { n: 3, label: 'Chế độ ăn hoàn hảo (≥1% cả ba chất cùng lúc)', passive: false, verified: false },
-  { n: 4, label: 'Vào vùng Mass Migration', passive: false, verified: false },
-  { n: 5, label: 'Đi qua 2 vùng di cư khác nhau', passive: false, verified: false },
-  { n: 6, label: 'Đi qua 4 vùng tuần tra khác nhau', passive: false, verified: false },
-  { n: 7, label: 'Nuôi con từ tổ lên subadult', passive: false, verified: false },
-  { n: 8, label: 'Không bao giờ bị vô sinh', passive: true, verified: false },
-  { n: 9, label: 'Không bao giờ bị co giật cơ', passive: true, verified: false },
-  { n: 10, label: 'Là loài nhỏ (Hypsi / Troodon / Beipi / Dryo…)', passive: true, verified: false },
+  { n: 1, label: 'Vào Sanctuary khi còn nhỏ', passive: false, verified: true },
+  { n: 2, label: 'Chưa rõ — chưa từng thấy đạt trên server (theo hướng dẫn: nở từ tổ của người chơi khác)', passive: false, verified: false },
+  { n: 3, label: 'Ăn đủ cả ba chất (carb, protein, lipid)', passive: false, verified: true },
+  { n: 4, label: 'Chưa rõ — chưa từng thấy đạt trên server (theo hướng dẫn: đi qua 2 vùng di cư khác nhau)', passive: false, verified: false },
+  { n: 5, label: 'Có mặt trong vùng Mass Migration khi đợt di cư đang diễn ra', passive: false, verified: true },
+  { n: 6, label: 'Vùng tuần tra (Patrol Zone) — đã có người đạt, quy tắc chính xác chưa rõ', passive: false, verified: false },
+  { n: 7, label: 'Chưa từng bị vô sinh — có sẵn, mất nếu để dino thiếu chất lâu', passive: true, verified: true },
+  { n: 8, label: 'Chưa từng bị co giật cơ — có sẵn', passive: true, verified: true },
+  { n: 9, label: 'Chưa rõ — mới thấy ở Deinosuchus trưởng thành (theo hướng dẫn: nuôi con từ tổ lên subadult)', passive: false, verified: false },
+  { n: 10, label: 'Loài được tặng sẵn (Beipiaosaurus, Deinosuchus…)', passive: true, verified: true },
 ];
+
+/** How many conditions make a dino eligible: every reading with 5+ was, every one with 4 or fewer was not. */
+export const PRIME_NEEDED = 5;
 
 /** Guides agree on this: prime is decided by 75 % growth. */
 export const PRIME_DEADLINE = 0.75;
@@ -34,6 +37,8 @@ export interface PrimeBoard {
   eligible: boolean | null;
   elder: boolean | null;
   met: number;
+  /** Conditions needed to be eligible (PRIME_NEEDED). */
+  needed: number;
   conditions: Array<PrimeCondition & { met: boolean | null }>;
   growth: number | null;
   deadline: number;
@@ -55,6 +60,7 @@ export function primeBoard(
     eligible: p.eligible,
     elder: p.elder,
     met: conditions.filter((c) => c.met === true).length,
+    needed: PRIME_NEEDED,
     conditions,
     growth,
     deadline: PRIME_DEADLINE,

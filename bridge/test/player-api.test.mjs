@@ -116,7 +116,8 @@ test('bars: vitals with their maxima; prime status', async () => {
   assert.equal(pb.met, 3);
   assert.equal(pb.conditions.length, 10);
   assert.deepEqual(pb.conditions.filter((c) => c.met).map((c) => c.n), [3, 8, 9]);
-  assert.ok(pb.conditions.every((c) => c.verified === false), 'labels marked unverified');
+  assert.equal(pb.needed, 5);
+  assert.deepEqual(pb.conditions.filter((c) => !c.verified).map((c) => c.n), [2, 4, 6, 9], 'the unsure labels say so');
   assert.equal(pb.locked, false, 'growth 0.3 < 75 %');
 });
 

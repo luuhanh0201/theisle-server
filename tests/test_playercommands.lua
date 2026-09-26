@@ -60,8 +60,9 @@ check("species, growth %, vitals", lastMsg():find("Carnotaurus", 1, true) and la
 say("")
 say("-- 3. !prime reads the game's own getters --")
 cmd("!prime")
-check("not prime / not eligible", lastMsg():find("Prime elder: không", 1, true)
-      and lastMsg():find("Đủ điều kiện lên prime: không", 1, true), lastMsg())
+check("conditions done out of 10, the 5 needed, eligible, prime and growth",
+      lastMsg():find("Nhiệm vụ prime: 3/10 xong (cần 5)", 1, true) and lastMsg():find("Đủ điều kiện: không", 1, true)
+      and lastMsg():find("Prime: chưa — game xét ở 75% growth", 1, true) and lastMsg():find("Growth 50%", 1, true), lastMsg())
 
 say("")
 say("-- 4. !unstuck: only to a recorded GROUND spot, old enough and far enough --")

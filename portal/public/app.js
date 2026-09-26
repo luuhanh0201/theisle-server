@@ -235,7 +235,7 @@ function renderPrimeBoard(pb) {
 
   return `
     <div class="prime-summary">
-      <div><b>${pb.met} / 10 điều kiện đạt</b> <span class="muted">(Cần 5 điều kiện, loài nhỏ cần 4)</span></div>
+      <div><b>${pb.met} / 10 điều kiện đạt</b> <span class="muted">(cần ${pb.needed ?? 5} — vài loài được tặng sẵn điều kiện 10)</span></div>
       <div>${verdict}</div>
     </div>
     ${deadline}
