@@ -193,6 +193,8 @@ EnvironmentFile=$BRIDGE_DIR/.env
 ExecStart=$NODE_BIN $BRIDGE_DIR/dist/index.js
 Restart=on-failure
 RestartSec=5
+# Below the game (Nice=-5): never takes the GameThread's core.
+Nice=10
 # No NoNewPrivileges: the panel's Server tab runs sudo -n systemctl
 # start/stop/restart theisle.service (sudoers allows exactly that), and
 # NoNewPrivileges would block sudo.

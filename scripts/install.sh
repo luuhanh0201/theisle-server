@@ -154,6 +154,9 @@ Restart=on-failure
 RestartSec=15
 TimeoutStopSec=60
 KillSignal=SIGINT
+# The game's work sits on ONE thread (GameThread): it goes first whenever
+# anything else on the box wants that core (bridge/portal run at Nice=10).
+Nice=-5
 
 [Install]
 WantedBy=multi-user.target
@@ -198,6 +201,8 @@ EnvironmentFile=$BRIDGE_DIR/.env
 ExecStart=/usr/bin/node $BRIDGE_DIR/dist/index.js
 Restart=on-failure
 RestartSec=5
+# Below the game (Nice=-5): never takes the GameThread's core.
+Nice=10
 
 [Install]
 WantedBy=multi-user.target

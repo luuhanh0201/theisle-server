@@ -106,6 +106,8 @@ EnvironmentFile=$PORTAL_DIR/.env
 ExecStart=$NODE $PORTAL_DIR/dist/index.js
 Restart=on-failure
 RestartSec=5
+# Below the game (Nice=-5): never takes the GameThread's core.
+Nice=10
 # It writes nothing and needs no privileges: lock it down.
 NoNewPrivileges=true
 ProtectSystem=strict
