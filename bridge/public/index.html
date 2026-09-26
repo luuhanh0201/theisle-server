@@ -522,6 +522,16 @@
   .subtabs a.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
   .subtabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dmg); }
   .subtabs-inner { border: 0; background: none; padding: 0; margin: 0 0 14px; gap: 6px; }
+  .gd-species { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 6px 12px; }
+  .gd-species label { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12.5px; margin: 0; }
+  .gd-species input { width: 56px; padding: 5px 8px; }
+  .gd-species label span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gd-species input { flex: none; }
+  .gd-sanct input { width: auto !important; flex: none; margin: 0; }
+  .gd-sanct label span { white-space: nowrap; }
+  .gd-sanct { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 10px; }
+  .gd-sanct label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin: 0; cursor: pointer; }
+  .gd-sanct .go { margin-left: auto; border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12px; padding: 0 2px; }
   .ops-sec { margin-top: 26px; scroll-margin-top: 16px; }
   .rd-verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
   .rd-verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
@@ -975,6 +985,7 @@
             <button type="button" role="tab" data-side="zones">Vùng AI</button>
             <button type="button" role="tab" data-side="drop">Thả AI</button>
             <button type="button" role="tab" data-side="reset">Làm mới</button>
+            <button type="button" role="tab" data-side="guard">Dino nhỏ</button>
             <button type="button" role="tab" data-side="players">Người chơi</button>
           </div>
 
@@ -1022,6 +1033,7 @@
                   <label>…đến (con)<input id="az-ptmax" type="number" min="1" max="5"></label>
                   <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
                 </div></details>
+              <label class="az-row"><input type="checkbox" id="az-small"> <span>Chỉ dino nhỏ <span class="muted">— dino lớn bị cảnh báo rồi ong đốt (luật ở tab <b>Dino nhỏ</b>)</span></span></label>
               <details class="az-sec"><summary>Nâng cao</summary>
                 <div class="az-grid">
                   <label>AI cách nhau tối thiểu (m)<input id="az-spacing" type="number" min="0" max="300" step="5"></label>
@@ -1068,6 +1080,33 @@
             <details class="howto"><summary>Cách dùng</summary>
               <p>Game không cho xoá AI từ mod (xoá là crash server), nên AI bị <b>giết</b> rồi dọn xác bằng lệnh của game; game và
                 các vùng tự sinh AI mới. Dino của người chơi (kể cả con offline) không bị đụng tới. Nội dung thông báo sửa ở <a href="#mods/messages">Tính năng mod → Thông báo</a>.</p>
+            </details>
+          </div>
+
+          <!-- small dinos only (mod ZoneGuard) -->
+          <div class="side-pane az" data-pane="guard" id="gd-card" hidden>
+            <label class="az-row"><input type="checkbox" id="gd-enabled"> <b>Bật luật chỉ dino nhỏ</b></label>
+            <div class="az-grid">
+              <label>Cảnh báo trước khi đốt (giây)<input id="gd-grace" type="number" min="0" max="600" step="5"></label>
+              <label>Mỗi lần đốt cách (giây)<input id="gd-every" type="number" min="1" max="60"></label>
+              <label>Mất máu mỗi lần (% máu tối đa)<input id="gd-pct" type="number" min="1" max="100"></label>
+              <label>Tăng trưởng tối đa mặc định (%)<input id="gd-default" type="number" min="5" max="100" step="5"></label>
+            </div>
+            <details class="az-sec" open><summary>Tăng trưởng tối đa theo loài</summary>
+              <div class="step-hint" style="margin-bottom:6px">Để trống = dùng mức mặc định ở trên. Dino lớn hơn mức này bị coi là "dino lớn".</div>
+              <div class="gd-species" id="gd-species"></div></details>
+            <details class="az-sec" open><summary>Khu bảo tồn áp dụng</summary>
+              <div class="gd-sanct" id="gd-sanct"></div></details>
+            <details class="az-sec" open><summary>Vùng AI áp dụng</summary>
+              <div class="step-hint" id="gd-zones"></div></details>
+            <div class="step-hint" id="gd-status"></div>
+            <button type="button" class="btn" id="gd-save">Lưu luật dino nhỏ</button>
+            <details class="howto"><summary>Cách dùng</summary>
+              <p>Dino của người chơi lớn hơn mức cho phép đi vào vùng được chọn: nhận cảnh báo giữa màn hình, sau thời gian cảnh báo
+                mà vẫn ở trong vùng thì bị <b>ong đốt</b> — mỗi lần mất % máu tối đa, ở lì thì chết. Ra khỏi vùng là dừng; quay lại
+                trong vòng 1 phút thì bị đốt ngay, không được cảnh báo lại. Nội dung tin nhắn sửa ở
+                <a href="#mods/messages">Tính năng mod → Thông báo</a>. Có hiệu lực trong vài giây, không cần khởi động lại.</p>
+              <p>Hình khu bảo tồn lấy từ lớp Sanctuary của bản đồ (VulnonaMAP). AI không bị ảnh hưởng.</p>
             </details>
           </div>
 
@@ -2847,9 +2886,16 @@ function drawMap() {
     ctx.strokeStyle = hexA(c, 0.9);
     ctx.stroke();
     ctx.setLineDash([]);
-    if (f.layer !== 'mud' && (f.layer === 'migration' || z >= 1.6)) {
+    // Small dinos only (tab Dino nhỏ): a yellow dashed edge and a bee.
+    const bee = f.layer === 'sanctuary' && guardedSanctuary(f.name);
+    if (bee) {
+      traceShape(ctx, f);
+      ctx.setLineDash([6, 4]); ctx.lineWidth = 2.5; ctx.strokeStyle = '#facc15'; ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (f.layer !== 'mud' && (f.layer === 'migration' || z >= 1.6 || bee)) {
       const [x, y] = scr(centerOf(f));
-      drawText(ctx, f.name, x, y, { font: '700 11px Inter, system-ui, sans-serif', color: c });
+      drawText(ctx, bee ? `🐝 ${f.name}` : f.name, x, y, { font: '700 11px Inter, system-ui, sans-serif', color: bee ? '#fde047' : c });
+      if (bee && z >= 1.6) drawText(ctx, 'chỉ dino nhỏ', x, y + 13, { font: '600 10px Inter, system-ui, sans-serif', color: '#fde047' });
     }
   }
   // 1a. the game's plant areas: its migration zones, as live as the Flora export (~2 min).
@@ -2888,7 +2934,7 @@ function drawMap() {
       const [x, y] = scr(f.at);
       const count = st && typeof st.count === 'number' ? ` · ${st.count}/${st.limit ?? zn.max}` : '';
       drawText(ctx, `${zn.name}${count}`, x, y - 9, { font: '800 12px Inter, system-ui, sans-serif', color: on ? '#ffedd5' : '#e2e8f0' });
-      drawText(ctx, `${zoneSize(zn)}${on ? '' : ' · tắt'}`, x, y + 7, { font: '600 10.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
+      drawText(ctx, `${zoneSize(zn)}${on ? '' : ' · tắt'}${zn.smallOnly && gd.draft?.enabled ? ' · 🐝 dino nhỏ' : ''}`, x, y + 7, { font: '600 10.5px Inter, system-ui, sans-serif', color: on ? '#fed7aa' : '#cbd5e1' });
       if (sel && !az.drawing) {
         ctx.beginPath(); ctx.moveTo(x - 6, y + 20); ctx.lineTo(x + 6, y + 20); ctx.moveTo(x, y + 14); ctx.lineTo(x, y + 26);
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
@@ -3380,6 +3426,7 @@ function renderAiZoneForm() {
   const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
   set('az-name', zn.name);
   $('az-zenabled').checked = zn.enabled;
+  $('az-small').checked = zn.smallOnly === true;
   set('az-radius', zn.radiusM);
   set('az-radius2', zn.radius2M ?? '');
   set('az-angle', zn.angleDeg ?? 0);
@@ -3502,6 +3549,7 @@ $('az-edit').addEventListener('input', (e) => {
   } else {
     zn.name = $('az-name').value;
     zn.enabled = $('az-zenabled').checked;
+    zn.smallOnly = $('az-small').checked;
     if (zn.shape !== 'polygon') zn.radiusM = n('az-radius');
     if (zn.shape === 'ellipse') { zn.radius2M = n('az-radius2'); zn.angleDeg = n('az-angle'); }
     zn.min = n('az-min'); zn.max = n('az-max'); zn.perTurnMin = n('az-ptmin'); zn.perTurnMax = n('az-ptmax'); zn.everySec = n('az-every'); zn.spacingM = n('az-spacing');
@@ -3531,6 +3579,83 @@ $('az-save').addEventListener('click', () => withToken('lưu vùng AI', async (t
   az.dirty = false;
   toast('Đã lưu vùng AI — mod đọc lại trong vòng 10 giây.');
   await refreshAiZones();
+  renderGuard();
+}));
+
+// --- "Dino nhỏ": small dinos only in the marked zones (bridge/src/zone-guard.ts, mods/ZoneGuard) ---
+const gd = { data: null, draft: null, dirty: false };
+async function loadGuard() {
+  const d = await getJson('/api/zone-guard');
+  gd.data = d;
+  if (!gd.dirty) {
+    gd.draft = { enabled: d.enabled, graceSec: d.graceSec, everySec: d.everySec, pct: d.pct, defaultMax: d.defaultMax,
+      maxBySpecies: { ...d.maxBySpecies }, sanctuaries: [...d.sanctuaries] };
+  }
+  renderGuard();
+  requestDraw();
+}
+/** A sanctuary of the map guarded now (shown on the map, as saved or being edited). */
+const guardedSanctuary = (name) => gd.draft?.enabled === true && gd.draft.sanctuaries.includes(name);
+function renderGuard() {
+  const d = gd.draft;
+  if (!d || !gd.data) return;
+  const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
+  $('gd-enabled').checked = d.enabled;
+  set('gd-grace', d.graceSec); set('gd-every', d.everySec); set('gd-pct', d.pct); set('gd-default', Math.round(d.defaultMax * 100));
+  const spKey = gd.data.species.join(',');
+  if ($('gd-species').dataset.key !== spKey) {
+    $('gd-species').dataset.key = spKey;
+    $('gd-species').innerHTML = gd.data.species.map((sp) => `<label title="${esc(sp)}"><span>${esc(sp)}</span><input type="number" min="5" max="100" step="5" data-gd-sp="${esc(sp)}"></label>`).join('');
+  }
+  for (const inp of $('gd-species').querySelectorAll('input[data-gd-sp]')) {
+    const v = d.maxBySpecies[inp.dataset.gdSp];
+    if (document.activeElement !== inp) inp.value = v === undefined ? '' : Math.round(v * 100);
+    inp.placeholder = String(Math.round(d.defaultMax * 100));
+  }
+  $('gd-sanct').innerHTML = gd.data.knownSanctuaries.map((n) => `<label><input type="checkbox" data-gd-sanct="${esc(n)}"${d.sanctuaries.includes(n) ? ' checked' : ''}>`
+    + `<span>${esc(n.replace(/^Sanctuary\s*/, 'Khu '))}</span><button type="button" class="go" data-gd-go="${esc(n)}" title="Tới trên bản đồ">↗</button></label>`).join('')
+    || '<span class="step-hint">Bản đồ không có khu bảo tồn nào.</span>';
+  const small = (az.draft?.zones ?? []).filter((zn) => zn.smallOnly);
+  $('gd-zones').innerHTML = small.length ? `${small.map((zn) => `<b>${esc(zn.name)}</b>`).join(', ')} — bật/tắt bằng ô "Chỉ dino nhỏ" trong từng vùng (tab Vùng AI).`
+    : 'Chưa vùng AI nào. Mở một vùng ở tab <b>Vùng AI</b> và tick "Chỉ dino nhỏ".';
+  const count = d.sanctuaries.length + small.length;
+  $('gd-status').innerHTML = !d.enabled ? 'Đang tắt.' : count === 0 ? 'Đang bật nhưng chưa chọn vùng nào.'
+    : `Đang áp dụng ở ${count} vùng${gd.dirty ? ' — <b style="color:#fb923c">chưa lưu</b>' : ''}.`;
+}
+$('gd-card').addEventListener('input', (e) => {
+  const d = gd.draft;
+  if (!d) return;
+  const t = e.target;
+  const num = (id) => Number($(id).value);
+  if (t.dataset.gdSp) {
+    const v = t.value.trim() === '' ? null : Number(t.value);
+    if (v === null || !Number.isFinite(v)) delete d.maxBySpecies[t.dataset.gdSp];
+    else d.maxBySpecies[t.dataset.gdSp] = Math.min(100, Math.max(5, v)) / 100;
+  } else if (t.dataset.gdSanct) {
+    const on = new Set(d.sanctuaries);
+    if (t.checked) on.add(t.dataset.gdSanct); else on.delete(t.dataset.gdSanct);
+    d.sanctuaries = [...on];
+  } else {
+    d.enabled = $('gd-enabled').checked;
+    d.graceSec = Math.round(num('gd-grace')); d.everySec = Math.round(num('gd-every')); d.pct = Math.round(num('gd-pct'));
+    d.defaultMax = Math.min(100, Math.max(5, num('gd-default'))) / 100;
+  }
+  gd.dirty = true;
+  if (!t.dataset.gdSp) renderGuard(); else $('gd-status').innerHTML = 'Có thay đổi <b style="color:#fb923c">chưa lưu</b>.';
+  requestDraw();
+});
+$('gd-sanct').addEventListener('click', (e) => {
+  const name = e.target.closest('[data-gd-go]')?.dataset.gdGo;
+  if (!name) return;
+  e.preventDefault();
+  const f = lm.data?.features.find((x) => x.layer === 'sanctuary' && x.name === name);
+  if (f) flyTo(centerOf(f), 4);
+});
+$('gd-save').addEventListener('click', () => withToken('lưu luật dino nhỏ', async (token) => {
+  await adminFetch('/api/zone-guard', 'PUT', token, gd.draft);
+  gd.dirty = false;
+  toast('Đã lưu luật dino nhỏ — mod áp dụng trong vài giây.');
+  await loadGuard();
 }));
 
 // --- "Làm mới AI" (bridge/src/ai-reset.ts) ---
@@ -3588,7 +3713,7 @@ $('reset-cancel').addEventListener('click', () => withToken('huỷ làm mới AI
 // --- messages: every text players get, and how often (bridge/src/messages.ts) ---
 
 const MSG_GROUPS = [
-  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ptera', 'Ptera gắp'], ['garage', 'Gara — cất dino'],
+  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ'], ['garage', 'Gara — cất dino'],
   ['redeem', 'Gara — lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
   ['admin', 'Admin'], ['hello', 'Chào mừng'],
 ];
@@ -5895,7 +6020,7 @@ const DIRTY = [
   ['world', 'flora', () => flDirty, () => $('fl-save').click(), 'Thực vật'],
   ['world', 'fish', () => fsDirty, () => $('fs-save').click(), 'Cá'],
   ['admin', 'access', () => paDirty, () => $('pa-save').click(), 'Truy cập panel'],
-  ['map', null, () => az.dirty, () => $('az-save').click(), 'Vùng AI'],
+  ['map', null, () => az.dirty || gd.dirty, () => { if (az.dirty) $('az-save').click(); if (gd.dirty) $('gd-save').click(); }, 'Vùng AI / Dino nhỏ'],
 ];
 const dirtyNow = () => DIRTY.filter(([, , is]) => { try { return is(); } catch { return false; } });
 function pageDirty(view, sub) { return dirtyNow().some(([v, s2]) => v === view && s2 === sub); }
@@ -6136,7 +6261,7 @@ async function refreshTab(tab) {
       break;
     case 'map':
       {
-        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones(), resetPolling ? null : pollReset(), loadFlora()]);
+        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones(), resetPolling ? null : pollReset(), loadFlora(), gd.dirty ? null : loadGuard()]);
         renderMap(m.players, m.ai ?? null);
       }
       break;

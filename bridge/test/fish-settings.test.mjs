@@ -11,6 +11,9 @@ test('validation: ranges, known species', () => {
   assert.throws(() => validateFish({ perPlayer: 61 }), /perPlayer/);
   assert.throws(() => validateFish({ cooldownSec: 0 }), /cooldownSec/);
   assert.throws(() => validateFish({ species: ['Shark'] }), /unknown fish/);
+  assert.deepEqual(validateFish({ tune: { MaxAIPerPlayer: 2, Radius: 1.5 } }).tune, { MaxAIPerPlayer: 2, Radius: 1.5 });
+  assert.throws(() => validateFish({ tune: { 'a b': 1 } }), /property name/);
+  assert.throws(() => validateFish({ tune: { X1: 'x' } }), /must be a number/);
 });
 
 test('species left out are disallowed; other entries kept; off = no fish disallowed', () => {

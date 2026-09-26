@@ -14,6 +14,12 @@
 --      whose class says "Fish", counted by class, a few locations, and each
 --      new class's parents (names only)
 --
+--   3. once (its own flag, spawnerprobe.flag): EVERY number and boolean of the
+--      spawner — Int/Float/Double/Bool properties found in its class (names
+--      and types from the class, values read only for those scalar kinds) —
+--      to find what limits the land AI around each player. Output:
+--      Mods/AIZones/Saved/spawnerprobe.txt
+--
 -- Output: Mods/AIZones/Saved/fishprobe.txt (that folder exists). Part 1 runs
 -- under a flag written first (no crash loop); delete fishprobe.flag to rerun.
 
@@ -143,6 +149,46 @@ local function fishCensus()
     end
     if not any then out("  none — go near a river, a lake or the sea") end
     flush()
+end
+
+local SP_FLAG = DIR .. "spawnerprobe.flag"
+local SP_OUT = DIR .. "spawnerprobe.txt"
+local SCALAR = { IntProperty = true, FloatProperty = true, DoubleProperty = true, BoolProperty = true,
+    Int64Property = true, UInt32Property = true, Int16Property = true }
+
+local function spawnerScalars()
+    local f = io.open(SP_FLAG, "w")
+    if f then f:write(tostring(os.time())); f:close() end
+    local rows = {}
+    local okA, all = pcall(function() return FindAllOf("TIAIWorldSpawner") or {} end)
+    local ws = okA and all[1] or nil
+    if ws == nil or not H.isValid(ws) then rows[1] = "no TIAIWorldSpawner" else
+        local cls, depth = ws:GetClass(), 0
+        while cls ~= nil and depth < 8 do
+            local cname = nameOf(cls)
+            if cname == "Actor" or cname == "Object" then break end
+            local props = {}
+            pcall(function() cls:ForEachProperty(function(p) props[#props + 1] = { nameOf(p), nameOf(p:GetClass()) } end) end)
+            for _, pr in ipairs(props) do
+                if SCALAR[pr[2]] then
+                    local okV, v = pcall(function() return ws[pr[1]] end)
+                    local shown = (okV and (type(v) == "number" or type(v) == "boolean")) and tostring(v) or "?"
+                    rows[#rows + 1] = string.format("[%s] %s : %s = %s", cname, pr[1], pr[2], shown)
+                end
+            end
+            local okS, sup = pcall(function() return cls:GetSuperStruct() end)
+            cls = okS and sup or nil
+            depth = depth + 1
+        end
+    end
+    local o = io.open(SP_OUT, "w")
+    if o then o:write(table.concat(rows, "\n"), "\n"); o:close() end
+    H.log(MOD .. ": spawner scalars: " .. #rows .. " -> " .. SP_OUT)
+end
+
+local spDone = io.open(SP_FLAG, "r")
+if spDone then spDone:close() else
+    H.defer(90000, function() H.try(MOD .. ": spawner scalars", spawnerScalars) end)
 end
 
 local already = io.open(FLAG, "r")

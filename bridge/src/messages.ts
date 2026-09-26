@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ptera' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
 
 export interface MessageDef {
   key: string;
@@ -74,6 +74,9 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'ptera.carry.released', group: 'ptera', label: 'Được thả (cho con bị gắp)', default: 'Pteranodon đã thả bạn ra.', vars: [], offByDefault: true },
   { key: 'ptera.carry.tooHeavy', group: 'ptera', label: 'Quá nặng', default: '{species} nặng {kg} kg — Pteranodon chỉ gắp được tới {max} kg.', vars: ['species', 'kg', 'max'], offByDefault: true },
   { key: 'ptera.carry.cooldown', group: 'ptera', label: 'Đang hồi', default: 'Gắp đang hồi: chờ {seconds} giây.', vars: ['seconds'], offByDefault: true },
+  // --- small dinos only (mods/ZoneGuard) ---
+  { key: 'guard.warn', group: 'guard', label: 'Dino quá lớn vào vùng chỉ dino nhỏ (cảnh báo)', default: 'Dino của bạn quá lớn cho “{zone}” ({growth}% — tối đa {max}%). Rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['zone', 'growth', 'max', 'seconds'] },
+  { key: 'guard.sting', group: 'guard', label: 'Bắt đầu bị ong đốt', default: 'Bạn đang bị ong đốt ở “{zone}” — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['zone', 'pct', 'every'] },
   { key: 'ptera.carry.nothing', group: 'ptera', label: '!drop khi không gắp gì', default: 'Bạn không gắp con nào.', vars: [] },
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },

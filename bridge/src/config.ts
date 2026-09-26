@@ -51,6 +51,8 @@ export const config = {
 
   /** PteraCarry's Saved/ directory: the panel writes its settings.json there. */
   pteraRoot: env('PTERA_ROOT', join(garageRoot, '..', '..', 'PteraCarry', 'Saved')),
+  /** ZoneGuard mod's Saved/ (small dinos only in marked zones): guard.json. */
+  zoneGuardRoot: env('ZONE_GUARD_ROOT', join(garageRoot, '..', '..', 'ZoneGuard', 'Saved')),
 
   /** The players' texts as edited on the panel, read by every mod (mods/_shared/messages.lua). */
   messagesModPath: env('MESSAGES_MOD_PATH', join(garageRoot, '..', '..', 'shared', 'isle-messages.json')),

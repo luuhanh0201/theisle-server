@@ -28,6 +28,7 @@ import { readAiZones, readAiZonesStatus, saveAiZones, zonePoints, type AiZonesSe
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
+import { readSanctuaries, readZoneGuard, saveZoneGuard, syncZoneGuard } from './zone-guard.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
 import { readFlora } from './flora.js';
 import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
@@ -314,6 +315,7 @@ async function handlePanel(
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
+      (path === '/api/zone-guard' && req.method === 'PUT') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
       (path === '/api/fish-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
@@ -388,6 +390,8 @@ async function handlePanel(
     if (path === '/api/ai-zones') {
       const before = await readAiZones();
       const saved = await saveAiZones(await readJsonBody(req), store.groundPoints);
+      // A zone marked "small dinos only" (or no longer) changes what ZoneGuard guards.
+      await syncZoneGuard();
       await audit({ action: 'AI zones saved', detail: describeZoneChanges(before, saved) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
@@ -437,6 +441,14 @@ async function handlePanel(
       const before = await readFloraSettings();
       const saved = await saveFloraSettings(await readJsonBody(req));
       await audit({ action: 'plant settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/zone-guard') {
+      const before = await readZoneGuard();
+      const saved = await saveZoneGuard(await readJsonBody(req));
+      await audit({ action: 'small-dinos-only zones saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
     }
@@ -744,6 +756,10 @@ async function handlePanel(
     }
     case '/api/ptera-carry': {
       sendJson(res, 200, await readPteraSettings());
+      return;
+    }
+    case '/api/zone-guard': {
+      sendJson(res, 200, { ...(await readZoneGuard()), knownSanctuaries: (await readSanctuaries()).map((c) => c.name), species: KNOWN_PLAYABLES });
       return;
     }
     case '/api/messages': {

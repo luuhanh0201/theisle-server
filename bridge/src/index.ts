@@ -14,6 +14,7 @@ import { groundPointsPath, readAiZones, refreshModFile } from './ai-zones.js';
 import { AI_BY_KEY } from './ai-species.js';
 import { pruneAudit } from './audit.js';
 import { loadMessages, syncModTexts } from './messages.js';
+import { syncZoneGuard } from './zone-guard.js';
 import { Announcer } from './announcer.js';
 import { AiReset } from './ai-reset.js';
 import { dropResult, enqueueAiCommand } from './ai-drop.js';
@@ -39,6 +40,8 @@ await mkdir(config.fishRoot, { recursive: true }).catch((error: unknown) => cons
 // file is rewritten so it matches them (a fresh server has none).
 await loadMessages();
 await syncModTexts().catch((error: unknown) => console.error('[messages] cannot write', config.messagesModPath, error));
+// The ZoneGuard mod's file, from what the panel saved (a redeploy does not touch it).
+await syncZoneGuard().catch((error: unknown) => console.error('[zone-guard] cannot write', config.zoneGuardRoot, error));
 
 // Ground points gathered before (AI positions are only ever seen live).
 await store.groundPoints.load(groundPointsPath());
