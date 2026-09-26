@@ -591,6 +591,26 @@ local function scanAi(now, playerPawns)
             if okA and addr ~= 0 and not playerPawns[addr] then add(pawn, addr, FISH_SET[speciesOf(pawn)] == true) end
         end
     end
+    -- The game's ambient fish are TIAmbientFish actors, not Pawns (FishSpawnTest,
+    -- 2026-09-26: FindAllOf("TIAmbientFish") and their location read 12 times on
+    -- the live server, fine). A fish the game parked is at (0, 0, 0): skipped.
+    -- No health read (the class has no functions).
+    local okF, swimmers = pcall(function() return FindAllOf("TIAmbientFish") or {} end)
+    for _, obj in ipairs(okF and swimmers or {}) do
+        if fishListed >= FISH_MAX then break end
+        if H.isValid(obj) then
+            local okA, addr = pcall(function() return obj:GetAddress() end)
+            if okA and addr ~= 0 and not seen[addr] then
+                seen[addr] = true
+                local loc = locationOf(obj)
+                if loc and not (loc.x == 0 and loc.y == 0 and loc.z == 0) then
+                    fish = fish + 1
+                    fishListed = fishListed + 1
+                    list[#list + 1] = { c = speciesOf(obj), x = loc.x, y = loc.y, z = loc.z, f = true }
+                end
+            end
+        end
+    end
     return { t = now, count = total, fish = fish, dead = dead, aiAlive = aiAliveCounter(), list = list }
 end
 
