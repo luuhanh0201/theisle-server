@@ -99,8 +99,16 @@ check("off: nothing happens", carno.__props.Health == c0)
 say("\n-- 5. staying kills --")
 rules(BASE)
 step(6)
-for _ = 1, 40 do step(5) end
+local afterDeath
+for _ = 1, 40 do
+  step(5)
+  if afterDeath == nil and carno.__props.Health == 0 then afterDeath = #cc._messages end
+end
 check("health never below 0; a dino that stays dies", carno.__props.Health == 0, tostring(carno.__props.Health))
+check("the corpse is not warned again", #cc._messages == afterDeath, last(cc))
+H.calls = {}
+for _ = 1, 30 do step(5) end
+check("nor stung", #cc._messages == afterDeath and H.countCalls("SetHealth") == 0, last(cc))
 
 check("never off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
 os.remove(RULES)

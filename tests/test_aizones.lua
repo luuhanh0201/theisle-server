@@ -65,6 +65,27 @@ local world = {
   end,
 }
 
+-- GameplayStatics: the mod spawns pawns deferred (always spawn). The fake
+-- makes them the way world:SpawnActor does, from the transform.
+local STATICS = "/Script/Engine.Default__GameplayStatics"
+local deferredBroken = false
+classes[STATICS] = {
+  IsValid = function() return true end,
+  BeginDeferredActorSpawnFromClass = function(_, w, cls, xf, collision, owner, scale)
+    H.touch("BeginDeferred")
+    if deferredBroken then error("no such function") end
+    H.record("BeginDeferred", cls._path, collision, owner, scale, xf)
+    return w.SpawnActor(w, cls, xf.Translation, { Pitch = 0, Yaw = 0, Roll = 0 })
+  end,
+  FinishSpawningActor = function(_, actor, xf, scale) H.record("FinishSpawningActor", actor, scale) end,
+}
+local FLAG = RUN .. "/Mods/AIZones/Saved/deferred-spawn.trying"
+os.remove(FLAG)
+local function logged(text)
+  for _, l in ipairs(H.log) do if l:find(text, 1, true) then return true end end
+  return false
+end
+
 local playerPawn = H.makePawn({ loc = { X = 0, Y = 0, Z = 100 } })
 rawset(playerPawn, "GetWorld", function() H.touch("GetWorld"); return world end)
 local player = H.makeCtrl("76561190000000001", playerPawn)
@@ -417,6 +438,40 @@ writeZones({ enabled = true, globalMax = 60, ignoreOccupants = { "BP_Dilo_C" }, 
 reader.fn()
 step(60)
 check("a water zone: the ignored species fills it (a crocodile at a lake)", spawns() == 1, tostring(spawns()))
+
+say("\n-- deferred spawn: always spawns, moved aside (a refused spawn crashed UE4SS) --")
+local deferredCall
+for _, c in ipairs(H.calls) do if c.what == "BeginDeferred" then deferredCall = c end end
+check("pawns spawned deferred with AdjustIfPossibleButAlwaysSpawn, no owner, scale multiply",
+      deferredCall ~= nil and deferredCall.args[2] == 2 and deferredCall.args[3] == nil and deferredCall.args[4] == 1)
+check("then FinishSpawningActor", H.countCalls("FinishSpawningActor") == H.countCalls("BeginDeferred"))
+local q = deferredCall and deferredCall.args[5].Rotation
+check("the transform: a unit quaternion, scale 1", q and math.abs(q.X ^ 2 + q.Y ^ 2 + q.Z ^ 2 + q.W ^ 2 - 1) < 1e-9
+      and deferredCall.args[5].Scale3D.X == 1)
+check("said once that it works", logged("deferred spawn works"))
+check("the crash flag is gone once it returned", io.open(FLAG, "r") == nil)
+
+deferredBroken = true
+fresh()
+writeZones({ enabled = true, globalMax = 60, zones = { zone({ id = "zb", min = 1 }) } })
+reader.fn()
+step(60)
+check("a failing deferred call: logged, then back to world:SpawnActor",
+      logged("deferred spawn failed") and H.countCalls("BeginDeferred") == 0 and spawns() >= 1, tostring(spawns()))
+deferredBroken = false
+
+say("\n-- a run that crashed in a deferred spawn: the next one does not try it --")
+local ff = assert(io.open(FLAG, "w")); ff:write("1"); ff:close()
+H.reset()
+aiPawns = {}
+dofile(RUN .. "/Mods/AIZones/Scripts/main.lua")
+for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then turn = l end end
+reader = H.loops[1]
+check("told at load", logged("last run stopped during a deferred spawn"))
+reader.fn()
+step(60)
+check("world:SpawnActor only", H.countCalls("BeginDeferred") == 0 and spawns() >= 1, tostring(spawns()))
+os.remove(FLAG)
 
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))

@@ -55,6 +55,18 @@ local TRIES       = 3        -- spawn points tried per AI before giving up this 
 local KEEP_OFF_CM = 4000     -- spots this close to a player are used last (no AI popping in your face)
 local RETRY_S     = 30       -- a zone whose top-up made nothing waits this long
 
+-- Pawns are spawned through GameplayStatics' deferred spawn with
+-- AdjustIfPossibleButAlwaysSpawn, not world:SpawnActor: that one keeps the
+-- class default (no spawn if colliding), and the first spawn the game refused
+-- for collision crashed the server inside UE4SS.dll (2026-09-26 19:16:51, a
+-- goat; pcall cannot catch it). Flag first: the flag is written before the
+-- deferred spawn of a run (until one worked) and removed when the call returns,
+-- so a crash in it leaves the flag and the next run goes back to world:SpawnActor.
+local STATICS_PATH  = "/Script/Engine.Default__GameplayStatics"
+local ALWAYS_SPAWN  = 2      -- ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+local SCALE_MULTIPLY = 1     -- ESpawnActorScaleMethod::MultiplyWithRoot (the Blueprint default)
+local DEFERRED_FLAG = "Mods/AIZones/Saved/deferred-spawn.trying"
+
 local config = nil           -- the decoded zones.json (plain Lua data)
 local status = nil           -- built on the game thread, written by the async loop
 local nextAt = {}            -- zone id -> os.time() of its next turn (while occupied)
@@ -224,6 +236,61 @@ local function spotsFor(zone, players, ai, spacing)
 end
 
 --- One AI of `sp` at the next free spot. Returns true, or false + why.
+-- Deferred spawning: nil = not tried yet this run, true = worked, false =
+-- off (the flag was left by a crash, or the calls failed).
+local deferred = nil
+do
+    local f = io.open(DEFERRED_FLAG, "r")
+    if f then
+        f:close()
+        deferred = false
+        H.logError(MOD .. ": the last run stopped during a deferred spawn — back to world:SpawnActor. Delete " .. DEFERRED_FLAG .. " to try again.")
+    end
+end
+
+--- The pawn, spawned even where it collides (moved aside when it can), or
+-- nil. A second value "broken" when the calls themselves failed.
+local function spawnDeferred(world, cls, loc, rot)
+    local statics = findClass(STATICS_PATH)
+    if statics == nil then return nil, "GameplayStatics not found" end
+    local half = math.rad(rot.Yaw) / 2
+    local xf = { Rotation = { X = 0, Y = 0, Z = math.sin(half), W = math.cos(half) },
+                 Translation = { X = loc.X, Y = loc.Y, Z = loc.Z },
+                 Scale3D = { X = 1, Y = 1, Z = 1 } }
+    local ok, actor = pcall(function()
+        return statics:BeginDeferredActorSpawnFromClass(world, cls, xf, ALWAYS_SPAWN, nil, SCALE_MULTIPLY)
+    end)
+    if not ok then return nil, "BeginDeferredActorSpawnFromClass: " .. tostring(actor) end
+    if actor == nil or addressOf(actor) == nil then return nil end
+    local okF, err = pcall(function() statics:FinishSpawningActor(actor, xf, SCALE_MULTIPLY) end)
+    if not okF then return nil, "FinishSpawningActor: " .. tostring(err) end
+    return actor
+end
+
+local function spawnPawn(world, cls, loc, rot)
+    if deferred == false then
+        local ok, pawn = pcall(function() return world:SpawnActor(cls, loc, rot) end)
+        return ok and pawn or nil
+    end
+    local first = deferred == nil
+    if first then
+        local f = io.open(DEFERRED_FLAG, "w")
+        if f then f:write(tostring(os.time())); f:close() end
+    end
+    local pawn, broken = spawnDeferred(world, cls, loc, rot)
+    if first then os.remove(DEFERRED_FLAG) end
+    if broken then
+        deferred = false
+        H.logError(MOD .. ": deferred spawn failed, back to world:SpawnActor — " .. broken)
+        return nil
+    end
+    if pawn ~= nil and deferred == nil then
+        deferred = true
+        H.log(MOD .. ": deferred spawn works (always spawns, moved aside if colliding)")
+    end
+    return pawn
+end
+
 local function spawnOne(world, zone, sp, nextSpot)
     local pawnCls = findClass(sp.pawn)
     local ctrlCls = findClass(sp.ctrl)
@@ -235,9 +302,9 @@ local function spawnOne(world, zone, sp, nextSpot)
         if pt == nil then return false, "no spot left far enough from other AI", true end
         local loc = { X = pt[1], Y = pt[2], Z = pt[3] + num(sp.lift, 0, 1000, 150) }
         local rot = { Pitch = 0, Yaw = math.random(0, 359), Roll = 0 }
-        local okP, pawn = pcall(function() return world:SpawnActor(pawnCls, loc, rot) end)
-        -- A spawn blocked by terrain comes back as an empty wrapper: try another point.
-        if okP and pawn ~= nil and addressOf(pawn) ~= nil then
+        local pawn = spawnPawn(world, pawnCls, loc, rot)
+        -- Nothing made (an empty wrapper): try another point.
+        if pawn ~= nil and addressOf(pawn) ~= nil then
             local okC, ctrl = pcall(function() return world:SpawnActor(ctrlCls, loc, rot) end)
             if not (okC and ctrl ~= nil and addressOf(ctrl) ~= nil) then
                 -- The pawn exists but has no brain; it cannot be removed (rule 6).

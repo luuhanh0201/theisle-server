@@ -156,6 +156,10 @@ local function tick()
         local pawn = id and H.livePawnFromCtrl(ctrl)
         if not pawn then return end
         seen[id] = true
+        -- A dead dino stays possessed until the player picks a new one: no
+        -- warning, no sting on the corpse (2026-09-26: warned 2 s after death).
+        local hp = call(pawn, "GetHealth")
+        if hp ~= nil and hp <= 0 then state[id] = nil; return end
         local st = state[id]
         local g = call(pawn, "GetGrowth")
         local sp = speciesOf(pawn)

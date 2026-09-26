@@ -29,7 +29,9 @@ AIZones : 1
 PteraCarry : 1
 PlantProbe : 0
 Flora : 1
-FishProbe : 1
+; FishProbe: OFF (2026-09-26) — done; its census walks every Actor each minute and
+; GetSuperStruct on fish classes (that call crashed the server at 16:25).
+FishProbe : 0
 ; FishControl: OFF — a Lua write on the AI spawner crashed the server (2026-09-26).
 FishControl : 0
 ; Small dinos only in the zones the panel marks (bridge writes Saved/guard.json);
