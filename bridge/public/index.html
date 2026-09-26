@@ -532,6 +532,11 @@
   .gd-sanct { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 10px; }
   .gd-sanct label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin: 0; cursor: pointer; }
   .gd-sanct .go { margin-left: auto; border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12px; padding: 0 2px; }
+  .ban-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .ban-grid { grid-template-columns: 1fr; } }
+  .ban-preview { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px dashed var(--border-strong); }
+  .ban-preview:empty { display: none; }
+  .ban-off { opacity: .55; }
   .dc-channels { display: flex; flex-direction: column; gap: 10px; }
   .dc-ch { display: grid; grid-template-columns: minmax(120px, 180px) 1fr auto auto; gap: 8px; align-items: center; }
   .dc-ch .st { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: -4px; }
@@ -667,6 +672,8 @@
   .msg-group { margin-bottom: 18px; }
   .msg-item { display: grid; grid-template-columns: minmax(170px, 240px) 1fr; gap: 6px 14px; padding: 10px 0; border-top: 1px solid var(--border); }
   .msg-item .what { font-size: 13px; font-weight: 600; }
+  .msg-item .ex { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .msg-item .ex span { color: var(--text-2); }
   .msg-item .key { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
   .msg-item .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   .msg-item .tag { font-size: 11px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted); }
@@ -959,6 +966,41 @@
       <div data-sub="players:chat" hidden>
 
       <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
+      </div>
+
+      <div data-sub="players:bans" hidden>
+        <div class="ban-grid">
+          <section class="card"><div class="card-head"><h2>Ban người chơi</h2><span class="sub">RCON · có lý do, có thời hạn</span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="cfg-field"><label for="ban-player">Người chơi</label><select id="ban-player"></select></div>
+              <div class="row" id="ban-manual" hidden>
+                <input id="ban-steam" placeholder="SteamID64 (7656119…)" inputmode="numeric" maxlength="17" aria-label="SteamID64">
+                <input id="ban-name" placeholder="Tên (không bắt buộc)" maxlength="60" aria-label="Tên">
+              </div>
+              <div class="cfg-field"><label for="ban-reason-pick">Lý do</label><select id="ban-reason-pick"></select>
+                <textarea id="ban-reason" rows="2" maxlength="200" placeholder="Ghi lý do (người chơi và cả server sẽ thấy)"></textarea></div>
+              <div class="cfg-field"><label for="ban-hours">Thời hạn</label><select id="ban-hours">
+                <option value="1">1 giờ</option><option value="6">6 giờ</option><option value="24">1 ngày</option><option value="72" selected>3 ngày</option>
+                <option value="168">7 ngày</option><option value="720">30 ngày</option><option value="perm">Vĩnh viễn</option></select></div>
+              <div class="ban-preview" id="ban-preview"></div>
+              <div class="row"><button type="button" class="btn-danger solid" id="ban-go">Ban</button></div>
+              <div class="step-hint">Người đang online nhận tin riêng (lý do, thời hạn) rồi bị kick sau ~3 giây. Mọi lần ban — kể cả ban trong
+                bảng admin của game — đều được báo cho cả server và ghi lên Discord (loại log "Ban"). Nội dung tin sửa ở
+                <a href="#mods/messages">Tính năng mod → Thông báo → Ban người chơi</a>.</div>
+            </div></section>
+          <section class="card"><div class="card-head"><h2>Mẫu lý do</h2><span class="sub">mỗi dòng một mẫu</span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+              <textarea id="ban-reasons" rows="9" maxlength="6000"></textarea>
+              <div class="row"><button type="button" class="btn-soft" id="ban-reasons-save">Lưu mẫu lý do</button></div>
+            </div></section>
+        </div>
+        <section class="card" style="margin-top:16px"><div class="card-head"><h2>Danh sách ban</h2><span class="sub" id="ban-count"></span></div>
+          <div class="card-body">
+            <div class="audit-table-wrap"><table class="audit-table">
+              <thead><tr><th>Người chơi</th><th>Lý do</th><th>Thời hạn</th><th>Ban lúc</th><th>Hết hạn</th><th>Người ban</th></tr></thead>
+              <tbody id="ban-list"></tbody></table></div>
+            <div class="step-hint" style="margin-top:8px">Lấy từ danh sách ban của game (PlayerBans.json). RCON không có lệnh gỡ ban: gỡ trong bảng admin của game.</div>
+          </div></section>
       </div>
 
     </div>
@@ -3749,7 +3791,7 @@ $('reset-cancel').addEventListener('click', () => withToken('huỷ làm mới AI
 // --- messages: every text players get, and how often (bridge/src/messages.ts) ---
 
 const MSG_GROUPS = [
-  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ'], ['garage', 'Gara — cất dino'],
+  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ban', 'Ban người chơi'], ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ'], ['garage', 'Gara — cất dino'],
   ['redeem', 'Gara — lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
   ['admin', 'Admin'], ['hello', 'Chào mừng'],
 ];
@@ -3798,6 +3840,15 @@ function renderMessagesTab() {
   renderMessageList();
 }
 
+// Sample values for the "Ví dụ" line under each text (tab Thông báo).
+const MSG_SAMPLE = {
+  name: 'Rex', reason: 'Hack / cheat', duration: '3 ngày', until: '29/9/2026 11:00', by: 'Dã Tượng',
+  left: '5 phút', leftEn: '5 min', time: '04:00', count: '42', seconds: '30', wait: '2 phút', meters: '25',
+  species: 'Carnotaurus', kg: '850', max: '150', slot: 'default', maxSlots: '5', growth: '80', pct: '5', every: '5',
+  zone: 'Sanctuary 67', command: 'slay', error: 'slot trống', prime: 'có', eligible: 'chưa',
+};
+const msgExample = (text) => String(text).replace(/\{(\w+)\}/g, (all, k) => MSG_SAMPLE[k] ?? all);
+
 function renderMessageList() {
   const d = msgs.draft;
   const q = $('msg-q').value.trim().toLowerCase();
@@ -3821,7 +3872,8 @@ function renderMessageList() {
         <div><textarea rows="1" maxlength="300" ${off ? 'disabled' : ''} aria-label="${esc(m.label)}">${esc(text)}</textarea>
           <div class="tools"><label><input type="checkbox" data-f="send" ${off ? '' : 'checked'}> Gửi</label>
             ${m.vars.map((v) => `<button type="button" class="var" data-var="${esc(v)}" title="Chèn">{${esc(v)}}</button>`).join('')}
-            ${own !== undefined ? '<button type="button" class="btn-ghost sm" data-f="reset" style="margin-left:auto">Về mặc định</button>' : ''}</div></div></div>`;
+            ${own !== undefined ? '<button type="button" class="btn-ghost sm" data-f="reset" style="margin-left:auto">Về mặc định</button>' : ''}</div>
+          <div class="ex"${off ? ' hidden' : ''}>Ví dụ: <span>${esc(msgExample(text))}</span></div></div></div>`;
     }).join('')}</div>`;
   }).join('') || '<p class="step-hint">Không có tin nào khớp.</p>';
 }
@@ -3836,6 +3888,8 @@ $('msg-groups').addEventListener('input', (e) => {
   // Off by default: the text itself, even the suggested one, is what turns it on.
   if (v === def.default && !def.offByDefault) delete msgs.draft.texts[def.key]; else msgs.draft.texts[def.key] = v;
   markMsgs();
+  const ex = item.querySelector('.ex span');
+  if (ex) ex.textContent = msgExample(v);
   const tags = item.querySelector('.tags');
   tags.innerHTML = msgs.draft.texts[def.key] !== undefined ? `<span class="tag edited">${def.offByDefault ? 'đã bật' : 'đã sửa'}</span>` : '';
 });
@@ -3905,6 +3959,7 @@ $('msg-periodic-add').addEventListener('click', () => {
 $('msg-save').addEventListener('click', () => withToken('lưu thông báo', async (token) => {
   await adminFetch('/api/messages', 'PUT', token, msgs.draft);
   toast('Đã lưu thông báo — tin của mod đổi trong vòng 5 giây.');
+  bans.texts = null;    // the ban page's preview uses the new text
   await loadMessagesTab();
 }));
 
@@ -5469,6 +5524,94 @@ $('dc-save').addEventListener('click', () => withToken('lưu Discord', async (to
   await loadDiscord(true);
 }));
 
+// --- Người chơi → Ban (bridge/src/bans.ts) ---
+const bans = { data: null, texts: null, playersKey: null, reasonsKey: null };
+let banReasonsDirty = false;
+async function loadBans() {
+  const [d, players, m] = await Promise.all([getJson('/api/bans'), getJson('/api/players'),
+    bans.texts ? null : getJson('/api/messages')]);
+  bans.data = d;
+  if (m) bans.texts = { own: m.texts, defaults: Object.fromEntries(m.catalog.map((c) => [c.key, c.default])) };
+  const online = players.players.filter((p) => p.online);
+  const pKey = online.map((p) => p.steamId).join(',');
+  if (pKey !== bans.playersKey) {
+    bans.playersKey = pKey;
+    const cur = $('ban-player').value;
+    $('ban-player').innerHTML = online.map((p) => `<option value="${esc(p.steamId)}" data-name="${esc(p.name ?? '')}">${esc(p.name ?? p.steamId)} · ${esc(dino(p.species ?? ''))} (online)</option>`).join('')
+      + '<option value="">Nhập SteamID khác…</option>';
+    if ([...$('ban-player').options].some((o) => o.value === cur)) $('ban-player').value = cur;
+    $('ban-manual').hidden = $('ban-player').value !== '';
+  }
+  const rKey = d.reasons.join('\n');
+  if (rKey !== bans.reasonsKey) {
+    bans.reasonsKey = rKey;
+    $('ban-reason-pick').innerHTML = '<option value="">Chọn mẫu lý do…</option>' + d.reasons.map((r) => `<option>${esc(r)}</option>`).join('');
+    if (!banReasonsDirty) $('ban-reasons').value = rKey;
+  }
+  $('ban-count').textContent = `${d.bans.filter((b) => b.active).length} đang ban · ${d.bans.length} tất cả`;
+  $('ban-list').innerHTML = d.bans.map((b) => `<tr class="${b.active ? '' : 'ban-off'}">
+      <td><b>${esc(b.name)}</b><br><span class="mono muted" style="font-size:11.5px">${esc(b.steamId)}</span></td>
+      <td>${esc(b.reason || '(không ghi)')}</td><td>${esc(b.duration)}${b.active ? '' : ' · <i>hết hạn</i>'}</td>
+      <td>${b.bannedAt ? esc(dateTime(b.bannedAt)) : '—'}</td><td>${b.permanent ? 'không' : b.endsAt ? esc(dateTime(b.endsAt)) : '—'}</td>
+      <td>${esc(b.by === 'Rcon' ? 'panel / RCON' : b.by)}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">Chưa ai bị ban.</td></tr>';
+  renderBanPreview();
+}
+function banForm() {
+  const sel = $('ban-player');
+  const manual = sel.value === '';
+  const steamId = manual ? $('ban-steam').value.trim() : sel.value;
+  const name = manual ? $('ban-name').value.trim() : sel.selectedOptions[0]?.dataset.name ?? '';
+  const perm = $('ban-hours').value === 'perm';
+  const hours = perm ? bans.data?.permanentHours ?? 87600 : Number($('ban-hours').value);
+  return { steamId, name, reason: $('ban-reason').value.trim(), hours, perm };
+}
+function renderBanPreview() {
+  const f = banForm();
+  const t = bans.texts;
+  if (!t) return;
+  const tpl = t.own['ban.announce'] ?? t.defaults['ban.announce'];
+  if (tpl === '') { $('ban-preview').innerHTML = '<span class="muted">Thông báo toàn server khi ban đang tắt.</span>'; return; }
+  const vars = { name: f.name || f.steamId || 'Rex', reason: f.reason || '(chưa ghi lý do)', by: 'admin',
+    duration: f.perm ? 'vĩnh viễn' : $('ban-hours').selectedOptions[0]?.textContent ?? '', until: '' };
+  $('ban-preview').innerHTML = `<span class="muted">Cả server sẽ thấy:</span><br>${esc(String(tpl).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all))}`;
+}
+$('ban-player').addEventListener('change', () => { $('ban-manual').hidden = $('ban-player').value !== ''; renderBanPreview(); });
+$('ban-reason-pick').addEventListener('change', () => {
+  if ($('ban-reason-pick').value) $('ban-reason').value = $('ban-reason-pick').value;
+  $('ban-reason-pick').value = '';
+  renderBanPreview();
+});
+for (const id of ['ban-reason', 'ban-steam', 'ban-name', 'ban-hours']) $(id).addEventListener('input', renderBanPreview);
+$('ban-hours').addEventListener('change', renderBanPreview);
+$('ban-go').addEventListener('click', () => {
+  const f = banForm();
+  if (!/^7656119\d{10}$/.test(f.steamId)) { toast('Chọn người chơi hoặc nhập SteamID64 đúng.', 'err'); return; }
+  if (!f.reason) { toast('Cần ghi lý do ban.', 'err'); $('ban-reason').focus(); return; }
+  const dur = f.perm ? 'vĩnh viễn' : $('ban-hours').selectedOptions[0]?.textContent;
+  confirmAction({
+    title: `Ban ${f.name || f.steamId}?`,
+    body: `<p>Ban <b>${esc(f.name || f.steamId)}</b> <span class="mono">${esc(f.steamId)}</span> — <b>${esc(dur)}</b>.</p><p>Lý do: ${esc(f.reason)}</p>
+      <p class="muted">Không gỡ được bằng panel (RCON không có lệnh gỡ ban) — gỡ trong bảng admin của game.</p>`,
+    okLabel: 'Ban', withReason: false, danger: true,
+    run: async (token) => {
+      const r = await adminFetch('/api/bans', 'POST', token, { steamId: f.steamId, name: f.name, reason: f.reason, hours: f.hours });
+      toast(`Đã ban ${f.name || f.steamId}${r.kicked ? ' và kick khỏi server' : ''}.`);
+      $('ban-reason').value = '';
+      await loadBans();
+    },
+  });
+});
+$('ban-reasons').addEventListener('input', () => { banReasonsDirty = true; });
+$('ban-reasons-save').addEventListener('click', () => withToken('lưu mẫu lý do ban', async (token) => {
+  const reasons = $('ban-reasons').value.split('\n').map((x) => x.trim()).filter(Boolean);
+  await adminFetch('/api/ban-reasons', 'PUT', token, { reasons });
+  banReasonsDirty = false;
+  bans.reasonsKey = '';
+  toast('Đã lưu mẫu lý do.');
+  await loadBans();
+}));
+
 async function loadAudit() {
   const q = audits.q ? `&q=${encodeURIComponent(audits.q)}` : '';
   const data = await getJson(`/api/server/audit?page=${audits.page}&limit=30${q}`);
@@ -6170,6 +6313,7 @@ const DIRTY = [
   ['world', 'fish', () => fsDirty, () => $('fs-save').click(), 'Cá'],
   ['admin', 'access', () => paDirty, () => $('pa-save').click(), 'Truy cập panel'],
   ['admin', 'discord', () => dc.dirty, () => $('dc-save').click(), 'Discord'],
+  ['players', 'bans', () => banReasonsDirty, () => $('ban-reasons-save').click(), 'Mẫu lý do ban'],
   ['map', null, () => az.dirty || gd.dirty, () => { if (az.dirty) $('az-save').click(); if (gd.dirty) $('gd-save').click(); }, 'Vùng AI / Dino nhỏ'],
 ];
 const dirtyNow = () => DIRTY.filter(([, , is]) => { try { return is(); } catch { return false; } });
@@ -6289,7 +6433,7 @@ async function renderWorldCards() {
 }
 
 const SUBS = {
-  players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat']],
+  players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban']],
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
   mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['voice', 'Voice gần'], ['messages', 'Thông báo']],
@@ -6384,6 +6528,8 @@ async function refreshTab(tab) {
         renderFeed($('killfeed'), (await getJson('/api/killfeed?limit=200')).events, 'Chưa có ai chết');
       } else if (sub === 'leaderboard') {
         renderLeaderboard(await getJson('/api/leaderboard'));
+      } else if (sub === 'bans') {
+        await loadBans();
       } else {
         renderChat((await getJson('/api/chat?limit=300')).events);
       }

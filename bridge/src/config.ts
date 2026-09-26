@@ -131,6 +131,11 @@ export const config = {
       'GAME_LOG_PATH',
       join(env('GAME_CONFIG_DIR', '/home/isle/server/TheIsle/Saved/Config/WindowsServer'), '..', '..', 'Logs', 'TheIsle.log'),
     ),
+    /** The game's ban list (Saved/PlayerData/PlayerBans.json), read only — bans.ts. */
+    bansPath: env(
+      'PLAYER_BANS_PATH',
+      join(env('GAME_CONFIG_DIR', '/home/isle/server/TheIsle/Saved/Config/WindowsServer'), '..', '..', 'PlayerData', 'PlayerBans.json'),
+    ),
     /** UDP game port (start.sh GAME_PORT). */
     port: envInt('GAME_PORT', 7777),
   },

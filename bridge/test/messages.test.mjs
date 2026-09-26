@@ -43,7 +43,7 @@ test('the catalog is what the mods send: every Msg call has its key, with the sa
     for (const [, v] of def.matchAll(/\{(\w+)\}/g)) assert.ok(MESSAGE_BY_KEY.get(key).vars.includes(v), `${key}: {${v}} not listed`);
   }
   for (const m of MESSAGES) {
-    if (m.group === 'server' || m.group === 'corpses' || m.group === 'ai') continue;
+    if (m.group === 'server' || m.group === 'corpses' || m.group === 'ai' || m.group === 'ban') continue;
     assert.ok(found.has(m.key), `${m.key} is in messages.ts but no mod sends it`);
   }
 });

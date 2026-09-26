@@ -26,7 +26,7 @@ import type { AuditEntry } from './audit.js';
 
 export type DiscordKind =
   | 'join' | 'leave' | 'chat' | 'kill' | 'death' | 'spawn' | 'growth' | 'mutation'
-  | 'garage' | 'adminKill' | 'server' | 'announce' | 'admin';
+  | 'garage' | 'adminKill' | 'ban' | 'server' | 'announce' | 'admin';
 
 export const DISCORD_KINDS: ReadonlyArray<{ key: DiscordKind; group: string; label: string }> = [
   { key: 'join', group: 'Người chơi', label: 'Vào server' },
@@ -39,6 +39,7 @@ export const DISCORD_KINDS: ReadonlyArray<{ key: DiscordKind; group: string; lab
   { key: 'mutation', group: 'Dino', label: 'Mutation mới' },
   { key: 'garage', group: 'Dino', label: 'Gara: cất / lấy dino' },
   { key: 'adminKill', group: 'Quản trị', label: 'Admin xoá dino' },
+  { key: 'ban', group: 'Quản trị', label: 'Ban (lý do, thời hạn, người ban)' },
   { key: 'admin', group: 'Quản trị', label: 'Nhật ký admin (mọi thao tác trên panel)' },
   { key: 'server', group: 'Server', label: 'Server bật / tắt / lỗi' },
   { key: 'announce', group: 'Server', label: 'Thông báo toàn server (RCON)' },
@@ -134,7 +135,7 @@ function duration(s: number | undefined): string {
 
 export const COLORS: Record<DiscordKind, number> = {
   join: 0x22c55e, leave: 0x64748b, chat: 0x60a5fa, kill: 0xef4444, death: 0x94a3b8, spawn: 0x10b981,
-  growth: 0x84cc16, mutation: 0xa855f7, garage: 0xf59e0b, adminKill: 0xf97316, server: 0x0ea5e9, announce: 0xeab308, admin: 0x6366f1,
+  growth: 0x84cc16, mutation: 0xa855f7, garage: 0xf59e0b, adminKill: 0xf97316, ban: 0xdc2626, server: 0x0ea5e9, announce: 0xeab308, admin: 0x6366f1,
 };
 
 export interface LogLine { kind: DiscordKind; text: string; t: number }
@@ -176,6 +177,15 @@ export function lineOf(e: FeedEntry): LogLine | null {
     default:
       return null;
   }
+}
+
+/** A ban from the game's list (bans.ts): who, how long, why, by whom. */
+export function banLine(b: { steamId: string; name: string; reason: string; bannedAt: number | null }, vars: Record<string, string>): LogLine {
+  return {
+    kind: 'ban', t: b.bannedAt ?? Math.floor(Date.now() / 1000),
+    text: `⛔ **${plain(b.name)}**${idOf(b.steamId)} bị ban **${plain(vars['duration'] ?? '')}** bởi ${plain(vars['by'] ?? '?')}`
+      + `\nLý do: ${plain(b.reason || '(không ghi)')}\nHết hạn: ${plain(vars['until'] ?? '')}`,
+  };
 }
 
 export function auditLine(a: AuditEntry): LogLine {

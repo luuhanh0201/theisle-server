@@ -18,7 +18,9 @@ import { syncZoneGuard } from './zone-guard.js';
 import { Announcer } from './announcer.js';
 import { AiReset } from './ai-reset.js';
 import { dropResult, enqueueAiCommand } from './ai-drop.js';
-import { DiscordLog, auditLine, lineOf, phaseLine } from './discord.js';
+import { DiscordLog, auditLine, banLine, lineOf, phaseLine } from './discord.js';
+import { BanWatcher, banVars } from './bans.js';
+import { renderMessage } from './messages.js';
 import { auditListeners } from './audit.js';
 
 const store = new Store();
@@ -114,6 +116,20 @@ setInterval(() => {
 setInterval(() => {
   discord.tick().catch((error: unknown) => console.error('[discord] send failed:', error));
 }, 2_000);
+
+// Every new ban in the game's list (panel or the game's own admin panel): told
+// to the server and logged on Discord (bans.ts).
+const bans = new BanWatcher((b) => {
+  const vars = banVars(b);
+  const text = renderMessage('ban.announce', vars);
+  if (text !== null && rcon.enabled) rcon.run('announce', text).catch((error: unknown) => console.error('[bans] announce failed:', error));
+  discord.post(banLine(b, vars));
+  console.info(`[bans] ${b.name} (${b.steamId}) banned by ${b.by}: ${b.reason}`);
+});
+setInterval(() => {
+  bans.tick().catch((error: unknown) => console.error('[bans] read failed:', error));
+}, 10_000);
+void bans.tick();
 
 startServer({ store, power, rcon, metrics, aiReset, discord, ...(voice ? { voice } : {}) });
 

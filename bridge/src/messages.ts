@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
 
 export interface MessageDef {
   key: string;
@@ -66,6 +66,9 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'ai.reset.warning', group: 'ai', label: 'Báo trước khi làm mới AI', default: 'AI sẽ được làm mới sau {left} / AI reset in {leftEn}.', vars: ['left', 'leftEn'] },
   { key: 'ai.reset.done', group: 'ai', label: 'Đã làm mới AI', default: 'Đã làm mới AI ({count} con) / AI has been reset.', vars: ['count'] },
   { key: 'ai.reset.cancelled', group: 'ai', label: 'Huỷ làm mới AI', default: 'Đã huỷ làm mới AI / AI reset cancelled.', vars: [] },
+  // --- bans (bans.ts): every ban in the game's list, from the panel or the game's own admin panel ---
+  { key: 'ban.announce', group: 'ban', label: 'Thông báo toàn server khi có người bị ban', default: '⛔ {name} đã bị ban {duration}. Lý do: {reason}', vars: ['name', 'reason', 'duration', 'until', 'by'] },
+  { key: 'ban.player', group: 'ban', label: 'Tin riêng cho người bị ban (gửi ngay trước khi bị kick, chỉ khi ban từ panel)', default: 'Bạn đã bị ban {duration}. Lý do: {reason}. Khiếu nại: vào Discord của server.', vars: ['name', 'reason', 'duration', 'until'] },
   // --- Pteranodon carry (mods/PteraCarry) ---
   { key: 'ptera.carry.hint', group: 'ptera', label: 'Gợi ý: có con gắp được ở gần', default: 'Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.', vars: ['species', 'kg'], offByDefault: true },
   { key: 'ptera.carry.start', group: 'ptera', label: 'Bắt đầu gắp (cho Ptera)', default: 'Đang gắp {species} ({kg} kg). Đáp xuống hoặc gõ !drop để thả (tối đa {seconds} giây).', vars: ['species', 'kg', 'seconds'], offByDefault: true },
@@ -129,7 +132,7 @@ export const MESSAGES: readonly MessageDef[] = [
 
 export const MESSAGE_BY_KEY: ReadonlyMap<string, MessageDef> = new Map(MESSAGES.map((m) => [m.key, m]));
 /** Sent by the bridge itself (RCON announce); the rest by the mods. */
-const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses', 'ai']);
+const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses', 'ai', 'ban']);
 
 export interface Periodic {
   id: string;

@@ -30,6 +30,7 @@ import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readSanctuaries, readZoneGuard, saveZoneGuard, syncZoneGuard } from './zone-guard.js';
 import { DISCORD_KINDS, publicView, type DiscordLog } from './discord.js';
+import { PERMANENT_HOURS, banPlayer, durationText, readBans, readReasons, saveReasons, validateBan } from './bans.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
 import { readFlora } from './flora.js';
 import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
@@ -281,6 +282,13 @@ async function handlePanel(
     });
     return;
   }
+  if (path === '/api/bans' && req.method === 'GET') {
+    const now = Math.floor(Date.now() / 1000);
+    const list = (await readBans()).map((b) => ({ ...b, duration: durationText(b), active: b.permanent || (b.endsAt !== null && b.endsAt > now) }))
+      .sort((a, b) => (b.bannedAt ?? 0) - (a.bannedAt ?? 0));
+    sendJson(res, 200, { bans: list, reasons: await readReasons(), permanentHours: PERMANENT_HOURS, rcon: ctx.rcon.enabled });
+    return;
+  }
   if (path === '/api/discord' && req.method === 'GET') {
     if (!ctx.discord) { sendJson(res, 503, { error: 'Discord log is not running' }); return; }
     sendJson(res, 200, { ...(publicView(ctx.discord.settings) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
@@ -324,6 +332,8 @@ async function handlePanel(
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
       (path === '/api/zone-guard' && req.method === 'PUT') ||
       (path === '/api/discord' && req.method === 'PUT') ||
+      (path === '/api/bans' && req.method === 'POST') ||
+      (path === '/api/ban-reasons' && req.method === 'PUT') ||
       (path === '/api/discord/test' && req.method === 'POST') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
       (path === '/api/fish-settings' && req.method === 'PUT') ||
@@ -492,6 +502,28 @@ async function handlePanel(
         ok: true,
       });
       sendJson(res, 202, { id: queued.id, spots: queued.spots.length });
+      return;
+    }
+
+    if (path === '/api/bans') {
+      const ban = validateBan(await readJsonBody(req));
+      const online = store.online().some((p) => p.steamId === ban.steamId);
+      try {
+        await banPlayer(ctx.rcon, ban, online);
+      } catch (error) {
+        await audit({ action: 'player banned', detail: `${ban.name} (${ban.steamId}) · ${ban.hours} h · ${ban.reason}`, ok: false, error: (error as Error).message });
+        throw error;
+      }
+      await audit({ action: 'player banned', detail: `${ban.name} (${ban.steamId}) · ${ban.hours >= PERMANENT_HOURS ? 'vĩnh viễn' : `${ban.hours} giờ`} · ${ban.reason}${online ? ' · đã kick' : ''}`, ok: true });
+      sendJson(res, 200, { ok: true, kicked: online });
+      return;
+    }
+
+    if (path === '/api/ban-reasons') {
+      const before = await readReasons();
+      const saved = await saveReasons(((await readJsonBody(req)) as { reasons?: unknown }).reasons);
+      await audit({ action: 'ban reasons saved', detail: describeChanges({ reasons: before }, { reasons: saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { reasons: saved });
       return;
     }
 
