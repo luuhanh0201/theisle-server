@@ -761,6 +761,26 @@ H.every(LIVE_EVERY_MS, MOD .. ": read", function()
     H.try(MOD .. ": live", liveOnce)
 end)
 
+-- The world AI spawner's fish numbers, once, two minutes after load: tells
+-- whether the Game.ini [/Script/TheIsle.TIAIWorldSpawner] lines (panel → AI)
+-- are taken. Numbers only — reading them is safe; a Lua WRITE there crashed
+-- the server (docs/lua-safety-rules.md).
+H.defer(120000, function()
+    local okA, all = pcall(function() return FindAllOf("TIAIWorldSpawner") or {} end)
+    local ws = okA and all[1] or nil
+    if ws == nil or not H.isValid(ws) then H.log(MOD .. ": spawner: not found"); return end
+    local function num(k)
+        local ok, v = pcall(function() return ws[k] end)
+        return ok and type(v) == "number" and v or nil
+    end
+    local row = { type = "spawner", t = os.time(), fishPerPlayer = num("MaxAmbientFishPerPlayer"),
+        fishPerWater = num("AmbientFishSoftLimitPerWater"), attempts = num("AmbientFishSpawnAttemptsPerPlayer"),
+        cooldown = num("AmbientFishSpawnCooldown") }
+    H.log(string.format("%s: spawner: fish per player %s, per water %s, attempts %s, cooldown %s", MOD,
+        tostring(row.fishPerPlayer), tostring(row.fishPerWater), tostring(row.attempts), tostring(row.cooldown)))
+    queue(row)
+end)
+
 H.log(MOD .. ": loaded, writing " .. Events.STREAMS.events.path
     .. " and " .. Events.STREAMS.snapshots.path)
 Events.emit({ type = "mod_loaded", mod = MOD })

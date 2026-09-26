@@ -28,7 +28,7 @@ import { ValidationError } from './garage.js';
  * works and do nothing.
  */
 
-export type Section = 'TIGameSession' | 'TIGameStateBase';
+export type Section = 'TIGameSession' | 'TIGameStateBase' | 'TIAIWorldSpawner';
 
 /**
  * AllowedClasses values for the playable roster, spelled as Game.ini expects
@@ -93,6 +93,13 @@ export type ManagedKey = IntKey | FloatKey | BoolKey | TextKey | ListKey;
 
 const S = 'TIGameSession' as const;
 const G = 'TIGameStateBase' as const;
+/**
+ * The world AI spawner's own numbers (ambient fish). A write from Lua on the
+ * live spawner crashed the server (2026-09-26); read from Game.ini they are
+ * set when the spawner is made — IF the game takes them from config, which
+ * the StatsLogger read-back at start ("spawner: fish per player …") tells.
+ */
+const W = 'TIAIWorldSpawner' as const;
 const NAME = /^[A-Za-z0-9_]{2,64}$/;
 const STEAM = /^\d{17}$/;
 
@@ -163,11 +170,17 @@ export const MANAGED: Record<string, ManagedKey> = {
     itemHelp: 'tên AI, vd. Boar', label: 'Cấm loài AI',
     // Dryosaurus, Gallimimus: also AI the game spawns (seen on the live map
     // 2026-09-26), not only playables.
-    suggest: ['Boar', 'Chicken', 'Compsognathus', 'Crab', 'Deer', 'Dryosaurus', 'Frog', 'Gallimimus', 'Goat', 'Lizard',
+    suggest: ['Boar', 'Bullfrog', 'Chicken', 'Compsognathus', 'Crab', 'Deer', 'Dryosaurus', 'Frog', 'Gallimimus', 'Goat', 'Lizard',
       'Psittacosaurus', 'Pterodactylus', 'Rabbit', 'Seaturtle'],
     help: 'Loài được tick: game không tự sinh nữa. Chỉ chặn AI game tự sinh — loài của vùng AI chọn riêng trong từng vùng (Bản đồ → Vùng AI).' },
   bSpawnAmbientFauna: { section: S, group: 'ai', type: 'bool', default: false,
     label: 'Sinh động vật môi trường', help: 'Thú nhỏ trang trí (chim, côn trùng…).' },
+  MaxAmbientFishPerPlayer: { section: W, group: 'ai', type: 'int', min: 1, max: 40, default: 12, verified: false,
+    label: 'Cá tối đa quanh mỗi người', help: 'Game: 12. Cá sấu đứng một mình chỉ có từng này con quanh nó. Nhiều hơn = nặng máy hơn một chút.' },
+  AmbientFishSoftLimitPerWater: { section: W, group: 'ai', type: 'int', min: 1, max: 120, default: 28, verified: false,
+    label: 'Cá tối đa mỗi vùng nước', help: 'Game: 28. Tổng cá trong một hồ / sông / biển.' },
+  AmbientFishSpawnAttemptsPerPlayer: { section: W, group: 'ai', type: 'int', min: 1, max: 5, default: 1, verified: false,
+    label: 'Lượt sinh cá mỗi lần', help: 'Game: 1. Số cá game thử sinh quanh mỗi người mỗi nửa giây — cá lên nhanh hơn.' },
   bSpawnPlants: { section: S, group: 'ai', type: 'bool', default: true,
     label: 'Sinh cây ăn được', help: 'Nguồn thức ăn của loài ăn cỏ.' },
   PlantSpawnMultiplier: { section: S, group: 'ai', type: 'float', min: 0, max: 5, step: 0.05, default: 1,

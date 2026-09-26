@@ -199,3 +199,12 @@ test('admins: panel-owned, SteamID64 only, never emptied', () => {
   const state = out.slice(out.indexOf('[/Script/TheIsle.TIGameStateBase]'));
   assert.match(state, /^AdminsSteamIDs=76561198000000010$/m, 'in TIGameStateBase');
 });
+
+test('the ambient fish numbers go in their own section, the rest untouched', () => {
+  const ini = '[/Script/TheIsle.TIGameSession]\nbSpawnAI=true\n';
+  const out = applySettings(ini, { MaxAmbientFishPerPlayer: 20, AmbientFishSoftLimitPerWater: 40, AmbientFishSpawnAttemptsPerPlayer: 2 });
+  assert.match(out, /\[\/Script\/TheIsle\.TIGameSession\]\nbSpawnAI=true\n/);
+  assert.match(out, /\[\/Script\/TheIsle\.TIAIWorldSpawner\]\nMaxAmbientFishPerPlayer=20\nAmbientFishSoftLimitPerWater=40\nAmbientFishSpawnAttemptsPerPlayer=2/);
+  assert.deepEqual(readManaged(out).MaxAmbientFishPerPlayer, 20);
+  assert.equal(applySettings(out, { MaxAmbientFishPerPlayer: 20, AmbientFishSoftLimitPerWater: 40, AmbientFishSpawnAttemptsPerPlayer: 2 }), out, 'idempotent');
+});
