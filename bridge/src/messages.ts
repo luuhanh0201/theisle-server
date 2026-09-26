@@ -111,6 +111,10 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'redeem.wrongSpecies', group: 'redeem', label: 'Sai loài', default: 'Wrong species — respawn as the one you stored.', vars: [] },
   { key: 'redeem.takeFailed', group: 'redeem', label: 'Không lấy slot ra được', default: "Slot '{slot}' could not be taken out ({error}).", vars: ['slot', 'error'] },
   // --- chat commands (mods/PlayerCommands) ---
+  { key: 'cmd.food.done', group: 'commands', label: '!food: xong', default: 'Đã nhả thứ trong mồm. Nếu vẫn kẹt, thoát ra vào lại hoặc dùng !unstuck.', vars: [] },
+  { key: 'cmd.food.cooldown', group: 'commands', label: '!food: đang hồi', default: '!food: chờ thêm {wait}.', vars: ['wait'] },
+  { key: 'cmd.food.noDino', group: 'commands', label: '!food: chưa có dino', default: '!food: bạn chưa điều khiển dino nào.', vars: [] },
+  { key: 'cmd.food.failed', group: 'commands', label: '!food: không được', default: '!food không thực hiện được, thử lại sau.', vars: [] },
   { key: 'cmd.slay.done', group: 'commands', label: '!slay: xong', default: 'Dino của bạn đã chết. Chọn loài để spawn lại.', vars: [] },
   { key: 'cmd.slay.cooldown', group: 'commands', label: '!slay: đang hồi', default: '!slay: chờ thêm {wait}.', vars: ['wait'] },
   { key: 'cmd.slay.noDino', group: 'commands', label: '!slay: chưa có dino', default: '!slay: bạn chưa điều khiển dino nào.', vars: [] },

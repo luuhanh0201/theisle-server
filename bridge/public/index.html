@@ -1443,6 +1443,9 @@
           <div class="cfg-field"><label for="pc-unstuck-cd">Chờ giữa hai lần !unstuck (giây)<span class="mono">unstuckCooldown</span></label>
             <input id="pc-unstuck-cd" type="number" min="0" max="86400" step="1">
             <div class="step-hint"><span class="mono">!unstuck</span> — về điểm gần nhất dino vừa đứng trên mặt đất (cách ≥ 3 m, nâng 0,5 m — không thả từ trên cao). Mặc định 600.</div></div>
+          <div class="cfg-field"><label for="pc-food-cd">Chờ giữa hai lần !food (giây)<span class="mono">foodCooldown</span></label>
+            <input id="pc-food-cd" type="number" min="0" max="86400" step="1">
+            <div class="step-hint"><span class="mono">!food</span> — nhả thứ đang kẹt trong mồm (con mồi đang gắp, miếng thịt / quả đang ngậm hay kéo). Mặc định 30.</div></div>
         </div>
         <div>
           <label>Lệnh đang bật</label>
@@ -6529,16 +6532,17 @@ $('gs-save').addEventListener('click', () => withToken('lưu cài đặt gara', 
 }));
 
 // --- player command settings ------------------------------------------------------
-const PC_NAMES = { slay: '!slay', unstuck: '!unstuck', prime: '!prime', status: '!status' };
+const PC_NAMES = { slay: '!slay', unstuck: '!unstuck', prime: '!prime', status: '!status', food: '!food' };
 let pcDirty = false;
 function renderCommandsSettings(cs) {
   if (pcDirty) return;
   $('pc-slay-cd').value = cs.slayCooldown;
+  $('pc-food-cd').value = cs.foodCooldown ?? 30;
   $('pc-unstuck-cd').value = cs.unstuckCooldown;
   $('pc-enabled').innerHTML = Object.entries(PC_NAMES).map(([k, label]) =>
     `<label><input type="checkbox" class="switch" data-cmd="${k}"${cs.enabled[k] ? ' checked' : ''}>${label}</label>`).join('');
 }
-for (const id of ['pc-slay-cd', 'pc-unstuck-cd', 'pc-enabled']) {
+for (const id of ['pc-slay-cd', 'pc-unstuck-cd', 'pc-food-cd', 'pc-enabled']) {
   $(id).addEventListener('input', () => { pcDirty = true; });
   $(id).addEventListener('change', () => { pcDirty = true; });
 }
@@ -6548,6 +6552,7 @@ $('pc-save').addEventListener('click', () => withToken('lưu cài đặt lệnh'
   await adminFetch('/api/commands-settings', 'PUT', token, {
     slayCooldown: Number($('pc-slay-cd').value),
     unstuckCooldown: Number($('pc-unstuck-cd').value),
+    foodCooldown: Number($('pc-food-cd').value),
     enabled,
   });
   pcDirty = false;

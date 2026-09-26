@@ -7,6 +7,11 @@
                    are recorded only while the dino is walking on the ground.
         !prime     is this dino a prime elder / eligible for prime
         !status    growth and vitals of your current dino
+        !food      let go of whatever is stuck in the mouth (cooldown): a
+                   critter grabbed (ReleasePhysicsCharacter, as PteraCarry
+                   uses), the piece carried / dragged (SetDraggedPickablePiece
+                   / SetDraggedActor with none), and the "food nearby" state
+                   (ServerResetPickableNearby) — the game's own setters
 
     Settings (panel → Server → Cấu hình game → Lệnh người chơi) are read fresh
     from Mods/PlayerCommands/Saved/settings.json on every command.
@@ -31,7 +36,8 @@ local SETTINGS_PATH = "Mods/PlayerCommands/Saved/settings.json"
 local DEFAULTS = {
     slayCooldown    = 300,     -- seconds between two !slay by one player
     unstuckCooldown = 600,     -- seconds between two !unstuck
-    enabled = { slay = true, unstuck = true, prime = true, status = true },
+    foodCooldown    = 30,      -- seconds between two !food
+    enabled = { slay = true, unstuck = true, prime = true, status = true, food = true },
 }
 
 local TRACK_MS       = 3000    -- how often ground spots are sampled
@@ -46,7 +52,7 @@ local UNSTUCK_LIFT     = 50    -- 0.5 m above the recorded ground point
 --------------------------------------------------------------------------
 
 local function readSettings()
-    local s = { slayCooldown = DEFAULTS.slayCooldown, unstuckCooldown = DEFAULTS.unstuckCooldown, enabled = {} }
+    local s = { slayCooldown = DEFAULTS.slayCooldown, unstuckCooldown = DEFAULTS.unstuckCooldown, foodCooldown = DEFAULTS.foodCooldown, enabled = {} }
     for k, v in pairs(DEFAULTS.enabled) do s.enabled[k] = v end
     local f = io.open(SETTINGS_PATH, "r")
     if not f then return s end
@@ -54,7 +60,7 @@ local function readSettings()
     f:close()
     local ok, data = pcall(json.decode, raw)
     if not ok or type(data) ~= "table" then return s end
-    for _, key in ipairs({ "slayCooldown", "unstuckCooldown" }) do
+    for _, key in ipairs({ "slayCooldown", "unstuckCooldown", "foodCooldown" }) do
         local n = tonumber(data[key])
         if n and n >= 0 and n <= 86400 then s[key] = math.floor(n) end
     end
@@ -70,7 +76,7 @@ end
 -- Cooldowns (in memory: a server restart resets them)
 --------------------------------------------------------------------------
 
-local lastUse = { slay = {}, unstuck = {} }
+local lastUse = { slay = {}, unstuck = {}, food = {} }
 
 --- nil if allowed now, else the seconds left.
 local function cooldownLeft(cmd, steamId, seconds)
@@ -201,6 +207,34 @@ local function doUnstuck(ctrl, steamId, settings)
     end
 end
 
+local function doFood(ctrl, steamId, settings)
+    local left = cooldownLeft("food", steamId, settings.foodCooldown)
+    if left then
+        Msg.notify(ctrl, "cmd.food.cooldown", "!food: chờ thêm {wait}.", { wait = fmtWait(left) })
+        return
+    end
+    local pawn = H.livePawnFromCtrl(ctrl)
+    if not pawn then
+        Msg.notify(ctrl, "cmd.food.noDino", "!food: bạn chưa điều khiển dino nào.")
+        return
+    end
+    -- What is in the mouth now (read only), for the log and the answer.
+    local okP, piece = pcall(function() return pawn:GetDraggedPickablePiece() end)
+    local hadPiece = okP and piece ~= nil and H.isValid(piece)
+    local done = {}
+    if pcall(function() pawn:ReleasePhysicsCharacter() end) then done[#done + 1] = "release" end
+    if hadPiece and pcall(function() pawn:SetDraggedPickablePiece(nil) end) then done[#done + 1] = "piece" end
+    if pcall(function() pawn:SetDraggedActor(nil) end) then done[#done + 1] = "dragged" end
+    if pcall(function() pawn:ServerResetPickableNearby() end) then done[#done + 1] = "nearby" end
+    H.log(string.format("%s: !food by %s — had a piece: %s, done: %s", MOD, steamId, tostring(hadPiece), table.concat(done, ",")))
+    if #done == 0 then
+        Msg.notify(ctrl, "cmd.food.failed", "!food không thực hiện được, thử lại sau.")
+        return
+    end
+    lastUse.food[steamId] = os.time()
+    Msg.notify(ctrl, "cmd.food.done", "Đã nhả thứ trong mồm. Nếu vẫn kẹt, thoát ra vào lại hoặc dùng !unstuck.")
+end
+
 local function callBool(pawn, fn)
     local ok, v = pcall(function() return pawn[fn](pawn) end)
     if ok and type(v) == "boolean" then return v end
@@ -256,7 +290,7 @@ local function doStatus(ctrl)
     H.safeNotify(ctrl, table.concat(parts, " · "))
 end
 
-local COMMANDS = { slay = doSlay, unstuck = doUnstuck, prime = doPrime, status = doStatus }
+local COMMANDS = { slay = doSlay, unstuck = doUnstuck, prime = doPrime, status = doStatus, food = doFood }
 
 H.onChat(function(ctrl, steamId, msg)
     local cmd = H.parseCommand(msg)

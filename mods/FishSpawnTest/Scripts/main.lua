@@ -37,8 +37,9 @@ local DIR = "Mods/AIZones/Saved/"
 -- smoothing… — a server-side swimmer, replicated, parked with no player near?
 -- Run 6: once a player is online, 3 catfish around them 1.5 m under them,
 -- their places every 5 s for a minute (and the fish's own numbers).
-local FLAG = DIR .. "fishspawn6.flag"
-local OUT = DIR .. "fishspawn6.txt"
+-- (fishspawn6.flag: stopped at a log line's "%d" with a float z — nothing spawned.)
+local FLAG = DIR .. "fishspawn7.flag"
+local OUT = DIR .. "fishspawn7.txt"
 local WAIT_FOR_PLAYER = true
 local ADMINS = { ["76561199248426579"] = true, ["76561199320940985"] = true }
 local USE_CONTROLLER = false
@@ -75,7 +76,7 @@ local function spawn(AT)
     if not okW or world == nil then out("no world"); return end
     for i, depth in ipairs(DEPTHS) do
         local loc = { X = AT.X + i * 300, Y = AT.Y + 200, Z = AT.Z - 150 }
-        out("spawn %d at z %d …", i, loc.Z)
+        out("spawn %d at z %.0f …", i, loc.Z)
         local okP, pawn = pcall(function() return world:SpawnActor(pawnCls, loc, { Pitch = 0, Yaw = 0, Roll = 0 }) end)
         if not (okP and pawn ~= nil and addr(pawn)) then out("  pawn: not spawned (%s)", tostring(pawn)); goto continue end
         out("  pawn: spawned")

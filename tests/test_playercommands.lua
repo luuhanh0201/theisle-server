@@ -1,4 +1,4 @@
--- Functional test: PlayerCommands — !slay, !unstuck, !prime, !status, the
+-- Functional test: PlayerCommands — !slay, !unstuck, !prime, !status, !food, the
 -- panel's cooldown / on-off settings, and the ground-spot tracker.
 
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end
@@ -121,6 +121,27 @@ local before = #ctrl._messages
 cmd("hello")
 cmd("!redeem default")
 check("no reply to non-commands or other mods' commands", #ctrl._messages == before)
+
+say("")
+say("-- 9. !food: lets go of what the mouth holds, then the cooldown --")
+local piece = { IsValid = function() return true end, GetAddress = function() return 8192 end }
+rawset(pawn, "GetDraggedPickablePiece", function() return piece end)
+for _, m in ipairs({ "ReleasePhysicsCharacter", "SetDraggedPickablePiece", "SetDraggedActor", "ServerResetPickableNearby" }) do
+  rawset(pawn, m, function(_, v) H.record(m, v) end)
+end
+H.calls = {}
+cmd("!food")
+check("released, piece and dragged actor cleared, nearby reset",
+      H.countCalls("ReleasePhysicsCharacter") == 1 and H.countCalls("SetDraggedPickablePiece") == 1
+      and H.countCalls("SetDraggedActor") == 1 and H.countCalls("ServerResetPickableNearby") == 1,
+      table.concat(H.callNames(), ","))
+check("told it is done", lastMsg():find("Đã nhả thứ trong mồm", 1, true) ~= nil, lastMsg())
+cmd("!food")
+check("second !food within 30 s refused", H.countCalls("ReleasePhysicsCharacter") == 1
+      and lastMsg():find("chờ thêm", 1, true) ~= nil, lastMsg())
+clock = clock + 31
+cmd("!food")
+check("allowed again after the cooldown", H.countCalls("ReleasePhysicsCharacter") == 2)
 
 say("")
 say("-- threads --")

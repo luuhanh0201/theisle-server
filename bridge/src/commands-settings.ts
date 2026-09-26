@@ -7,19 +7,22 @@ import { ValidationError } from './garage.js';
  * Settings of the PlayerCommands mod (mods/PlayerCommands/Scripts/main.lua),
  * read fresh by the mod on every command — no restart needed.
  */
-export const COMMANDS = ['slay', 'unstuck', 'prime', 'status'] as const;
+export const COMMANDS = ['slay', 'unstuck', 'prime', 'status', 'food'] as const;
 export type CommandName = (typeof COMMANDS)[number];
 export interface CommandsSettings {
   /** Seconds between two !slay by one player. */
   slayCooldown: number;
   /** Seconds between two !unstuck by one player. */
   unstuckCooldown: number;
+  /** Seconds between two !food by one player. */
+  foodCooldown: number;
   enabled: Record<CommandName, boolean>;
 }
 export const COMMANDS_DEFAULTS: CommandsSettings = {
   slayCooldown: 300,
   unstuckCooldown: 600,
-  enabled: { slay: true, unstuck: true, prime: true, status: true },
+  foodCooldown: 30,
+  enabled: { slay: true, unstuck: true, prime: true, status: true, food: true },
 };
 const MAX_COOLDOWN = 86400;
 
@@ -32,7 +35,7 @@ function cooldown(v: unknown): number | null {
 
 function normalise(raw: Record<string, unknown>, strict: boolean): CommandsSettings {
   const out: CommandsSettings = { ...COMMANDS_DEFAULTS, enabled: { ...COMMANDS_DEFAULTS.enabled } };
-  for (const key of ['slayCooldown', 'unstuckCooldown'] as const) {
+  for (const key of ['slayCooldown', 'unstuckCooldown', 'foodCooldown'] as const) {
     if (raw[key] === undefined) continue;
     const v = cooldown(raw[key]);
     if (v === null) {

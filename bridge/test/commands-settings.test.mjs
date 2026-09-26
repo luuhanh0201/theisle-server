@@ -12,14 +12,14 @@ after(() => rmSync(root, { recursive: true, force: true }));
 
 test('defaults when nothing is saved: slay 5 min, unstuck 10 min, all on', async () => {
   assert.deepEqual(await readCommandsSettings(), COMMANDS_DEFAULTS);
-  assert.deepEqual(COMMANDS_DEFAULTS, { slayCooldown: 300, unstuckCooldown: 600,
-    enabled: { slay: true, unstuck: true, prime: true, status: true } }, 'same as the mod');
+  assert.deepEqual(COMMANDS_DEFAULTS, { slayCooldown: 300, unstuckCooldown: 600, foodCooldown: 30,
+    enabled: { slay: true, unstuck: true, prime: true, status: true, food: true } }, 'same as the mod');
 });
 
 test('save: validated, partial input merged onto defaults, written for the mod', async () => {
   const saved = await saveCommandsSettings({ slayCooldown: 60, enabled: { status: false } });
-  assert.deepEqual(saved, { slayCooldown: 60, unstuckCooldown: 600,
-    enabled: { slay: true, unstuck: true, prime: true, status: false } });
+  assert.deepEqual(saved, { slayCooldown: 60, unstuckCooldown: 600, foodCooldown: 30,
+    enabled: { slay: true, unstuck: true, prime: true, status: false, food: true } });
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'settings.json'), 'utf8')), saved);
   await assert.rejects(() => saveCommandsSettings({ slayCooldown: -1 }), /0–86400/);
   await assert.rejects(() => saveCommandsSettings({ enabled: { slay: 'yes' } }), /true or false/);
