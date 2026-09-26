@@ -298,6 +298,7 @@ async function handlePanel(
   }
   if (path === '/api/discord' && req.method === 'GET') {
     if (!ctx.discord) { sendJson(res, 503, { error: 'Discord log is not running' }); return; }
+    await ctx.discord.refreshInfo();
     sendJson(res, 200, { ...(publicView(ctx.discord.settings) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
     return;
   }
@@ -573,6 +574,7 @@ async function handlePanel(
       }
       const before = ctx.discord.settings;
       const saved = await ctx.discord.save(await readJsonBody(req));
+      await ctx.discord.refreshInfo(true);
       // Never the URLs in the audit: names and routes only.
       const view = (s: typeof saved): Record<string, unknown> => ({ enabled: s.enabled, channels: s.channels.map((c) => c.name), routes: s.routes });
       await audit({ action: 'Discord log saved', detail: describeChanges(view(before), view(saved)) || 'không đổi gì', ok: true });

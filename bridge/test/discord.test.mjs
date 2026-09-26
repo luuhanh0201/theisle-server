@@ -24,6 +24,9 @@ test('settings: webhook URLs checked, kept when not sent again, never shown whol
   assert.throws(() => validateDiscord({ enabled: true, channels: [{ name: 'x' }] }), /webhook URL/);
   assert.throws(() => validateDiscord({ enabled: true, channels: [{ id: 'aa', name: 'x', url: URL1 }], routes: { chat: 'zz' } }), /unknown channel/);
   assert.throws(() => validateDiscord({ enabled: true, channels: [], routes: { nope: '' } }), /unknown log kind/);
+  assert.throws(() => validateDiscord({ enabled: true, channels: [{ name: 'A', url: URL1 }, { name: 'B', url: URL1 }] }), /cùng một webhook/);
+  assert.equal(validateDiscord({ enabled: true, channels: [{ name: 'A', url: URL1 }, { name: 'B', url: URL1 }] }, undefined, { unique: false }).channels.length, 2,
+    'a file saved before the check still loads');
   assert.equal(maskUrl(URL1), 'webhook 123456789012345678 · …ABCD');
   assert.ok(!JSON.stringify(publicView(s)).includes('abcdefghij'), 'the token part is not in the panel view');
 });
@@ -49,14 +52,19 @@ test('lines: what each event says; player text cannot format or ping', () => {
 
 function fakeDiscord() {
   const calls = [];
+  const gets = [];
   const replies = [];
   const fetch = async (url, init) => {
+    if (init.method === 'GET') {
+      gets.push(url);
+      return { status: 200, text: async () => JSON.stringify({ name: 'Công An Xóm', channel_id: '99' }) };
+    }
     calls.push({ url, body: JSON.parse(init.body) });
     const r = replies.shift() ?? { status: 204 };
     if (r.throw) throw new Error(r.throw);
     return { status: r.status, text: async () => r.body ?? '' };
   };
-  return { calls, replies, fetch };
+  return { calls, gets, replies, fetch };
 }
 
 test('sender: batched per channel, a replay not sent, 429 and outages wait, a dead webhook is dropped', async () => {
@@ -74,6 +82,9 @@ test('sender: batched per channel, a replay not sent, 429 and outages wait, a de
   assert.equal(d.calls.length, 2, 'one message per channel');
   assert.equal(d.calls[0].body.embeds.length, 10, 'at most 10 lines a message');
   assert.deepEqual(d.calls[0].body.allowed_mentions, { parse: [] });
+  assert.equal(d.calls[0].body.username, undefined, 'the webhook\'s own name (set in Discord) is shown');
+  await log.refreshInfo();
+  assert.deepEqual({ ...log.status().channels.aa.webhook, at: 0 }, { name: 'Công An Xóm', channelId: '99', error: null, at: 0 });
   assert.equal(d.calls[0].body.embeds[0].timestamp, new Date(1_000_000_000).toISOString(), 'the line keeps its own time');
   assert.ok(!d.calls.some((c) => JSON.stringify(c.body).includes('old')));
   assert.equal(log.status().queued, 2);

@@ -65,7 +65,7 @@ export function maskUrl(url: string): string {
   return m ? `webhook ${m[1]} · …${(m[2] as string).slice(-4)}` : '';
 }
 
-export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_DEFAULTS): DiscordSettings {
+export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_DEFAULTS, opts: { unique?: boolean } = {}): DiscordSettings {
   if (typeof raw !== 'object' || raw === null) throw new ValidationError('body must be an object');
   const r = raw as Record<string, unknown>;
   if (typeof r['enabled'] !== 'boolean') throw new ValidationError('enabled must be true or false');
@@ -85,6 +85,16 @@ export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_
     return { id, name, url };
   });
   if (new Set(channels.map((c) => c.id)).size !== channels.length) throw new ValidationError('two channels have the same id');
+  // One webhook posts into one Discord channel: the same URL twice would send both lists to the same place.
+  const seen = new Map<string, string>();
+  // Checked on a save; a file saved before this check still loads (and says so on the panel).
+  for (const c of opts.unique === false ? [] : channels) {
+    const other = seen.get(c.url);
+    if (other !== undefined) {
+      throw new ValidationError(`"${c.name}" và "${other}" đang dùng cùng một webhook — mỗi kênh Discord cần một webhook riêng (tạo trong chính kênh đó)`);
+    }
+    seen.set(c.url, c.name);
+  }
   const ids = new Set(channels.map((c) => c.id));
   const routesRaw = r['routes'] ?? {};
   if (typeof routesRaw !== 'object' || routesRaw === null || Array.isArray(routesRaw)) throw new ValidationError('routes must be an object');
@@ -100,7 +110,7 @@ export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_
 
 export async function readDiscord(): Promise<DiscordSettings> {
   try {
-    return validateDiscord(JSON.parse(await readFile(settingsPath(), 'utf8')));
+    return validateDiscord(JSON.parse(await readFile(settingsPath(), 'utf8')), DISCORD_DEFAULTS, { unique: false });
   } catch {
     return structuredClone(DISCORD_DEFAULTS);
   }
@@ -231,7 +241,9 @@ export function phaseLine(from: string | null, to: string, t: number, planned: b
 
 interface Queued { ch: string; kind: DiscordKind; text: string; t: number }
 export interface ChannelState { queued: number; lastOkAt: number | null; lastError: string | null; waitUntil: number }
-type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal }) =>
+/** What Discord says about a webhook (GET on its URL): its name and the channel it posts in. */
+export interface WebhookInfo { name: string | null; channelId: string | null; error: string | null; at: number }
+type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body?: string; signal?: AbortSignal }) =>
   Promise<{ status: number; text(): Promise<string> }>;
 
 const MAX_QUEUE = 3000;
@@ -243,6 +255,7 @@ export class DiscordLog {
   #queue: Queued[] = [];
   #state = new Map<string, ChannelState>();
   #dropped = 0;
+  readonly #info = new Map<string, WebhookInfo>();
   #saveTimer: NodeJS.Timeout | null = null;
   #sending = false;
   readonly #since: number;
@@ -289,16 +302,38 @@ export class DiscordLog {
     this.#persistSoon();
   }
 
-  status(): { queued: number; dropped: number; channels: Record<string, ChannelState> } {
-    const channels: Record<string, ChannelState> = {};
+  status(): { queued: number; dropped: number; channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> } {
+    const channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> = {};
     for (const c of this.#settings.channels) {
       const st = this.#state.get(c.id);
       channels[c.id] = {
         queued: this.#queue.filter((q) => q.ch === c.id).length,
         lastOkAt: st?.lastOkAt ?? null, lastError: st?.lastError ?? null, waitUntil: st?.waitUntil ?? 0,
+        webhook: this.#info.get(c.url) ?? null,
       };
     }
     return { queued: this.#queue.length, dropped: this.#dropped, channels };
+  }
+
+  /** Ask Discord for each webhook's name and channel (at most every 10 minutes each). */
+  async refreshInfo(force = false): Promise<void> {
+    const now = this.#now();
+    for (const c of this.#settings.channels) {
+      const known = this.#info.get(c.url);
+      if (!force && known && now - known.at < 600_000) continue;
+      try {
+        const res = await this.#fetch(c.url, { method: 'GET', headers: {}, signal: AbortSignal.timeout(8000) });
+        const text = await res.text().catch(() => '');
+        if (res.status >= 200 && res.status < 300) {
+          const j = JSON.parse(text) as { name?: unknown; channel_id?: unknown };
+          this.#info.set(c.url, { name: typeof j.name === 'string' ? j.name : null, channelId: typeof j.channel_id === 'string' ? j.channel_id : null, error: null, at: now });
+        } else {
+          this.#info.set(c.url, { name: null, channelId: null, error: res.status === 404 || res.status === 401 ? 'webhook không còn' : `Discord trả ${res.status}`, at: now });
+        }
+      } catch (error) {
+        this.#info.set(c.url, { name: null, channelId: null, error: (error as Error).message, at: now });
+      }
+    }
   }
 
   /** Send what is due: one message per channel per call (called every couple of seconds). */
@@ -344,7 +379,7 @@ export class DiscordLog {
     const st = this.#stateOf(ch);
     const now = this.#now();
     const body = JSON.stringify({
-      username: 'Isle Server',
+      // No username / avatar: the webhook's own, as set in Discord, are shown.
       allowed_mentions: { parse: [] },
       embeds: batch.map((q) => ({ description: q.text, color: COLORS[q.kind], timestamp: new Date(q.t * 1000).toISOString() })),
     });

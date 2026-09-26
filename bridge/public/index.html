@@ -1664,7 +1664,9 @@
             <button type="button" class="btn-soft sm" id="dc-add" style="margin-left:auto">+ Thêm kênh</button></div>
           <div class="card-body"><div class="dc-channels" id="dc-channels"></div>
             <details class="howto" style="margin-top:10px"><summary>Lấy URL webhook thế nào?</summary>
-              <p>Trong Discord: bấm ⚙ <b>Chỉnh sửa kênh</b> → <b>Tích hợp</b> → <b>Webhook</b> → <b>Webhook mới</b> → <b>Sao chép URL webhook</b>, rồi dán vào ô ở trên.
+              <p>Trong Discord: vào <b>đúng kênh muốn nhận log</b>, bấm ⚙ <b>Chỉnh sửa kênh</b> → <b>Tích hợp</b> → <b>Webhook</b> → <b>Webhook mới</b> → đặt tên
+                (và ảnh) cho webhook — tin log sẽ hiện bằng tên đó → <b>Sao chép URL webhook</b>, rồi dán vào ô ở trên. Mỗi kênh Discord một webhook
+                riêng: dán cùng một URL cho hai kênh thì cả hai đều về một chỗ.
                 Mỗi kênh (vd. #killfeed, #chat-log, #admin-log) một webhook. URL là bí mật: panel chỉ lưu trên server, không bao giờ hiện lại đầy đủ.</p>
               <p>Log được xếp hàng trên server: Discord hoặc mạng gặp sự cố (kể cả khi VPS bị DDoS) thì log gửi bù sau, giữ đúng giờ gốc.</p>
             </details></div>
@@ -5435,12 +5437,24 @@ function renderDiscordStatus() {
   $('dc-status').innerHTML = !dc.draft.enabled ? 'Đang tắt — không gửi gì.'
     : dc.draft.channels.length === 0 ? 'Chưa có kênh nào: thêm webhook ở dưới.'
     : `Đang gửi · ${st.queued} tin đang chờ${st.dropped ? ` · đã bỏ ${st.dropped} tin (hàng chờ đầy)` : ''}.`;
+  // Two panel channels on one Discord channel: both lists land in the same place.
+  const byDiscordChannel = {};
+  for (const [id, cs] of Object.entries(st.channels)) {
+    const ch = cs.webhook?.channelId;
+    if (ch) (byDiscordChannel[ch] ??= []).push(id);
+  }
+  const nameOf = (id) => dc.draft.channels.find((c) => c.id === id)?.name || id;
   for (const row of $('dc-channels').querySelectorAll('[data-dc]')) {
     const cs = st.channels[row.dataset.dc];
     const el = row.querySelector('.st');
     if (!cs) { el.textContent = 'chưa lưu'; el.className = 'st'; continue; }
-    el.className = `st${cs.lastError ? ' err' : ''}`;
-    el.textContent = [cs.lastError ? `Lỗi: ${cs.lastError}` : cs.lastOkAt ? `Gửi được lúc ${dateTime(cs.lastOkAt)}` : 'Chưa gửi gì',
+    const wh = cs.webhook;
+    const same = wh?.channelId ? (byDiscordChannel[wh.channelId] ?? []).filter((x) => x !== row.dataset.dc) : [];
+    el.className = `st${cs.lastError || wh?.error || same.length ? ' err' : ''}`;
+    el.textContent = [
+      wh?.error ? `Webhook: ${wh.error}` : wh?.name ? `Webhook trong Discord: “${wh.name}” · kênh …${String(wh.channelId).slice(-4)}` : '',
+      same.length ? `trùng kênh Discord với “${same.map(nameOf).join('”, “')}” — tạo webhook mới trong kênh kia` : '',
+      cs.lastError ? `Lỗi: ${cs.lastError}` : cs.lastOkAt ? `Gửi được lúc ${dateTime(cs.lastOkAt)}` : 'Chưa gửi gì',
       cs.queued ? `${cs.queued} tin đang chờ` : ''].filter(Boolean).join(' · ');
   }
 }
