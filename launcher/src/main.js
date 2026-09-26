@@ -17,7 +17,7 @@
 const { app, BrowserWindow, Tray, Menu, shell, ipcMain, session, nativeImage, net, Notification, powerMonitor, screen } = require('electron');
 const { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync, renameSync } = require('node:fs');
 const { join } = require('node:path');
-const { label, PushToTalk, DEFAULT_RANGE } = require('./ptt.js');
+const { clashOf, distinctBindings, label, PushToTalk, DEFAULT_PTT, DEFAULT_RANGE } = require('./ptt.js');
 const { Overlay, normaliseKeep } = require('./overlay.js');
 const { LoginFlow } = require('./login.js');
 
@@ -150,6 +150,7 @@ let quitting = false;
 /** Global keys: hold to talk, cycle the voice range, overlay on / off, overlay edit mode. */
 const keys = { ptt: null, range: null, overlay: null, edit: null };
 const KEY_SETTING = { ptt: 'ptt', range: 'rangeKey', overlay: 'overlayKey', edit: 'overlayEditKey' };
+const KEY_TITLE = { ptt: 'Bấm để nói', range: 'Đổi tầm nói', overlay: 'Bật / tắt overlay', edit: 'Chỉnh vị trí overlay' };
 const DEFAULT_OVERLAY_KEY = { kind: 'key', code: 66 };   // UiohookKey.F8
 const DEFAULT_EDIT_KEY = { kind: 'key', code: 67 };      // UiohookKey.F9
 let overlay = null;
@@ -412,14 +413,20 @@ function startPtt() {
   }
   const toPage = (channel, value) => { if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(channel, value); };
   const saved = readSettings();
-  keys.ptt = new PushToTalk(hook, saved.ptt, (held) => { toPage('ptt', held); updateTray(); });
-  keys.range = new PushToTalk(hook, saved.rangeKey, (down) => { if (down) toPage('range-key', true); }, DEFAULT_RANGE);
-  keys.overlay = new PushToTalk(hook, saved.overlayKey, (down) => {
+  const b = distinctBindings([
+    { name: 'ptt', binding: saved.ptt, fallback: DEFAULT_PTT },
+    { name: 'range', binding: saved.rangeKey, fallback: DEFAULT_RANGE },
+    { name: 'overlay', binding: saved.overlayKey, fallback: DEFAULT_OVERLAY_KEY },
+    { name: 'edit', binding: saved.overlayEditKey, fallback: DEFAULT_EDIT_KEY },
+  ]);
+  keys.ptt = new PushToTalk(hook, b.ptt, (held) => { toPage('ptt', held); updateTray(); });
+  keys.range = new PushToTalk(hook, b.range, (down) => { if (down) toPage('range-key', true); }, DEFAULT_RANGE);
+  keys.overlay = new PushToTalk(hook, b.overlay, (down) => {
     if (!down || !overlay) return;
     overlay.toggle();
     updateTray();
   }, DEFAULT_OVERLAY_KEY);
-  keys.edit = new PushToTalk(hook, saved.overlayEditKey, (down) => {
+  keys.edit = new PushToTalk(hook, b.edit, (down) => {
     if (!down || !overlay) return;
     overlay.edit(!overlay.editing);
     toPage('overlay:changed', overlay.settings);
@@ -452,10 +459,20 @@ function wireIpc() {
   ipcMain.handle('key:capture', async (e, name) => {
     const k = keys[name];
     if (!fromUs(e) || !(name in keys) || !k || !hookRunning) return null;
+    // One capture at a time: two waiting at once both took the same key.
+    for (const [other, o] of Object.entries(keys)) if (other !== name && o) o.cancelCapture();
+    const before = k.binding;
     const b = await k.captureNext();
-    if (b) writeSettings({ [KEY_SETTING[name]]: b });
+    if (!b) return null;
+    const others = Object.fromEntries(Object.entries(keys).filter(([, o]) => o).map(([n, o]) => [n, o.binding]));
+    const clash = clashOf(others, name, b);
+    if (clash !== null) {
+      k.set(before);
+      return { error: `Phím ${label(b, require('uiohook-napi').UiohookKey)} đang dùng cho "${KEY_TITLE[clash]}" — chọn phím khác.` };
+    }
+    writeSettings({ [KEY_SETTING[name]]: b });
     updateTray();
-    return b ? keyLabel(k) : null;
+    return keyLabel(k);
   });
   // The overlay: voice state in, settings in and out, drag mode, preview.
   ipcMain.on('overlay:state', (e, state) => { if (fromUs(e) && overlay && state && typeof state === 'object') overlay.setVoice(state); });

@@ -649,8 +649,9 @@
   const captureKey = async (which) => {
     capturing = which; renderSettings();
     if (launcher) {
-      await (which === 'ptt' ? launcher.capturePttKey() : launcher.captureRangeKey());
+      const r = await (which === 'ptt' ? launcher.capturePttKey() : launcher.captureRangeKey());
       capturing = null; renderSettings();
+      if (r && r.error) $(which === 'ptt' ? 'ptt-key-name' : 'range-key-name').textContent = r.error;   // already used by another key
     }
   };
   $('ptt-key').addEventListener('click', () => captureKey('ptt'));

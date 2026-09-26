@@ -272,13 +272,15 @@
   });
   $('ov-key').addEventListener('click', async () => {
     $('ov-key-name').textContent = 'bấm một phím hoặc nút chuột…';
-    await L.captureKey('overlay');
+    const r = await L.captureKey('overlay');
     render();
+    if (r && r.error) $('ov-key-name').textContent = r.error;   // already used by another key
   });
   $('ov-edit-key').addEventListener('click', async () => {
     $('ov-edit-key-name').textContent = 'bấm một phím hoặc nút chuột…';
-    await L.captureKey('edit');
+    const r = await L.captureKey('edit');
     render();
+    if (r && r.error) $('ov-edit-key-name').textContent = r.error;
   });
   render();
 })();

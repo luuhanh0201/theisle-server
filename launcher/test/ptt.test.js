@@ -66,3 +66,32 @@ test('range key: ` by default, its own binding next to the talk key', () => {
   assert.deepEqual(talk, []);
   assert.deepEqual(parseBinding({ kind: 'mouse', code: 1 }, DEFAULT_RANGE), DEFAULT_RANGE);
 });
+
+test('two keys on one button: a saved duplicate gets its default back; a clash is found', () => {
+  const { distinctBindings, clashOf, DEFAULT_RANGE } = require('../src/ptt.js');
+  const F8 = { kind: 'key', code: UiohookKey.F8 };
+  const F9 = { kind: 'key', code: UiohookKey.F9 };
+  const W = { kind: 'key', code: UiohookKey.W };
+  // As saved on 2026-09-26: the overlay and its edit mode both on W.
+  const b = distinctBindings([
+    { name: 'ptt', binding: undefined, fallback: DEFAULT_PTT },
+    { name: 'range', binding: undefined, fallback: DEFAULT_RANGE },
+    { name: 'overlay', binding: W, fallback: F8 },
+    { name: 'edit', binding: W, fallback: F9 },
+  ]);
+  assert.deepEqual(b.overlay, W, 'the first keeps its choice');
+  assert.deepEqual(b.edit, F9, 'the repeat goes back to its default');
+  assert.equal(clashOf(b, 'edit', W), 'overlay');
+  assert.equal(clashOf(b, 'overlay', W), null, 'its own key is no clash');
+  assert.equal(clashOf(b, 'edit', { kind: 'mouse', code: 4 }), null);
+});
+
+test('cancelCapture: a waiting capture ends unchanged', async () => {
+  const { hook, ptt } = setup(undefined);
+  const p = ptt.captureNext();
+  ptt.cancelCapture();
+  assert.equal(await p, null);
+  hook.emit('keydown', { keycode: UiohookKey.W });
+  assert.deepEqual(ptt.binding, DEFAULT_PTT);
+  ptt.cancelCapture();   // nothing waiting: no-op
+});

@@ -93,10 +93,39 @@ class PushToTalk {
     });
   }
 
+  /** Stop waiting for a key (another key started its own capture): unchanged. */
+  cancelCapture() {
+    if (this.capture !== null) this.#endCapture(null);
+  }
+
   /** Focus left everything (lock screen, alt-tab mid-press): never stay stuck "talking". */
   release() {
     if (this.held) { this.held = false; this.onChange(false); }
   }
 }
 
-module.exports = { DEFAULT_PTT, DEFAULT_RANGE, label, parseBinding, PushToTalk };
+const sameBinding = (a, b) => Boolean(a && b && a.kind === b.kind && a.code === b.code);
+
+/** The name of another key in `bindings` ({ name: binding }) that already uses `binding`, or null. */
+function clashOf(bindings, name, binding) {
+  for (const [other, b] of Object.entries(bindings)) if (other !== name && sameBinding(b, binding)) return other;
+  return null;
+}
+
+/**
+ * Saved bindings, each key its own: a later key that repeats an earlier one
+ * gets its default back (when that is free). Two keys on one button (the
+ * overlay and its edit mode both on W, 2026-09-26) flipped both at every press.
+ * `wanted`: [{ name, binding, fallback }] in priority order.
+ */
+function distinctBindings(wanted) {
+  const out = {};
+  for (const { name, binding, fallback } of wanted) {
+    let b = parseBinding(binding, fallback);
+    if (clashOf(out, name, b) !== null && clashOf(out, name, fallback) === null) b = fallback;
+    out[name] = b;
+  }
+  return out;
+}
+
+module.exports = { DEFAULT_PTT, DEFAULT_RANGE, clashOf, distinctBindings, label, parseBinding, PushToTalk, sameBinding };
