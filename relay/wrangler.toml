@@ -10,9 +10,9 @@ crons = ["* * * * *"]
 
 [vars]
 # The Discord application's public key (Developer Portal → General Information): not a secret.
-DISCORD_PUBLIC_KEY = ""
+DISCORD_PUBLIC_KEY = "b51b21947f7d31aac0ea7044b4bc01bdd3dbf0f87add80e590a11528ea2a0aed"
 
-# KV_ID is filled in by `wrangler kv namespace create STATE` (relay/README.md).
+# The KV namespace (`wrangler kv namespace create STATE`, 2026-09-26).
 [[kv_namespaces]]
 binding = "STATE"
-id = "KV_ID"
+id = "295b14875e27441f8f5b0d705923d8b6"
