@@ -365,10 +365,15 @@ os.remove(AI_FILE)
 local boar = H.makePawn({ class = "BlueprintGeneratedClass /Game/AI/BP_Boar.BP_Boar_C", health = 40,
                           loc = { X = 1000.4, Y = -2000.6, Z = 300 } })
 local corpse = H.makePawn({ class = "BlueprintGeneratedClass /Game/AI/BP_Deer.BP_Deer_C", health = 0 })
+-- Fish: one among the Pawns, one only found by its class.
+local catfish = H.makePawn({ class = "BP_Catfish_C", health = 5, loc = { X = 50, Y = 60, Z = -100 } })
+local hoplo = H.makePawn({ class = "BP_Hoplo_C", health = 3, loc = { X = 70, Y = 80, Z = -120 } })
 online = { ctrlP }
 _G.FindAllOf = function(cls)
   H.touch("FindAllOf")
-  if cls == "Pawn" then return { pawnP, boar, corpse } end
+  if cls == "Pawn" then return { pawnP, boar, corpse, catfish } end
+  if cls == "BP_Hoplo_C" then return { hoplo } end
+  if cls == "BP_Catfish_C" then return { catfish } end
   return online
 end
 _G.FindFirstOf = function(cls)
@@ -383,8 +388,13 @@ check("live file written", live ~= nil and ai ~= nil)
 check("the player, with position, heading and vitals", live and #live.players == 1
       and live.players[1].id == PR and live.players[1].yaw == 90 and live.players[1].health == 100
       and live.players[1].x == 1, live and require("shared.isle.json").encode(live.players) or "-")
+local fishes = {}
+for _, e in ipairs(ai and ai.list or {}) do if e.f then fishes[#fishes + 1] = e.c end end
+table.sort(fishes)
+check("fish: found among the Pawns and by class, once each, marked and counted apart",
+      ai and ai.fish == 2 and table.concat(fishes, ",") == "BP_Catfish_C,BP_Hoplo_C", ai and require("shared.isle.json").encode(ai) or "-")
 check("player pawns are not AI; the living AI is listed with class and position",
-      ai and ai.count == 1 and #ai.list == 1 and ai.list[1].c:find("BP_Boar", 1, true) ~= nil
+      ai and ai.count == 1 and #ai.list == 3 and ai.list[1].c:find("BP_Boar", 1, true) ~= nil
       and ai.list[1].x == 1000 and ai.list[1].y == -2001 and ai.list[1].hp == 40,
       ai and require("shared.isle.json").encode(ai) or "-")
 check("a corpse (health 0) is counted apart, not shown", ai and ai.dead == 1)

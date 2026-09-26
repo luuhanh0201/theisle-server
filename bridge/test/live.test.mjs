@@ -13,7 +13,7 @@ test('players: well-formed entries pass, junk is dropped', () => {
       { id: 'not-a-steamid', x: 1, y: 2 },
       { id: '76561198000000002', x: 'x', y: 2 },
     ],
-    ai: { t: 999, count: 3, dead: 1, aiAlive: 3, list: [{ c: 'BP_Boar_C', x: 1, y: 2, z: 3, hp: 40 }, { x: 1 }] },
+    ai: { t: 999, count: 3, fish: 4, dead: 1, aiAlive: 3, list: [{ c: 'BP_Boar_C', x: 1, y: 2, z: 3, hp: 40 }, { x: 1 }, { c: 'BP_Catfish_C', x: 5, y: 6, z: -7, hp: 2, f: true }] },
   }), 1001);
   assert.equal(live.stale, false);
   assert.deepEqual(live.players.map((p) => p.steamId), [ME]);
@@ -22,7 +22,8 @@ test('players: well-formed entries pass, junk is dropped', () => {
   assert.equal(live.players[0].vitals.health, 90);
   assert.equal(live.players[0].vitals.thirst, null);
   assert.equal(live.ai.count, 3, 'the count is the mod\'s, even when the list is capped');
-  assert.deepEqual(live.ai.list, [{ c: 'BP_Boar_C', x: 1, y: 2, z: 3, hp: 40 }]);
+  assert.deepEqual(live.ai.list, [{ c: 'BP_Boar_C', x: 1, y: 2, z: 3, hp: 40 }, { c: 'BP_Catfish_C', x: 5, y: 6, z: -7, hp: 2, f: true }]);
+  assert.equal(live.ai.fish, 4, 'fish counted apart');
   assert.equal(livePlayer(live, ME).growth, 0.5);
   assert.equal(livePlayer(live, '76561198000000009'), null);
 });

@@ -354,7 +354,8 @@ export async function handlePlayerApi(
     const ai = (ctx.live ? await ctx.live() : null)?.ai ?? null;
     send(res, 200, ai === null ? { t: null, stale: true, count: 0, list: [] } : {
       t: ai.t, stale: ai.stale, count: ai.count, aiAlive: ai.aiAlive,
-      list: ai.stale ? [] : ai.list.map((a) => ({ s: shortSpecies(a.c), x: a.x, y: a.y })),
+      // Not the fish: they spawn only around a player in the water — a dot on a lake would be a player.
+      list: ai.stale ? [] : ai.list.filter((a) => !a.f).map((a) => ({ s: shortSpecies(a.c), x: a.x, y: a.y })),
     });
     return true;
   }

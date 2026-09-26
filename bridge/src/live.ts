@@ -21,13 +21,15 @@ export interface LivePlayer {
 
 export interface LiveAi {
   t: number;
-  /** AI pawns seen alive (list may be capped; count is not). */
+  /** AI pawns seen alive, fish apart (list may be capped; count is not). */
   count: number;
+  /** The game's ambient fish alive (listed with f: true). */
+  fish: number;
   /** Pawns at 0 health (corpses), counted, not listed. */
   dead: number;
   /** The game's own counter (TIGameStateBase.AIAlive), as a cross-check. */
   aiAlive: number | null;
-  list: Array<{ c: string; x: number; y: number; z: number | null; hp: number | null }>;
+  list: Array<{ c: string; x: number; y: number; z: number | null; hp: number | null; f?: true }>;
   stale: boolean;
 }
 
@@ -66,10 +68,10 @@ function parseAi(raw: unknown, nowS: number): LiveAi | null {
     if (o === null) continue;
     const x = num(o['x']); const y = num(o['y']);
     if (x === null || y === null || typeof o['c'] !== 'string') continue;
-    list.push({ c: o['c'].slice(0, 120), x, y, z: num(o['z']), hp: num(o['hp']) });
+    list.push({ c: o['c'].slice(0, 120), x, y, z: num(o['z']), hp: num(o['hp']), ...(o['f'] === true ? { f: true as const } : {}) });
   }
   return {
-    t, count: num(r['count']) ?? list.length, dead: num(r['dead']) ?? 0, aiAlive: num(r['aiAlive']),
+    t, count: num(r['count']) ?? list.filter((a) => !a.f).length, fish: num(r['fish']) ?? list.filter((a) => a.f).length, dead: num(r['dead']) ?? 0, aiAlive: num(r['aiAlive']),
     list, stale: nowS - t > AI_STALE_AFTER_S,
   };
 }

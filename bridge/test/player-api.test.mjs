@@ -158,12 +158,12 @@ test('home page info: name, slots, a real Discord invite only', () => {
 test('live AI for the map: species and position only', async () => {
   const t3 = Math.floor(Date.now() / 1000);
   const live = { t: t3, stale: false, players: [], ai: { t: t3, stale: false, count: 2, dead: 0, aiAlive: 2,
-    list: [{ c: 'BP_Boar_C', x: 10, y: 20, z: 1, hp: 40 }] } };
+    list: [{ c: 'BP_Boar_C', x: 10, y: 20, z: 1, hp: 40 }, { c: 'BP_Catfish_C', x: 5, y: 5, z: -9, hp: 2, f: true }] } };
   const req = { method: 'GET', headers: { 'x-portal-token': 'portal-secret-token' } };
   let body = '';
   const res = { writeHead: () => {}, end: (b) => { body = b; } };
   await handlePlayerApi(req, res, '/player-api/ai', { store, serverPhase: async () => 'running', live: async () => live });
-  assert.deepEqual(JSON.parse(body), { t: t3, stale: false, count: 2, aiAlive: 2, list: [{ s: 'Boar', x: 10, y: 20 }] });
+  assert.deepEqual(JSON.parse(body), { t: t3, stale: false, count: 2, aiAlive: 2, list: [{ s: 'Boar', x: 10, y: 20 }] }, 'no fish for players');
   await handlePlayerApi(req, res, '/player-api/ai', { store, serverPhase: async () => 'running', live: async () => null });
   assert.deepEqual(JSON.parse(body).list, [], 'no live file: nothing');
 });

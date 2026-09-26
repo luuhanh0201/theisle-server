@@ -99,15 +99,25 @@ local function count()
     local online = 0
     H.forEachPlayer(function() online = online + 1 end)
     if online == 0 then return end
-    local ok, all = pcall(function() return FindAllOf("Pawn") or {} end)
-    local by, total = {}, 0
-    for _, p in ipairs(ok and all or {}) do
-        local okC, n = pcall(function() return p:GetClass():GetFName():ToString() end)
-        n = okC and n and (tostring(n):match("([%w_]+)$") or tostring(n)) or nil
-        if n and FISH[n] then
-            by[n] = (by[n] or 0) + 1
-            total = total + 1
+    -- Among the Pawns and by each fish class (a fish may not be a Pawn), once each.
+    local by, total, seen = {}, 0, {}
+    local function tally(list)
+        for _, p in ipairs(list) do
+            local okC, n = pcall(function() return p:GetClass():GetFName():ToString() end)
+            n = okC and n and (tostring(n):match("([%w_]+)$") or tostring(n)) or nil
+            local okA, addr = pcall(function() return p:GetAddress() end)
+            if n and FISH[n] and okA and addr and addr ~= 0 and not seen[addr] then
+                seen[addr] = true
+                by[n] = (by[n] or 0) + 1
+                total = total + 1
+            end
         end
+    end
+    local ok, all = pcall(function() return FindAllOf("Pawn") or {} end)
+    tally(ok and all or {})
+    for cls in pairs(FISH) do
+        local okF, found = pcall(function() return FindAllOf(cls) or {} end)
+        tally(okF and found or {})
     end
     local ws = spawner()
     census = { t = os.time(), online = online, total = total, species = by,

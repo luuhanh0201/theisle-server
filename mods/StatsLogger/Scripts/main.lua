@@ -525,6 +525,14 @@ local LIVE_FILE      = "live.json"
 local LIVE_EVERY_MS  = 1000
 local AI_EVERY_LIVES = 2      -- AI list every 2nd live read (2 s)
 local AI_MAX         = 500
+-- The game's ambient fish (TIAIWorldSpawner.AIAmbientFishClasses, FishProbe
+-- 2026-09-26): spawned around players in the water. Looked up by class too, not
+-- only among the Pawns, in case a fish is not one; listed with f = true, counted
+-- apart (`fish`), so the map draws them as their own layer.
+local FISH_CLASSES = { "BP_Catfish_C", "BP_Coalecanth_C", "BP_Forktail_C", "BP_Hoplo_C", "BP_Longear_C", "BP_Muskel_C" }
+local FISH_SET = {}
+for _, c in ipairs(FISH_CLASSES) do FISH_SET[c] = true end
+local FISH_MAX = 300
 local readyLive = nil         -- the latest state, written by the async tick
 local lastAi    = nil         -- the last AI scan, repeated between scans
 local liveCount = 0
@@ -553,25 +561,45 @@ local function scanAi(now, playerPawns)
         H.logError(MOD .. ": FindAllOf(Pawn) failed")
         return nil
     end
-    local list, total, dead = {}, 0, 0
-    for _, pawn in ipairs(pawns) do
-        if H.isValid(pawn) then
-            local okA, addr = pcall(function() return pawn:GetAddress() end)
-            if okA and addr ~= 0 and not playerPawns[addr] then
-                local hp = health(pawn)
-                if hp ~= nil and hp <= 0 then
-                    dead = dead + 1           -- a corpse is not AI you can meet
-                else
-                    total = total + 1
-                    local loc = locationOf(pawn)
-                    if loc and #list < AI_MAX then
-                        list[#list + 1] = { c = speciesOf(pawn), x = loc.x, y = loc.y, z = loc.z, hp = hp }
-                    end
-                end
+    local list, total, dead, fish, fishListed = {}, 0, 0, 0, 0
+    local seen = {}
+    local function add(pawn, addr, isFish)
+        seen[addr] = true
+        local hp = health(pawn)
+        if hp ~= nil and hp <= 0 then
+            dead = dead + 1                   -- a corpse is not AI you can meet
+            return
+        end
+        local loc = locationOf(pawn)
+        if isFish then
+            fish = fish + 1
+            if loc and fishListed < FISH_MAX then
+                fishListed = fishListed + 1
+                list[#list + 1] = { c = speciesOf(pawn), x = loc.x, y = loc.y, z = loc.z, hp = hp, f = true }
+            end
+        else
+            total = total + 1
+            if loc and #list - fishListed < AI_MAX then
+                list[#list + 1] = { c = speciesOf(pawn), x = loc.x, y = loc.y, z = loc.z, hp = hp }
             end
         end
     end
-    return { t = now, count = total, dead = dead, aiAlive = aiAliveCounter(), list = list }
+    for _, pawn in ipairs(pawns) do
+        if H.isValid(pawn) then
+            local okA, addr = pcall(function() return pawn:GetAddress() end)
+            if okA and addr ~= 0 and not playerPawns[addr] then add(pawn, addr, FISH_SET[speciesOf(pawn)] == true) end
+        end
+    end
+    for _, cls in ipairs(FISH_CLASSES) do
+        local okF, found = pcall(function() return FindAllOf(cls) or {} end)
+        for _, obj in ipairs(okF and found or {}) do
+            if H.isValid(obj) and speciesOf(obj) == cls then
+                local okA, addr = pcall(function() return obj:GetAddress() end)
+                if okA and addr ~= 0 and not seen[addr] then add(obj, addr, true) end
+            end
+        end
+    end
+    return { t = now, count = total, fish = fish, dead = dead, aiAlive = aiAliveCounter(), list = list }
 end
 
 local function liveOnce()

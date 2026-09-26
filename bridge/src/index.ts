@@ -58,8 +58,8 @@ const tails = [config.eventsPath, config.snapshotsPath].map(
 const metrics = new Metrics(config.dataDir, async () => {
   const live = await readLiveState();
   const fresh = live !== null && !live.stale;
-  // Where the AI stands now is ground the AI zones may spawn on.
-  if (fresh && live.ai && !live.ai.stale) for (const a of live.ai.list) store.groundPoints.add(a.x, a.y, a.z, a.c);
+  // Where the AI stands now is ground the AI zones may spawn on (not a fish: it is under water).
+  if (fresh && live.ai && !live.ai.stale) for (const a of live.ai.list) if (!a.f) store.groundPoints.add(a.x, a.y, a.z, a.c);
   return {
     online: store.online().length,
     fps: fresh ? live.fps : null,
