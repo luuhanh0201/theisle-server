@@ -107,6 +107,14 @@ async function readSmallJson(req: IncomingMessage): Promise<Record<string, unkno
   }
 }
 
+/** An address for the log, not the whole of it: "113.161.x.x", "2405:4802:1d32::…". */
+export function maskIp(ip: string): string {
+  const v4 = /^(?:::ffff:)?(\d+)\.(\d+)\.\d+\.\d+$/.exec(ip);
+  if (v4) return `${v4[1]}.${v4[2]}.x.x`;
+  if (ip.includes(':')) return `${ip.split(':').slice(0, 3).join(':')}::…`;
+  return ip;
+}
+
 function clientIp(req: IncomingMessage, trustProxy: boolean): string {
   if (trustProxy) {
     const fwd = req.headers['x-forwarded-for'];
@@ -203,6 +211,7 @@ export function createPortal(opts: PortalOptions): Server {
       const state = body?.['state'];
       if (typeof state !== 'string' || !STATE_RE.test(state)) { send(res, 400, { error: 'bad state' }); return; }
       const r = launcherLogins.claim(state, ip);
+      if (r.status !== 'pending') console.info(`[launcher-login] claim ${state.slice(0, 8)} from ${maskIp(ip)}: ${r.status}`);
       if (r.status !== 'done') { send(res, r.status === 'pending' ? 200 : 410, { status: r.status }); return; }
       const maxAge = opts.sessionDays * 86400;
       send(res, 200, {
@@ -229,6 +238,7 @@ export function createPortal(opts: PortalOptions): Server {
       if (path === '/auth/launcher/start' && req.method === 'POST') {
         const state = launcherLogins.start(ip);
         if (state === null) { send(res, 503, { error: 'too many logins in progress, try again shortly' }); return; }
+        console.info(`[launcher-login] start ${state.slice(0, 8)} from ${maskIp(ip)} (${String(req.headers['user-agent'] ?? '').slice(0, 60)})`);
         send(res, 200, { state, url: `${opts.baseUrl}/auth/steam?launcher=${state}` });
         return;
       }
@@ -241,6 +251,7 @@ export function createPortal(opts: PortalOptions): Server {
           if (launcher !== null) {
             // A launcher login: back to its page (never the web home), and the launcher is told.
             if (result.steam) launcherLogins.fail(launcher[1] as string);
+            console.info(`[launcher-login] browser ${(launcher[1] as string).slice(0, 8)} from ${maskIp(ip)}: steam refused (${result.steam ? 'steam' : 'refused'})`);
             redirect(res, `/launcher-done.html?error=${result.steam ? 'steam' : 'refused'}`, clear);
             return;
           }
@@ -257,6 +268,7 @@ export function createPortal(opts: PortalOptions): Server {
         const launcher = /^launcher\.([0-9a-f]{64})$/.exec(asked ?? '');
         if (launcher !== null) {
           const r = launcherLogins.complete(launcher[1] as string, result.steamId, ip);
+          console.info(`[launcher-login] browser ${(launcher[1] as string).slice(0, 8)} from ${maskIp(ip)} (${String(req.headers['user-agent'] ?? '').slice(0, 60)}): ${r}`);
           to = r === 'ok' ? '/launcher-done.html' : `/launcher-done.html?error=${r}`;
         }
         redirect(res, to, {
