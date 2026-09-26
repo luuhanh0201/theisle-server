@@ -614,7 +614,7 @@ async function handlePanel(
       const saved = await ctx.discord.save(await readJsonBody(req));
       await ctx.discord.refreshInfo(true);
       // Never the URLs in the audit: names and routes only.
-      const view = (s: typeof saved): Record<string, unknown> => ({ enabled: s.enabled, channels: s.channels.map((c) => c.name), routes: s.routes, relay: s.relay?.url ?? null });
+      const view = (s: typeof saved): Record<string, unknown> => ({ enabled: s.enabled, channels: s.channels.map((c) => c.name), routes: s.routes, mentions: s.mentions, relay: s.relay?.url ?? null });
       await audit({ action: 'Discord log saved', detail: describeChanges(view(before), view(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, { ...(publicView(saved) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
       return;

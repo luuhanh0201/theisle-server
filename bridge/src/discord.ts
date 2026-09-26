@@ -52,10 +52,12 @@ export interface DiscordSettings {
   enabled: boolean;
   channels: DiscordChannel[];
   routes: Partial<Record<DiscordKind, string>>;
+  /** Who a kind of log tags: "everyone", "here", or a role's ID. None = no one. */
+  mentions: Partial<Record<DiscordKind, string>>;
   /** The relay off the VPS (relay/, a Cloudflare Worker): heartbeat, outage alerts, /status. */
   relay: { url: string; secret: string } | null;
 }
-export const DISCORD_DEFAULTS: DiscordSettings = { enabled: false, channels: [], routes: {}, relay: null };
+export const DISCORD_DEFAULTS: DiscordSettings = { enabled: false, channels: [], routes: {}, mentions: {}, relay: null };
 
 const WEBHOOK_RE = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/(\d{15,22})\/([\w-]{20,100})$/;
 const MAX_CHANNELS = 10;
@@ -123,7 +125,16 @@ export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_
       relay = { url, secret };
     }
   }
-  return { enabled: r['enabled'], channels, routes, relay };
+  const mentionsRaw = r['mentions'] ?? {};
+  if (typeof mentionsRaw !== 'object' || mentionsRaw === null || Array.isArray(mentionsRaw)) throw new ValidationError('mentions must be an object');
+  const mentions: DiscordSettings['mentions'] = {};
+  for (const [k, v] of Object.entries(mentionsRaw)) {
+    if (!KIND_KEYS.has(k)) throw new ValidationError(`unknown log kind "${k}"`);
+    if (v === null || v === '') continue;
+    if (typeof v !== 'string' || !/^(everyone|here|\d{15,22})$/.test(v)) throw new ValidationError(`${k}: tag everyone, here or a role ID (số)`);
+    mentions[k as DiscordKind] = v;
+  }
+  return { enabled: r['enabled'], channels, routes, mentions, relay };
 }
 
 export async function readDiscord(): Promise<DiscordSettings> {
@@ -137,7 +148,7 @@ export async function readDiscord(): Promise<DiscordSettings> {
 /** What the panel sees: the URLs only as hints. */
 export function publicView(s: DiscordSettings): unknown {
   return {
-    enabled: s.enabled, routes: s.routes, channels: s.channels.map((c) => ({ id: c.id, name: c.name, hint: maskUrl(c.url) })),
+    enabled: s.enabled, routes: s.routes, mentions: s.mentions, channels: s.channels.map((c) => ({ id: c.id, name: c.name, hint: maskUrl(c.url) })),
     relay: s.relay ? { url: s.relay.url, hasSecret: true } : null,
   };
 }
@@ -260,6 +271,14 @@ export function phaseLine(from: string | null, to: string, t: number, planned: b
 
 // --- the sender ---------------------------------------------------------------
 
+/** The message text and allowed_mentions for a kind's tag (settings.mentions). */
+export function mentionOf(m: string | undefined): { content: string; allowed: Record<string, unknown> } | null {
+  if (m === 'everyone') return { content: '@everyone', allowed: { parse: ['everyone'] } };
+  if (m === 'here') return { content: '@here', allowed: { parse: ['everyone'] } };
+  if (m !== undefined && /^\d{15,22}$/.test(m)) return { content: `<@&${m}>`, allowed: { parse: [], roles: [m] } };
+  return null;
+}
+
 interface Queued { ch: string; kind: DiscordKind; text: string; t: number }
 export interface ChannelState { queued: number; lastOkAt: number | null; lastError: string | null; waitUntil: number }
 /** What Discord says about a webhook (GET on its URL): its name and the channel it posts in. */
@@ -368,13 +387,17 @@ export class DiscordLog {
       for (const c of this.#settings.channels) {
         const st = this.#stateOf(c.id);
         if (st.waitUntil > now) continue;
+        // A line that tags someone goes alone (the tag is the message's text); the others together.
         const batch: Queued[] = [];
         let chars = 0;
         for (const q of this.#queue) {
           if (q.ch !== c.id) continue;
+          const tags = this.#settings.mentions[q.kind] !== undefined;
+          if (tags && batch.length > 0) break;
           if (batch.length >= PER_MESSAGE || chars + q.text.length > MESSAGE_CHARS) break;
           batch.push(q);
           chars += q.text.length;
+          if (tags) break;
         }
         if (batch.length === 0) continue;
         const result = await this.#send(c.url, batch);
@@ -401,9 +424,12 @@ export class DiscordLog {
     const ch = batch[0]?.ch ?? '';
     const st = this.#stateOf(ch);
     const now = this.#now();
+    const tag = batch.length === 1 ? mentionOf(this.#settings.mentions[(batch[0] as Queued).kind]) : null;
     const body = JSON.stringify({
       // No username / avatar: the webhook's own, as set in Discord, are shown.
-      allowed_mentions: { parse: [] },
+      // Only the tag the admin chose can ping; text in embeds never does.
+      ...(tag ? { content: tag.content } : {}),
+      allowed_mentions: tag ? tag.allowed : { parse: [] },
       embeds: batch.map((q) => ({ description: q.text, color: COLORS[q.kind], timestamp: new Date(q.t * 1000).toISOString() })),
     });
     try {

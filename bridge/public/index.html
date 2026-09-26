@@ -546,11 +546,15 @@
   .dc-eye:hover, .dc-eye.on { opacity: 1; }
   .dc-ch .st { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: -4px; }
   .dc-ch .st.err { color: var(--kill); }
-  .dc-routes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px 24px; }
+  .dc-routes { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 8px 24px; }
+  .dc-route [data-dc-tag], .dc-route [data-dc-tag] + .cs-btn { width: 130px; flex: none; }
+  .dc-route { flex-wrap: wrap; }
+  .dc-route > span { flex: 1 1 140px; min-width: 140px; }
+  .dc-route input[data-dc-role] { width: 170px; flex: none; margin-left: auto; padding: 7px 10px; font-size: 12.5px; }
   .dc-routes .g { grid-column: 1 / -1; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
   .dc-route { display: flex; align-items: center; gap: 10px; }
   .dc-route > span { flex: 1; font-size: 13px; }
-  .dc-route .cs-btn, .dc-route select { width: 190px; flex: none; }
+  .dc-route .cs-btn, .dc-route select { width: 170px; flex: none; }
   @media (max-width: 640px) { .dc-ch { grid-template-columns: 1fr auto auto; } .dc-ch input.nm { grid-column: 1 / -1; } }
   .dd-live { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .dd-state { font-size: 14px; font-weight: 600; min-width: 260px; }
@@ -1703,10 +1707,13 @@
             </details></div>
         </section>
         <section class="card" style="margin-top:16px">
-          <div class="card-head"><h2>Loại log → kênh</h2>
+          <div class="card-head"><h2>Loại log → kênh · tag</h2>
             <span class="row" style="margin-left:auto;gap:8px;flex:none;align-items:center"><span class="muted" style="font-size:12.5px">Tất cả vào</span>
               <select id="dc-all" style="width:180px"></select></span></div>
-          <div class="card-body"><div class="dc-routes" id="dc-routes"></div></div>
+          <div class="card-body"><div class="dc-routes" id="dc-routes"></div>
+            <div class="step-hint" style="margin-top:10px">Tag: tin loại đó được gửi riêng kèm <b>@everyone</b> / <b>@here</b> / role. ID role: trong Discord bật
+              <b>Cài đặt người dùng → Nâng cao → Chế độ nhà phát triển</b>, rồi <b>Cài đặt máy chủ → Vai trò</b> → chuột phải role → <b>Sao chép ID</b>.
+              Chữ người chơi gõ (chat, tên) không bao giờ tag được ai.</div></div>
         </section>
         <section class="card" style="margin-top:16px">
           <div class="card-head"><h2>Trạm ngoài VPS</h2><span class="sub">Cloudflare Worker · báo mất kết nối, lệnh /status /online</span></div>
@@ -5484,7 +5491,7 @@ async function loadDiscord(rebuild = false) {
   const d = await getJson('/api/discord');
   dc.data = d;
   if (!dc.draft || (rebuild && !dc.dirty)) {
-    dc.draft = { enabled: d.enabled, routes: { ...d.routes }, channels: d.channels.map((c) => ({ id: c.id, name: c.name, hint: c.hint, url: '' })),
+    dc.draft = { enabled: d.enabled, routes: { ...d.routes }, mentions: { ...(d.mentions ?? {}) }, channels: d.channels.map((c) => ({ id: c.id, name: c.name, hint: c.hint, url: '' })),
       relay: { url: d.relay?.url ?? '', secret: '', hasSecret: d.relay?.hasSecret === true } };
     renderDiscord();
   } else {
@@ -5545,7 +5552,12 @@ function renderDiscord() {
   $('dc-routes').innerHTML = dc.data.kinds.map((k) => {
     const head = k.group !== group ? `<div class="g">${esc(k.group)}</div>` : '';
     group = k.group;
-    return `${head}<label class="dc-route"><span>${esc(k.label)}</span><select data-dc-kind="${esc(k.key)}">${opts(d.routes[k.key])}</select></label>`;
+    const m = d.mentions[k.key] ?? '';
+    const role = /^\d+$/.test(m);
+    return `${head}<div class="dc-route"><span>${esc(k.label)}</span><select data-dc-kind="${esc(k.key)}" aria-label="Kênh">${opts(d.routes[k.key])}</select>
+      <select data-dc-tag="${esc(k.key)}" aria-label="Tag"><option value="">không tag</option><option value="everyone"${m === 'everyone' ? ' selected' : ''}>@everyone</option>
+        <option value="here"${m === 'here' ? ' selected' : ''}>@here</option><option value="role"${role ? ' selected' : ''}>tag role…</option></select>
+      <input data-dc-role="${esc(k.key)}" inputmode="numeric" placeholder="ID role" value="${role ? esc(m) : ''}"${role ? '' : ' hidden'} aria-label="ID role"></div>`;
   }).join('');
   renderDiscordStatus();
 }
@@ -5617,9 +5629,26 @@ $('dc-channels').addEventListener('click', (e) => {
   });
 });
 $('dc-routes').addEventListener('change', (e) => {
+  const tagKind = e.target.dataset.dcTag;
+  if (tagKind) {
+    const v = e.target.value;
+    const roleInput = $('dc-routes').querySelector(`input[data-dc-role="${CSS.escape(tagKind)}"]`);
+    roleInput.hidden = v !== 'role';
+    if (v === 'role') { roleInput.focus(); if (/^\d+$/.test(roleInput.value)) dc.draft.mentions[tagKind] = roleInput.value; else delete dc.draft.mentions[tagKind]; }
+    else if (v) dc.draft.mentions[tagKind] = v; else delete dc.draft.mentions[tagKind];
+    markDc();
+    return;
+  }
   const k = e.target.dataset.dcKind;
   if (!k) return;
   if (e.target.value) dc.draft.routes[k] = e.target.value; else delete dc.draft.routes[k];
+  markDc();
+});
+$('dc-routes').addEventListener('input', (e) => {
+  const k = e.target.dataset.dcRole;
+  if (!k) return;
+  const v = e.target.value.trim();
+  if (/^\d{15,22}$/.test(v)) dc.draft.mentions[k] = v; else delete dc.draft.mentions[k];
   markDc();
 });
 $('dc-all').addEventListener('change', () => {
@@ -5632,7 +5661,7 @@ $('dc-all').addEventListener('change', () => {
 });
 $('dc-save').addEventListener('click', () => withToken('lưu Discord', async (token) => {
   const r = dc.draft.relay;
-  const body = { enabled: dc.draft.enabled, routes: dc.draft.routes,
+  const body = { enabled: dc.draft.enabled, routes: dc.draft.routes, mentions: dc.draft.mentions,
     channels: dc.draft.channels.map((c) => ({ id: c.id, name: c.name, ...(c.url ? { url: c.url } : {}) })),
     relay: r.url ? { url: r.url, ...(r.secret ? { secret: r.secret } : {}) } : null };
   await adminFetch('/api/discord', 'PUT', token, body);

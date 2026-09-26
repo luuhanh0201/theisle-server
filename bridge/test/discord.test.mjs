@@ -115,6 +115,28 @@ test('sender: batched per channel, a replay not sent, 429 and outages wait, a de
   assert.match(log.status().channels.aa.lastError, /webhook không còn/);
 });
 
+test('tags: the kinds the admin chose tag everyone / here / a role, alone in their message; nothing else pings', async () => {
+  const { mentionOf } = await import('../dist/discord.js');
+  assert.deepEqual(mentionOf('everyone'), { content: '@everyone', allowed: { parse: ['everyone'] } });
+  assert.deepEqual(mentionOf('123456789012345678'), { content: '<@&123456789012345678>', allowed: { parse: [], roles: ['123456789012345678'] } });
+  assert.equal(mentionOf(undefined), null);
+  assert.throws(() => validateDiscord({ enabled: true, mentions: { ban: '@all' } }), /tag everyone/);
+  const d = fakeDiscord();
+  const log = new DiscordLog({ startedAt: 1, fetch: d.fetch });
+  await log.load();
+  await log.save({ enabled: true, channels: [{ id: 'aa', name: 'x', url: URL1 }], routes: { chat: 'aa', ban: 'aa' }, mentions: { ban: 'everyone' } });
+  log.post({ kind: 'chat', t: 5, text: 'c1' });
+  log.post({ kind: 'chat', t: 5, text: 'c2' });
+  log.post({ kind: 'ban', t: 5, text: 'b1' });
+  log.post({ kind: 'chat', t: 5, text: 'c3' });
+  await log.tick(); await log.tick(); await log.tick();
+  assert.deepEqual(d.calls.map((c) => [c.body.content ?? null, c.body.embeds.map((e) => e.description)]), [
+    [null, ['c1', 'c2']], ['@everyone', ['b1']], [null, ['c3']],
+  ]);
+  assert.deepEqual(d.calls[1].body.allowed_mentions, { parse: ['everyone'] });
+  assert.deepEqual(d.calls[0].body.allowed_mentions, { parse: [] });
+});
+
 test('the queue is on disk: a restart does not lose what was not sent', async () => {
   const d = fakeDiscord();
   const a = new DiscordLog({ startedAt: 1, fetch: d.fetch });
