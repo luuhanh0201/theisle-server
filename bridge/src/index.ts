@@ -22,6 +22,8 @@ import { DiscordLog, auditLine, banLine, lineOf, phaseLine, plain } from './disc
 import { BanWatcher, banVars } from './bans.js';
 import { alertWebhookOf, sendHeartbeat } from './relay.js';
 import { readLive } from './gameini.js';
+import { DdosWatch, SAMPLE_S, defaultIface, endText, parseNetDev, readDdos, startText } from './ddos.js';
+import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
 import { auditListeners } from './audit.js';
 
@@ -119,6 +121,32 @@ setInterval(() => {
   discord.tick().catch((error: unknown) => console.error('[discord] send failed:', error));
 }, 2_000);
 
+// DDoS watch (ddos.ts): the traffic into the VPS every SAMPLE_S; an attack and
+// its end told on Discord (log kind "ddos"). The settings are re-read on save.
+const ddos = { watch: new DdosWatch(), settings: await readDdos(), iface: process.env['NET_IFACE'] ?? null as string | null };
+if (ddos.iface === null) ddos.iface = defaultIface(await readFile('/proc/net/route', 'utf8').catch(() => ''));
+console.info(`[ddos] watching ${ddos.iface ?? '(no interface found)'}`);
+setInterval(() => {
+  if (ddos.iface === null) return;
+  readFile('/proc/net/dev', 'utf8').then(async (text) => {
+    const c = parseNetDev(text, ddos.iface as string);
+    if (c === null) return;
+    const online = store.online().length;
+    for (const e of ddos.watch.feed(Math.floor(Date.now() / 1000), c, ddos.settings, online)) {
+      if (e.kind === 'start') {
+        const live = await readLiveState().catch(() => null);
+        discord.post({ kind: 'ddos', t: e.now.t, text: startText(e, online, live && !live.stale ? live.fps : null) });
+        console.warn(`[ddos] attack: ${e.now.pps} pkt/s, ${e.now.mbps} Mbit/s`);
+        void heartbeat().catch(() => undefined);      // the relay learns it now, not in 2 minutes
+      } else {
+        discord.post({ kind: 'ddos', t: e.at, text: endText(e) });
+        console.warn(`[ddos] ended, peak ${e.attack.peakPps} pkt/s`);
+        void heartbeat().catch(() => undefined);
+      }
+    }
+  }).catch((error: unknown) => console.error('[ddos] read failed:', error));
+}, SAMPLE_S * 1000);
+
 // The relay off the VPS (relay/): a heartbeat every 2 minutes (relay.ts).
 async function heartbeat(): Promise<void> {
   const relay = discord.settings.relay;
@@ -136,6 +164,7 @@ async function heartbeat(): Promise<void> {
     fps: fresh ? live.fps : null,
     ai: fresh && live.ai && !live.ai.stale ? live.ai.count : null,
     alertWebhook: alertWebhookOf(discord.settings),
+    attack: ddos.watch.attack ? { since: ddos.watch.attack.since, peakPps: ddos.watch.attack.peakPps, peakMbps: ddos.watch.attack.peakMbps } : null,
   }, discord.relayState);
 }
 setInterval(() => { heartbeat().catch((error: unknown) => console.error('[relay] heartbeat failed:', error)); }, 120_000);
@@ -177,7 +206,7 @@ setInterval(() => {
 }, 10_000);
 void bans.tick();
 
-startServer({ store, power, rcon, metrics, aiReset, discord, bans, ...(voice ? { voice } : {}) });
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, ...(voice ? { voice } : {}) });
 
 // AI zones: keep the ground points on disk and hand the mod the points found
 // since (a zone drawn where nobody had been yet gets spots as people go there).

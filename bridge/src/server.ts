@@ -31,6 +31,7 @@ import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
 import { readSanctuaries, readZoneGuard, saveZoneGuard, syncZoneGuard } from './zone-guard.js';
 import { DISCORD_KINDS, banChangeLine, publicView, type DiscordLog } from './discord.js';
 import { registerCommands } from './relay.js';
+import { saveDdos, type DdosSettings, type DdosWatch } from './ddos.js';
 import {
   PERMANENT_HOURS, banPlayer, banVars, durationText, formatGameTime, parseGameTime, readBans, readReasons, saveReasons, validateBan, validateBanEdit,
   type BanWatcher,
@@ -190,6 +191,7 @@ export interface Ctx {
   aiReset?: AiReset;
   discord?: DiscordLog;
   bans?: BanWatcher;
+  ddos?: { watch: DdosWatch; settings: DdosSettings; iface: string | null };
 }
 
 /** Everything the Server tab shows, in one call. */
@@ -297,6 +299,12 @@ async function handlePanel(
     sendJson(res, 200, { bans: list, reasons: await readReasons(), permanentHours: PERMANENT_HOURS, rcon: ctx.rcon.enabled, admins });
     return;
   }
+  if (path === '/api/ddos' && req.method === 'GET') {
+    if (!ctx.ddos) { sendJson(res, 503, { error: 'DDoS watch is not running' }); return; }
+    const d = ctx.ddos;
+    sendJson(res, 200, { ...d.settings, iface: d.iface, attack: d.watch.attack, history: d.watch.history.slice(-60) });
+    return;
+  }
   if (path === '/api/discord/url' && req.method === 'GET') {
     // One saved webhook URL, shown to an admin who asked (the eye on the panel); logged.
     const c = ctx.discord?.settings.channels.find((x) => x.id === url.searchParams.get('channel'));
@@ -354,6 +362,7 @@ async function handlePanel(
       (path === '/api/ban-reasons' && req.method === 'PUT') ||
       (path === '/api/discord/test' && req.method === 'POST') ||
       (path === '/api/discord/register-commands' && req.method === 'POST') ||
+      (path === '/api/ddos' && req.method === 'PUT') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
       (path === '/api/fish-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
@@ -571,6 +580,16 @@ async function handlePanel(
       const saved = await saveReasons(((await readJsonBody(req)) as { reasons?: unknown }).reasons);
       await audit({ action: 'ban reasons saved', detail: describeChanges({ reasons: before }, { reasons: saved }) || 'không đổi gì', ok: true });
       sendJson(res, 200, { reasons: saved });
+      return;
+    }
+
+    if (path === '/api/ddos') {
+      if (!ctx.ddos) { sendJson(res, 503, { error: 'DDoS watch is not running' }); return; }
+      const before = ctx.ddos.settings;
+      const saved = await saveDdos(await readJsonBody(req));
+      ctx.ddos.settings = saved;
+      await audit({ action: 'DDoS alert settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
       return;
     }
 

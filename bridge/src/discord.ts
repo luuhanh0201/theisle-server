@@ -26,7 +26,7 @@ import type { AuditEntry } from './audit.js';
 
 export type DiscordKind =
   | 'join' | 'leave' | 'chat' | 'kill' | 'death' | 'spawn' | 'growth' | 'mutation'
-  | 'garage' | 'adminKill' | 'ban' | 'server' | 'announce' | 'admin';
+  | 'garage' | 'adminKill' | 'ban' | 'server' | 'ddos' | 'announce' | 'admin';
 
 export const DISCORD_KINDS: ReadonlyArray<{ key: DiscordKind; group: string; label: string }> = [
   { key: 'join', group: 'Người chơi', label: 'Vào server' },
@@ -42,6 +42,7 @@ export const DISCORD_KINDS: ReadonlyArray<{ key: DiscordKind; group: string; lab
   { key: 'ban', group: 'Quản trị', label: 'Ban, gỡ ban, sửa ban (lý do, ngày, người làm)' },
   { key: 'admin', group: 'Quản trị', label: 'Nhật ký admin (mọi thao tác trên panel)' },
   { key: 'server', group: 'Server', label: 'Server bật / tắt / lỗi' },
+  { key: 'ddos', group: 'Server', label: 'Nghi bị DDoS (lưu lượng vào bất thường) và lúc hết' },
   { key: 'announce', group: 'Server', label: 'Thông báo toàn server (RCON)' },
 ];
 const KIND_KEYS: ReadonlySet<string> = new Set(DISCORD_KINDS.map((k) => k.key));
@@ -165,7 +166,7 @@ function duration(s: number | undefined): string {
 
 export const COLORS: Record<DiscordKind, number> = {
   join: 0x22c55e, leave: 0x64748b, chat: 0x60a5fa, kill: 0xef4444, death: 0x94a3b8, spawn: 0x10b981,
-  growth: 0x84cc16, mutation: 0xa855f7, garage: 0xf59e0b, adminKill: 0xf97316, ban: 0xdc2626, server: 0x0ea5e9, announce: 0xeab308, admin: 0x6366f1,
+  growth: 0x84cc16, mutation: 0xa855f7, garage: 0xf59e0b, adminKill: 0xf97316, ban: 0xdc2626, ddos: 0xb91c1c, server: 0x0ea5e9, announce: 0xeab308, admin: 0x6366f1,
 };
 
 export interface LogLine { kind: DiscordKind; text: string; t: number }

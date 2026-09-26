@@ -552,6 +552,12 @@
   .dc-route > span { flex: 1; font-size: 13px; }
   .dc-route .cs-btn, .dc-route select { width: 190px; flex: none; }
   @media (max-width: 640px) { .dc-ch { grid-template-columns: 1fr auto auto; } .dc-ch input.nm { grid-column: 1 / -1; } }
+  .dd-live { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .dd-state { font-size: 14px; font-weight: 600; min-width: 260px; }
+  .dd-state.hit { color: var(--kill); }
+  .dd-spark { flex: 1; min-width: 200px; height: 48px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border); }
+  .az-grid.dd-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 640px) { .az-grid.dd-grid { grid-template-columns: 1fr; } }
   .ops-sec { margin-top: 26px; scroll-margin-top: 16px; }
   .rd-verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
   .rd-verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
@@ -1547,6 +1553,26 @@
                 <button type="button" class="btn" id="sch-save">Lưu lịch</button>
               </div>
               <div class="step-hint">Giờ theo múi giờ của VPS (<span id="sch-tz"></span>). Người chơi được báo đếm ngược qua RCON.</div>
+            </div>
+          </section>
+      </div>
+
+      <div id="ops-ddos" class="ops-sec">
+          <section class="card">
+            <div class="card-head"><h2>Cảnh báo DDoS</h2><span class="sub" id="dd-iface"></span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="dd-live"><div id="dd-state" class="dd-state"></div><svg id="dd-spark" class="dd-spark" viewBox="0 0 300 48" preserveAspectRatio="none" aria-hidden="true"></svg></div>
+              <label class="az-row" style="justify-content:flex-start;gap:8px"><input type="checkbox" id="dd-enabled"> <b>Báo khi lưu lượng vào server bất thường</b></label>
+              <div class="az-grid dd-grid">
+                <label>Từ (gói/giây)<input id="dd-pps" type="number" min="1000" step="1000"></label>
+                <label>hoặc từ (Mbit/s)<input id="dd-mbps" type="number" min="1" step="5"></label>
+                <label>kéo dài ít nhất (giây)<input id="dd-sustain" type="number" min="5" max="600" step="5"></label>
+              </div>
+              <div class="row"><button type="button" class="btn-soft" id="dd-save">Lưu cảnh báo DDoS</button></div>
+              <div class="step-hint">Bridge đo lưu lượng vào card mạng của VPS mỗi 5 giây. Vượt ngưỡng đủ lâu → tin <b>"🚨 Nghi bị DDoS"</b> lên Discord
+                (loại log "DDoS", chọn kênh ở <a href="#admin/discord">Quản trị → Discord</a>), hết → <b>"✅ Hết lưu lượng bất thường"</b> kèm thời gian và đỉnh;
+                lệnh <b>/status</b> cũng báo đang bị tấn công. Mạng nghẽn tới mức VPS không gửi được: tin được gửi bù, trạm ngoài VPS báo "Mất kết nối".
+                Cảnh báo không chặn được tấn công — chặn là việc của nhà cung cấp VPS (chống DDoS cho cổng game UDP).</div>
             </div>
           </section>
       </div>
@@ -6041,6 +6067,44 @@ function renderReadiness(r) {
     : 'Chưa có người chơi nào vào kể từ khi bridge chạy.';
 }
 
+// --- Server → Vận hành → Cảnh báo DDoS (bridge/src/ddos.ts) ---
+let ddDirty = false;
+let ddLoaded = false;
+const fmtN = (x) => Math.round(x).toLocaleString('vi-VN');
+async function loadDdos() {
+  const d = await getJson('/api/ddos');
+  $('dd-iface').textContent = d.iface ? `card mạng ${d.iface} · mỗi 5 giây` : 'không tìm thấy card mạng';
+  const last = d.history.at(-1);
+  const a = d.attack;
+  $('dd-state').className = `dd-state${a ? ' hit' : ''}`;
+  $('dd-state').innerHTML = a
+    ? `🚨 Đang có lưu lượng bất thường từ ${esc(dateTime(a.since))} — đỉnh ${fmtN(a.peakPps)} gói/s · ${a.peakMbps} Mbit/s`
+    : last ? `Bình thường · vào ${fmtN(last.pps)} gói/s · ${last.mbps} Mbit/s · ra ${last.outMbps} Mbit/s` : 'Đang đo…';
+  // The last 5 minutes of incoming packets/s, the threshold as a dashed line.
+  const hs = d.history;
+  const max = Math.max(d.pps * 1.2, ...hs.map((x) => x.pps), 1);
+  const pts = hs.map((x, i) => `${(i / Math.max(1, hs.length - 1)) * 300},${48 - (x.pps / max) * 44 - 2}`).join(' ');
+  const ty = 48 - (d.pps / max) * 44 - 2;
+  $('dd-spark').innerHTML = `<line x1="0" x2="300" y1="${ty}" y2="${ty}" stroke="var(--kill)" stroke-dasharray="4 4" stroke-width="1" opacity=".6"/>`
+    + (hs.length > 1 ? `<polyline points="${pts}" fill="none" stroke="${a ? 'var(--kill)' : 'var(--accent)'}" stroke-width="2"/>` : '');
+  $('dd-spark').setAttribute('aria-label', 'gói/giây 5 phút qua');
+  if (!ddDirty || !ddLoaded) {
+    $('dd-enabled').checked = d.enabled;
+    for (const [id, k] of [['dd-pps', 'pps'], ['dd-mbps', 'mbps'], ['dd-sustain', 'sustainSec']]) if (document.activeElement !== $(id)) $(id).value = d[k];
+    ddLoaded = true;
+  }
+}
+for (const id of ['dd-enabled', 'dd-pps', 'dd-mbps', 'dd-sustain']) $(id).addEventListener('input', () => { ddDirty = true; });
+$('dd-save').addEventListener('click', () => withToken('lưu cảnh báo DDoS', async (token) => {
+  await adminFetch('/api/ddos', 'PUT', token, {
+    enabled: $('dd-enabled').checked, pps: Math.round(Number($('dd-pps').value)), mbps: Math.round(Number($('dd-mbps').value)),
+    sustainSec: Math.round(Number($('dd-sustain').value)),
+  });
+  ddDirty = false;
+  toast('Đã lưu cảnh báo DDoS.');
+  await loadDdos();
+}));
+
 async function refreshServerTab() {
   const [status, cfg, readiness] = await Promise.all([
     getJson('/api/server/status'),
@@ -6051,6 +6115,7 @@ async function refreshServerTab() {
   ]);
   renderServer(status);
   renderReadiness(readiness);
+  loadDdos().catch(() => undefined);
 
   if (cfg && !cfgDirty) renderConfig(cfg);
 }
@@ -6447,7 +6512,7 @@ const getJson = (url) => fetch(url).then((r) => {
 // [block, sub-page (null = the whole block), is it changed?, its save, name]
 const DIRTY = [
   ['server', 'cfg', () => cfgDirty, () => $('cfg-form').requestSubmit(), 'Cấu hình game'],
-  ['server', 'ops', () => schDraft !== null, () => $('sch-save').click(), 'Lịch khởi động lại'],
+  ['server', 'ops', () => schDraft !== null || ddDirty, () => { if (schDraft !== null) $('sch-save').click(); if (ddDirty) $('dd-save').click(); }, 'Lịch khởi động lại / Cảnh báo DDoS'],
   ['garage', 'settings', () => gsDirty, () => $('gs-save').click(), 'Cài đặt gara'],
   ['mods', 'commands', () => pcDirty, () => $('pc-save').click(), 'Lệnh chat'],
   ['mods', 'ptera', () => ptDirty, () => $('pt-save').click(), 'Ptera gắp'],

@@ -64,6 +64,9 @@ test('/status and /online, live and while unreachable', () => {
   assert.match(onlineText(s, 1010), /2 người online.*Rex, Bé\\_Ba/s);
   assert.match(onlineText(s, 1000 + STALE_S + 1), /Mất kết nối/);
   assert.match(onlineText(null, 1), /Chưa nhận/);
+  const hit = cleanHeartbeat({ serverName: 'XG', phase: 'running', online: 1, attack: { since: 990, peakPps: 180000, peakMbps: 900 } }, 1000) as never;
+  assert.match(String(statusEmbed(hit, 1010).description), /Đang bị DDoS.*<t:990:R>.*180\.000 gói\/s · 900 Mbit\/s/s);
+  assert.equal((cleanHeartbeat({ attack: 'x' }, 1) as { attack: unknown }).attack, null);
 });
 
 test('interactions: a bad signature refused; PING; /status answered from KV', async () => {

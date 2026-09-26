@@ -21,6 +21,8 @@ export interface Heartbeat {
   fps: number | null;
   ai: number | null;
   alertWebhook: string | null;
+  /** A DDoS going on now (ddos.ts), or null. */
+  attack: { since: number; peakPps: number; peakMbps: number } | null;
 }
 
 export interface RelayState { lastOkAt: number | null; lastError: string | null }

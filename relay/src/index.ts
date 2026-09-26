@@ -34,6 +34,8 @@ export interface ServerState {
   ai: number | null;
   /** Where to post "unreachable" / "back": the Discord webhook of the server-status log. */
   alertWebhook: string | null;
+  /** A DDoS the bridge sees going on (bridge/src/ddos.ts), or null. */
+  attack: { since: number; peakPps: number; peakMbps: number } | null;
   /** Set once the outage was told, cleared by the next heartbeat. */
   alertedAt?: number;
 }
@@ -71,7 +73,15 @@ export function cleanHeartbeat(raw: unknown, now: number): ServerState | null {
     fps: num(r['fps']),
     ai: num(r['ai']),
     alertWebhook: WEBHOOK_RE.test(hook) ? hook : null,
+    attack: attackOf(r['attack']),
   };
+}
+
+function attackOf(v: unknown): ServerState['attack'] {
+  if (typeof v !== 'object' || v === null) return null;
+  const o = v as Record<string, unknown>;
+  const since = num(o['since']);
+  return since === null ? null : { since, peakPps: num(o['peakPps']) ?? 0, peakMbps: num(o['peakMbps']) ?? 0 };
 }
 
 /** Player text as plain text in Discord. */
@@ -92,10 +102,11 @@ export function statusEmbed(s: ServerState | null, now: number): Record<string, 
   ];
   return {
     title: plain(s.serverName),
-    description: stale
+    description: (stale
       ? `🔴 **Mất kết nối** — tín hiệu cuối <t:${s.t}:R> (<t:${s.t}:f>). VPS có thể đang sập, mất mạng hoặc bị DDoS.`
-      : `${PHASE[s.phase] ?? plain(s.phase)} · cập nhật <t:${s.t}:R>`,
-    color: stale ? 0xef4444 : s.phase === 'running' ? 0x22c55e : 0xf59e0b,
+      : `${PHASE[s.phase] ?? plain(s.phase)} · cập nhật <t:${s.t}:R>`)
+      + (s.attack ? `\n🚨 **Đang bị DDoS** từ <t:${s.attack.since}:R> — đỉnh ${Math.round(s.attack.peakPps).toLocaleString('vi-VN')} gói/s · ${s.attack.peakMbps} Mbit/s` : ''),
+    color: stale || s.attack ? 0xef4444 : s.phase === 'running' ? 0x22c55e : 0xf59e0b,
     fields: stale ? [{ name: 'Lần cuối', value: `${s.online} người online`, inline: true }] : fields,
   };
 }
