@@ -562,6 +562,20 @@
   .dd-spark { flex: 1; min-width: 200px; height: 48px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border); }
   .az-grid.dd-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   @media (max-width: 640px) { .az-grid.dd-grid { grid-template-columns: 1fr; } }
+  /* On / off: a switch, not a tick (a tick stays for choosing several things). */
+  input[type=checkbox].switch.switch {
+    appearance: none; -webkit-appearance: none; flex: none; position: relative; margin: 0; padding: 0; border: 0;
+    width: 36px !important; min-width: 36px !important; max-width: 36px !important; height: 20px !important; flex: none !important; border-radius: 999px; cursor: pointer;
+    background: var(--border-strong); box-shadow: inset 0 0 0 1px var(--border); transition: background .15s;
+  }
+  input[type=checkbox].switch.switch::before {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(2, 6, 23, .35); transition: transform .15s;
+  }
+  input[type=checkbox].switch.switch:checked { background: var(--accent); box-shadow: none; }
+  input[type=checkbox].switch.switch:checked::before { transform: translateX(16px); }
+  input[type=checkbox].switch.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=checkbox].switch.switch:disabled { opacity: .5; cursor: not-allowed; }
   .ops-sec { margin-top: 26px; scroll-margin-top: 16px; }
   .rd-verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
   .rd-verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
@@ -1061,8 +1075,8 @@
 
           <!-- AI zones (mod AIZones) -->
           <div class="side-pane az" data-pane="zones" id="az-card">
-            <label class="az-row"><input type="checkbox" id="az-enabled"> <b>Bật vùng AI</b></label>
-            <label class="az-row"><input type="checkbox" id="az-ambient"> AI game tự sinh quanh người chơi</label>
+            <label class="az-row"><input type="checkbox" class="switch" id="az-enabled"> <b>Bật vùng AI</b></label>
+            <label class="az-row"><input type="checkbox" class="switch" id="az-ambient"> AI game tự sinh quanh người chơi</label>
             <div class="az-row"><label for="az-global">Tổng AI toàn server tối đa</label>
               <input id="az-global" type="number" min="0" max="5000" step="10" style="width:90px"></div>
             <div class="step-hint" id="az-status"></div>
@@ -1083,7 +1097,7 @@
             <ul class="az-list" id="az-list"></ul>
             <div class="az-edit" id="az-edit" hidden>
               <div class="az-row"><input id="az-name" maxlength="40" aria-label="Tên vùng" placeholder="Tên vùng">
-                <label class="az-row" style="flex:none"><input type="checkbox" id="az-zenabled"> Bật</label></div>
+                <label class="az-row" style="flex:none"><input type="checkbox" class="switch" id="az-zenabled"> Bật</label></div>
               <div class="seg" id="az-shape" role="radiogroup" aria-label="Hình dạng vùng">
                 <button type="button" data-shape="circle">Tròn</button>
                 <button type="button" data-shape="ellipse">Bầu dục</button>
@@ -1107,8 +1121,8 @@
                   <label>…đến (con)<input id="az-ptmax" type="number" min="1" max="5"></label>
                   <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
                 </div></details>
-              <label class="az-row"><input type="checkbox" id="az-water"> <span>Vùng nước <span class="muted">— ven hồ/sông: cá sấu (và loài "không kích vùng") cũng kích vùng này</span></span></label>
-              <label class="az-row"><input type="checkbox" id="az-small"> <span>Chỉ dino nhỏ <span class="muted">— dino lớn bị cảnh báo rồi ong đốt (luật ở tab <b>Dino nhỏ</b>)</span></span></label>
+              <label class="az-row"><input type="checkbox" class="switch" id="az-water"> <span>Vùng nước <span class="muted">— ven hồ/sông: cá sấu (và loài "không kích vùng") cũng kích vùng này</span></span></label>
+              <label class="az-row"><input type="checkbox" class="switch" id="az-small"> <span>Chỉ dino nhỏ <span class="muted">— dino lớn bị cảnh báo rồi ong đốt (luật ở tab <b>Dino nhỏ</b>)</span></span></label>
               <details class="az-sec"><summary>Nâng cao</summary>
                 <div class="az-grid">
                   <label>AI cách nhau tối thiểu (m)<input id="az-spacing" type="number" min="0" max="300" step="5"></label>
@@ -1146,7 +1160,7 @@
             <div class="az-row"><label for="reset-countdown">Báo trước</label><select id="reset-countdown">
               <option value="0">Ngay lập tức</option><option value="30">30 giây</option><option value="60" selected>1 phút</option>
               <option value="120">2 phút</option><option value="300">5 phút</option></select></div>
-            <label class="az-row"><input type="checkbox" id="reset-wipe" checked> Dọn xác sau đó (cả xác người chơi)</label>
+            <label class="az-row"><input type="checkbox" class="switch" id="reset-wipe" checked> Dọn xác sau đó (cả xác người chơi)</label>
             <div class="step-hint" id="reset-status"></div>
             <div class="az-row" style="gap:8px;justify-content:flex-start">
               <button type="button" class="btn-danger solid" id="reset-go">Làm mới AI</button>
@@ -1160,7 +1174,7 @@
 
           <!-- small dinos only (mod ZoneGuard) -->
           <div class="side-pane az" data-pane="guard" id="gd-card" hidden>
-            <label class="az-row"><input type="checkbox" id="gd-enabled"> <b>Bật luật chỉ dino nhỏ</b></label>
+            <label class="az-row"><input type="checkbox" class="switch" id="gd-enabled"> <b>Bật luật chỉ dino nhỏ</b></label>
             <div class="az-grid">
               <label>Cảnh báo trước khi đốt (giây)<input id="gd-grace" type="number" min="0" max="600" step="5"></label>
               <label>Mỗi lần đốt cách (giây)<input id="gd-every" type="number" min="1" max="60"></label>
@@ -1211,7 +1225,7 @@
         <div class="step-hint">Cây và quả chỉ <b>có chất (α β γ)</b> trong các vùng di cư <b>đang hoạt động</b> — ít ở di cư thường, nhiều ở
           <b>đại di cư</b>. Ngoài vùng: ít cây hơn và chỉ là lá, <b>không có chất</b>. Game tự chọn vùng nào di cư; tắt mục này thì mọi
           giá trị về như game gốc. Xem cây thật trên tab <a href="#map">Bản đồ</a> (lớp "Thực vật (live)").</div>
-        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="fl-control" style="width:auto"> <b>Bật điều khiển thực vật</b></label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" class="switch" id="fl-control"> <b>Bật điều khiển thực vật</b></label>
         <div class="cfg-grid">
           <div class="cfg-field"><label for="fl-mig-pct">Di cư: % cây có chất<span class="mono">migrationNutrientPct</span></label>
             <input id="fl-mig-pct" type="number" min="0" max="100" step="5"></div>
@@ -1244,7 +1258,7 @@
       <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
         <div class="step-hint">Cá sinh quanh người chơi ở sông, hồ, biển (như game). Mục này đặt <b>mật độ chung</b> cho mọi nơi và
           <b>loài nào được có</b>. Tắt thì mọi thứ về như game (12 cá quanh mỗi người, 28 mỗi vùng nước, đủ 6 loài).</div>
-        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="fs-control" style="width:auto"> <b>Bật điều khiển cá</b></label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" class="switch" id="fs-control"> <b>Bật điều khiển cá</b></label>
         <div class="cfg-grid">
           <div class="cfg-field"><label for="fs-player">Tối đa cá quanh mỗi người chơi<span class="mono">perPlayer</span></label>
             <input id="fs-player" type="number" min="0" max="60" step="1"><div class="step-hint">Game: 12. 0 = không có cá.</div></div>
@@ -1327,13 +1341,13 @@
                 </div>
                 <div class="step-hint">Giới tính không chọn được: người chơi chọn khi respawn, và restore không có cách đổi nó.</div>
                 <div class="row" style="margin-top:10px;align-items:center">
-                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" id="f-stomach" checked style="width:auto"> Dạ dày đầy khi lấy ra</label>
+                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" class="switch" id="f-stomach" checked style="width:auto"> Dạ dày đầy khi lấy ra</label>
                   <label for="f-nutrient" style="margin:0 0 0 12px;flex:none">Dinh dưỡng</label>
                   <input id="f-nutrient" type="number" min="0" max="100" step="5" value="50" style="width:90px"> <span class="muted">%</span>
                 </div>
                 <div class="step-hint">Dạ dày được lấp đầy đúng mức tối đa game báo cho dino đó. Mức dinh dưỡng % áp dụng khi đã đo được giá trị tối đa của từng chất trên server (đang kiểm tra).</div>
                 <div class="row" style="margin-top:10px;align-items:center">
-                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" id="f-prime" style="width:auto"> 👑 Prime Elder</label>
+                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" class="switch" id="f-prime"> 👑 Prime Elder</label>
                   <label for="f-elder-stacks" style="margin:0 0 0 12px;flex:none">Elder stacks</label>
                   <input id="f-elder-stacks" type="number" min="0" max="10" step="1" value="0" style="width:90px">
                 </div>
@@ -1345,7 +1359,7 @@
                 <div class="step-hint">Mỗi mutation phải <b>đã được game ghi nhận trên chính loài này</b> (từ người chơi thật
                   hoặc dino họ đã cất). Rê chuột vào <span class="info-btn" style="cursor:default">!</span> để xem mô tả và bằng chứng.
                   Để "trống" thì slot đó giữ nguyên khi redeem.</div>
-                <label class="toggle"><input type="checkbox" id="f-allow-unconfirmed">
+                <label class="toggle"><input type="checkbox" class="switch" id="f-allow-unconfirmed">
                   Cho phép cả mutation chưa xác nhận trên loài này (chỉ thấy trên loài khác)</label>
                 <div class="step-hint" id="f-mut-gen"></div>
                 <div class="group-label">Đang dùng</div>
@@ -1447,7 +1461,7 @@
           ngay dưới mình. Thả khi <b>đáp xuống</b>, gõ <span class="mono">!drop</span>, hết thời gian, hoặc một trong hai thoát / chết.
           Thả trên cao thì con mồi rơi và chịu sát thương rơi như game. Chỉ gắp dino người chơi (không gắp AI).
           Nội dung tin nhắn sửa ở tab <a href="#mods/messages">Thông báo → Ptera gắp</a>.</div>
-        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="pt-enabled" style="width:auto"> <b>Bật Ptera gắp</b></label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" class="switch" id="pt-enabled"> <b>Bật Ptera gắp</b></label>
         <div class="cfg-grid">
           <div class="cfg-field"><label for="pt-maxkg">Cân nặng tối đa gắp được (kg)<span class="mono">maxKg</span></label>
             <input id="pt-maxkg" type="number" min="1" max="20000" step="5">
@@ -1571,7 +1585,7 @@
             <div class="card-head"><h2>Cảnh báo DDoS</h2><span class="sub" id="dd-iface"></span></div>
             <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
               <div class="dd-live"><div id="dd-state" class="dd-state"></div><svg id="dd-spark" class="dd-spark" viewBox="0 0 300 48" preserveAspectRatio="none" aria-hidden="true"></svg></div>
-              <label class="az-row" style="justify-content:flex-start;gap:8px"><input type="checkbox" id="dd-enabled"> <b>Báo khi lưu lượng vào server bất thường</b></label>
+              <label class="az-row" style="justify-content:flex-start;gap:8px"><input type="checkbox" class="switch" id="dd-enabled"> <b>Báo khi lưu lượng vào server bất thường</b></label>
               <div class="az-grid dd-grid">
                 <label>Từ (gói/giây)<input id="dd-pps" type="number" min="1000" step="1000"></label>
                 <label>hoặc từ (Mbit/s)<input id="dd-mbps" type="number" min="1" step="5"></label>
@@ -1696,7 +1710,7 @@
         <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">💬</span>
           <h2>Log lên Discord</h2><span class="sub">gửi bằng webhook, có hiệu lực ngay</span></div>
         <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
-          <label class="az-row" style="justify-content:flex-start;gap:8px"><input type="checkbox" id="dc-enabled"> <b>Bật gửi log lên Discord</b></label>
+          <label class="az-row" style="justify-content:flex-start;gap:8px"><input type="checkbox" class="switch" id="dc-enabled"> <b>Bật gửi log lên Discord</b></label>
           <div class="step-hint" id="dc-status"></div>
         </div></section>
         <section class="card" style="margin-top:16px">
@@ -3926,7 +3940,7 @@ function renderMessagesTab() {
   if (document.activeElement !== $('msg-cw-warn')) $('msg-cw-warn').value = d.corpseWipe.warnSec;
   $('msg-periodic').innerHTML = d.periodic.length === 0 ? '<li class="step-hint">Chưa có thông báo định kỳ nào.</li>'
     : d.periodic.map((p, i) => `<li data-i="${i}">
-        <input type="checkbox" data-f="enabled" ${p.enabled ? 'checked' : ''} title="Bật / tắt">
+        <input type="checkbox" class="switch" data-f="enabled" ${p.enabled ? 'checked' : ''} title="Bật / tắt">
         <input type="text" data-f="text" maxlength="300" value="${esc(p.text)}" placeholder="Nội dung, ví dụ: Discord của server: …">
         <span class="step-hint">mỗi</span><input type="number" data-f="everyMin" min="5" max="1440" step="5" value="${p.everyMin}"><span class="step-hint">phút</span>
         <button type="button" class="btn-ghost sm" data-f="del" style="color:var(--kill,#ef4444)">Xoá</button></li>`).join('');
@@ -3964,7 +3978,7 @@ function renderMessageList() {
         <div><div class="what">${esc(m.label)}</div><div class="key">${esc(m.key)}</div>
           <div class="tags">${tag}</div></div>
         <div><textarea rows="1" maxlength="300" ${off ? 'disabled' : ''} aria-label="${esc(m.label)}">${esc(text)}</textarea>
-          <div class="tools"><label><input type="checkbox" data-f="send" ${off ? '' : 'checked'}> Gửi</label>
+          <div class="tools"><label><input type="checkbox" class="switch" data-f="send" ${off ? '' : 'checked'}> Gửi</label>
             ${m.vars.map((v) => `<button type="button" class="var" data-var="${esc(v)}" title="Chèn">{${esc(v)}}</button>`).join('')}
             ${own !== undefined ? '<button type="button" class="btn-ghost sm" data-f="reset" style="margin-left:auto">Về mặc định</button>' : ''}</div>
           <div class="ex"${off ? ' hidden' : ''}>Ví dụ: <span>${esc(msgExample(text))}</span></div></div></div>`;
@@ -6386,7 +6400,7 @@ function renderCommandsSettings(cs) {
   $('pc-slay-cd').value = cs.slayCooldown;
   $('pc-unstuck-cd').value = cs.unstuckCooldown;
   $('pc-enabled').innerHTML = Object.entries(PC_NAMES).map(([k, label]) =>
-    `<label><input type="checkbox" data-cmd="${k}"${cs.enabled[k] ? ' checked' : ''}>${label}</label>`).join('');
+    `<label><input type="checkbox" class="switch" data-cmd="${k}"${cs.enabled[k] ? ' checked' : ''}>${label}</label>`).join('');
 }
 for (const id of ['pc-slay-cd', 'pc-unstuck-cd', 'pc-enabled']) {
   $(id).addEventListener('input', () => { pcDirty = true; });
