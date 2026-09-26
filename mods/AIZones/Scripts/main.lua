@@ -277,6 +277,11 @@ local function tick()
 
     -- Players: where they are, and one pawn to reach the world from (with
     -- nobody online, the game state's world).
+    -- Species that do not make a zone "occupied" (cfg.ignoreOccupants, e.g. a
+    -- Deinosuchus in a lake must not fill a land zone); they still count as
+    -- players for keeping new AI away from them.
+    local ignore = {}
+    for _, c in ipairs((cfg and type(cfg.ignoreOccupants) == "table") and cfg.ignoreOccupants or {}) do ignore[tostring(c)] = true end
     local players, playerAddrs, world = {}, {}, nil
     H.forEachPlayer(function(ctrl)
         local pawn = H.livePawnFromCtrl(ctrl)
@@ -284,7 +289,10 @@ local function tick()
         local addr = addressOf(pawn)
         if addr then playerAddrs[addr] = true end
         local loc = locationOf(pawn)
-        if loc then players[#players + 1] = loc end
+        if loc then
+            if next(ignore) ~= nil and ignore[classNameOf(pawn) or ""] then loc.passive = true end
+            players[#players + 1] = loc
+        end
         if world == nil then
             local okW, w = pcall(function() return pawn:GetWorld() end)
             if okW and w ~= nil and H.isValid(w) then world = w end
@@ -310,7 +318,7 @@ local function tick()
                 and type(z.species) == "table" and #z.species > 0 then
             local radius = num(z.radius, 1000, 2000000, 20000)
             for _, p in ipairs(players) do
-                if inZone(z, radius, p) then zs.occupied = true; break end
+                if not p.passive and inZone(z, radius, p) then zs.occupied = true; break end
             end
             active[#active + 1] = z
         end

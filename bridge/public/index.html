@@ -1074,6 +1074,10 @@
               <p><span id="az-ambient-state"></span> Tắt "AI game tự sinh" để trên đảo chỉ còn loài của các vùng; con có sẵn dọn bằng
                 tab <b>Làm mới</b> → "Chỉ AI không thuộc loài của vùng". Có hiệu lực ngay, giữ sau restart.</p>
             </details>
+            <details class="az-sec"><summary>Loài không kích vùng <span class="muted" id="az-ignore-n"></span></summary>
+              <div class="step-hint" style="margin:4px 0 6px">Người chơi loài được tick đi vào vùng thì vùng <b>không</b> sinh thêm AI (vd. cá sấu dưới hồ không
+                làm vùng heo/hươu trên bờ sinh thêm). Vùng vẫn luôn giữ đủ số tối thiểu.</div>
+              <div class="az-species" id="az-ignore"></div></details>
             <div class="az-listhead"><span class="group-label" style="margin:0">Các vùng</span>
               <button type="button" class="btn-soft sm" id="az-add">+ Vùng mới</button></div>
             <ul class="az-list" id="az-list"></ul>
@@ -3516,7 +3520,7 @@ async function refreshAiZones() {
   az.points = d.points ?? {};
   az.speciesLabel = Object.fromEntries(d.species.map((s) => [s.key, s.label]));
   az.speciesCls = Object.fromEntries(d.species.map((s) => [s.key, s.cls]));
-  if (!az.dirty) az.draft = { enabled: d.enabled, globalMax: d.globalMax, zones: structuredClone(d.zones) };
+  if (!az.dirty) az.draft = { enabled: d.enabled, globalMax: d.globalMax, zones: structuredClone(d.zones), ignoreOccupants: [...(d.ignoreOccupants ?? [])] };
   renderAiZones();
   renderDropSpecies();
   requestDraw();
@@ -3537,6 +3541,13 @@ function aiZoneOf(a) {
 function renderAiZones() {
   const d = az.draft;
   if (!d || !az.data) return;
+  const ig = new Set(d.ignoreOccupants ?? []);
+  $('az-ignore-n').textContent = ig.size ? `(${[...ig].join(', ')})` : '(không)';
+  const igKey = `${(az.data.playables ?? []).join(',')}|${[...ig].join(',')}`;
+  if ($('az-ignore').dataset.key !== igKey) {
+    $('az-ignore').dataset.key = igKey;
+    $('az-ignore').innerHTML = (az.data.playables ?? []).map((sp) => `<label><input type="checkbox" data-az-ignore="${esc(sp)}"${ig.has(sp) ? ' checked' : ''}> ${esc(sp)}</label>`).join('');
+  }
   if (document.activeElement !== $('az-global')) $('az-global').value = d.globalMax;
   $('az-enabled').checked = d.enabled;
   const st = az.status;
@@ -3687,6 +3698,14 @@ $('az-list').addEventListener('click', (e) => {
   if (zn) flyTo(aiZoneShape(zn).at, 3);
 });
 $('az-enabled').addEventListener('change', () => { az.draft.enabled = $('az-enabled').checked; markAz(); });
+$('az-ignore').addEventListener('change', (e) => {
+  const sp = e.target.dataset.azIgnore;
+  if (!sp) return;
+  const set = new Set(az.draft.ignoreOccupants ?? []);
+  if (e.target.checked) set.add(sp); else set.delete(sp);
+  az.draft.ignoreOccupants = [...set];
+  markAz();
+});
 $('az-global').addEventListener('input', () => { az.draft.globalMax = Math.max(0, Math.round(Number($('az-global').value) || 0)); markAz(); });
 $('az-edit').addEventListener('input', (e) => {
   const zn = az.draft?.zones.find((z) => z.id === az.sel);

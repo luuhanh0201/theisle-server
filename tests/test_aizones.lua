@@ -398,6 +398,18 @@ if fz then fz:close() end
 check("status: the zone counts the boars on the strip only", sz and sz.zones.zp and sz.zones.zp.count == 2 and sz.zones.zp.occupied == true,
   sz and json.encode(sz.zones.zp) or "no status")
 
+say("\n-- 5h. a species that does not fill a zone (a crocodile in a lake) --")
+fresh()
+writeZones({ enabled = true, globalMax = 60, ignoreOccupants = { "BP_Dilo_C" }, zones = { strip } })
+reader.fn()
+playerPawn.__props.Loc = { X = 45000, Y = 0, Z = 100 }        -- on the strip, but a Dilo is ignored
+step(60)
+check("an ignored species in the zone: no turn", spawns() == 0, tostring(spawns()))
+writeZones({ enabled = true, globalMax = 60, ignoreOccupants = {}, zones = { strip } })
+reader.fn()
+step(60)
+check("…and once it is not ignored: a turn", spawns() == 1, tostring(spawns()))
+
 say("\n-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
 

@@ -62,9 +62,12 @@ export interface AiZonesSettings {
   enabled: boolean;
   globalMax: number;
   zones: AiZone[];
+  /** Player species that never make a zone "occupied" (a crocodile in a lake does not fill a land zone). */
+  ignoreOccupants: string[];
 }
 
-export const AI_ZONES_DEFAULTS: AiZonesSettings = { enabled: false, globalMax: 150, zones: [] };
+export const DEFAULT_IGNORE_OCCUPANTS = ['Deinosuchus'];
+export const AI_ZONES_DEFAULTS: AiZonesSettings = { enabled: false, globalMax: 150, zones: [], ignoreOccupants: [...DEFAULT_IGNORE_OCCUPANTS] };
 const MAX_ZONES = 40;
 /** Zones saved before spacing existed get this. */
 export const DEFAULT_SPACING_M = 40;
@@ -151,14 +154,21 @@ export function validateAiZones(raw: unknown): AiZonesSettings {
   if (!Array.isArray(zonesRaw) || zonesRaw.length > MAX_ZONES) throw new ValidationError(`zones must be a list of at most ${MAX_ZONES}`);
   const zones = zonesRaw.map(validateZone);
   if (new Set(zones.map((z) => z.id)).size !== zones.length) throw new ValidationError('two zones have the same id');
-  return { enabled: r['enabled'], globalMax: int(r['globalMax'], 0, 5000, 'globalMax'), zones };
+  // Saved before this setting: the default (a Deinosuchus does not fill land zones).
+  const ig = r['ignoreOccupants'] ?? DEFAULT_IGNORE_OCCUPANTS;
+  if (!Array.isArray(ig) || ig.length > 40) throw new ValidationError('ignoreOccupants must be a list');
+  const ignoreOccupants = [...new Set(ig.map((s, i) => {
+    if (typeof s !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{1,40}$/.test(s)) throw new ValidationError(`ignoreOccupants[${i}] is not a species`);
+    return s;
+  }))];
+  return { enabled: r['enabled'], globalMax: int(r['globalMax'], 0, 5000, 'globalMax'), zones, ignoreOccupants };
 }
 
 export async function readAiZones(): Promise<AiZonesSettings> {
   try {
     return validateAiZones(JSON.parse(await readFile(settingsPath(), 'utf8')));
   } catch {
-    return { ...AI_ZONES_DEFAULTS, zones: [] };
+    return { ...AI_ZONES_DEFAULTS, zones: [], ignoreOccupants: [...DEFAULT_IGNORE_OCCUPANTS] };
   }
 }
 
@@ -182,6 +192,7 @@ export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
   return {
     enabled: s.enabled,
     globalMax: s.globalMax,
+    ignoreOccupants: (s.ignoreOccupants ?? DEFAULT_IGNORE_OCCUPANTS).map((k) => `BP_${k}_C`),
     zones: s.zones.map((z) => ({
       id: z.id, name: z.name, enabled: z.enabled, x: z.x, y: z.y,
       // The circle around the shape, and the shape itself when it is not a circle.

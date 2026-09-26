@@ -186,6 +186,11 @@ local function spawnerScalars()
     H.log(MOD .. ": spawner scalars: " .. #rows .. " -> " .. SP_OUT)
 end
 
+-- (A part 4 listed every loaded class with "Fish" in its name, and the full
+-- path of each AIAmbientFishClasses entry: it CRASHED the server on
+-- 2026-09-26 15:47 — enumerating classes / GetFullName on them from Lua is not
+-- safe here. Removed; its flag, fishclasses.flag, stays so it never runs.)
+
 local spDone = io.open(SP_FLAG, "r")
 if spDone then spDone:close() else
     H.defer(90000, function() H.try(MOD .. ": spawner scalars", spawnerScalars) end)

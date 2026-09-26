@@ -859,6 +859,7 @@ async function handlePanel(
       sendJson(res, 200, {
         ...zones,
         species: AI_SPECIES.map(({ key, label, kind, cls }) => ({ key, label, kind, cls })),
+        playables: KNOWN_PLAYABLES,
         status: await readAiZonesStatus(),
         // How many spawn spots each zone has (0 = nobody has stood there yet).
         points: Object.fromEntries(zones.zones.map((z) => [z.id, zonePoints(z, store.groundPoints).length])),

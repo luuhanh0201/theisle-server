@@ -50,6 +50,10 @@ test('ground points: one per 25 m cell, fliers and swimmers left out, a circle q
 
 test('validation: names, known species, min under max, a per-turn range 1–5, growth order', () => {
   const ok = validateAiZones({ enabled: true, globalMax: 150, zones: [zone()] });
+  assert.deepEqual(ok.ignoreOccupants, ['Deinosuchus'], 'saved before the setting: a Deinosuchus does not fill land zones');
+  assert.deepEqual(validateAiZones({ enabled: true, globalMax: 150, zones: [], ignoreOccupants: [] }).ignoreOccupants, []);
+  assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [], ignoreOccupants: ['a b'] }), /not a species/);
+  assert.deepEqual(modFile(ok, new GroundPoints()).ignoreOccupants, ['BP_Deinosuchus_C']);
   assert.equal(ok.zones.length, 1);
   assert.match(ok.zones[0].id, /^[a-z0-9]{1,16}$/, 'a zone without an id gets one');
   assert.throws(() => validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ name: '' })] }), /name/);
@@ -89,7 +93,7 @@ test('save: the panel\'s file and the mod\'s file (classes, radius in cm, the zo
   assert.deepEqual(z.species.map((s) => s.cls), ['BP_Boar_C', 'BP_Deer_C']);
   assert.ok(z.species.every((s) => s.pawn && s.ctrl && s.lift > 0));
   assert.equal(z.points.length, 2);
-  assert.deepEqual(modFile({ enabled: false, globalMax: 0, zones: [] }, g), { enabled: false, globalMax: 0, zones: [] });
+  assert.deepEqual(modFile({ enabled: false, globalMax: 0, zones: [], ignoreOccupants: [] }, g), { enabled: false, globalMax: 0, ignoreOccupants: [], zones: [] });
 });
 
 test('status from the mod: read back, stale after a minute, null when none', async () => {
