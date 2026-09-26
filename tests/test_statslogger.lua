@@ -371,9 +371,7 @@ local hoplo = H.makePawn({ class = "BP_Hoplo_C", health = 3, loc = { X = 70, Y =
 online = { ctrlP }
 _G.FindAllOf = function(cls)
   H.touch("FindAllOf")
-  if cls == "Pawn" then return { pawnP, boar, corpse, catfish } end
-  if cls == "BP_Hoplo_C" then return { hoplo } end
-  if cls == "BP_Catfish_C" then return { catfish } end
+  if cls == "Pawn" then return { pawnP, boar, corpse, catfish, hoplo } end
   return online
 end
 _G.FindFirstOf = function(cls)
@@ -391,7 +389,7 @@ check("the player, with position, heading and vitals", live and #live.players ==
 local fishes = {}
 for _, e in ipairs(ai and ai.list or {}) do if e.f then fishes[#fishes + 1] = e.c end end
 table.sort(fishes)
-check("fish: found among the Pawns and by class, once each, marked and counted apart",
+check("fish: found among the Pawns, marked and counted apart",
       ai and ai.fish == 2 and table.concat(fishes, ",") == "BP_Catfish_C,BP_Hoplo_C", ai and require("shared.isle.json").encode(ai) or "-")
 check("player pawns are not AI; the living AI is listed with class and position",
       ai and ai.count == 1 and #ai.list == 3 and ai.list[1].c:find("BP_Boar", 1, true) ~= nil

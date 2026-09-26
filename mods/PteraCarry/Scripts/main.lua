@@ -59,7 +59,7 @@ local HINT_AGAIN_S = 30      -- one hint per carrier and target this often
 local SETTINGS_RELOAD_S = 5
 local FLAGS_EVERY_S = 300    -- the pick-up flags census (read-only), while players are online
 local FLAGS_MAX_PAWNS = 400
-local FLAGS_RUNS = 12         -- then it stops (an hour of play is enough to see every kind)
+local FLAGS_RUNS = 0          -- done (2026-09-26): players have bBlockPickUp=false too, like AI — not what hides the prompt
 local MIN_CARRY_S = 1        -- a carrier "landing" in the first second is the take-off itself
 
 local ASC_CLASS = "/Script/GameplayAbilities.AbilitySystemComponent"

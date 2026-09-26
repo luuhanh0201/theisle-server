@@ -526,9 +526,10 @@ local LIVE_EVERY_MS  = 1000
 local AI_EVERY_LIVES = 2      -- AI list every 2nd live read (2 s)
 local AI_MAX         = 500
 -- The game's ambient fish (TIAIWorldSpawner.AIAmbientFishClasses, FishProbe
--- 2026-09-26): spawned around players in the water. Looked up by class too, not
--- only among the Pawns, in case a fish is not one; listed with f = true, counted
--- apart (`fish`), so the map draws them as their own layer.
+-- 2026-09-26): spawned around players in the water. Marked among the Pawns
+-- (f = true, counted apart as `fish`) so the map draws them as their own layer.
+-- Not looked up by class: none was ever found that way, and it was one of the
+-- new reads just before the 10:35 crash (2026-09-26).
 local FISH_CLASSES = { "BP_Catfish_C", "BP_Coalecanth_C", "BP_Forktail_C", "BP_Hoplo_C", "BP_Longear_C", "BP_Muskel_C" }
 local FISH_SET = {}
 for _, c in ipairs(FISH_CLASSES) do FISH_SET[c] = true end
@@ -588,15 +589,6 @@ local function scanAi(now, playerPawns)
         if H.isValid(pawn) then
             local okA, addr = pcall(function() return pawn:GetAddress() end)
             if okA and addr ~= 0 and not playerPawns[addr] then add(pawn, addr, FISH_SET[speciesOf(pawn)] == true) end
-        end
-    end
-    for _, cls in ipairs(FISH_CLASSES) do
-        local okF, found = pcall(function() return FindAllOf(cls) or {} end)
-        for _, obj in ipairs(okF and found or {}) do
-            if H.isValid(obj) and speciesOf(obj) == cls then
-                local okA, addr = pcall(function() return obj:GetAddress() end)
-                if okA and addr ~= 0 and not seen[addr] then add(obj, addr, true) end
-            end
         end
     end
     return { t = now, count = total, fish = fish, dead = dead, aiAlive = aiAliveCounter(), list = list }
