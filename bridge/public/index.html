@@ -539,6 +539,11 @@
   .ban-off { opacity: .55; }
   .dc-channels { display: flex; flex-direction: column; gap: 10px; }
   .dc-ch { display: grid; grid-template-columns: minmax(120px, 180px) 1fr auto auto; gap: 8px; align-items: center; }
+  .dc-url-wrap { position: relative; min-width: 0; display: block; }
+  .dc-url-wrap input { width: 100%; padding-right: 40px; font-family: ui-monospace, monospace; font-size: 12.5px; }
+  .dc-url.masked { -webkit-text-security: disc; text-security: disc; }
+  .dc-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; cursor: pointer; font-size: 15px; opacity: .55; padding: 4px; }
+  .dc-eye:hover, .dc-eye.on { opacity: 1; }
   .dc-ch .st { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: -4px; }
   .dc-ch .st.err { color: var(--kill); }
   .dc-routes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px 24px; }
@@ -5464,8 +5469,11 @@ function renderDiscord() {
   $('dc-enabled').checked = d.enabled;
   $('dc-channels').innerHTML = d.channels.map((c) => `<div class="dc-ch" data-dc="${esc(c.id)}">
       <input class="nm" data-f="name" maxlength="40" value="${esc(c.name)}" placeholder="Tên kênh (vd. killfeed)" aria-label="Tên kênh">
-      <input data-f="url" type="password" autocomplete="off" spellcheck="false" value="${esc(c.url)}"
-        placeholder="${esc(c.hint ? `${c.hint} — dán URL mới để đổi` : 'Dán URL webhook: https://discord.com/api/webhooks/…')}" aria-label="URL webhook">
+      <span class="dc-url-wrap">
+        <input data-f="url" class="dc-url masked" type="text" name="dc-webhook-${esc(c.id)}" autocomplete="off" spellcheck="false"
+          data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" value="${esc(c.url)}"
+          placeholder="${esc(c.hint ? `${c.hint} — dán URL mới để đổi` : 'Dán URL webhook: https://discord.com/api/webhooks/…')}" aria-label="URL webhook">
+        <button type="button" class="dc-eye" data-f="eye" title="Hiện / ẩn URL" aria-label="Hiện / ẩn URL">👁</button></span>
       <button type="button" class="btn-soft sm" data-f="test">Thử</button>
       <button type="button" class="btn-ghost sm" data-f="del" style="color:var(--kill,#ef4444)">Xoá</button>
       <div class="st"></div></div>`).join('') || '<p class="step-hint">Chưa có kênh. Bấm <b>+ Thêm kênh</b>.</p>';
@@ -5502,8 +5510,21 @@ $('dc-channels').addEventListener('input', (e) => {
 $('dc-channels').addEventListener('click', (e) => {
   const row = e.target.closest('[data-dc]');
   const f = e.target.dataset.f;
-  if (!row || (f !== 'del' && f !== 'test')) return;
+  if (!row || (f !== 'del' && f !== 'test' && f !== 'eye')) return;
   const id = row.dataset.dc;
+  if (f === 'eye') {
+    const input = row.querySelector('input[data-f="url"]');
+    const show = input.classList.contains('masked');
+    input.classList.toggle('masked', !show);
+    e.target.classList.toggle('on', show);
+    // Nothing typed and the channel is saved: fetch the saved URL to look at (admins only; logged).
+    if (show && input.value === '' && dc.data?.channels.some((c) => c.id === id)) {
+      getJson(`/api/discord/url?channel=${encodeURIComponent(id)}`).then((r) => {
+        if (input.value === '' && !input.classList.contains('masked')) { input.value = r.url; }
+      }).catch((err) => toast(err.message, 'err'));
+    }
+    return;
+  }
   if (f === 'del') {
     dc.draft.channels = dc.draft.channels.filter((c) => c.id !== id);
     for (const k of Object.keys(dc.draft.routes)) if (dc.draft.routes[k] === id) delete dc.draft.routes[k];

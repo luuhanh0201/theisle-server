@@ -296,6 +296,14 @@ async function handlePanel(
     sendJson(res, 200, { bans: list, reasons: await readReasons(), permanentHours: PERMANENT_HOURS, rcon: ctx.rcon.enabled, admins });
     return;
   }
+  if (path === '/api/discord/url' && req.method === 'GET') {
+    // One saved webhook URL, shown to an admin who asked (the eye on the panel); logged.
+    const c = ctx.discord?.settings.channels.find((x) => x.id === url.searchParams.get('channel'));
+    if (!c) { sendJson(res, 404, { error: 'no such channel' }); return; }
+    await audit({ action: 'Discord webhook URL viewed', detail: c.name, ok: true });
+    sendJson(res, 200, { url: c.url });
+    return;
+  }
   if (path === '/api/discord' && req.method === 'GET') {
     if (!ctx.discord) { sendJson(res, 503, { error: 'Discord log is not running' }); return; }
     await ctx.discord.refreshInfo();
