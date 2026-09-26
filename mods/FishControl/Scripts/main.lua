@@ -10,10 +10,10 @@
 --   * density: those three numbers are set on the spawner from settings.json
 --     (written by the bridge); the game's own are remembered and put back when
 --     the control is off. Numbers only — nothing else is written.
---   * tune: any other NUMBER of the spawner the admin sets (settings.tune,
---     { PropertyName = value }) — e.g. how much land AI it keeps around each
---     player. Only a property the class itself lists as Int/Float/Double is
---     written; the game's value is remembered and put back when the entry goes.
+--   * WARNING (2026-09-26): writing a number on the spawner from Lua CRASHED
+--     this server twice (GlobalAISpawnLimit = 15, inside UE4SS.dll, ~30 s after
+--     load). This mod writes the same way when `control` is on, so it is
+--     DISABLED in mods.txt until a write is proven safe. Reading is fine.
 --   * species: not here — the bridge adds the species left out to the game's
 --     own DisallowedAIClasses (Game.ini + RCON), the game's mechanism.
 --   * a census, every CENSUS_MS while players are online: live fish counted by
@@ -69,70 +69,12 @@ end
 local orig = nil         -- the game's own values, first seen
 local applied = false
 
---- name -> "int" | "float": the spawner's numeric properties, from its class (metadata only, once).
-local numeric = nil
-local function numericOf(ws)
-    if numeric then return numeric end
-    numeric = {}
-    local okC, cls = pcall(function() return ws:GetClass() end)
-    local depth = 0
-    cls = okC and cls or nil
-    while cls ~= nil and depth < 8 do
-        pcall(function()
-            cls:ForEachProperty(function(p)
-                local okN, n = pcall(function() return p:GetFName():ToString() end)
-                local okT, t = pcall(function() return p:GetClass():GetFName():ToString() end)
-                if okN and okT then
-                    t = tostring(t)
-                    if t == "IntProperty" then numeric[tostring(n)] = "int"
-                    elseif t == "FloatProperty" or t == "DoubleProperty" then numeric[tostring(n)] = "float" end
-                end
-            end)
-        end)
-        local okS, sup = pcall(function() return cls:GetSuperStruct() end)
-        cls = okS and sup or nil
-        depth = depth + 1
-    end
-    return numeric
-end
-
-local OWN = {}
-for _, f in pairs(FIELDS) do OWN[f[1]] = true end
-local tuneOrig = {}      -- property -> the game's value before the admin's
-
-local function applyTune(ws, tune)
-    local kinds = numericOf(ws)
-    local want = {}
-    for name, v in pairs(type(tune) == "table" and tune or {}) do
-        name = tostring(name)
-        if kinds[name] and not OWN[name] and tonumber(v) then want[name] = tonumber(v) end
-    end
-    local changed = {}
-    for name, o in pairs(tuneOrig) do
-        if want[name] == nil then
-            if pcall(function() ws[name] = o end) then changed[#changed + 1] = name .. "=" .. tostring(o) .. " (game's)" end
-            tuneOrig[name] = nil
-        end
-    end
-    for name, v in pairs(want) do
-        local cur = num(ws, name)
-        if cur ~= nil then
-            if tuneOrig[name] == nil then tuneOrig[name] = cur end
-            if kinds[name] == "int" then v = math.floor(v + 0.5) end
-            if math.abs(cur - v) > 1e-6 and pcall(function() ws[name] = v end) then changed[#changed + 1] = name .. "=" .. tostring(v) end
-        end
-    end
-    if #changed > 0 then H.log(MOD .. ": tune " .. table.concat(changed, ", ")) end
-end
-
 local function apply()
     local s = readSettings()
     if s == nil then return end
     local on = s.control == true
-    local ws0 = (s.tune ~= nil or next(tuneOrig) ~= nil) and spawner() or nil
-    if ws0 ~= nil then applyTune(ws0, s.tune) end
     if not on and not applied then return end
-    local ws = ws0 or spawner()
+    local ws = spawner()
     if ws == nil then return end
     if orig == nil then
         orig = {}

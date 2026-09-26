@@ -30,7 +30,8 @@ PteraCarry : 1
 PlantProbe : 0
 Flora : 1
 FishProbe : 1
-FishControl : 1
+; FishControl: OFF — a Lua write on the AI spawner crashed the server (2026-09-26).
+FishControl : 0
 ; Small dinos only in the zones the panel marks (bridge writes Saved/guard.json);
 ; off until the panel turns it on.
 ZoneGuard : 1
