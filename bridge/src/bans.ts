@@ -210,6 +210,7 @@ async function writeGameFile(path: string, before: Buffer, enc: GameEncoding, do
  */
 export class BanWatcher {
   #known: Set<string> | null = null;
+  #list: Ban[] = [];
   #edits: BanEdit[] | null = null;
   #busy: Promise<void> = Promise.resolve();
   readonly #path: string;
@@ -253,10 +254,18 @@ export class BanWatcher {
       if (got === null) return;
       if (applyEdits(got.doc, await this.#editsNow())) await writeGameFile(this.#path, got.raw, got.enc, got.doc);
       const bans = parseBans(JSON.stringify(got.doc));
+      this.#list = bans;
       const now = new Set(bans.map((b) => key(b.steamId, b.bannedTime)));
       if (this.#known !== null) for (const b of bans) if (!this.#known.has(key(b.steamId, b.bannedTime))) this.#onBan(b);
       this.#known = now;
     });
+  }
+
+  /** The bans in force now (from the last read), by SteamID. */
+  active(nowS = this.#now()): Map<string, Ban> {
+    const out = new Map<string, Ban>();
+    for (const b of this.#list) if (b.permanent || (b.endsAt !== null && b.endsAt > nowS)) out.set(b.steamId, b);
+    return out;
   }
 
   /** Unban, or change the end / reason, of one ban; the ban as it was, and as it is now (null when unbanned). */
@@ -272,7 +281,8 @@ export class BanWatcher {
       await writeAtomic(editsPath(), JSON.stringify(this.#edits, null, 2));
       applyEdits(got.doc, this.#edits);
       await writeGameFile(this.#path, got.raw, got.enc, got.doc);
-      const after = parseBans(JSON.stringify(got.doc)).find((b) => b.steamId === edit.steamId && b.bannedTime === edit.bannedTime) ?? null;
+      this.#list = parseBans(JSON.stringify(got.doc));
+      const after = this.#list.find((b) => b.steamId === edit.steamId && b.bannedTime === edit.bannedTime) ?? null;
       if (after === null) this.#known?.delete(key(edit.steamId, edit.bannedTime));
       return { before, after };
     });

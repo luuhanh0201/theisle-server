@@ -48,6 +48,9 @@ test('watcher: the first read is the baseline, each new ban once', async () => {
   await w.tick();
   await w.tick();
   assert.deepEqual(seen, ['Troll']);
+  const active = w.active(parseGameTime('2026.09.26-12.30.00'));
+  assert.deepEqual([...active.keys()].sort(), ['76561190000000009', '76561199000000001', '76561199000000002'], 'in force: not ended yet, or permanent');
+  assert.deepEqual([...w.active(parseGameTime('2026.10.01-00.00.00')).keys()], ['76561199000000001'], 'later: only the permanent one');
 });
 
 test('unban and edit: the game file changed (a copy kept), and kept so when the game writes its own list back', async () => {

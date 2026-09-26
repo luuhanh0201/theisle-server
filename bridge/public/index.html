@@ -984,7 +984,8 @@
                 <option value="168">7 ngày</option><option value="720">30 ngày</option><option value="perm">Vĩnh viễn</option></select></div>
               <div class="ban-preview" id="ban-preview"></div>
               <div class="row"><button type="button" class="btn-danger solid" id="ban-go">Ban</button></div>
-              <div class="step-hint">Người đang online nhận tin riêng (lý do, thời hạn) rồi bị kick sau ~3 giây. Mọi lần ban — kể cả ban trong
+              <div class="step-hint">Người đang online nhận tin riêng (lý do, thời hạn) rồi bị kick sau ~3 giây. Ai còn hạn ban mà vẫn vào được
+                server (vd. tài khoản admin) sẽ bị panel tự kick lại mỗi lần vào. Mọi lần ban — kể cả ban trong
                 bảng admin của game — đều được báo cho cả server và ghi lên Discord (loại log "Ban"). Nội dung tin sửa ở
                 <a href="#mods/messages">Tính năng mod → Thông báo → Ban người chơi</a>.</div>
             </div></section>
@@ -5552,7 +5553,7 @@ async function loadBans() {
   }
   $('ban-count').textContent = `${d.bans.filter((b) => b.active).length} đang ban · ${d.bans.length} tất cả`;
   $('ban-list').innerHTML = d.bans.map((b) => `<tr class="${b.active ? '' : 'ban-off'}">
-      <td><b>${esc(b.name)}</b><br><span class="mono muted" style="font-size:11.5px">${esc(b.steamId)}</span></td>
+      <td><b>${esc(b.name)}</b>${(bans.data?.admins ?? []).includes(b.steamId) ? ' <span class="tag" title="Game không chặn admin vào lại; panel tự kick">admin</span>' : ''}<br><span class="mono muted" style="font-size:11.5px">${esc(b.steamId)}</span></td>
       <td>${esc(b.reason || '(không ghi)')}</td><td>${esc(b.duration)}${b.active ? '' : ' · <i>hết hạn</i>'}</td>
       <td>${b.bannedAt ? esc(dateTime(b.bannedAt)) : '—'}</td><td>${b.permanent ? 'không' : b.endsAt ? esc(dateTime(b.endsAt)) : '—'}</td>
       <td>${esc(b.by === 'Rcon' ? 'panel / RCON' : b.by)}</td>
@@ -5578,7 +5579,9 @@ function renderBanPreview() {
   if (tpl === '') { $('ban-preview').innerHTML = '<span class="muted">Thông báo toàn server khi ban đang tắt.</span>'; return; }
   const vars = { name: f.name || f.steamId || 'Rex', reason: f.reason || '(chưa ghi lý do)', by: 'admin',
     duration: f.perm ? 'vĩnh viễn' : $('ban-hours').selectedOptions[0]?.textContent ?? '', until: '' };
-  $('ban-preview').innerHTML = `<span class="muted">Cả server sẽ thấy:</span><br>${esc(String(tpl).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all))}`;
+  const admin = (bans.data?.admins ?? []).includes(f.steamId);
+  $('ban-preview').innerHTML = `<span class="muted">Cả server sẽ thấy:</span><br>${esc(String(tpl).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all))}`
+    + (admin ? '<br><b style="color:var(--dmg)">⚠ Tài khoản này là admin server (AdminsSteamIDs): game không chặn admin vào lại — panel sẽ tự kick mỗi lần họ vào khi còn hạn ban.</b>' : '');
 }
 $('ban-player').addEventListener('change', () => { $('ban-manual').hidden = $('ban-player').value !== ''; renderBanPreview(); });
 $('ban-reason-pick').addEventListener('change', () => {

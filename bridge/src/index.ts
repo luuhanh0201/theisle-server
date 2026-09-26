@@ -18,7 +18,7 @@ import { syncZoneGuard } from './zone-guard.js';
 import { Announcer } from './announcer.js';
 import { AiReset } from './ai-reset.js';
 import { dropResult, enqueueAiCommand } from './ai-drop.js';
-import { DiscordLog, auditLine, banLine, lineOf, phaseLine } from './discord.js';
+import { DiscordLog, auditLine, banLine, lineOf, phaseLine, plain } from './discord.js';
 import { BanWatcher, banVars } from './bans.js';
 import { renderMessage } from './messages.js';
 import { auditListeners } from './audit.js';
@@ -128,8 +128,28 @@ const bans = new BanWatcher((b) => {
   discord.post(banLine(b, vars));
   console.info(`[bans] ${b.name} (${b.steamId}) banned by ${b.by}: ${b.reason}`);
 });
+// A banned player who is in the game anyway (the game let them back in — e.g.
+// an account in AdminsSteamIDs, 2026-09-26) is told why and kicked, every
+// time, at most once in 30 s each.
+const kickedAt = new Map<string, number>();
+async function enforceBans(): Promise<void> {
+  if (!rcon.enabled) return;
+  const active = bans.active();
+  const now = Date.now();
+  for (const p of store.online()) {
+    const b = active.get(p.steamId);
+    if (!b || now - (kickedAt.get(p.steamId) ?? 0) < 30_000) continue;
+    kickedAt.set(p.steamId, now);
+    const vars = banVars(b);
+    const text = renderMessage('ban.player', vars);
+    if (text !== null) await rcon.directMessage(p.steamId, text).catch(() => undefined);
+    setTimeout(() => { rcon.exec(0x30, p.steamId).catch((error: unknown) => console.error('[bans] kick failed:', error)); }, 2500);
+    discord.post({ kind: 'ban', t: Math.floor(now / 1000), text: `🚫 **${plain(b.name)}** \`${b.steamId}\` đang bị ban (${plain(vars['duration'] ?? '')}, hết ${plain(vars['until'] ?? '')}) mà vẫn vào server — đã kick.` });
+    console.info(`[bans] ${b.name} (${b.steamId}) is banned but online: kicked`);
+  }
+}
 setInterval(() => {
-  bans.tick().catch((error: unknown) => console.error('[bans] read failed:', error));
+  bans.tick().then(enforceBans).catch((error: unknown) => console.error('[bans] read failed:', error));
 }, 10_000);
 void bans.tick();
 

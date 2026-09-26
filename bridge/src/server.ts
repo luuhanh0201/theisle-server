@@ -290,7 +290,10 @@ async function handlePanel(
     const now = Math.floor(Date.now() / 1000);
     const list = (await readBans()).map((b) => ({ ...b, duration: durationText(b), active: b.permanent || (b.endsAt !== null && b.endsAt > now) }))
       .sort((a, b) => (b.bannedAt ?? 0) - (a.bannedAt ?? 0));
-    sendJson(res, 200, { bans: list, reasons: await readReasons(), permanentHours: PERMANENT_HOURS, rcon: ctx.rcon.enabled });
+    const live = await readLive().catch(() => null);
+    const adminsRaw = live?.settings['AdminsSteamIDs'] ?? live?.effective['AdminsSteamIDs'];
+    const admins = Array.isArray(adminsRaw) ? adminsRaw.filter((x): x is string => typeof x === 'string') : [];
+    sendJson(res, 200, { bans: list, reasons: await readReasons(), permanentHours: PERMANENT_HOURS, rcon: ctx.rcon.enabled, admins });
     return;
   }
   if (path === '/api/discord' && req.method === 'GET') {
