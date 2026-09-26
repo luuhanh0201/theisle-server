@@ -305,7 +305,7 @@ end
 -- Player-on-player damage (the same hook StatsLogger reads): a storing dino
 -- that hits or is hit fails at once. Reads only; no engine writes in a hook.
 pcall(function()
-    RegisterHook("/Script/TheIsle.TICharacterBase:ApplyDamage", function(selfParam, targetParam)
+    RegisterHook("/Script/TheIsle.TICharacterBase:ApplyDamage", H.timed(MOD .. ": damage hook", function(selfParam, targetParam)
         if next(pendingStore) == nil then return end
         H.try(MOD .. ": store damage guard", function()
             local attacker = selfParam and selfParam:get()
@@ -320,7 +320,7 @@ pcall(function()
                 end
             end
         end)
-    end)
+    end))
 end)
 
 --------------------------------------------------------------------------

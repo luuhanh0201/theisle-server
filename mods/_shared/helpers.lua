@@ -40,6 +40,66 @@ function M.try(what, fn, ...)
     return true, res
 end
 
+--------------------------------------------------------------------------
+-- Timing: how long each loop / hook holds the game thread
+--------------------------------------------------------------------------
+-- Every H.every loop and every hook wrapped in H.timed is timed with
+-- os.clock (wall clock in ms on Windows); every PERF_REPORT_S one line goes to
+-- UE4SS.log: "[perf] 300s: X ms on the game thread (Y %) — the top ones".
+-- UE4SS's own cost of calling into Lua is not in it.
+
+M.PERF_REPORT_S = 300
+local perf, perfSince = {}, nil
+
+function M.perfReport(now)
+    now = now or os.time()
+    local span = math.max(1, now - (perfSince or now))
+    local rows, total = {}, 0
+    for what, p in pairs(perf) do
+        rows[#rows + 1] = { what = what, p = p }
+        total = total + p.ms
+    end
+    table.sort(rows, function(a, b) return a.p.ms > b.p.ms end)
+    local parts = {}
+    for i = 1, math.min(#rows, 8) do
+        local r = rows[i]
+        parts[#parts + 1] = string.format("%s %.0f ms (%dx, max %.0f)", r.what, r.p.ms, r.p.n, r.p.max)
+    end
+    M.log(string.format("[perf] %s %ds: %.0f ms on the game thread (%.2f%%) — %s",
+        M.modName or "?", span, total, total / (span * 10), #parts > 0 and table.concat(parts, " | ") or "nothing ran"))
+    perf, perfSince = {}, now
+end
+
+local function perfRecord(what, seconds)
+    local p = perf[what]
+    if p == nil then p = { ms = 0, n = 0, max = 0 }; perf[what] = p end
+    local ms = seconds * 1000
+    p.ms, p.n = p.ms + ms, p.n + 1
+    if ms > p.max then p.max = ms end
+    local now = os.time()
+    if perfSince == nil then perfSince = now
+    elseif now - perfSince >= M.PERF_REPORT_S then M.perfReport(now) end
+end
+
+--- fn timed under `what`, errors caught and logged (as M.try). For hooks.
+function M.timed(what, fn)
+    if M.modName == nil and type(debug) == "table" and debug.getinfo then
+        -- Each mod has its own copy of this file: name the report after the
+        -- mod that asked (Mods/<name>/Scripts/main.lua).
+        for level = 2, 4 do
+            local info = debug.getinfo(level, "S")
+            local name = info and tostring(info.source):match("Mods[/\\]([^/\\]+)[/\\]Scripts")
+            if name then M.modName = name; break end
+        end
+    end
+    return function(...)
+        local t0 = os.clock()
+        local _, res = M.try(what, fn, ...)
+        perfRecord(what, os.clock() - t0)
+        return res
+    end
+end
+
 --- True only if obj is a usable UObject right now.
 -- Rule 1: never trust a stored reference; call this at the point of use.
 function M.isValid(obj)
@@ -308,9 +368,8 @@ end
 local STUCK_AFTER_S = 15
 function M.every(ms, what, fn)
     if type(LoopInGameThreadWithDelay) == "function" then
-        LoopInGameThreadWithDelay(ms, function()
-            M.try(what, fn)
-        end)
+        local timedFn = M.timed(what, fn)
+        LoopInGameThreadWithDelay(ms, function() timedFn() end)
         return true
     end
     local queuedAt = nil
@@ -320,9 +379,10 @@ function M.every(ms, what, fn)
             M.logError(tostring(what) .. ": game-thread callback lost, queueing it again")
         end
         queuedAt = os.time()
+        local timedFn = M.timed(what, fn)
         local queued = M.onGameThread(what, function()
             queuedAt = nil
-            fn()
+            timedFn()
         end)
         if not queued then queuedAt = nil end
         return false
@@ -413,32 +473,30 @@ function M.onChat(fn)
     -- GetChatMessage(NewText, ChatPlayerController, ChatMode, NoFilterMsg) runs
     -- on the RECEIVING controller (self); the SENDER is ChatPlayerController.
     -- Taking self as the sender would run a command as whoever received it.
-    RegisterHook(CHAT_HOOK, function(selfParam, textParam, senderParam)
-        M.try("chat hook", function()
-            local ctrl = senderParam and senderParam:get()
-            if not M.isValid(ctrl) then return end
+    RegisterHook(CHAT_HOOK, M.timed("chat hook", function(selfParam, textParam, senderParam)
+        local ctrl = senderParam and senderParam:get()
+        if not M.isValid(ctrl) then return end
 
-            local id = M.safeSteamId(ctrl)
-            if not id then return end
+        local id = M.safeSteamId(ctrl)
+        if not id then return end
 
-            local gotMsg, msg = pcall(function() return M.textOf(textParam:get()) end)
-            if not gotMsg or msg == nil or msg == "" then return end
+        local gotMsg, msg = pcall(function() return M.textOf(textParam:get()) end)
+        if not gotMsg or msg == nil or msg == "" then return end
 
-            local now = os.time()
-            pruneSeen(now)
-            local key = id .. "\0" .. msg
-            if lastSeen[key] ~= nil then return end   -- duplicate fire
-            lastSeen[key] = now
+        local now = os.time()
+        pruneSeen(now)
+        local key = id .. "\0" .. msg
+        if lastSeen[key] ~= nil then return end   -- duplicate fire
+        lastSeen[key] = now
 
-            -- Rule 4: never act inside the hook. Re-resolve the player on the
-            -- way out so handlers get a controller that is still valid.
-            M.deferWithPlayer(ctrl, 0, function(c)
-                for _, handler in ipairs(chatHandlers) do
-                    M.try("chat handler", handler, c, id, msg)
-                end
-            end)
+        -- Rule 4: never act inside the hook. Re-resolve the player on the
+        -- way out so handlers get a controller that is still valid.
+        M.deferWithPlayer(ctrl, 0, function(c)
+            for _, handler in ipairs(chatHandlers) do
+                M.try("chat handler", handler, c, id, msg)
+            end
         end)
-    end)
+    end))
 
     M.log("chat hook registered on " .. CHAT_HOOK)
 end

@@ -428,25 +428,25 @@ end
 
 -- The hook only notes who grabbed whom (addresses); the game thread does the rest.
 local okHook, err = pcall(function()
-    RegisterHook(GRAB_HOOK, function(selfP, targetP)
+    RegisterHook(GRAB_HOOK, H.timed(MOD .. ": grab hook", function(selfP, targetP)
         local okS, me = pcall(function() return selfP:get() end)
         local okT, it = pcall(function() return targetP:get() end)
         local a, b = okS and addressOf(me), okT and addressOf(it)
         if a and b and #pending < 20 then pending[#pending + 1] = { self = a, target = b } end
-    end)
+    end))
 end)
 H.log(MOD .. ": hook " .. GRAB_HOOK .. ": " .. (okHook and "registered" or ("FAILED: " .. tostring(err))))
 
 -- Every ability a player starts reaches these; only the two addresses are noted.
 for _, path in ipairs(KEY_HOOKS) do
     local okK, errK = pcall(function()
-        RegisterHook(path, function(selfP, handleP)
+        RegisterHook(path, H.timed(MOD .. ": ability hook", function(selfP, handleP)
             if #keys >= 50 then return end
             local okS, asc = pcall(function() return selfP:get() end)
             local okH, h = pcall(function() return handleP:get().Handle end)
             local a = okS and addressOf(asc)
             if a and okH and h ~= nil then keys[#keys + 1] = { asc = a, handle = tonumber(h) or h } end
-        end)
+        end))
     end)
     H.log(MOD .. ": hook " .. path .. ": " .. (okK and "registered" or ("FAILED: " .. tostring(errK))))
 end

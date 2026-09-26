@@ -82,6 +82,30 @@ _G.ExecuteInGameThreadWithDelay = savedDelay
 
 os.time = realTime
 say("")
+say("")
+say("-- 5. timing: loops and hooks, one [perf] line every PERF_REPORT_S --")
+local realClock = os.clock
+local now = realTime()
+os.time = function() return now end
+local fake = 0
+os.clock = function() return fake end
+local hook = Helpers.timed("test hook", function(x) fake = fake + 0.002; return x * 2 end)
+Helpers.perfReport(now)                                      -- start a fresh window
+H.log = {}
+check("a timed hook passes its value through", hook(21) == 42)
+local boom = Helpers.timed("bad hook", function() error("kaboom") end)
+check("an error in a timed hook is caught, not raised", pcall(boom) == true)
+check("…and logged", table.concat(H.log, " "):find("bad hook: .*kaboom") ~= nil)
+hook(1); hook(1)
+now = now + Helpers.PERF_REPORT_S
+hook(1)
+local line
+for _, l in ipairs(H.log) do if l:find("[perf]", 1, true) then line = l end end
+check("a [perf] line after the window", line ~= nil, table.concat(H.log, " | "))
+check("with the total and the share of the window", line and line:find("8 ms on the game thread", 1, true) and line:find("0.00%", 1, true), line)
+check("and each entry, count and max", line and line:find("test hook 8 ms (4x, max 2)", 1, true), line)
+os.clock = realClock
+
 say(string.format("=== Helpers: %d passed, %d failed ===", pass, fail))
 io.flush()
 os.exit(fail == 0 and 0 or 1, true)

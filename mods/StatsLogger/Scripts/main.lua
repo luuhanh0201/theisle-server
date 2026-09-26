@@ -264,7 +264,7 @@ local recentHits = {}   -- victimSteamId -> last player hit on them
 -- and defensively rather than pretending to know their names.
 
 RegisterHook("/Script/TheIsle.TICharacterBase:ApplyDamage",
-function(selfParam, targetParam, amountParam)
+H.timed(MOD .. ": damage hook", function(selfParam, targetParam, amountParam)
     H.try(MOD .. ": ApplyDamage", function()
         local attacker = selfParam and selfParam:get()
         local target   = targetParam and targetParam:get()
@@ -308,7 +308,7 @@ function(selfParam, targetParam, amountParam)
             loc             = locationOf(target),
         })
     end)
-end)
+end))
 
 --------------------------------------------------------------------------
 -- Chat — the shared hook already deduplicates and defers out of the hook
