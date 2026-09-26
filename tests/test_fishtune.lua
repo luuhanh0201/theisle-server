@@ -1,4 +1,4 @@
--- Functional test: FishTune (test server only) — nothing without the marker;
+-- Functional test: FishTune (only with Mods/FishTune/ENABLED) — nothing without the marker;
 -- with it, each apply.json id written once on the spawner, read back, flagged.
 
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end
@@ -19,13 +19,13 @@ local spawnerObj = { IsValid = function() return true end, MaxAmbientFishPerPlay
 _G.FindAllOf = function(c) if c == "TIAIWorldSpawner" then return { spawnerObj } end; return {} end
 
 say("\n-- 1. not the test server: nothing --")
-os.remove("Mods/FishTune/TEST_SERVER")
+os.remove("Mods/FishTune/ENABLED")
 dofile(RUN .. "/Mods/FishTune/Scripts/main.lua")
 check("no loop without the marker", #H.gameLoops == 0)
 
 say("\n-- 2. the test server: one write per apply.json id --")
 H.reset()
-local m = assert(io.open("Mods/FishTune/TEST_SERVER", "w")); m:close()
+local m = assert(io.open("Mods/FishTune/ENABLED", "w")); m:close()
 os.remove("Mods/FishTune/Saved/writing.flag")
 dofile(RUN .. "/Mods/FishTune/Scripts/main.lua")
 local poll = H.gameLoops[1]
@@ -54,7 +54,7 @@ f = assert(io.open("Mods/FishTune/Saved/apply.json", "w")); f:write(json.encode(
 dofile(RUN .. "/Mods/FishTune/Scripts/main.lua")
 H.gameLoops[1].fn()
 check("blocked: nothing written", spawnerObj.MaxAmbientFishPerPlayer == 12)
-os.remove("Mods/FishTune/TEST_SERVER"); os.remove("Mods/FishTune/Saved/writing.flag"); os.remove("Mods/FishTune/Saved/apply.json")
+os.remove("Mods/FishTune/ENABLED"); os.remove("Mods/FishTune/Saved/writing.flag"); os.remove("Mods/FishTune/Saved/apply.json")
 
 check("never off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
 say(string.format("=== FishTune: %d passed, %d failed ===", pass, fail))

@@ -12,6 +12,11 @@
 # wineserver (sharing one slowed both). The service runs below the live one
 # (Nice=10, at most one core), does not come back after a crash, and does not
 # start with the VPS. Mods run with empty Saved/ folders: no AI zones, no garage.
+#
+# NOT JOINABLE as it is (2026-09-27): the in-game list shows "[TEST] …" with
+# the live server's player count, and joining it lands on the LIVE server —
+# the listing carries port 7777 whatever -Port/-QueryPort/?Port/[URL] Port say.
+# A test server needs its own IP (another VPS). Removed from the VPS.
 
 set -euo pipefail
 

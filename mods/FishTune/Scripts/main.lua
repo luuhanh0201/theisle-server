@@ -1,10 +1,12 @@
--- FishTune — TEST SERVER ONLY: more ambient fish, by writing the world AI
+-- FishTune — more ambient fish, by writing the world AI
 -- spawner's fish numbers (MaxAmbientFishPerPlayer 12, AmbientFishSoftLimitPerWater
 -- 28, AmbientFishSpawnAttemptsPerPlayer 1, AmbientFishSpawnCooldown 0.5 — the
 -- game's). Game.ini [/Script/TheIsle.TIAIWorldSpawner] is NOT read (read back on
 -- the test server, 2026-09-27). A Lua write on this spawner (GlobalAISpawnLimit,
--- FishControl) crash-looped the LIVE server on 2026-09-26: this runs only where
--- Mods/FishTune/TEST_SERVER exists, and is off in the live mods.txt.
+-- FishControl) crash-looped the live server on 2026-09-26; these four fish
+-- numbers were written on the test server with no crash (2026-09-27). Runs only
+-- where an admin made Mods/FishTune/ENABLED (a second server on the same VPS
+-- could not be joined — its listing pointed at the live port).
 --
 -- It writes nothing by itself. An admin drops Mods/FishTune/Saved/apply.json:
 --   { "id": "a1", "perPlayer": 24, "perWater": 60, "attempts": 3, "cooldown": 0.25 }
@@ -23,9 +25,9 @@ local MOD  = "FishTune"
 local DIR  = "Mods/FishTune/Saved/"
 local FLAG = DIR .. "writing.flag"
 
-local marker = io.open("Mods/FishTune/TEST_SERVER", "r")
+local marker = io.open("Mods/FishTune/ENABLED", "r")
 if not marker then
-    H.log(MOD .. ": not the test server (no Mods/FishTune/TEST_SERVER) — nothing to do")
+    H.log(MOD .. ": off (no Mods/FishTune/ENABLED) — nothing to do")
     return
 end
 marker:close()
@@ -109,4 +111,4 @@ end
 
 H.every(5000, MOD .. ": poll", poll)
 local ws = spawner()
-H.log(MOD .. ": loaded (test server) — spawner now " .. (ws and json.encode(readBack(ws)) or "not found yet"))
+H.log(MOD .. ": loaded — spawner now " .. (ws and json.encode(readBack(ws)) or "not found yet"))
