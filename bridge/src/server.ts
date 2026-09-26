@@ -64,6 +64,7 @@ import {
   readGarageSettings,
   saveGarageSettings,
 } from './garage.js';
+import { addPrimeFix, listPrimeFixes } from './prime-fixes.js';
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
@@ -372,6 +373,7 @@ async function handlePanel(
       (path === '/api/server/schedule' && req.method === 'PUT') ||
       (path === '/api/game-config' && req.method === 'PUT') ||
       (path === '/api/garage-settings' && req.method === 'PUT') ||
+      (path === '/api/prime-fixes' && req.method === 'POST') ||
       (path === '/api/commands-settings' && req.method === 'PUT') ||
       (path === '/api/voice-settings' && req.method === 'PUT') ||
       (path === '/api/panel-access' && req.method === 'PUT') ||
@@ -747,6 +749,18 @@ async function handlePanel(
       return;
     }
 
+    if (path === '/api/prime-fixes') {
+      const fix = await addPrimeFix(await readJsonBody(req));
+      const conds = Object.entries(fix.primeData).filter(([k, v]) => k.startsWith('cond') && v).map(([k]) => k.slice(4)).join(',');
+      await audit({
+        action: 'prime fix added',
+        detail: `${fix.steamId} · ${fix.species} ${Math.round(fix.minGrowth * 100)}–${Math.round(fix.maxGrowth * 100)}% · điều kiện ${conds || '—'}${fix.prime ? ' · prime' : ''}${fix.note ? ' · ' + fix.note : ''}`,
+        ok: true,
+      });
+      sendJson(res, 200, fix);
+      return;
+    }
+
     if (path === '/api/garage-settings') {
       const before = await readGarageSettings();
       const saved = await saveGarageSettings(await readJsonBody(req));
@@ -1077,6 +1091,9 @@ async function handlePanel(
       return;
     case '/api/garage-settings':
       sendJson(res, 200, await readGarageSettings());
+      return;
+    case '/api/prime-fixes':
+      sendJson(res, 200, { fixes: await listPrimeFixes() });
       return;
     case '/api/garage':
       sendJson(res, 200, await listAll());

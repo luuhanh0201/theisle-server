@@ -448,6 +448,62 @@ local reported = false
 for _, l in ipairs(H.log) do if l:match("prime asked %-> eligible=true prime=true") then reported = true end end
 check("what the game made of it is logged", reported, table.concat(H.log, " | "):sub(1, 300))
 
+print("\n-- 19. the prime conditions go into the slot and come back; a stored prime comes back prime --")
+for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
+writeSettings('{"cooldown":0,"storeCountdown":0}')
+local before = H.makePawn({ growth = 0.76, prime = true })
+for i = 1, 10 do before.__prime["bPrimeCondition" .. i] = (i == 1 or i == 3 or i == 5 or i == 7 or i == 8) end
+before.__prime.bIsEligiblePrime = true
+useCtrl(H.makeCtrl(STEAM, before))
+local id19 = send("store")
+H.advance(10)
+local st19 = final(id19) and Storage.get(STEAM, final(id19).slot)
+check("conditions stored", st19 and st19.primeData and st19.primeData.cond5 == true and st19.primeData.cond2 == false
+      and st19.primeData.eligible == true, st19 and json.encode(st19.primeData) or "no slot")
+H.calls = {}
+local after = H.makePawn({ growth = 0.05, mutation = "None" })
+useCtrl(H.makeCtrl(STEAM, after))
+send("redeem", { slot = final(id19).slot })
+H.advance(3100); H.advance(600)
+local got = {}
+for i = 1, 10 do got[i] = after.__prime["bPrimeCondition" .. i] and "1" or "0" end
+check("conditions written back (migration, patrol…)", table.concat(got) == "1010101100", table.concat(got))
+check("eligible written back", after.__prime.bIsEligiblePrime == true)
+local asked = false
+for _, c in ipairs(H.calls) do if c.what == "ServerSetPrimeEligible" and c.args[1] == true then asked = true end end
+check("a stored prime (\"prime\", not \"isPrime\") asks for prime back", asked)
+check("the first-write flag is gone", io.open("Mods/DinoGarage/Saved/prime-write.trying", "r") == nil)
+
+print("\n-- 20. prime fixes: applied once, on the right dino only --")
+local fixLoop
+for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then fixLoop = l end end
+check("a 5 s game-thread loop", fixLoop ~= nil)
+local ff = assert(io.open("Mods/DinoGarage/Saved/prime-fixes.json", "w"))
+ff:write(json.encode({ fixes = {
+  { id = "fix1", steamId = STEAM, species = "BP_Triceratops_C", minGrowth = 0.55, maxGrowth = 0.65,
+    primeData = { cond1 = true, cond3 = true, cond5 = true, cond7 = true, cond8 = true, eligible = true },
+    prime = false, expiresAt = clock + 3600 },
+  { id = "old", steamId = STEAM, species = "BP_Triceratops_C", minGrowth = 0, maxGrowth = 1,
+    primeData = { cond6 = true }, expiresAt = clock - 1 },
+} }))
+ff:close()
+local wrong = H.makePawn({ growth = 0.60, class = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C" })
+useCtrl(H.makeCtrl(STEAM, wrong))
+fixLoop.fn()
+check("another species: waits", wrong.__prime.bPrimeCondition5 == false and #eventsOf("prime_fix") == 0)
+local trike = H.makePawn({ growth = 0.60, class = "BlueprintGeneratedClass /Game/BP_Triceratops.BP_Triceratops_C" })
+local trikeCtrl = H.makeCtrl(STEAM, trike)
+useCtrl(trikeCtrl)
+fixLoop.fn()
+check("the right dino: conditions given back", trike.__prime.bPrimeCondition5 == true and trike.__prime.bIsEligiblePrime == true)
+check("an expired fix is not applied", trike.__prime.bPrimeCondition6 == false)
+check("an event and a message", #eventsOf("prime_fix") == 1 and eventsOf("prime_fix")[1].id == "fix1"
+      and lastMsg(trikeCtrl):find("khôi phục tiến độ prime", 1, true) ~= nil, lastMsg(trikeCtrl))
+trike.__prime.bPrimeCondition5 = false
+fixLoop.fn()
+check("once only", trike.__prime.bPrimeCondition5 == false and #eventsOf("prime_fix") == 1)
+os.remove("Mods/DinoGarage/Saved/prime-fixes.json"); os.remove("Mods/DinoGarage/Saved/prime-fixes.done.json")
+
 say("")
 say("-- threads: nothing the mod ran from an async callback touched the engine --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))

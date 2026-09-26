@@ -24,6 +24,21 @@ local R = {}
 
 local FIELD_WRITE_DELAY_MS = 500   -- the settle window; required, not a guess
 
+-- Writing the prime conditions is new (2026-09-26): flag first, like the
+-- other first-time engine writes. The flag is written before the first write
+-- of a run and removed after it; found at load, the writes stay off.
+local PRIME_FLAG = "Mods/DinoGarage/Saved/prime-write.trying"
+local primeWrites = nil   -- nil = not tried this run, true = worked, false = off
+do
+    local f = io.open(PRIME_FLAG, "r")
+    if f then
+        f:close()
+        primeWrites = false
+        H.logError("restore: the last run stopped while writing prime conditions — they are not written. Delete "
+            .. PRIME_FLAG .. " to try again.")
+    end
+end
+
 -- Skin restore in upstream predates the customizer overhaul in v0.21.720 and
 -- is flagged there as needing re-verification. Off until someone verifies it
 -- on this server: a wrong colour is cosmetic, a crash is not.
@@ -168,6 +183,45 @@ function R.teleport(pawn, location, rotation)
     return ok and moved ~= false
 end
 
+--- The prime conditions (EligiblePrimeElderData.bPrimeCondition1..10 and
+-- bIsEligiblePrime: field writes on the pawn's own struct, like the inherited
+-- mutation slots) and, for a dino that was prime, ServerSetPrimeEligible(true).
+-- Logs what the game says afterwards. Returns written, isPrimeNow.
+function R.applyPrime(pawn, primeData, prime)
+    local wrote = 0
+    if type(primeData) == "table" and primeWrites ~= false then
+        local first = primeWrites == nil
+        if first then
+            local f = io.open(PRIME_FLAG, "w")
+            if f then f:write(tostring(os.time())); f:close() end
+        end
+        local okD, data = pcall(function() return pawn.EligiblePrimeElderData end)
+        if okD and data ~= nil then
+            for i = 1, 10 do
+                local v = primeData["cond" .. i]
+                if type(v) == "boolean" and pcall(function() data["bPrimeCondition" .. i] = v end) then
+                    wrote = wrote + 1
+                end
+            end
+            if type(primeData.eligible) == "boolean" then
+                pcall(function() data.bIsEligiblePrime = primeData.eligible end)
+            end
+        end
+        if first then
+            os.remove(PRIME_FLAG)
+            primeWrites = true
+        end
+    end
+    if prime == true then
+        H.try("restore: ServerSetPrimeEligible", function() pawn:ServerSetPrimeEligible(true) end)
+    end
+    local okE, eligible = pcall(function() return pawn:GetIsEligiblePrimeElder() end)
+    local okP, isPrime = pcall(function() return pawn:IsPrimeElder() end)
+    H.log(string.format("prime: %d conditions written%s -> eligible=%s prime=%s", wrote,
+        prime == true and ", prime asked" or "", okE and tostring(eligible) or "?", okP and tostring(isPrime) or "?"))
+    return wrote, okP and isPrime == true
+end
+
 --- Apply a stored state to a live pawn.
 -- @param onDone optional fn(ok) called once the deferred phase has run
 function R.apply(pawn, state, onDone)
@@ -176,12 +230,17 @@ function R.apply(pawn, state, onDone)
         return
     end
 
-    -- Step 1 — growth and vitals, plus prime eligibility.
+    -- Step 1 — growth and vitals, plus prime eligibility. `isPrime` is an
+    -- admin's choice (bridge); `prime` is what a stored dino was — before
+    -- 2026-09-26 it was saved but never read back, and a prime came out
+    -- without it.
+    local prime = state.isPrime
+    if prime == nil and state.prime == true then prime = true end
     set(pawn, "SetGrowth", state.growth)
     applyVitals(pawn, state)
-    if state.isPrime ~= nil then
+    if prime ~= nil then
         H.try("restore: ServerSetPrimeEligible", function()
-            pawn:ServerSetPrimeEligible(state.isPrime)
+            pawn:ServerSetPrimeEligible(prime)
         end)
     end
 
@@ -225,13 +284,9 @@ function R.apply(pawn, state, onDone)
             end)
         end
 
-        -- A slot made prime by an admin: say what the game made of it, so the
-        -- effect of ServerSetPrimeEligible can be checked in UE4SS.log.
-        if state.isPrime == true then
-            local okE, eligible = pcall(function() return pawn:GetIsEligiblePrimeElder() end)
-            local okP, prime = pcall(function() return pawn:IsPrimeElder() end)
-            H.log(string.format("restore: prime asked -> eligible=%s prime=%s",
-                okE and tostring(eligible) or "?", okP and tostring(prime) or "?"))
+        -- Step 7 — the prime conditions, and prime once more on top of them.
+        if state.primeData ~= nil or prime == true then
+            R.applyPrime(pawn, state.primeData, prime == true)
         end
 
         if R.APPLY_SKIN and state.skin ~= nil then

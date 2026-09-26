@@ -193,9 +193,25 @@ function C.capture(pawn)
     state.elderStacks = okElder and tonumber(stacks) or nil
 
     -- Prime elder or not, as the game says (IsPrimeElder, which StatsLogger
-    -- also reads): shown on the web garage only; restore does not set it.
+    -- also reads); restore asks for it back (ServerSetPrimeEligible).
     local okPrime, isPrime = pcall(function() return pawn:IsPrimeElder() end)
     state.prime = okPrime and isPrime == true or nil
+
+    -- The ten prime conditions, the progress towards prime (migration and
+    -- patrol zones visited, sanctuary, diet…): EligiblePrimeElderData, the
+    -- struct StatsLogger reads. Left out, a stored dino came back with none
+    -- (2026-09-26).
+    local okD, data = pcall(function() return pawn.EligiblePrimeElderData end)
+    if okD and data ~= nil then
+        local pd = {}
+        for i = 1, 10 do
+            local okC, v = pcall(function() return data["bPrimeCondition" .. i] end)
+            if okC and type(v) == "boolean" then pd["cond" .. i] = v end
+        end
+        local okE, e = pcall(function() return data.bIsEligiblePrime end)
+        if okE and type(e) == "boolean" then pd.eligible = e end
+        if next(pd) ~= nil then state.primeData = pd end
+    end
 
     state.location, state.rotation = captureTransform(pawn)
     -- The skin as the game had it, for the player portal. Not applied on

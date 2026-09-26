@@ -37,6 +37,7 @@ local Capture = require("garage.capture")
 local Restore = require("garage.restore")
 local Inbox   = require("garage.inbox")
 local Settings = require("garage.settings")
+local PrimeFix = require("garage.primefix")
 
 local MOD = "DinoGarage"
 
@@ -474,6 +475,8 @@ end)
 -- — the hand-off that lost callbacks on the server (2026-09-24).
 H.every(INBOX_POLL_MS, MOD .. ": inbox poll", Inbox.poll)
 H.every(GUARD_EVERY_MS, MOD .. ": store guard", guardStores)
+-- Prime progress an admin gives back (garage/primefix.lua).
+H.every(5000, MOD .. ": prime fixes", PrimeFix.poll)
 
 H.log(MOD .. ": loaded")
 Events.emit({ type = "mod_loaded", mod = MOD })

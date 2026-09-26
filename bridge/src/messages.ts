@@ -86,6 +86,7 @@ export const MESSAGES: readonly MessageDef[] = [
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
   { key: 'garage.tenSeconds', group: 'garage', label: 'Còn 10 giây', default: 'Còn 10 giây là cất xong — đứng yên.', vars: [] },
+  { key: 'garage.primeFixed', group: 'garage', label: 'Bù tiến độ prime', default: 'Đã khôi phục tiến độ prime (các vùng di cư, tuần tra…) mà gara làm mất. Xin lỗi vì sự cố!', vars: [] },
   { key: 'garage.stored', group: 'garage', label: 'Cất xong', default: 'Đã cất dino vào gara. Respawn đúng loài rồi lấy ra trên trang web.', vars: [] },
   { key: 'garage.failed', group: 'garage', label: 'Cất thất bại ({reason} = một lý do bên dưới)', default: 'Cất thất bại: {reason}. Bạn có thể cất lại ngay.', vars: ['reason'] },
   ...REASONS.map(([k, label, def]): MessageDef => ({ key: `garage.reason.${k}`, group: 'garage', label: `Lý do thất bại: ${label}`, default: def, vars: [] })),
