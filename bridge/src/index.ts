@@ -12,7 +12,8 @@ import { Metrics } from './metrics.js';
 import { readLiveState } from './live.js';
 import { readFlora } from './flora.js';
 import { addPrimeFix } from './prime-fixes.js';
-import { MigrationCredit, activeMigrationZones } from './migration-credit.js';
+import { ZoneCredit, taskZones } from './zone-credit.js';
+import { readMapZones } from './zone-guard.js';
 import { PrimeNotifier } from './prime-notify.js';
 import { VoiceRoom } from './voice.js';
 import { groundPointsPath, readAiZones, refreshModFile } from './ai-zones.js';
@@ -240,11 +241,13 @@ setInterval(() => {
   announcer.tick().catch((error: unknown) => console.error('[announcer] tick failed:', error));
 }, 5_000);
 
-// Prime condition 5 (migration) for every species alike (migration-credit.ts):
-// a dino a minute in an active migration zone that the game did not credit
-// gets it through a prime fix, applied by the DinoGarage mod within 5 s.
-const migrationCredit = new MigrationCredit();
-async function migrationTick(): Promise<void> {
+// The zone prime tasks (sanctuary, migration, patrol) for every species alike
+// (zone-credit.ts): a dino a minute in the right zone that the game did not
+// credit gets the task through a prime fix, applied by the DinoGarage mod.
+const zoneCredit = new ZoneCredit();
+const mapZones = { sanctuary: await readMapZones('sanctuary'), migration: await readMapZones('migration'), patrol: await readMapZones('patrol') };
+console.info(`[zone-credit] map zones: ${mapZones.sanctuary.length} sanctuaries, ${mapZones.migration.length} migration, ${mapZones.patrol.length} patrol`);
+async function zoneCreditTick(): Promise<void> {
   const [live, flora] = await Promise.all([readLiveState(), readFlora()]);
   if (live === null || live.stale || flora === null || flora.stale) return;
   const stats = new Map(store.online().map((p) => [p.steamId, p]));
@@ -254,13 +257,13 @@ async function migrationTick(): Promise<void> {
     return [{ steamId: lp.steamId, species: p.species ?? null, growth: lp.growth ?? p.growth ?? null,
       x: lp.loc.x, y: lp.loc.y, conditions: p.prime?.conditions ?? null }];
   });
-  for (const fix of migrationCredit.tick(Math.floor(Date.now() / 1000), players, activeMigrationZones(flora.spawners))) {
+  for (const fix of zoneCredit.tick(Math.floor(Date.now() / 1000), players, taskZones(flora.spawners, mapZones))) {
     const made = await addPrimeFix(fix);
-    console.info(`[migration] ${fix.steamId} (${fix.species}): condition 5 given — ${made.id}`);
+    console.info(`[zone-credit] ${fix.steamId} (${fix.species}): ${fix.conditions} given — ${made.id}`);
   }
 }
 setInterval(() => {
-  migrationTick().catch((error: unknown) => console.error('[migration] tick failed:', error));
+  zoneCreditTick().catch((error: unknown) => console.error('[zone-credit] tick failed:', error));
 }, 10_000);
 
 // Daily restart schedule: check often enough that the countdown starts on time.

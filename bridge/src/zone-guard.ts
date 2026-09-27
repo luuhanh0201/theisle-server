@@ -100,13 +100,18 @@ export async function readZoneGuard(): Promise<ZoneGuardSettings> {
  * [game Y, game X] / 1000 (vulnona.ts); a circle is turned into a polygon.
  */
 export function sanctuariesOf(map: unknown): Sanctuary[] {
+  return mapZonesOf(map, 'sanctuary');
+}
+
+/** The map's zones of one layer (sanctuary, migration, patrol), as polygons in game units. */
+export function mapZonesOf(map: unknown, layer: 'sanctuary' | 'migration' | 'patrol'): Sanctuary[] {
   const features = (map as { features?: unknown } | null)?.features;
   if (!Array.isArray(features)) return [];
   const toGame = (p: unknown): Point2 | null => (Array.isArray(p) && typeof p[0] === 'number' && typeof p[1] === 'number'
     ? [Math.round(p[1] * 1000), Math.round(p[0] * 1000)] : null);
   const out: Sanctuary[] = [];
   for (const f of features as Array<Record<string, unknown>>) {
-    if (f['layer'] !== 'sanctuary' || typeof f['name'] !== 'string') continue;
+    if (f['layer'] !== layer || typeof f['name'] !== 'string') continue;
     let ring: Point2[] = [];
     if (f['kind'] === 'poly' && Array.isArray(f['pts']) && Array.isArray(f['pts'][0])) {
       ring = (f['pts'][0] as unknown[]).map(toGame).filter((p): p is Point2 => p !== null);
@@ -127,6 +132,15 @@ export function sanctuariesOf(map: unknown): Sanctuary[] {
     out.push({ name: f['name'], x, y, poly: ring });
   }
   return out;
+}
+
+/** The map's zones of one layer, read from the map shipped with the panel ([] when unreadable). */
+export async function readMapZones(layer: 'sanctuary' | 'migration' | 'patrol', file = MAP_FILE): Promise<Sanctuary[]> {
+  try {
+    return mapZonesOf(JSON.parse(await readFile(file, 'utf8')), layer);
+  } catch {
+    return [];
+  }
 }
 
 export async function readSanctuaries(file = MAP_FILE): Promise<Sanctuary[]> {
