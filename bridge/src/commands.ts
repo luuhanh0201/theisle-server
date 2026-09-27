@@ -26,12 +26,14 @@ export type InboxCommand =
   | CommandBase & { type: 'kill'; reason: string }
   | CommandBase & { type: 'store'; slot: string }
   | CommandBase & { type: 'redeem'; slot?: string; where?: 'stored' | 'here' }
-  | CommandBase & { type: 'skin'; skin: SkinRequest };
+  | CommandBase & { type: 'skin'; skin: SkinRequest }
+  | CommandBase & { type: 'light'; on: boolean };
 type NewCommand =
   | { type: 'kill'; steamId: string; reason: string }
   | { type: 'store'; steamId: string; slot: string }
   | { type: 'redeem'; steamId: string; slot?: string; where?: 'stored' | 'here' }
-  | { type: 'skin'; steamId: string; skin: SkinRequest };
+  | { type: 'skin'; steamId: string; skin: SkinRequest }
+  | { type: 'light'; steamId: string; on: boolean };
 
 /** The skin regions of pawn.CustomizerData (<Region>Color), as the mods read and write them. */
 export const SKIN_REGIONS = ['Body', 'Flank', 'Underbelly', 'Markings', 'MaleDisplay', 'Detail1', 'Eyes', 'Teeth', 'Mouth', 'Claws'] as const;
@@ -202,4 +204,15 @@ export async function queueSkin(steamId: string, raw: unknown, now = Date.now())
   if (last !== undefined && now - last < PLAYER_COMMAND_GAP_MS) throw new TooSoonError('one command every few seconds');
   lastPlayerCommand.set(steamId, now);
   return enqueue({ type: 'skin', steamId, skin });
+}
+
+/**
+ * Admin test (panel API only): a light attached to a player's dino, or taken
+ * off it (mods/DinoGarage garage/light.lua) — to see whether a light the
+ * server spawns shows on players' machines at night. Not for players.
+ */
+export async function queueLightTest(steamId: string, on: unknown): Promise<InboxCommand> {
+  assertSteamId(steamId);
+  if (typeof on !== 'boolean') throw new ValidationError('on must be true or false');
+  return enqueue({ type: 'light', steamId, on });
 }

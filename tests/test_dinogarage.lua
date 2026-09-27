@@ -650,6 +650,48 @@ keepLoop.fn(); clock = clock + 6; keepLoop.fn()
 check("a dino just taken out of the garage keeps its slot's colours", fromGarage.__skin.BodyColor.R == 0.5)
 os.remove("Mods/DinoGarage/Saved/skins.json")
 
+say("\n-- admin light test: a replicated light attached to the player's dino, then off --")
+local events = {}
+local lightObj = { PointLightComponent = { SetIntensity = function(_, v) events[#events + 1] = "intensity " .. v end,
+  SetLightColor = function() end, SetAttenuationRadius = function() end, SetCastShadows = function() end } }
+lightObj.GetAddress = function() return 4242 end
+lightObj.IsValid = function() return true end
+lightObj.SetReplicates = function(_, v) events[#events + 1] = "replicates " .. tostring(v) end
+lightObj.K2_AttachToActor = function(_, parent) events[#events + 1] = "attach " .. tostring(parent ~= nil) end
+lightObj.K2_DestroyActor = function() events[#events + 1] = "destroy" end
+lightObj.SetActorHiddenInGame = function() end
+lightObj.K2_DetachFromActor = function() events[#events + 1] = "detach" end
+local statics = {
+  IsValid = function() return true end,
+  BeginDeferredActorSpawnFromClass = function() events[#events + 1] = "begin"; return lightObj end,
+  FinishSpawningActor = function() events[#events + 1] = "finish (bReplicates " .. tostring(lightObj.bReplicates) .. ")" end,
+}
+local savedSFO = _G.StaticFindObject
+_G.StaticFindObject = function(path) if path:find("GameplayStatics", 1, true) then return statics end; return { IsValid = function() return true end } end
+local lit = H.makePawn({ growth = 0.5 })
+rawset(lit, "GetWorld", function() return { IsValid = function() return true end } end)
+local litCtrl = H.makeCtrl(STEAM, lit)
+local savedFAO = _G.FindAllOf
+_G.FindAllOf = function(c) H.touch("FindAllOf"); if c == "PointLight" then return { lightObj } end; return { litCtrl } end
+local function sendLight(on)
+  nextId = nextId + 1
+  local c = { id = nextId, type = "light", steamId = STEAM, createdAt = clock, expiresAt = clock + 600, on = on }
+  local fl = assert(io.open("Mods/DinoGarage/Saved/inbox.json", "w"))
+  fl:write(json.encode({ commands = { c } })); fl:close()
+  poll.fn()
+  return nextId
+end
+local lon = sendLight(true)
+local seq = table.concat(events, ", ")
+check("on: deferred spawn, replicated before it finishes, attached, lit", started(lon) and started(lon).ok == true
+      and seq:find("begin, replicates true, finish (bReplicates true), attach true, intensity 8000", 1, true) ~= nil, seq)
+check("the crash flag is down", io.open("Mods/DinoGarage/Saved/light-test.trying", "r") == nil)
+events = {}
+local loff = sendLight(false)
+seq = table.concat(events, ", ")
+check("off: dimmed, detached, destroyed", started(loff) and started(loff).ok == true and seq == "intensity 0, detach, destroy", seq)
+_G.StaticFindObject, _G.FindAllOf = savedSFO, savedFAO
+
 say("")
 say("-- threads: nothing the mod ran from an async callback touched the engine --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))

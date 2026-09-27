@@ -29,6 +29,8 @@
       "skin"    — (the player, from the web) { skin = { colors, pattern,
                   theme, variation } } onto the dino they play now
                   (garage/skin.lua), same outcome event.
+      "light"   — (admin test, panel API) { on } a light on / off the
+                  player's dino (garage/light.lua).
     Anything else is refused.
 
     Threads: poll() runs ON THE GAME THREAD (H.every in main.lua): it reads

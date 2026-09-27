@@ -40,6 +40,7 @@ local Settings = require("garage.settings")
 local PrimeFix = require("garage.primefix")
 local Skin    = require("garage.skin")
 local KeepSkin = require("garage.keepskin")
+local Light   = require("garage.light")
 
 local MOD = "DinoGarage"
 
@@ -481,6 +482,20 @@ end)
 Inbox.on("redeem", function(c, cmd, say)
     return doRedeem(c, cmd.steamId, cmd.slot, cmd.where, say)
 end)
+-- Admin test (garage/light.lua): a light on a player's dino, or off it.
+Inbox.on("light", function(c, cmd, say)
+    if cmd.on == true then
+        local pawn = H.livePawnFromCtrl(c)
+        if pawn == nil then say("light: no dino"); return false end
+        local ok, why = Light.on(cmd.steamId, pawn)
+        say(ok and "light: on" or ("light: failed — " .. tostring(why)))
+        return ok
+    end
+    Light.off(cmd.steamId)
+    say("light: off")
+    return true
+end)
+
 -- The player's own skin from the web (garage/skin.lua): onto the dino they play now.
 Inbox.on("skin", function(c, cmd, say)
     local skin, why = Skin.validate(cmd.skin)

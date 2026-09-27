@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, normalize } from 'node:path';
 import { config } from './config.js';
 import type { Store } from './store.js';
-import { queueKill } from './commands.js';
+import { queueKill, queueLightTest } from './commands.js';
 import { readNotes, setNote } from './notes.js';
 import { actingAs, audit, describeChanges, readAuditPage } from './audit.js';
 import { currentLogin, panelGate } from './panel-gate.js';
@@ -374,6 +374,7 @@ async function handlePanel(
       (path === '/api/game-config' && req.method === 'PUT') ||
       (path === '/api/garage-settings' && req.method === 'PUT') ||
       (path === '/api/prime-fixes' && req.method === 'POST') ||
+      (path === '/api/light-test' && req.method === 'POST') ||
       (path === '/api/commands-settings' && req.method === 'PUT') ||
       (path === '/api/voice-settings' && req.method === 'PUT') ||
       (path === '/api/panel-access' && req.method === 'PUT') ||
@@ -746,6 +747,15 @@ async function handlePanel(
       const saved = await saveVoiceSettings(await readJsonBody(req));
       await audit({ action: 'voice settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/light-test') {
+      // Admin test: a light on one player's dino (garage/light.lua), or off it.
+      const body = (await readJsonBody(req)) as { steamId?: unknown; on?: unknown } | null;
+      const cmd = await queueLightTest(String(body?.steamId ?? ''), body?.on);
+      await audit({ action: 'light test', detail: `${cmd.steamId} · ${body?.on ? 'gắn đèn' : 'gỡ đèn'}`, ok: true });
+      sendJson(res, 202, { id: cmd.id });
       return;
     }
 
