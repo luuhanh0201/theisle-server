@@ -78,3 +78,29 @@ test('a blip in the data does not hide a widget; a longer absence does', () => {
   assert.equal(contentShown(false, t - 3000, t), true, 'gone 3 s ago (server restarting): still shown');
   assert.equal(contentShown(false, t - CONTENT_GRACE_MS - 1, t), false, 'gone longer: hidden');
 });
+
+test('editing done shows the widgets again, even hidden by the overlay key before', () => {
+  const { Overlay } = require('../src/overlay.js');
+  const wins = [];
+  class FakeWindow {
+    constructor() { this.visible = false; this.destroyed = false; this.webContents = { on() {}, send() {} }; wins.push(this); }
+    setAlwaysOnTop() {} setVisibleOnAllWorkspaces() {} setIgnoreMouseEvents() {} setFocusable() {} on() {} loadFile() {}
+    isDestroyed() { return this.destroyed; } destroy() { this.destroyed = true; }
+    isVisible() { return this.visible; } showInactive() { this.visible = true; } hide() { this.visible = false; }
+    setBounds() {} setOpacity() {} blur() {} getPosition() { return [0, 0]; }
+  }
+  const disp = { id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, size: { width: 1920, height: 1080 } };
+  const screen = { getPrimaryDisplay: () => disp, getAllDisplays: () => [disp], getDisplayNearestPoint: () => disp };
+  const o = new Overlay({ electron: { BrowserWindow: FakeWindow, screen }, preload: '', file: '', load: () => ({ widgets: { dino: { enabled: true } } }), save: () => {} });
+  o.create();
+  o.setGame({ dino: { species: 'Rex' } });
+  const dino = () => o.wins.dino;
+  assert.equal(dino().isVisible(), true, 'a dino in game: shown');
+  o.toggle();
+  assert.equal(dino().isVisible(), false, 'F8: hidden');
+  o.edit(true);
+  assert.equal(dino().isVisible(), true, 'editing: shown');
+  o.edit(false);
+  assert.equal(o.hiddenByKey, false);
+  assert.equal(dino().isVisible(), true, 'editing done: shown again, not hidden by the old F8');
+});

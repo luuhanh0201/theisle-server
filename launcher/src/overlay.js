@@ -356,6 +356,10 @@ class Overlay {
    */
   edit(on) {
     this.editing = on === true;
+    // Placed on screen just now: they are to be seen. A widget hidden by the
+    // overlay key (F8) before went away the moment editing ended — "it does
+    // not stay, only while editing" (2026-09-28).
+    if (!this.editing) this.hiddenByKey = false;
     this.apply();   // editing: a window for every widget; done: only the ones that are on
     for (const id of WIDGETS) {
       const win = this.wins[id];
