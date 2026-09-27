@@ -514,6 +514,22 @@ check("SetElderReplicationStacks(2)", stacksArg == 2, tostring(stacksArg))
 local reported = false
 for _, l in ipairs(H.log) do if l:match("prime asked %-> eligible=true prime=true") then reported = true end end
 check("what the game made of it is logged", reported, table.concat(H.log, " | "):sub(1, 300))
+do
+  -- Prime's stats come with a stat recompute (SetGrowth): the growth is set once more after prime,
+  -- then the vitals it wiped (a prime Deinosuchus came out with a plain one's max health, 2026-09-28).
+  local names = H.callNames()
+  local lastPrime, growths, lastGrowth, lastHealth = 0, 0, 0, 0
+  for i, n in ipairs(names) do
+    if n == "ServerSetPrimeEligible" then lastPrime = i end
+    if n == "SetGrowth" then growths = growths + 1; lastGrowth = i end
+    if n == "SetMaxHunger" then lastHealth = i end   -- the stomach, recomputed from the new max health
+  end
+  check("a prime dino: the growth set again after prime, the stomach / vitals after that", growths == 2
+        and lastGrowth > lastPrime and lastHealth > lastGrowth, growths .. " / " .. lastPrime .. " / " .. lastGrowth .. " / " .. lastHealth)
+  local logged = false
+  for _, l in ipairs(H.log) do if l:find("prime stats — max health", 1, true) then logged = true end end
+  check("…and logged", logged)
+end
 
 print("\n-- 19. the prime conditions go into the slot and come back; a stored prime comes back prime --")
 for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
@@ -539,6 +555,8 @@ check("eligible written back", after.__prime.bIsEligiblePrime == true)
 local asked = false
 for _, c in ipairs(H.calls) do if c.what == "ServerSetPrimeEligible" and c.args[1] == true then asked = true end end
 check("a stored prime (\"prime\", not \"isPrime\") asks for prime back", asked)
+check("the game did not make it prime (this fake): the growth is not set again", H.countCalls("SetGrowth") == 1,
+      "SetGrowth x" .. H.countCalls("SetGrowth"))
 check("the first-write flag is gone", io.open("Mods/DinoGarage/Saved/prime-write.trying", "r") == nil)
 
 print("\n-- 20. prime fixes: applied once, on the right dino only --")

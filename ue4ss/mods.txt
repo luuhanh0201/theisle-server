@@ -55,6 +55,9 @@ LightLab : 0
 ; MutLab: TEST SERVER ONLY (turned on by hand in the test copy): where the game keeps
 ; quest-unlocked mutations (MutationsRequirementsData) and whether Lua can write them back
 MutLab : 0
+; StatLab: TEST SERVER ONLY (turned on by hand in the test copy): max health of a prime
+; dino after growth / prime writes (the garage restore order)
+StatLab : 0
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,
