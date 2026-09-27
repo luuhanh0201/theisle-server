@@ -2,7 +2,7 @@
 // reads the game every second), your own recent trail, and the places players
 // plan around (migration / patrol zones, sanctuaries, water, landmarks).
 // Only YOUR dino: the portal never gets anyone else's position. The AI alive on
-// the server is shown (the owner's choice), from /api/ai every 2 s.
+// the server and the game's fish are shown (the owner's choice), from /api/ai every 2 s.
 //
 // Base image and places: VulnonaMAP (Coco.N), fetched by the bridge
 // (bridge/src/cli-fetch-map.ts) and shipped to public/map/. Map units = game
@@ -11,6 +11,7 @@
 
 const LAYERS = [
   ['ai', 'AI (live)', '#ef4444', true],
+  ['fish', 'Cá (live)', '#22d3ee', true],
   ['aizone', 'Vùng AI', '#fb923c', true],
   ['migration', 'Vùng di cư', '#22c55e', true],
   ['sanctuary', 'Sanctuary', '#e879f9', true],
@@ -27,6 +28,9 @@ const LAYERS = [
 ];
 const LAYER = Object.fromEntries(LAYERS.map(([id, label, color, on]) => [id, { label, color, on }]));
 const ZONES = new Set(['migration', 'patrol', 'sanctuary', 'mud']);
+// The game's fish by the names players use (as the admin map, World → Cá).
+const FISH_VN = { Catfish: 'Cá trê', Coalecanth: 'Cá vây tay', Forktail: 'Forktail', Hoplo: 'Hoplo', Longear: 'Cá thái dương', Muskel: 'Muskel' };
+const fishName = (s) => FISH_VN[s] ?? s ?? 'Cá';
 const TWEEN_MS = 900;
 const COLOR = '#34d399';
 
@@ -97,6 +101,7 @@ export function createMap(root) {
     on: new Set(LAYERS.filter((l) => l[3]).map((l) => l[0])),
     pointers: new Map(), drag: null, pinch: null,
     ai: [],              // [{ s: species, x, y }] from /api/ai
+    fish: [],            // the game's fish, [{ s, x, y }] from /api/ai .fish
     zones: [],           // AI zones the admins drew, from /api/ai-zones
     wp: loadWaypoints(), // { target, saved }
     onTarget: null,      // told when the target changes (the launcher's overlay)
@@ -259,6 +264,24 @@ export function createMap(root) {
       }
     }
 
+    // The game's fish alive now: a small fish-shaped mark (body + tail), as on the admin map.
+    if (st.on.has('fish')) {
+      const r = Math.max(2.5, Math.min(5, 2 * Math.sqrt(z)));
+      for (const a of st.fish) {
+        const [x, y] = scr(unitsOf(a));
+        if (x < -10 || y < -10 || x > cw + 10 || y > ch + 10) continue;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * 1.5, r, 0, 0, Math.PI * 2);
+        ctx.moveTo(x - r * 1.3, y);
+        ctx.lineTo(x - r * 2.5, y - r * 0.9);
+        ctx.lineTo(x - r * 2.5, y + r * 0.9);
+        ctx.closePath();
+        ctx.fillStyle = LAYER.fish.color; ctx.fill();
+        ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
+        if (z >= 4) text(ctx, fishName(a.s), x, y - r - 8, '600 10.5px Inter, system-ui, sans-serif', '#a5f3fc');
+      }
+    }
+
     // The AI alive on the server now, under your own dino.
     if (st.on.has('ai')) {
       const r = Math.max(3, Math.min(6, 2.4 * Math.sqrt(z)));
@@ -396,7 +419,7 @@ export function createMap(root) {
   // --- layers ---
   function chips() {
     root.querySelector('.map-chips').innerHTML = LAYERS.map(([id, label, color]) =>
-      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : ''}</button>`).join('');
+      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'fish' ? ` <b class="fish-n">${st.fish.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : ''}</button>`).join('');
   }
   root.querySelector('.map-chips').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-layer]');
@@ -493,6 +516,13 @@ export function createMap(root) {
       st.ai = Array.isArray(list) ? list.filter((a) => typeof a?.x === 'number' && typeof a?.y === 'number') : [];
       const n = root.querySelector('.map-chips .ai-n');
       if (n) n.textContent = String(st.ai.length);
+      draw();
+    },
+    /** /api/ai .fish: [{ s, x, y }] (absent from an older bridge: no fish). */
+    setFish(list) {
+      st.fish = Array.isArray(list) ? list.filter((a) => typeof a?.x === 'number' && typeof a?.y === 'number') : [];
+      const n = root.querySelector('.map-chips .fish-n');
+      if (n) n.textContent = String(st.fish.length);
       draw();
     },
     /** /api/ai-zones .zones: [{ name, x, y, radiusM, species: [labels], count }]. */

@@ -889,7 +889,7 @@ setInterval(async () => {
   aiBusy = true;
   try {
     const ai = await getJson('/api/ai');
-    if (ai.status === 200) { lastAi = ai.body?.list ?? []; map.setAi(lastAi); }
+    if (ai.status === 200) { lastAi = ai.body?.list ?? []; map.setAi(lastAi); map.setFish(ai.body?.fish ?? []); }
   } catch {
     // The next tick tries again.
   } finally {

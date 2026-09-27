@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello' | 'prime';
 
 export interface MessageDef {
   key: string;
@@ -86,7 +86,8 @@ export const MESSAGES: readonly MessageDef[] = [
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
   { key: 'garage.tenSeconds', group: 'garage', label: 'Còn 10 giây', default: 'Còn 10 giây là cất xong — đứng yên.', vars: [] },
-  { key: 'garage.primeFixed', group: 'garage', label: 'Bù tiến độ prime', default: 'Đã khôi phục tiến độ prime (các vùng di cư, tuần tra…) mà gara làm mất. Xin lỗi vì sự cố!', vars: [] },
+  // Off by default: each task given back is told by prime.conditionDone (prime-notify.ts).
+  { key: 'garage.primeFixed', group: 'garage', label: 'Bù tiến độ prime (gara, vùng di cư) — mặc định tắt: đã có tin "hoàn thành nhiệm vụ"', default: 'Đã cập nhật tiến độ prime của bạn (vùng di cư, tuần tra…).', vars: [], offByDefault: true },
   { key: 'garage.stored', group: 'garage', label: 'Cất xong', default: 'Đã cất dino vào gara. Respawn đúng loài rồi lấy ra trên trang web.', vars: [] },
   { key: 'garage.failed', group: 'garage', label: 'Cất thất bại ({reason} = một lý do bên dưới)', default: 'Cất thất bại: {reason}. Bạn có thể cất lại ngay.', vars: ['reason'] },
   ...REASONS.map(([k, label, def]): MessageDef => ({ key: `garage.reason.${k}`, group: 'garage', label: `Lý do thất bại: ${label}`, default: def, vars: [] })),
@@ -132,6 +133,9 @@ export const MESSAGES: readonly MessageDef[] = [
   // --- admin actions (mods/DinoGarage inbox) ---
   { key: 'admin.kill', group: 'admin', label: 'Admin xoá dino (không lý do)', default: 'An admin removed your dino.', vars: [] },
   { key: 'admin.killReason', group: 'admin', label: 'Admin xoá dino (có lý do)', default: 'An admin removed your dino. Reason: {reason}', vars: ['reason'] },
+  // --- prime tasks (prime-notify.ts): sent by the bridge when a task turns on ---
+  { key: 'prime.conditionDone', group: 'prime', label: 'Hoàn thành một nhiệm vụ prime ({task} = tên nhiệm vụ)', default: '✅ Đã hoàn thành nhiệm vụ prime: {task} ({done}/10 — cần {needed} để đủ điều kiện prime).', vars: ['task', 'n', 'done', 'needed'] },
+  { key: 'prime.eligible', group: 'prime', label: 'Dino vừa đủ điều kiện prime', default: '🌟 Dino của bạn đã đủ điều kiện prime ({done}/10)! Game xét prime khi dino đạt 75% growth.', vars: ['done', 'needed'] },
   // --- greeting (mods/HelloIsle) ---
   { key: 'hello.welcome', group: 'hello', label: 'Chào khi vào game / spawn', default: 'Welcome to the island. Type !ping to check the mods.', vars: [] },
   { key: 'hello.pong', group: 'hello', label: 'Trả lời !ping', default: 'pong — mods are alive', vars: [] },
@@ -139,7 +143,7 @@ export const MESSAGES: readonly MessageDef[] = [
 
 export const MESSAGE_BY_KEY: ReadonlyMap<string, MessageDef> = new Map(MESSAGES.map((m) => [m.key, m]));
 /** Sent by the bridge itself (RCON announce); the rest by the mods. */
-const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses', 'ai', 'ban']);
+const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses', 'ai', 'ban', 'prime']);
 
 export interface Periodic {
   id: string;

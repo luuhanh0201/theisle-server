@@ -536,7 +536,7 @@ check("progress gained since is kept (only given, never taken)", trike.__prime.b
 check("the right dino: conditions given back", trike.__prime.bPrimeCondition5 == true and trike.__prime.bIsEligiblePrime == true)
 check("an expired fix is not applied", trike.__prime.bPrimeCondition6 == false)
 check("an event and a message", #eventsOf("prime_fix") == 1 and eventsOf("prime_fix")[1].id == "fix1"
-      and lastMsg(trikeCtrl):find("khôi phục tiến độ prime", 1, true) ~= nil, lastMsg(trikeCtrl))
+      and lastMsg(trikeCtrl):find("cập nhật tiến độ prime", 1, true) ~= nil, lastMsg(trikeCtrl))
 trike.__prime.bPrimeCondition5 = false
 fixLoop.fn()
 check("once only", trike.__prime.bPrimeCondition5 == false and #eventsOf("prime_fix") == 1)

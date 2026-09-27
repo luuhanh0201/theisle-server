@@ -24,7 +24,7 @@ import { readVoiceSettings, shownName } from './voice-settings.js';
  *   GET /player-api/me/<steamId>     that player's dino, stats, lives, garage
  *   GET /player-api/leaderboard      top players by name (no SteamIDs)
  *   GET /player-api/server           online count, whether the game is up, name, slots, Discord
- *   GET /player-api/ai               the AI alive on the server now (species + position)
+ *   GET /player-api/ai               the AI alive on the server now (species + position), fish apart
  *   GET /player-api/ai-zones         the AI zones admins drew (name, circle, AI kinds)
  *   POST /player-api/garage/<steamId>          { action: store|redeem, slot?, where? }
  *        — that player's own store / redeem, run by DinoGarage exactly like
@@ -354,8 +354,11 @@ export async function handlePlayerApi(
     const ai = (ctx.live ? await ctx.live() : null)?.ai ?? null;
     send(res, 200, ai === null ? { t: null, stale: true, count: 0, list: [] } : {
       t: ai.t, stale: ai.stale, count: ai.count, aiAlive: ai.aiAlive,
-      // Not the fish: they spawn only around a player in the water — a dot on a lake would be a player.
       list: ai.stale ? [] : ai.list.filter((a) => !a.f).map((a) => ({ s: shortSpecies(a.c), x: a.x, y: a.y })),
+      // The game's ambient fish, apart (the map draws them as their own layer).
+      // Shown on the owner's request (2026-09-27), knowing they spawn only
+      // around a player in the water: fish on a lake hint that someone is there.
+      fish: ai.stale ? [] : ai.list.filter((a) => a.f).map((a) => ({ s: shortSpecies(a.c), x: a.x, y: a.y })),
     });
     return true;
   }

@@ -119,7 +119,7 @@ function P.poll()
                 Events.emit({ type = "prime_fix", id = fix.id, steamId = id, species = cls, growth = g,
                     conditions = wrote, prime = isPrime, t = now })
                 Msg.notify(ctrl, "garage.primeFixed",
-                    "Đã khôi phục tiến độ prime (các vùng di cư, tuần tra…) mà gara làm mất. Xin lỗi vì sự cố!")
+                    "Đã cập nhật tiến độ prime của bạn (vùng di cư, tuần tra…).")
                 break   -- one fix per dino per pass
             end
         end
