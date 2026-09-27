@@ -19,7 +19,8 @@
 
     A fix waits (up to expiresAt) until that player plays that species within
     that growth range — a dino still in the garage is fixed right after it is
-    taken out. Game thread (H.every in main.lua): reads one small file.
+    taken out. Game thread (H.every in main.lua): reads one small file,
+    decodes it only when it changed.
 ]]
 
 local H       = require("shared.isle.helpers")
@@ -40,6 +41,25 @@ local function readJson(path)
     f:close()
     local ok, d = pcall(json.decode, raw or "")
     return ok and type(d) == "table" and d or nil
+end
+
+-- The fixes as last parsed, and the text they came from: the file is read
+-- every poll (a few KB, cheap) but decoded only when it changed — decoding it
+-- every 5 s held the game thread ~7 ms (up to 39), 2026-09-27, though the
+-- bridge rarely writes it.
+local fixesRaw, fixesList = nil, nil
+
+local function readFixes()
+    local f = io.open(P.FIXES_PATH, "r")
+    if not f then fixesRaw, fixesList = nil, nil; return nil end
+    local raw = f:read("*a")
+    f:close()
+    if raw ~= fixesRaw then
+        fixesRaw = raw
+        local ok, d = pcall(json.decode, raw or "")
+        fixesList = ok and type(d) == "table" and type(d.fixes) == "table" and d.fixes or nil
+    end
+    return fixesList
 end
 
 local done = nil   -- id -> os.time(), loaded lazily
@@ -78,11 +98,11 @@ end
 
 --- One pass: every open fix whose player is on the right dino now.
 function P.poll()
-    local d = readJson(P.FIXES_PATH)
-    if type(d) ~= "table" or type(d.fixes) ~= "table" then return end
+    local fixes = readFixes()
+    if fixes == nil then return end
     local now = os.time()
     local open = {}
-    for _, fix in ipairs(d.fixes) do
+    for _, fix in ipairs(fixes) do
         if valid(fix) and loadDone()[fix.id] == nil and now <= (tonumber(fix.expiresAt) or 0) then
             open[fix.steamId] = open[fix.steamId] or {}
             table.insert(open[fix.steamId], fix)

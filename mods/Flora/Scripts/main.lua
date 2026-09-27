@@ -29,14 +29,20 @@
 -- Every EXPORT_MS this writes Mods/Flora/Saved/flora.json: each spawner (where,
 -- its shape, whether it is a migration zone and active / mass now) and every
 -- plant and fruit (class, where, whether it gives nutrients, and its α/β/γ
--- proportions). The bridge serves it to the panel's map.
+-- proportions). The bridge serves it to the panel's map, and reads the
+-- spawners for the prime zone tasks (zone-credit.ts) — so they stay fresh.
+-- The plants and fruits are for the map only: read every PLANTS_EVERY_MS,
+-- CHUNK a tick (all ~1,200 plants in one tick held the game thread up to
+-- 275 ms, 2026-09-27); each export carries the last complete read.
 --
 -- Read-only, and careful (lessons of 2026-09-24 and 2026-09-26):
 --   * only numbers and booleans are read from these actors, plus the
 --     components the game made for their shape (Box / Sphere / AreaSpline,
 --     through their UFunctions) and the plant's Spawner — nothing else
---   * one family per game-thread tick (spawners, plants, fruits), found
---     fresh by FindAllOf in that tick; no actor kept across ticks
+--   * one piece per game-thread tick (the spawners, or CHUNK plants / fruits),
+--     found fresh by FindAllOf in that tick; no actor kept across ticks (a
+--     chunk goes on from an index; an actor seen twice, the list having moved,
+--     is counted once by its address)
 --   * a flag is written before the first export and removed after it: if
 --     the server crashed in the middle, the next start does not export again
 --   * the JSON is encoded and written on the async thread
@@ -52,14 +58,15 @@ local MOD = "Flora"
 local DIR = "Mods/Flora/Saved/"
 local OUT = DIR .. "flora.json"
 local FLAG = DIR .. "export.running"
-local EXPORT_MS = 120000     -- a full picture every two minutes…
-local STEP_MS = 3000         -- …built one family per tick, three ticks apart
+local EXPORT_MS = 120000     -- the spawners every two minutes…
+local PLANTS_EVERY_MS = 600000   -- …the plants and fruits every ten…
+local CHUNK = 150            -- …this many a tick
+local STEP_MS = 3000         -- ticks three seconds apart
 local WRITE_MS = 5000
 local SPLINE_POINTS = 64     -- at most, per spline area
 
 local disabled = false
 local firstDone = false
-local picture = nil          -- being built: { spawners, plants, fruits }
 local ready = nil            -- finished, waiting to be written
 local stats = nil            -- the last control round's counts (step 2), exported with the picture
 local shapes = {}            -- spawner address -> its shape (areas do not move)
@@ -163,41 +170,51 @@ local function readSpawners()
     return list
 end
 
-local function readPlants()
-    local list = {}
-    local okA, all = pcall(function() return FindAllOf("TIEdiblePlant") or {} end)
-    for _, p in ipairs(okA and all or {}) do
-        if H.isValid(p) then
-            local x, y = where(p)
-            if x then
-                local spawner = nil
-                pcall(function() local s = p.Spawner; if s ~= nil and H.isValid(s) then spawner = addressOf(s) end end)
-                list[#list + 1] = {
-                    c = className(p), x = x, y = y, n = bool(p, "bCanGiveNutrients"), ft = num(p, "FoodType"),
-                    cp = r2(num(p, "CarbProportion")), pp = r2(num(p, "ProteinProportion")), lp = r2(num(p, "LipidProportion")),
-                    eaten = bool(p, "bWasConsumed"), s = spawner,
-                }
-            end
-        end
-    end
-    return list
+local function plantRow(p)
+    local x, y = where(p)
+    if not x then return nil end
+    local spawner = nil
+    pcall(function() local s = p.Spawner; if s ~= nil and H.isValid(s) then spawner = addressOf(s) end end)
+    return {
+        c = className(p), x = x, y = y, n = bool(p, "bCanGiveNutrients"), ft = num(p, "FoodType"),
+        cp = r2(num(p, "CarbProportion")), pp = r2(num(p, "ProteinProportion")), lp = r2(num(p, "LipidProportion")),
+        eaten = bool(p, "bWasConsumed"), s = spawner,
+    }
 end
 
-local function readFruits()
-    local list = {}
-    local okA, all = pcall(function() return FindAllOf("TIFruitBase") or {} end)
-    for _, f in ipairs(okA and all or {}) do
-        if H.isValid(f) then
-            local x, y = where(f)
-            if x then
-                list[#list + 1] = {
-                    c = className(f), x = x, y = y, n = bool(f, "bCanGiveNutri"), ft = num(f, "GoreFoodType"),
-                    cp = r2(num(f, "CarbProportion")), pp = r2(num(f, "ProteinProportion")), lp = r2(num(f, "LipidProportion")),
-                }
+local function fruitRow(f)
+    local x, y = where(f)
+    if not x then return nil end
+    return {
+        c = className(f), x = x, y = y, n = bool(f, "bCanGiveNutri"), ft = num(f, "GoreFoodType"),
+        cp = r2(num(f, "CarbProportion")), pp = r2(num(f, "ProteinProportion")), lp = r2(num(f, "LipidProportion")),
+    }
+end
+
+local FAMILIES = {
+    plants = { cls = "TIEdiblePlant", row = plantRow, next = "fruits" },
+    fruits = { cls = "TIFruitBase", row = fruitRow },
+}
+
+--- The next CHUNK of a family being read (b: { family, list, seen, from }). True once it is all read.
+local function readChunk(b)
+    local fam = FAMILIES[b.family]
+    local okA, all = pcall(function() return FindAllOf(fam.cls) or {} end)
+    all = okA and all or {}
+    local last = math.min(#all, b.from + CHUNK - 1)
+    for i = b.from, last do
+        local o = all[i]
+        if H.isValid(o) then
+            local a = addressOf(o)
+            if a and not b.seen[a] then
+                b.seen[a] = true
+                local row = fam.row(o)
+                if row then b.list[#b.list + 1] = row end
             end
         end
     end
-    return list
+    b.from = last + 1
+    return b.from > #all
 end
 
 local function markRunning(on, flag)
@@ -210,32 +227,54 @@ local function markRunning(on, flag)
     end
 end
 
--- One family per tick; the picture is handed to the writer when complete.
-local stage = 0
-local nextAt = 0
+-- One piece of work per tick: the spawners when they are due (each time an
+-- export, with the last complete plants and fruits), else CHUNK plants or
+-- fruits when those are being read.
+local last = { plants = {}, fruits = {}, t = nil }
+local reading = nil          -- { family, list, seen, from }
+local nextAt, plantsAt = 0, 0
+
+-- The flag is up only for the tick that first reads a kind of actor (the
+-- spawners, the plants, the fruits): a stop between ticks — a restart —
+-- never leaves it behind.
+local tried = {}
+local function guarded(kind, fn)
+    local first = not tried[kind]
+    if first then markRunning(true) end
+    local ok, r = pcall(fn)   -- a Lua error is not a crash: the flag comes down all the same
+    if first then tried[kind] = true; markRunning(false) end
+    if not ok then error(r, 0) end
+    return r
+end
+
 local function step()
     if disabled then return end
     local now = os.time() * 1000
-    if stage == 0 then
-        if now < nextAt then return end
-        if not firstDone then markRunning(true) end
-        picture = { t = os.time(), spawners = readSpawners() }
-        stage = 1
-    elseif stage == 1 then
-        picture.plants = readPlants()
-        stage = 2
-    elseif stage == 2 then
-        picture.fruits = readFruits()
-        picture.control = stats
-        ready, picture = picture, nil
-        stage = 0
+    if now >= nextAt then
+        ready = { t = os.time(), spawners = guarded("spawners", readSpawners), plants = last.plants,
+            fruits = last.fruits, plantsT = last.t, control = stats }
         nextAt = now + EXPORT_MS
-        if not firstDone then
-            firstDone = true
-            markRunning(false)
-            H.log(string.format("%s: first export — %d spawners, %d plants, %d fruits", MOD,
-                #ready.spawners, #ready.plants, #ready.fruits))
-        end
+        return
+    end
+    if reading == nil then
+        if now < plantsAt then return end
+        reading = { family = "plants", list = {}, seen = {}, from = 1 }
+    end
+    local b = reading
+    if not guarded(b.family, function() return readChunk(b) end) then return end
+    last[reading.family] = reading.list
+    local nextFamily = FAMILIES[reading.family].next
+    if nextFamily then
+        reading = { family = nextFamily, list = {}, seen = {}, from = 1 }
+        return
+    end
+    reading = nil
+    last.t = os.time()
+    plantsAt = now + PLANTS_EVERY_MS
+    nextAt = 0   -- an export now, with them
+    if not firstDone then
+        firstDone = true
+        H.log(string.format("%s: first export — %d plants, %d fruits", MOD, #last.plants, #last.fruits))
     end
 end
 
@@ -524,5 +563,6 @@ else
     end
     H.every(STEP_MS, MOD .. " export", step)
     LoopAsync(WRITE_MS, function() write(); return false end)
-    H.log(MOD .. ": loaded — exporting plants every " .. (EXPORT_MS // 1000) .. " s to " .. OUT)
+    H.log(MOD .. ": loaded — spawners every " .. (EXPORT_MS // 1000) .. " s, plants every "
+        .. (PLANTS_EVERY_MS // 1000) .. " s (" .. CHUNK .. " a tick) to " .. OUT)
 end

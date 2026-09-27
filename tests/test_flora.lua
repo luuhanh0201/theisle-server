@@ -36,7 +36,9 @@ local plain = obj("BP_EdiblePlantsSpawnable_C", { K2_GetActorLocation = at(9000,
 local fern = obj("BP_Fiddlehead_C", { K2_GetActorLocation = at(600, 400), bCanGiveNutrients = true, FoodType = 2,
   CarbProportion = 0.5, ProteinProportion = 0.25, LipidProportion = 0.25, Spawner = mz })
 local mango = obj("BP_FruitMangoStatic_C", { K2_GetActorLocation = at(9100, 9000), bCanGiveNutri = false, GoreFoodType = 1 })
+local flagSeen = {}
 _G.FindAllOf = function(c)
+  flagSeen[c] = io.open(FLAG, "r") ~= nil
   if c == "TIEdibleSpawner" then return { mz, plain } end
   if c == "TIEdiblePlant" then return { fern } end
   if c == "TIFruitBase" then return { mango } end
@@ -47,14 +49,22 @@ dofile(RUN .. "/Mods/Flora/Scripts/main.lua")
 local step = H.gameLoops[#H.gameLoops]
 local writer = H.loops[#H.loops]
 step.fn()
-check("the crash flag is up during the first export", io.open(FLAG, "r") ~= nil)
-step.fn(); step.fn()
-check("…and down once it finished", io.open(FLAG, "r") == nil)
+check("the crash flag is up while the spawners are first read", flagSeen.TIEdibleSpawner == true)
+check("…and down after that tick (a restart between ticks leaves none)", io.open(FLAG, "r") == nil)
 writer.fn()
 local f = io.open(OUT, "r")
 local d = f and json.decode(f:read("*a"))
 if f then f:close() end
-check("flora.json written", d ~= nil)
+check("the spawners are exported at once, before any plant is read", d ~= nil and #d.spawners == 2 and #d.plants == 0)
+step.fn(); step.fn()
+check("the plants, then the fruits, each tick with the flag up the first time", flagSeen.TIEdiblePlant == true
+  and flagSeen.TIFruitBase == true and io.open(FLAG, "r") == nil)
+step.fn()
+writer.fn()
+f = io.open(OUT, "r")
+d = f and json.decode(f:read("*a"))
+if f then f:close() end
+check("flora.json written with them", d ~= nil and #d.plants == 1 and #d.fruits == 1 and d.plantsT == clock)
 local s1 = d and d.spawners[1]
 check("a migration zone: its spline, active, multiplier", s1 and s1.migration == true and s1.active == true and s1.multiplier == 2
   and s1.shape.spline and #s1.shape.spline == 4, s1 and json.encode(s1) or "")
@@ -64,6 +74,30 @@ local p = d and d.plants[1]
 check("a plant: nutrients, α/β/γ, its spawner", p and p.n == true and p.cp == 0.5 and p.s == s1.id and p.c == "BP_Fiddlehead_C")
 check("a fruit: no nutrients", d and d.fruits[1].n == false and d.fruits[1].c == "BP_FruitMangoStatic_C")
 check("never off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
+
+-- Many plants: CHUNK (150) a tick, never all at once; spawners again at 2 min, plants at 10.
+local many = {}
+for i = 1, 400 do many[i] = obj("BP_Fiddlehead_C", { K2_GetActorLocation = at(i, i), bCanGiveNutrients = false }) end
+local reads = 0
+local prevFind = _G.FindAllOf
+_G.FindAllOf = function(c)
+  if c == "TIEdiblePlant" then reads = reads + 1; return many end
+  return prevFind(c)
+end
+clock = clock + 121
+step.fn()   -- spawners due
+check("at 2 min: the spawners again, no plant read", reads == 0)
+step.fn()
+check("the plants not before 10 min", reads == 0)
+clock = clock + 600
+for _ = 1, 8 do step.fn() end   -- 3 plant chunks, the fruits, the export; then nothing due
+writer.fn()
+f = io.open(OUT, "r")
+d = f and json.decode(f:read("*a"))
+if f then f:close() end
+check("400 plants read in 3 ticks of at most 150, each counted once", reads == 3 and d and #d.plants == 400,
+  "reads " .. reads .. ", plants " .. tostring(d and #d.plants))
+_G.FindAllOf = prevFind
 -- A start after a crash in the middle of an export: exports stay off.
 local ff = io.open(FLAG, "w"); ff:write("1"); ff:close()
 H.log = {}

@@ -545,6 +545,13 @@ check("an event and a message", #eventsOf("prime_fix") == 1 and eventsOf("prime_
 trike.__prime.bPrimeCondition5 = false
 fixLoop.fn()
 check("once only", trike.__prime.bPrimeCondition5 == false and #eventsOf("prime_fix") == 1)
+do
+  local decodes, decode = 0, json.decode
+  json.decode = function(...) decodes = decodes + 1; return decode(...) end
+  fixLoop.fn(); fixLoop.fn()
+  json.decode = decode
+  check("the file unchanged: not decoded again (it held the game thread ~7 ms every 5 s)", decodes == 0, decodes .. " decodes")
+end
 
 -- primeAt: every condition was there, so past 75 % it would have been prime.
 local function primeAsked()
