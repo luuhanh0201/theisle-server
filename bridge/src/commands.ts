@@ -215,6 +215,15 @@ export async function queueSkin(steamId: string, raw: unknown, now = Date.now())
 }
 
 /**
+ * The bridge's own repaint (skin-relog.ts: the colours a dino had, after a
+ * relog): checked like a player's, not bound to the player's command gap.
+ */
+export async function queueSkinRepaint(steamId: string, raw: unknown): Promise<InboxCommand> {
+  assertSteamId(steamId);
+  return enqueue({ type: 'skin', steamId, skin: validateSkin(raw) });
+}
+
+/**
  * Admin test (panel API only): a light attached to a player's dino, or taken
  * off it (mods/DinoGarage garage/light.lua) — to see whether a light the
  * server spawns shows on players' machines at night. Not for players.

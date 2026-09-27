@@ -1,4 +1,7 @@
 import { mkdir } from 'node:fs/promises';
+import { SkinRelog } from './skin-relog.js';
+import { queueSkinRepaint } from './commands.js';
+import { keptSkinsOf } from './kept-skins.js';
 import { config } from './config.js';
 import { NdjsonTail } from './tail.js';
 import { Store } from './store.js';
@@ -75,11 +78,16 @@ await store.groundPoints.load(groundPointsPath());
 const notifier = new Notifier(rcon, Math.floor(Date.now() / 1000));
 // "Completed: <task>" to the player, for each prime task that turns on (prime-notify.ts).
 const primeNotifier = new PrimeNotifier(rcon, Math.floor(Date.now() / 1000), (key, vars) => renderMessage(key, vars));
+// A dino's colours painted again when the player comes back on it (skin-relog.ts).
+const skinRelog = new SkinRelog(Math.floor(Date.now() / 1000),
+  (steamId, skin) => queueSkinRepaint(steamId, skin),
+  async (steamId, species) => (await keptSkinsOf(steamId))[species] !== undefined);
 const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {
     store.apply(event);
     void notifier.handle(event);
     void primeNotifier.handle(event);
+    void skinRelog.handle(event);
   }),
 );
 
