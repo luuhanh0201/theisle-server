@@ -2799,12 +2799,22 @@ function renderLives(lives, online, steamId) {
       <td><div style="display:flex;gap:6px;justify-content:flex-end">${lifeRestore(d, steamId)}${i < PATH_LIVES ? `<a class="btn-soft sm" style="white-space:nowrap" href="#map/path/${esc(encodeURIComponent(steamId))}/${l.spawnedAt}">Đường đi</a>` : ''}</div></td>
     </tr>`;
   }).join(''); };
-  draw(new Map());
-  // Prime tasks, and what can be put back in the garage: from the events (life-history.ts).
+  // Prime tasks, and what can be put back in the garage: from the events
+  // (life-history.ts reads the whole events file) — so once a minute, not on every 2 s tick.
+  const cached = lifeDetailCache.steamId === steamId ? lifeDetailCache : null;
+  draw(cached?.map ?? new Map());
+  if (cached && Date.now() - cached.at < 60_000) return;
+  lifeDetailCache.steamId = steamId;
+  lifeDetailCache.at = Date.now();
   getJson(`/api/lives/${encodeURIComponent(steamId)}`)
-    .then((r) => { if ($('player-lives') === tbody) draw(new Map(r.lives.map((x) => [x.spawnedAt, x]))); })
-    .catch(() => {});
+    .then((r) => {
+      if (lifeDetailCache.steamId !== steamId) return;
+      lifeDetailCache.map = new Map(r.lives.map((x) => [x.spawnedAt, x]));
+      draw(lifeDetailCache.map);
+    })
+    .catch(() => { lifeDetailCache.at = 0; });
 }
+const lifeDetailCache = { steamId: null, at: 0, map: null };
 
 /** "6/10 · 👑" — the prime tasks a life had done when last read. */
 function lifeTasks(d) {
@@ -2841,6 +2851,7 @@ document.addEventListener('click', (ev) => {
     run: async (token, _reason, slot) => {
       const r = await adminFetch('/api/restore-life', 'POST', token, { steamId, spawnedAt, slot: slot.trim() });
       toast(`Đã khôi phục ${label} vào gara (slot ${r.slot ?? slot}).`);
+      lifeDetailCache.at = 0;
       refresh();
     },
   });
@@ -7116,6 +7127,17 @@ const PHASE_BADGE = {
   failed:   ['stale', 'Server lỗi', 'systemd báo failed — xem tab Server'],
 };
 
+// A hidden tab (another tab in front, window minimised) asks nothing; it
+// catches up as soon as it is shown again. One refresh at a time: a slow
+// answer never piles up requests behind it.
+let refreshing = false;
+async function tick() {
+  if (document.hidden || refreshing) return;
+  refreshing = true;
+  try { await refresh(); } finally { refreshing = false; }
+}
+document.addEventListener('visibilitychange', tick);
+
 async function refresh() {
   try {
     const [health] = await Promise.all([getJson('/api/health'), refreshTab(currentTab()), refreshUnitPhase()]);
@@ -7150,7 +7172,7 @@ async function refresh() {
 
 renderFilters();
 showTab();
-setInterval(refresh, 2000);
+setInterval(tick, 2000);
 </script>
 </body>
 </html>
