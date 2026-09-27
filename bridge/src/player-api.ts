@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
 import { isSteamId, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
 import { queuePlayerCommand, queueSkin, TooSoonError } from './commands.js';
+import { keptSkinsOf, setKeptSkin } from './kept-skins.js';
 import type { LifeRecord, PlayerStats, Store, TrailPoint } from './store.js';
 import type { Skin } from './events.js';
 import { readAiZones, readAiZonesStatus } from './ai-zones.js';
@@ -27,7 +28,9 @@ import { readVoiceSettings, shownName } from './voice-settings.js';
  *   GET /player-api/ai               the AI alive on the server now (species + position), fish apart
  *   GET /player-api/ai-zones         the AI zones admins drew (name, circle, AI kinds)
  *   POST /player-api/garage/<steamId>          { action: store|redeem, slot?, where? }
- *   POST /player-api/skin/<steamId>            { colors: { Body: {r,g,b}… (linear 0–1) }, pattern?, theme?, variation? }
+ *   POST /player-api/skin/<steamId>            { colors: { Body: {r,g,b}… (linear) }, effects?, pattern?, theme?, variation?, keep? }
+ *          keep: true keeps these colours for the species played now (every new dino of it), false forgets them;
+ *          { forget: "BP_X_C" } forgets one species' kept colours
  *        — that player's own store / redeem, run by DinoGarage exactly like
  *          the chat command (commands.ts → inbox). 202 { id }.
  *   GET /player-api/command/<steamId>/<id>     its outcome once the mod ran it
@@ -291,9 +294,23 @@ export async function handlePlayerApi(
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
     const body = await readSmallJson(req);
     if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    const who = skinCmd[1] as string;
+    // Forget the colours kept for one species (no game command).
+    if (typeof body['forget'] === 'string') {
+      await setKeptSkin(who, body['forget'], null);
+      send(res, 200, { forgotten: body['forget'] });
+      return true;
+    }
     try {
-      const cmd = await queueSkin(skinCmd[1] as string, body);
-      send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt });
+      const cmd = await queueSkin(who, body);
+      // "Giữ màu cho lần chơi sau": for the species played now (keep: false = no longer).
+      const species = ctx.store.player(who)?.player.species ?? null;
+      let kept: string | null = null;
+      if (species !== null && cmd.type === 'skin' && typeof body['keep'] === 'boolean') {
+        await setKeptSkin(who, species, body['keep'] ? cmd.skin : null);
+        if (body['keep']) kept = species;
+      }
+      send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt, kept });
     } catch (err) {
       if (err instanceof TooSoonError) send(res, 429, { error: 'too many requests' });
       else if (err instanceof ValidationError) send(res, 400, { error: err.message });
@@ -331,6 +348,8 @@ export async function handlePlayerApi(
       ...playerView(steamId, detail?.player ?? null, detail?.lives ?? [], await readPlayerGarage(steamId), live, trail),
       // The garage rules the web garage shows (and the mod enforces).
       garageRules: { maxSlots: gs.maxSlots, redeemAt: gs.redeemAt, storeCountdown: gs.storeCountdown, cooldown: gs.cooldown },
+      // Colours kept for the next times, by species (kept-skins.ts).
+      keptSkins: await keptSkinsOf(steamId),
     });
     return true;
   }

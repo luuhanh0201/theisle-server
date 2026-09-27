@@ -39,6 +39,7 @@ local Inbox   = require("garage.inbox")
 local Settings = require("garage.settings")
 local PrimeFix = require("garage.primefix")
 local Skin    = require("garage.skin")
+local KeepSkin = require("garage.keepskin")
 
 local MOD = "DinoGarage"
 
@@ -421,6 +422,8 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     end
 
     -- Deferred restore: the engine needs the pawn to settle after a spawn.
+    -- The slot's own colours go on it: the kept web skin must not paint over them.
+    Skin.restoredAt[steamId] = os.time()
     H.deferWithPawn(ctrl, RESTORE_DELAY_MS, function(c, livePawn)
         -- Move first, then restore: the vitals and mutations land on the
         -- dino where it will stay.
@@ -508,6 +511,8 @@ H.every(INBOX_POLL_MS, MOD .. ": inbox poll", Inbox.poll)
 H.every(GUARD_EVERY_MS, MOD .. ": store guard", guardStores)
 -- Prime progress an admin gives back (garage/primefix.lua).
 H.every(5000, MOD .. ": prime fixes", PrimeFix.poll)
+-- Colours a player keeps from the web, on every new dino of that species (garage/keepskin.lua).
+H.every(3000, MOD .. ": kept skins", KeepSkin.poll)
 
 H.log(MOD .. ": loaded")
 Events.emit({ type = "mod_loaded", mod = MOD })

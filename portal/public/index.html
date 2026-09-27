@@ -904,6 +904,11 @@
     padding: 4px 7px; font: 12px ui-monospace, SFMono-Regular, monospace; }
   .hex-input:focus { outline: none; border-color: rgba(52,211,153,.55); color: inherit; }
   .hex-input.bad { border-color: rgba(248,113,113,.7); }
+  .dino-3d { position: relative; height: 260px; margin-top: 12px; border-radius: 12px; border: 1px solid var(--border); overflow: hidden;
+    background: radial-gradient(ellipse at 50% 65%, rgba(34,197,94,.12), rgba(2,6,23,.55)); }
+  .dino-3d canvas, .slot-3d canvas { width: 100% !important; height: 100% !important; display: block; }
+  .slot-3d { flex: none; width: 100%; height: 150px; border-radius: 10px; border: 1px solid var(--border); overflow: hidden;
+    background: radial-gradient(ellipse at 50% 65%, rgba(34,197,94,.10), rgba(2,6,23,.55)); }
   .skin-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
   @media (max-width: 900px) { .skin-layout { grid-template-columns: 1fr; } }
   .skin-preview { position: relative; height: 320px; border-radius: 12px; border: 1px solid var(--border);
@@ -952,6 +957,14 @@
   .skin-controls label > span, .skin-field > span { white-space: nowrap; line-height: 18px; }
   .skin-controls input[type=number], .xsel-btn, .xseg { height: 38px; box-sizing: border-box; }
   .skin-controls input[type=range] { margin: 10px 0 0; width: 100%; accent-color: #34d399; }
+  .skin-keep { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .skin-keep input { accent-color: #34d399; width: 16px; height: 16px; margin: 0; flex: none; }
+  .skin-kept { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; }
+  .kept-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 8px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg-surface); font-weight: 600; }
+  .kept-chip i { width: 10px; height: 10px; border-radius: 50%; }
+  .kept-chip button { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 0 4px; }
+  .kept-chip button:hover { color: #f87171; }
   .skin-fx { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-surface); }
   .skin-fx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
   .skin-fx-head .muted { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1430,6 +1443,9 @@
         <div class="dino-growth-badge" id="game-dino-growth">Growth: 0%</div>
       </div>
 
+      <!-- The dino played now in 3D, in its colours (skin3d.js) -->
+      <div class="dino-3d" id="game-3d" hidden></div>
+
       <!-- Growth bar -->
       <div style="margin-top:12px">
         <div class="player-meter-header">
@@ -1665,7 +1681,9 @@
               <b id="skin-glow-val">1.0×</b>
             </div>
           </div>
+          <label class="skin-keep"><input type="checkbox" id="skin-keep" checked><span>Giữ màu này cho những lần chơi sau (cùng loài) — lấy từ gara vẫn giữ màu của ô gara</span></label>
           <button type="button" class="btn btn-emerald" id="btn-skin-apply" style="width:100%;margin-top:12px">Áp dụng lên dino đang chơi</button>
+          <div class="skin-kept" id="skin-kept" hidden></div>
           <div class="garage-status" id="skin-status" hidden></div>
 
           <div class="skin-code">

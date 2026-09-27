@@ -412,6 +412,7 @@ async function sendSkin() {
   const k = (v) => Math.min(GLOW_MAX, Math.round(v * sk.glow * 10000) / 10000);
   for (const [id] of REGIONS) { const c = linearOf(sk.colors[id]); body.colors[id] = { r: k(c.r), g: k(c.g), b: k(c.b) }; }
   if (sk.effects) body.effects = sk.effects;
+  body.keep = $('skin-keep').checked;
   skinStatus('', 'Đang gửi…');
   try {
     const r = await fetch('/api/skin', {
@@ -485,6 +486,21 @@ function renderSaved() {
         <span title="${esc(it.name)}">${esc(it.name)}</span>
         <button type="button" class="btn btn-ghost" data-load="${i}" style="font-size:11.5px;padding:3px 10px">Nạp</button>
         <button type="button" class="btn btn-ghost" data-del="${i}" style="font-size:11.5px;padding:3px 10px">Xoá</button></li>`).join('');
+}
+
+/** The colours kept for the next times (/api/me keptSkins), with a way to stop keeping them. */
+function renderKept(kept) {
+  const names = Object.keys(kept ?? {});
+  const box = $('skin-kept');
+  const key = JSON.stringify(kept ?? {});
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.hidden = names.length === 0;
+  box.innerHTML = names.length === 0 ? '' : `<span class="muted">Đang giữ màu cho:</span> ${names.map((sp) => {
+    const c = kept[sp]?.colors?.Body;
+    return `<span class="kept-chip"><i style="background:${c ? hex(c) : '#888'}"></i>${esc(sp.replace(/^BP_/, '').replace(/_C$/, ''))}
+      <button type="button" data-forget="${esc(sp)}" title="Bỏ giữ màu">✕</button></span>`;
+  }).join('')}`;
 }
 
 function initSkinEditor() {
@@ -565,6 +581,14 @@ function initSkinEditor() {
   });
 
   $('btn-skin-apply').addEventListener('click', () => { void sendSkin(); });
+  $('skin-kept').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-forget]');
+    if (!b) return;
+    b.disabled = true;
+    const r = await fetch('/api/skin', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ forget: b.dataset.forget }) }).catch(() => null);
+    if (r?.ok) { b.closest('.kept-chip')?.remove(); skinStatus('', 'Đã bỏ giữ màu cho loài đó.'); } else b.disabled = false;
+  });
 
   $('btn-skin-export').addEventListener('click', () => {
     const code = skinCode(editorSkin());
@@ -686,6 +710,8 @@ function renderGame(me) {
     // Prime
     $('game-prime-content').innerHTML = renderPrimeBoard(me.dino.prime);
 
+    renderGame3d(me.dino);
+
     // The skin preview shows the dino played now (skin3d.js), unless the player picked another.
     window.skin3dLive = { species: me.dino.species, female: me.dino.skin?.female };
     window.skin3d?.follow?.(me.dino.species, me.dino.skin?.female);
@@ -711,7 +737,9 @@ function renderGame(me) {
     $('game-vitals').innerHTML = '<p class="muted" style="grid-column:1/-1;padding:12px 0;margin:0">Chưa có chỉ số sinh tồn của dino.</p>';
     $('game-prime-content').innerHTML = '<p class="muted" style="font-size:13px">Dino chưa spawn trên bản đồ.</p>';
     $('skin-active-swatches-box').hidden = true;
+    renderGame3d(null);
   }
+  renderKept(me.keptSkins);
 
   // Lifetime Stats
   const s = me.stats;
@@ -914,11 +942,12 @@ function renderGara(me) {
   // Rebuild only when something shown changes.
   const key = JSON.stringify([rows.map(({ g, why }) => [g.slot, g.species, g.growth, g.storedAt, g.gift, g.prime, g.vitals, g.max, g.skin, why]), garageBusy]);
   const list = $('gara-slots-list');
-  if (list.dataset.key === key) return;
+  if (list.dataset.key === key) { placeSlot3d(rows.map(({ g }) => g)); return; }
   list.dataset.key = key;
   list.innerHTML = rows.map(({ g, why }) => `
     <li class="garage-slot-card stacked${g.prime ? ' prime' : ''}">
       <div class="garage-slot-body">
+        <div class="slot-3d-spot" data-slot3d="${esc(g.slot)}"></div>
         <div style="flex:1;min-width:0">
           <b style="font-size:15px">${esc(g.species ?? 'Dino')}</b>
           <span class="tag" style="margin-left:6px">Growth ${pct(g.growth)}</span>
@@ -931,6 +960,47 @@ function renderGara(me) {
         <button type="button" class="btn btn-emerald slot-redeem" data-redeem="${esc(g.slot)}" ${why || garageBusy ? 'disabled' : ''}>📤 Lấy ra</button>
       </div>
     </li>`).join('');
+  placeSlot3d(rows.map(({ g }) => g));
+}
+
+// Each garage slot in 3D, in the colours it was stored with. A slot keeps its
+// viewer (and its canvas) across list rebuilds: the box is moved, not re-made.
+const slotViewers = new Map();   // slot -> { box, viewer, key }
+function placeSlot3d(slots) {
+  // Only while the Gara tab is shown (renderGara runs every second): a model is loaded when first seen.
+  if (!window.Dino3D || !$('gara-slots-list').offsetParent) return;
+  const keep = new Set();
+  for (const g of slots) {
+    if (!g.species) continue;
+    const spot = document.querySelector(`[data-slot3d="${CSS.escape(g.slot)}"]`);
+    let v = slotViewers.get(g.slot);
+    if (!spot && !v?.box.isConnected) continue;      // not in the list (yet)
+    keep.add(g.slot);
+    if (!v) {
+      const box = document.createElement('div');
+      box.className = 'slot-3d';
+      v = { box, viewer: window.Dino3D.create(box, { interactive: false, autoRotate: true, fit: 0.95 }), key: null };
+      slotViewers.set(g.slot, v);
+    }
+    if (spot) spot.replaceWith(v.box);
+    const key = JSON.stringify([g.species, g.skin]);
+    if (v.key !== key) { v.key = key; void v.viewer.show(g.species, window.Dino3D.fromGame(g.skin) ?? { colors: {} }); }
+  }
+  for (const slot of [...slotViewers.keys()]) if (!keep.has(slot)) slotViewers.delete(slot);
+}
+
+// The dino played now, in 3D (tab Game): shown while there is one, re-coloured when its skin changes.
+let gameViewer = null, gameViewerKey = null;
+function renderGame3d(dino) {
+  const box = $('game-3d');
+  if (!dino?.species || !window.Dino3D) { box.hidden = true; return; }
+  box.hidden = false;
+  if (!box.offsetParent) return;          // the Game tab is not shown: load nothing yet
+  if (!gameViewer) gameViewer = window.Dino3D.create(box, { autoRotate: true, fit: 1.15 });
+  const key = JSON.stringify([dino.species, dino.skin]);
+  if (key === gameViewerKey) return;
+  gameViewerKey = key;
+  void gameViewer.show(dino.species, window.Dino3D.fromGame(dino.skin) ?? { colors: {} }).then((ok) => { if (!ok) box.hidden = true; });
 }
 
 

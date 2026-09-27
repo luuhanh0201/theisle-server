@@ -214,8 +214,8 @@ function C.capture(pawn)
     end
 
     state.location, state.rotation = captureTransform(pawn)
-    -- The skin as the game had it, for the player portal. Not applied on
-    -- restore yet (restore.lua R.APPLY_SKIN).
+    -- The skin as the game had it: shown on the player portal, and painted
+    -- back on the dino taken out (restore.lua, step 8).
     state.skin = H.readSkin(pawn)
 
     -- Refuse to store a snapshot we cannot put back. Growth drives the whole

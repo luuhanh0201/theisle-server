@@ -39,10 +39,11 @@ do
     end
 end
 
--- Skin restore in upstream predates the customizer overhaul in v0.21.720 and
--- is flagged there as needing re-verification. Off until someone verifies it
--- on this server: a wrong colour is cosmetic, a crash is not.
-R.APPLY_SKIN = false
+-- The stored skin goes back on the dino taken out (garage/skin.lua: field by
+-- field into CustomizerData — the way the web skin editor writes it, used on
+-- the live server since 2026-09-27; the upstream restore predated the
+-- customizer overhaul of v0.21.720 and stayed off until then).
+local Skin = require("garage.skin")
 
 local ACTIVE_SLOTS = {
     { key = "Slot1", field = "MutationSlot1" },
@@ -346,9 +347,13 @@ function R.apply(pawn, state, onDone)
             R.applyPrime(pawn, state.primeData, prime == true)
         end
 
-        if R.APPLY_SKIN and state.skin ~= nil then
-            H.logError("restore: skin apply is enabled but not implemented — "
-                .. "verify against v0.21.720 customizer changes first")
+        -- Step 8 — the colours it had when stored.
+        if state.skin ~= nil then
+            local sk = Skin.fromCaptured(state.skin)
+            if sk ~= nil then
+                local wrote = Skin.apply(pawn, sk)
+                H.log("restore: skin " .. tostring(wrote) .. " fields")
+            end
         end
 
         if onDone then onDone(true) end

@@ -102,6 +102,19 @@ function S.validate(skin)
     return out
 end
 
+--- A skin as the garage / StatsLogger captured it (H.readSkin: colors,
+--- patternIndex, themeIndex, variation, female) → a checked skin, or nil.
+--- The sex is not written: it is the dino's, not its paint.
+function S.fromCaptured(captured)
+    if type(captured) ~= "table" or type(captured.colors) ~= "table" then return nil end
+    return S.validate({ colors = captured.colors, pattern = captured.patternIndex,
+        theme = captured.themeIndex, variation = captured.variation })
+end
+
+--- Players whose dino the garage just painted: the kept skin (keepskin.lua)
+--- must not paint over a slot taken out. steamId -> os.time().
+S.restoredAt = {}
+
 --- Write a checked skin onto a live pawn. Returns how many fields were written, or nil and why.
 function S.apply(pawn, skin)
     if writes == false then return nil, "off" end

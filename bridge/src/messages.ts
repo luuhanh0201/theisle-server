@@ -137,6 +137,7 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'skin.applied', group: 'skin', label: 'Đổi màu dino thành công', default: 'Đã đổi màu dino của bạn.', vars: [] },
   { key: 'skin.noDino', group: 'skin', label: 'Đổi màu: chưa điều khiển dino', default: 'Bạn cần đang điều khiển một con dino còn sống để đổi màu.', vars: [] },
   { key: 'skin.failed', group: 'skin', label: 'Đổi màu thất bại', default: 'Không đổi được màu dino. Thử lại sau.', vars: [] },
+  { key: 'skin.kept', group: 'skin', label: 'Tô lại màu đã giữ (dino mới cùng loài)', default: 'Đã tô lại màu bạn giữ cho loài này.', vars: [] },
   // --- prime tasks (prime-notify.ts): sent by the bridge when a task turns on ---
   { key: 'prime.conditionDone', group: 'prime', label: 'Hoàn thành một nhiệm vụ prime ({task} = tên nhiệm vụ)', default: '✅ Đã hoàn thành nhiệm vụ prime: {task} ({done}/10 — cần {needed} để đủ điều kiện prime).', vars: ['task', 'n', 'done', 'needed'] },
   { key: 'prime.eligible', group: 'prime', label: 'Dino vừa đủ điều kiện prime', default: '🌟 Dino của bạn đã đủ điều kiện prime ({done}/10)! Game xét prime khi dino đạt 75% growth.', vars: ['done', 'needed'] },

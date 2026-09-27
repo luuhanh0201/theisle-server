@@ -153,7 +153,10 @@ check("refused, with the reason", started(id4) and started(id4).ok == false
 
 print("\n-- 5. redeem on the right species restores, in cookbook order --")
 H.calls = {}
-local freshCtrl = H.makeCtrl(STEAM, H.makePawn({ growth = 0.05, mutation = "None" }))
+local freshPawn = H.makePawn({ growth = 0.05, mutation = "None" })
+freshPawn.__skin.BodyColor = { R = 0, G = 0, B = 0, A = 1 }       -- the new dino's own paint
+freshPawn.__skin.PatternIndex = 1
+local freshCtrl = H.makeCtrl(STEAM, freshPawn)
 useCtrl(freshCtrl)
 send("redeem", { slot = "1" })
 H.advance(10)
@@ -169,6 +172,8 @@ check("active slots pushed after settle", H.countCalls("SetReplicatedMutationsDa
       tostring(H.countCalls("SetReplicatedMutationsData")))
 check("vitals re-applied after growth wipe", H.countCalls("SetHealth") >= 2, "SetHealth x" .. H.countCalls("SetHealth"))
 check("elder stacks applied last", H.countCalls("SetElderReplicationStacks") == 1)
+check("the stored colours are painted back", freshPawn.__skin.BodyColor.R == 0.5 and freshPawn.__skin.BodyColor.G == 0.25
+      and freshPawn.__skin.PatternIndex == 3, json.encode(freshPawn.__skin.BodyColor))
 local names = H.callNames()
 local function firstIndex(n) for i, v in ipairs(names) do if v == n then return i end end end
 local function lastIndex(n) local r; for i, v in ipairs(names) do if v == n then r = i end end return r end
@@ -614,6 +619,36 @@ local deadCtrl = H.makeCtrl(STEAM, dead)
 useCtrl(deadCtrl)
 local nd = sendSkin({ colors = { Body = { r = 0.1, g = 0.1, b = 0.1 } } })
 check("a dead dino is not painted", started(nd) and started(nd).ok == false and lastMsg(deadCtrl):find("dino còn sống", 1, true) ~= nil)
+
+say("\n-- kept skin: painted on a new dino of that species, not over a garage slot --")
+local keepLoop
+for _, l in ipairs(H.gameLoops) do if l.ms == 3000 then keepLoop = l end end
+check("a kept-skins loop (3 s, game thread)", keepLoop ~= nil)
+local KEEPER = "76561198000000077"
+local kf = assert(io.open("Mods/DinoGarage/Saved/skins.json", "w"))
+kf:write(json.encode({ players = { [KEEPER] = { BP_Dilo_C = { colors = { Body = { r = 0.9, g = 0.2, b = 0.1 } }, pattern = 2 } } } }))
+kf:close()
+local newDino = H.makePawn({ growth = 0.3 })
+local keepCtrl = H.makeCtrl(KEEPER, newDino)
+useCtrl(keepCtrl)
+keepLoop.fn()                                   -- first seen
+check("not at once: the game paints a new dino first", newDino.__skin.BodyColor.R == 0.5)
+clock = clock + 6
+keepLoop.fn()
+check("5 s later: the kept colours are on it", newDino.__skin.BodyColor.R == 0.9 and newDino.__skin.PatternIndex == 2,
+      json.encode(newDino.__skin.BodyColor))
+check("the player is told", lastMsg(keepCtrl):find("màu bạn giữ", 1, true) ~= nil, lastMsg(keepCtrl))
+newDino.__skin.BodyColor = { R = 0.1, G = 0.1, B = 0.1, A = 1 }
+clock = clock + 6
+keepLoop.fn()
+check("only once per dino", newDino.__skin.BodyColor.R == 0.1)
+local fromGarage = H.makePawn({ growth = 0.3 })
+local gCtrl = H.makeCtrl(KEEPER, fromGarage)
+useCtrl(gCtrl)
+require("garage.skin").restoredAt[KEEPER] = clock
+keepLoop.fn(); clock = clock + 6; keepLoop.fn()
+check("a dino just taken out of the garage keeps its slot's colours", fromGarage.__skin.BodyColor.R == 0.5)
+os.remove("Mods/DinoGarage/Saved/skins.json")
 
 say("")
 say("-- threads: nothing the mod ran from an async callback touched the engine --")

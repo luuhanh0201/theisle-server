@@ -238,3 +238,21 @@ test('skin from the web: checked, queued to the inbox for the mod, one every few
   assert.ok(parseEvent({ type: 'skin_effects', t: 1, steamId: PAINTER, struct: 'SkinEffects', values: { MudAmount: 0.4 } }),
     'the skin effects probe is a known event');
 });
+
+test('kept skins: "keep" saves the colours for the species played now; forget removes them; /me lists them', async () => {
+  const KEEPER = '76561198000000098';
+  store.apply({ type: 'snapshot', t: Math.floor(Date.now() / 1000), steamId: KEEPER, name: 'Keeper', species: 'BP_Deinosuchus_C', growth: 0.4,
+    health: 100, stamina: 100, hunger: 50, thirst: 50 });
+  const skin = { colors: { Body: { r: 0.9, g: 0.1, b: 0.2 } }, effects: { Mud: 0.5 }, pattern: 1, keep: true };
+  const r = await call(`/player-api/skin/${KEEPER}`, { method: 'POST', body: skin });
+  assert.equal(r.status, 202);
+  assert.equal(r.body.kept, 'BP_Deinosuchus_C');
+  const file = JSON.parse(readFileSync(join(root, 'skins.json'), 'utf8'));
+  const kept = file.players[KEEPER].BP_Deinosuchus_C;
+  assert.deepEqual([kept.colors, kept.pattern, kept.effects], [{ Body: { r: 0.9, g: 0.1, b: 0.2 } }, 1, undefined], 'colours kept, effects not (they dry off)');
+  const me = await call(`/player-api/me/${KEEPER}`);
+  assert.deepEqual(Object.keys(me.body.keptSkins), ['BP_Deinosuchus_C']);
+  const f = await call(`/player-api/skin/${KEEPER}`, { method: 'POST', body: { forget: 'BP_Deinosuchus_C' } });
+  assert.equal(f.status, 200);
+  assert.equal(JSON.parse(readFileSync(join(root, 'skins.json'), 'utf8')).players[KEEPER], undefined);
+});
