@@ -103,6 +103,21 @@ test('online needs an open session and recent activity; map lists positions', ()
   assert.equal(s.map()[0].trail.length, 0, 'a new life starts a new trail');
 });
 
+test('ping: the last snapshot\'s, only while online', () => {
+  const s = new Store();
+  const t = now();
+  feed(s, [
+    { t, type: 'session_start', steamId: A },
+    { t, type: 'snapshot', steamId: A, species: 'X', health: 1, stamina: 1, hunger: 1, thirst: 1, growth: 1, ping: 92 },
+    { t, type: 'session_start', steamId: B },
+    { t, type: 'snapshot', steamId: B, species: 'X', health: 1, stamina: 1, hunger: 1, thirst: 1, growth: 1 },
+  ]);
+  assert.equal(s.player(A).player.ping, 92);
+  assert.equal(s.player(B).player.ping, null, 'an older mod sends none');
+  feed(s, [{ t: t + 1, type: 'session_end', steamId: A, duration: 1 }]);
+  assert.equal(s.player(A).player.ping, null, 'offline: no ping shown');
+});
+
 test('chat and per-player timeline', () => {
   const s = new Store();
   const t = now();

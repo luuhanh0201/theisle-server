@@ -75,6 +75,8 @@ export interface PlayerStats {
   online: boolean;
   /** The skin of the dino they play now (last "skin" event), null before one. */
   skin: Skin | null;
+  /** The server-measured ping from the last snapshot (every 5 s), ms; null online without a dino, or offline. */
+  ping: number | null;
   /** Vital maxima from the last snapshot that had them. */
   max: Partial<Record<VitalName, number>> | null;
   /** Prime / elder status of the dino they play now (last "prime" event). */
@@ -220,6 +222,7 @@ export class Store {
         p.blood = event.blood ?? null;
         p.growth = event.growth;
         p.yaw = event.yaw ?? null;
+        p.ping = typeof event.ping === 'number' && Number.isFinite(event.ping) ? event.ping : null;
         if (event.max !== undefined) p.max = event.max;
         this.speciesStats.snapshot(event.steamId, event.t, event.species, event.growth, event.max);
         if (event.loc !== undefined) this.groundPoints.add(event.loc.x, event.loc.y, event.loc.z, event.species);
@@ -645,12 +648,14 @@ export class Store {
   /** A copy with the derived fields filled in for this moment. */
   #view(p: PlayerStats, now: number): PlayerStats {
     const open = p.sessionStart !== null;
+    // An open session with nothing heard for a while means the server went
+    // down (or the bridge is replaying old files) — not a connected player.
+    const online = open && now - p.lastSeen <= config.offlineAfterSeconds;
     return {
       ...p,
       playtime: p.playtime + (open ? Math.max(0, p.lastSeen - (p.sessionStart ?? 0)) : 0),
-      // An open session with nothing heard for a while means the server went
-      // down (or the bridge is replaying old files) — not a connected player.
-      online: open && now - p.lastSeen <= config.offlineAfterSeconds,
+      online,
+      ping: online ? p.ping : null,
     };
   }
 
@@ -686,6 +691,7 @@ export class Store {
         longestLife: 0,
         biggestKill: null,
         skin: null,
+        ping: null,
         max: null,
         prime: null,
         online: false,

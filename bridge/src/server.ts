@@ -930,9 +930,15 @@ async function handlePanel(
   }
 
   switch (path) {
-    case '/api/players':
-      sendJson(res, 200, { players: store.players() });
+    case '/api/players': {
+      // With each player's garage: how many dinos stored, of the slots allowed.
+      const [index, gs] = await Promise.all([listAll(), readGarageSettings()]);
+      sendJson(res, 200, {
+        players: store.players().map((p) => ({ ...p, garage: Object.keys(index.players[p.steamId] ?? {}).length })),
+        garageMax: gs.maxSlots,
+      });
       return;
+    }
     case '/api/online':
       sendJson(res, 200, { players: store.online() });
       return;

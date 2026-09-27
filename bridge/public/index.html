@@ -969,7 +969,7 @@
           <div class="card-body table-wrap">
             <table>
               <thead><tr>
-                <th>Người chơi</th><th>HP</th><th class="hide-sm">Growth</th><th>K / D</th>
+                <th>Người chơi</th><th title="Ping server đo, cập nhật mỗi 5 giây">Ping</th><th title="Số dino trong gara / số slot tối đa">Gara</th><th>K / D</th>
                 <th class="hide-sm">Damage</th><th class="hide-sm">Giờ chơi</th>
               </tr></thead>
               <tbody id="players"></tbody>
@@ -2537,7 +2537,14 @@ function renderKpis(players) {
   ].join('');
 }
 
-function renderPlayers(players) {
+/** The ping the server measured: green under 80 ms, amber under 150, red above. */
+function pingCell(p) {
+  if (!p.online || typeof p.ping !== 'number') return '<span class="muted">–</span>';
+  const tone = p.ping < 80 ? 'tone-grow' : p.ping < 150 ? 'tone-dmg' : 'tone-kill';
+  return `<span class="chip ${tone}" style="font-variant-numeric:tabular-nums">${Math.round(p.ping)} ms</span>`;
+}
+
+function renderPlayers(players, garageMax) {
   $('players-sub').textContent = `${players.filter((p) => p.online).length} online`;
   const tbody = $('players');
   if (players.length === 0) {
@@ -2550,8 +2557,8 @@ function renderPlayers(players) {
         <div class="meta"><div class="nm">${esc(p.name ?? shortId(p.steamId))}
           ${p.online ? '<span class="chip tone-accent"><span class="d"></span>online</span>' : ''}</div>
           <div class="sp">${esc(dino(p.species))}</div></div></div></td>
-      <td>${meter(p.health, 100)}</td>
-      <td class="hide-sm">${meter(p.growth, 1, 'grow')}</td>
+      <td>${pingCell(p)}</td>
+      <td class="${p.garage ? '' : 'muted'}" style="font-variant-numeric:tabular-nums">${p.garage ?? 0}${garageMax ? `/${garageMax}` : ''}</td>
       <td><b>${p.kills}</b> <span class="muted">/ ${p.deaths}</span></td>
       <td class="hide-sm">${num(p.damageDealt)}</td>
       <td class="hide-sm muted">${dur(p.playtime)}</td>
@@ -7029,7 +7036,7 @@ async function refreshTab(tab) {
       const q = feedFilter ? `&type=${encodeURIComponent(feedFilter)}` : '';
       const [players, feed] = await Promise.all([getJson('/api/players'), getJson(`/api/feed?limit=150${q}`), refreshPerf(), renderOverviewExtras()]);
       renderKpis(players.players);
-      renderPlayers(players.players);
+      renderPlayers(players.players, players.garageMax);
       renderFeed($('feed'), feed.events);
       break;
     }
@@ -7053,7 +7060,7 @@ async function refreshTab(tab) {
       if (sub === 'list') {
         const players = await getJson('/api/players');
         renderKpis(players.players);
-        renderPlayers(players.players);
+        renderPlayers(players.players, players.garageMax);
       } else if (sub === 'killfeed') {
         renderFeed($('killfeed'), (await getJson('/api/killfeed?limit=200')).events, 'Chưa có ai chết');
       } else if (sub === 'leaderboard') {

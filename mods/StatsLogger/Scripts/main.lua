@@ -220,6 +220,51 @@ local function playerNameOf(ctrl)
     return tostring(name)
 end
 
+--------------------------------------------------------------------------
+-- Ping: the round trip the SERVER measured for each player, read with the
+-- snapshot (every SNAPSHOT_SECONDS — no need for more). UE5 keeps it on the
+-- PlayerState as CompressedPing, a uint8 of ms / 4 (UE4: Ping); a number
+-- read, like the name above. It includes the server's own frame time: when
+-- the server bogs down, everyone's ping rises together. Flag first:
+-- Saved/ping-read.trying before the first read of a run, removed after;
+-- found at load, ping stays off.
+local PING_FLAG = "Mods/StatsLogger/Saved/ping-read.trying"
+local pingOff, pingTried = false, false
+do
+    local f = io.open(PING_FLAG, "r")
+    if f then
+        f:close()
+        pingOff = true
+        H.logError(MOD .. ": the last run stopped while reading a ping — ping off. Delete " .. PING_FLAG .. " to try again.")
+    end
+end
+
+--- ms, or nil when it cannot be read.
+local function pingOf(ctrl)
+    if pingOff then return nil end
+    local first = not pingTried
+    if first then
+        local f = io.open(PING_FLAG, "w")
+        if f then f:write(tostring(os.time())); f:close() end
+    end
+    local ok, v = pcall(function()
+        local ps = ctrl.PlayerState
+        if not H.isValid(ps) then return nil end
+        local okC, c = pcall(function() return ps.CompressedPing end)
+        if okC and type(c) == "number" then return c end
+        local okP, legacy = pcall(function() return ps.Ping end)
+        if okP and type(legacy) == "number" then return legacy end
+        return nil
+    end)
+    if first then
+        os.remove(PING_FLAG)
+        pingTried = true
+        H.log(MOD .. ": ping read: " .. (ok and v ~= nil and (tostring(v * 4) .. " ms") or "not readable on this build"))
+    end
+    if ok and type(v) == "number" then return v * 4 end
+    return nil
+end
+
 local function steamIdOfPawn(pawn)
     local ok, ctrl = pcall(function() return pawn.Controller end)
     if not ok then return nil end
@@ -745,6 +790,7 @@ local function snapshotOnce()
             max     = maxima(pawn),
             loc     = locationOf(pawn),
             yaw     = yawOf(pawn),
+            ping    = pingOf(ctrl),
         }
         snaps[#snaps + 1] = snap
 

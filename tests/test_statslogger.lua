@@ -27,6 +27,7 @@ local pawnA, pawnB = H.makePawn({}), H.makePawn({ growth = 0.2 })
 local ctrlA, ctrlB = H.makeCtrl(A, pawnA, "Alpha"), H.makeCtrl(B, pawnB, "Bravo")
 H.attachController(pawnA, ctrlA)
 H.attachController(pawnB, ctrlB)
+ctrlB.PlayerState.CompressedPing = 23   -- the game keeps ms / 4
 
 local online = { ctrlA, ctrlB }
 _G.FindAllOf = function() H.touch("FindAllOf"); return online end
@@ -113,6 +114,10 @@ check("snapshot has position", snap and snap.loc and snap.loc.x == 1 and snap.lo
       snap and json.encode(snap.loc or {}) or "nil")
 check("snapshot has yaw and name", snap and snap.yaw == 90 and snap.name == "Bravo")
 check("snapshot has oxygen and blood", snap and snap.oxygen == 100 and snap.blood == 100)
+check("snapshot has the ping the server measured (CompressedPing x 4 ms)", snap and snap.ping == 92, snap and tostring(snap.ping))
+local snapA = (function() for _, e in ipairs(ofType("snapshot", SNAPSHOTS)) do if e.steamId == A then return e end end end)()
+check("no PlayerState ping: none in the snapshot", snapA ~= nil and snapA.ping == nil)
+check("the ping flag is gone after the first read", io.open("Mods/StatsLogger/Saved/ping-read.trying", "r") == nil)
 
 say("")
 say("-- 3. a second poll with nothing new emits no lifecycle events --")

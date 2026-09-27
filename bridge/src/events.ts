@@ -55,6 +55,8 @@ export interface SnapshotEvent extends BaseEvent {
   yaw?: number;
   /** The game's current maxima (GetMaxHealth…), for bars. Absent from older mods. */
   max?: Partial<Record<VitalName, number>>;
+  /** Round trip the server measured, ms (PlayerState.CompressedPing x 4). Absent: not readable. */
+  ping?: number;
 }
 
 export type VitalName = 'health' | 'stamina' | 'hunger' | 'thirst' | 'blood' | 'oxygen';
