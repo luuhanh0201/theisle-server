@@ -320,9 +320,10 @@
       const ghost = document.createElement('i'); ghost.className = 'ghost';
       const fill = document.createElement('i'); fill.className = 'fill'; fill.style.background = color;
       t.append(ghost, fill);
+      const n = document.createElement('span'); n.className = 'n';
       const v = document.createElement('span'); v.className = 'v';
-      row.append(l, t, v);
-      dinoEl.rows[k] = { row, fill, ghost, v };
+      row.append(l, t, n, v);
+      dinoEl.rows[k] = { row, fill, ghost, n, v };
       return row;
     });
     dinoEl.pops = document.createElement('div'); dinoEl.pops.className = 'pops';
@@ -367,12 +368,11 @@
       r.row.hidden = false;
       const pct = typeof m === 'number' && m > 0 ? Math.max(0, Math.min(1, v / m)) : null;
       setWidth(r.fill, `${Math.round((pct ?? 0) * 1000) / 10}%`);
-      // Health: the real numbers too ("980 / 1.300 · 75%").
-      if (k === 'health' && show.hpValue) {
-        setText(r.v, pct === null ? fmtHp(v) : `${fmtHp(v)} / ${fmtHp(m)} · ${Math.round(pct * 100)}%`);
-      } else {
-        setText(r.v, pct === null ? String(Math.round(v)) : `${Math.round(pct * 100)}%`);
-      }
+      // Number, then % in its own column: health as "980 / 1.300" (the
+      // "Số máu cụ thể" option), the others as they are now.
+      if (k === 'health') setText(r.n, show.hpValue ? (pct === null ? fmtHp(v) : `${fmtHp(v)} / ${fmtHp(m)}`) : '');
+      else setText(r.n, fmtHp(v));
+      setText(r.v, pct === null ? '' : `${Math.round(pct * 100)}%`);
     }
   }
 

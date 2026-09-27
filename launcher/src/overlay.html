@@ -66,16 +66,20 @@
   .dino .sp-name { font-weight: 800; font-size: 1.1em; }
   .dino .prime { font-size: 1.05em; line-height: 1; }
   .dino .prime.dim { opacity: .45; filter: grayscale(.4); }
-  .dino { position: relative; }
-  .bar { display: grid; grid-template-columns: calc(52px * var(--scale)) 1fr auto; align-items: center; gap: calc(6px * var(--scale)); margin: calc(3px * var(--scale)) 0; font-size: .88em; border-radius: 6px; }
+  /* One grid for every row — name | bar | number | % — so the bars are the
+     same length and the numbers line up, whatever each row's text. */
+  .dino { position: relative; display: grid; grid-template-columns: max-content minmax(calc(40px * var(--scale)), 1fr) max-content max-content;
+          column-gap: calc(8px * var(--scale)); row-gap: calc(4px * var(--scale)); align-items: center; }
+  .dino .head, .dino > .sub, .dino .pops { grid-column: 1 / -1; }
+  .bar { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; font-size: .88em; border-radius: 6px; font-variant-numeric: tabular-nums; }
   .bar .track { position: relative; height: calc(7px * var(--scale)); border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }
   .bar .track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; }
   .bar .track .fill { transition: width .35s ease-out; }
   .bar .track .ghost { width: 0; background: #fde68a; }
-  .bar .v { text-align: right; color: var(--muted); white-space: nowrap; min-width: calc(34px * var(--scale)); }
-  .b-health .v { color: var(--text); }
-  .l-numbers .bar { grid-template-columns: 1fr auto; }
-  .l-numbers .bar .track { display: none; }
+  .bar .n { text-align: right; color: var(--muted); white-space: nowrap; }
+  .bar .v { text-align: right; white-space: nowrap; min-width: calc(34px * var(--scale)); }
+  .b-health .n { color: var(--text); }
+  .l-numbers .bar .track { visibility: hidden; }
   /* took damage */
   .bar.hit { animation: hit .6s ease-out; }
   @keyframes hit { 0% { background: rgba(239,68,68,.55); transform: translateX(-2px); } 20% { transform: translateX(2px); } 40% { transform: translateX(-1px); } 100% { background: transparent; transform: none; } }
