@@ -241,7 +241,7 @@
   @media (max-width: 640px) { .hide-sm { display: none; } }
 
   /* ---- feed ----------------------------------------------------------- */
-  .feed { list-style: none; margin: 0; padding: 0; max-height: 620px; overflow-y: auto; }
+  .feed { list-style: none; margin: 0; padding: 0 12px 0 0; max-height: 620px; overflow-y: auto; scrollbar-gutter: stable; }
   .feed.tall { max-height: none; }
   /* Every log as columns: time | kind | what happened | value — one line per event, easy to scan and compare. */
   .feed li { display: grid; grid-template-columns: 66px 30px 96px minmax(0, 1fr) minmax(72px, auto); column-gap: 10px;
@@ -2509,8 +2509,9 @@ function valueOf(e) {
   switch (e.type) {
     case 'damage':
       if (!isNum(e.amount)) return '';
-      return `−${num(e.amount)}${e.ticks > 1 ? `<small>cắn giữ ×${e.ticks}</small>` : '<small>1 phát</small>'}`;
-    case 'death': return isNum(e.growth) ? `${pctOf(e.growth)}<small>growth</small>` : '';
+      return `−${num(e.amount)}${e.ticks > 1 ? `<small>cắn giữ ×${e.ticks}</small>` : ''}`;
+    // A store or an admin removal is not a death: the 25 % is the shrunk corpse, not the dino.
+    case 'death': return e.cause === 'garage' || e.cause === 'admin' || !isNum(e.growth) ? '' : `${pctOf(e.growth)}<small>growth</small>`;
     case 'spawn': return isNum(e.growth) ? `${pctOf(e.growth)}<small>growth</small>` : '';
     case 'growth': case 'growth_set': return pctOf(e.growth ?? e.to);
     default: return '';
