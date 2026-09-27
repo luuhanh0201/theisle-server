@@ -892,6 +892,18 @@
   .leaderboard-rank.top-3 { background: linear-gradient(135deg, #b45309, #78350f); color: #fff; }
 
   /* SKIN PAGE STYLES */
+  /* Skin tab: the colours as compact rows in one panel */
+  .skin-side .regions-grid { display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--bg-surface);
+    border: 1px solid var(--border); border-radius: 12px; }
+  .skin-side .region-card { padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; justify-content: flex-start; gap: 10px; cursor: pointer; }
+  .skin-side .region-card:hover { background: rgba(255,255,255,.04); }
+  .skin-side .region-card .color-picker-input { width: 26px; height: 26px; border-radius: 7px; flex: none; }
+  .skin-side .region-card .color-picker-input::-webkit-color-swatch { border-radius: 5px; }
+  .region-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hex-input { width: 84px; flex: none; background: rgba(2,6,23,.5); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted);
+    padding: 4px 7px; font: 12px ui-monospace, SFMono-Regular, monospace; }
+  .hex-input:focus { outline: none; border-color: rgba(52,211,153,.55); color: inherit; }
+  .hex-input.bad { border-color: rgba(248,113,113,.7); }
   .skin-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
   @media (max-width: 900px) { .skin-layout { grid-template-columns: 1fr; } }
   .skin-preview { position: relative; height: 320px; border-radius: 12px; border: 1px solid var(--border);
@@ -902,9 +914,56 @@
   .skin-preview-flat div { border-radius: 10px; height: 88px; border: 1px solid rgba(255,255,255,.15); display: flex; align-items: flex-end;
     padding: 6px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000; }
   .skin-preview-note { position: absolute; left: 12px; bottom: 8px; font-size: 11.5px; }
-  .skin-controls { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.6fr; gap: 12px; margin-top: 12px; }
-  @media (max-width: 640px) { .skin-controls { grid-template-columns: 1fr 1fr; } }
-  .skin-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; }
+  /* Wraps whole fields when narrow (launcher window, phone) — never squeezes a label or a button */
+  .skin-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; align-items: flex-start; }
+  .skin-controls > * { flex: 1 1 0; }
+  .skin-controls > .skin-field:nth-child(1) { flex: 2 1 150px; }
+  .skin-controls > .skin-field:nth-child(2) { flex: 1.4 1 128px; }
+  .skin-controls > label:nth-child(3), .skin-controls > label:nth-child(4) { flex: .7 1 64px; }
+  .skin-controls > .skin-variation { flex: 2 1 150px; }
+  .skin-field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; min-width: 0; }
+  /* The species picker: our own dropdown, not the browser's */
+  .xsel { position: relative; }
+  .xsel-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(2,6,23,.5);
+    border: 1px solid var(--border); border-radius: 8px; color: inherit; padding: 8px 10px; font: inherit; font-weight: 600; cursor: pointer; }
+  .xsel-btn:hover, .xsel.open .xsel-btn { border-color: rgba(52,211,153,.55); }
+  .xsel-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .xsel-caret { width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px);
+    opacity: .7; transition: transform .15s; flex: none; }
+  .xsel.open .xsel-caret { transform: rotate(225deg) translateY(-2px); }
+  .xsel-menu { position: absolute; z-index: 30; left: 0; min-width: max(100%, 210px); top: calc(100% + 6px); margin: 0; padding: 6px; list-style: none;
+    max-height: 280px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.18) transparent;
+    background: var(--bg-surface, #0f172a); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.45); outline: none; }
+  .xsel-menu::-webkit-scrollbar { width: 6px; }
+  .xsel-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 3px; }
+  .xsel-menu li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 7px; cursor: pointer;
+    font-weight: 500; white-space: nowrap; }
+  .xsel-menu li:hover, .xsel-menu li.active { background: rgba(52,211,153,.14); }
+  .xsel-menu li[aria-selected="true"] { color: #34d399; font-weight: 700; }
+  .xsel-menu li[aria-selected="true"]::after { content: '✓'; }
+  .xsel-menu li .xsel-live { font-size: 10.5px; font-weight: 700; color: #0b1220; background: #34d399; border-radius: 999px; padding: 1px 7px; }
+  /* Male / female */
+  .xseg { display: flex; background: rgba(2,6,23,.5); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 3px; }
+  .xseg button { flex: 1; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 600; padding: 0 6px; border-radius: 6px; cursor: pointer;
+    opacity: .7; white-space: nowrap; }
+  .xseg button.on { background: rgba(52,211,153,.18); color: #34d399; opacity: 1; }
+  .region-card.off { opacity: .45; }
+  .skin-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; min-width: 0; }
+  .skin-controls label > span, .skin-field > span { white-space: nowrap; line-height: 18px; }
+  .skin-controls input[type=number], .xsel-btn, .xseg { height: 38px; box-sizing: border-box; }
+  .skin-controls input[type=range] { margin: 10px 0 0; width: 100%; accent-color: #34d399; }
+  .skin-presets { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .skin-presets h4 { margin: 0 0 10px; font-size: 13px; color: var(--text-muted); }
+  .skin-presets h4 .muted { font-weight: 500; font-size: 11.5px; }
+  .preset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 640px) { .preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .preset-tile { display: flex; flex-direction: column; gap: 6px; padding: 7px; border-radius: 9px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: inherit; font: inherit; cursor: pointer; text-align: left; min-width: 0; transition: var(--transition); }
+  .preset-tile:hover { border-color: rgba(52,211,153,.55); transform: translateY(-1px); }
+  .preset-tile.on { border-color: #34d399; box-shadow: 0 0 0 1px #34d399 inset; }
+  .preset-stripe { display: flex; height: 16px; border-radius: 5px; overflow: hidden; }
+  .preset-stripe i { flex: 1; }
+  .preset-tile span { font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .skin-controls input[type=number], .skin-controls select, .skin-code input, .skin-saved input { background: rgba(2,6,23,.5); border: 1px solid var(--border);
     border-radius: 8px; color: inherit; padding: 8px 10px; font: inherit; min-width: 0; }
   .skin-code input { flex: 1; font-family: ui-monospace, monospace; font-size: 12px; }
@@ -1561,10 +1620,21 @@
             <span class="skin-preview-note muted" id="skin-preview-note"></span>
           </div>
           <div class="skin-controls">
-            <label>Loài (xem trước) <select id="skin-species"></select></label>
-            <label>Kiểu hoa văn <input type="number" id="skin-pattern" min="0" max="2" step="1" value="0"></label>
-            <label>Tông <input type="number" id="skin-theme" min="0" max="20" step="1" value="0"></label>
-            <label class="skin-variation">Biến thể: <b id="skin-variation-val">0</b>
+            <div class="skin-field"><span>Loài</span>
+              <div class="xsel" id="skin-species">
+                <button type="button" class="xsel-btn" aria-haspopup="listbox" aria-expanded="false"><span class="xsel-val">Đang tải…</span><i class="xsel-caret"></i></button>
+                <ul class="xsel-menu" role="listbox" tabindex="-1" hidden></ul>
+              </div>
+            </div>
+            <div class="skin-field"><span>Giới tính</span>
+              <div class="xseg" id="skin-gender" role="radiogroup">
+                <button type="button" data-g="m" role="radio" aria-checked="true" class="on">♂ Đực</button>
+                <button type="button" data-g="f" role="radio" aria-checked="false">♀ Cái</button>
+              </div>
+            </div>
+            <label title="Kiểu hoa văn (0–2)"><span>Kiểu</span><input type="number" id="skin-pattern" min="0" max="2" step="1" value="0"></label>
+            <label><span>Tông</span><input type="number" id="skin-theme" min="0" max="20" step="1" value="0"></label>
+            <label class="skin-variation"><span>Biến thể: <b id="skin-variation-val">0</b></span>
               <input type="range" id="skin-variation" min="0" max="20" step="1" value="0"></label>
           </div>
           <button type="button" class="btn btn-emerald" id="btn-skin-apply" style="width:100%;margin-top:12px">Áp dụng lên dino đang chơi</button>
@@ -1577,6 +1647,11 @@
               <input type="text" id="skin-code" placeholder="Dán mã vào đây…" spellcheck="false">
               <button type="button" class="btn btn-ghost" id="btn-skin-import" style="font-size:12px">Nạp mã</button>
             </div>
+          </div>
+
+          <div class="skin-presets">
+            <h4>Bảng màu gợi ý <span class="muted">— bấm để áp cả 10 vùng</span></h4>
+            <div class="preset-grid" id="skin-presets-bar"></div>
           </div>
         </div>
 
@@ -1591,12 +1666,6 @@
             <!-- Injected via JavaScript -->
           </div>
 
-          <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-            <h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted)">Bảng màu gợi ý:</h4>
-            <div style="display:flex;flex-wrap:wrap;gap:8px" id="skin-presets-bar">
-              <!-- Injected via JS -->
-            </div>
-          </div>
 
           <div class="skin-saved">
             <h4>Skin đã lưu (trên máy này)</h4>

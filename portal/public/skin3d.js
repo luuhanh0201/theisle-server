@@ -12,6 +12,11 @@
 // classified ONCE per species (its two nearest regions and the blend between
 // them); a colour change only re-mixes those — fast enough to follow a picker.
 // Teeth, mouth and claws have no region there: the preview cannot show them.
+// A female has no display colour: its display areas take the body colour.
+//
+// Species and sex: our own picker (#skin-species, #skin-gender). In game, the
+// preview follows the dino played now; a species the player picks stays until
+// that dino changes (a new species or sex, a new life).
 // Shading: the RAC map's blue channel (crevices) and green (surface detail) are
 // baked into the colour; the normal map gives the relief.
 
@@ -33,13 +38,20 @@ const REGION_CODES = [             // [region, code colour in the region map]
 const $ = (id) => document.getElementById(id);
 const host = $('skin-3d');
 const note = $('skin-preview-note');
-const select = $('skin-species');
+const picker = $('skin-species');
+const pickerBtn = picker.querySelector('.xsel-btn');
+const pickerVal = picker.querySelector('.xsel-val');
+const menu = picker.querySelector('.xsel-menu');
+const genderBox = $('skin-gender');
 
 let registry = null;
 let renderer = null, scene = null, camera = null, controls = null, mixer = null, clock = null;
 let current = null;                // { name, root, bodyMats, eyeMats, texture, canvas, ctx, classes, shade }
 let lastSkin = null;
-let chosenByUser = false;
+let chosen = null;                 // the species shown
+let female = false;
+let liveKey = null;                // "species|sex" of the dino played now, as last seen
+let liveName = null;
 let loading = 0;
 
 const srgb = (hex) => { const n = parseInt(String(hex).replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -89,7 +101,8 @@ function shading(rac) {
 
 function paint() {
   if (!current || !lastSkin) return;
-  const cols = REGION_CODES.map(([id]) => srgb(lastSkin.colors?.[id] ?? '#808080'));
+  // A female has no display colour: those areas take the body's.
+  const cols = REGION_CODES.map(([id]) => srgb(lastSkin.colors?.[female && id === 'MaleDisplay' ? 'Body' : id] ?? '#808080'));
   const { a, b, t } = current.classes;
   const img = current.ctx.createImageData(SIZE, SIZE);
   const d = img.data, sh = current.shade;
@@ -136,11 +149,13 @@ function ensureRenderer() {
   controls.maxDistance = 30;
   controls.target.set(0, 0, 0);
   clock = new THREE.Clock();
-  new ResizeObserver(resize).observe(host);
-  resize();
   const loop = () => {
     requestAnimationFrame(loop);
     if (host.hidden || document.hidden || !host.offsetParent) return;   // tab not shown: nothing to draw
+    // Follow the box's size here rather than with a ResizeObserver: the tab can be
+    // hidden when the model loads (0 × 0), and an observer missed that change.
+    const w = host.clientWidth, h = host.clientHeight;
+    if (w > 0 && h > 0 && (w !== sizeW || h !== sizeH)) resize();
     mixer?.update(clock.getDelta());
     controls.update();
     renderer.render(scene, camera);
@@ -148,8 +163,10 @@ function ensureRenderer() {
   loop();
 }
 
+let sizeW = 0, sizeH = 0;
 function resize() {
   const w = host.clientWidth || 1, h = host.clientHeight || 1;
+  sizeW = w; sizeH = h;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
@@ -241,14 +258,84 @@ function speciesOf(raw) {
   return Object.keys(registry.species).find((k) => k.toLowerCase() === short) ?? null;
 }
 
+// --- the species picker (our own dropdown) -------------------------------------
+let activeIdx = -1;
+function renderMenu() {
+  const names = Object.keys(registry?.species ?? {}).sort();
+  menu.innerHTML = names.map((n, i) => `<li role="option" data-name="${n}" id="xsel-opt-${i}" aria-selected="${n === chosen}">
+    <span>${n}</span>${n === liveName ? '<span class="xsel-live">đang chơi</span>' : ''}</li>`).join('');
+  pickerVal.textContent = chosen ?? '—';
+}
+function openMenu(open) {
+  picker.classList.toggle('open', open);
+  menu.hidden = !open;
+  pickerBtn.setAttribute('aria-expanded', String(open));
+  if (open) {
+    const items = [...menu.children];
+    activeIdx = Math.max(0, items.findIndex((li) => li.dataset.name === chosen));
+    markActive();
+    menu.focus();
+  }
+}
+function markActive() {
+  [...menu.children].forEach((li, i) => li.classList.toggle('active', i === activeIdx));
+  menu.children[activeIdx]?.scrollIntoView({ block: 'nearest' });
+}
+function pick(name, byUser) {
+  if (!registry?.species?.[name]) return;
+  chosen = name;
+  renderMenu();
+  if (byUser) openMenu(false);
+  if (current?.name !== name) void showSpecies(name);
+}
+pickerBtn.addEventListener('click', () => openMenu(menu.hidden));
+menu.addEventListener('click', (e) => { const li = e.target.closest('li[data-name]'); if (li) { pick(li.dataset.name, true); pickerBtn.focus(); } });
+menu.addEventListener('keydown', (e) => {
+  const n = menu.children.length;
+  if (e.key === 'ArrowDown') { activeIdx = (activeIdx + 1) % n; markActive(); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { activeIdx = (activeIdx - 1 + n) % n; markActive(); e.preventDefault(); }
+  else if (e.key === 'Enter' || e.key === ' ') { const li = menu.children[activeIdx]; if (li) pick(li.dataset.name, true); pickerBtn.focus(); e.preventDefault(); }
+  else if (e.key === 'Escape' || e.key === 'Tab') { openMenu(false); if (e.key === 'Escape') pickerBtn.focus(); }
+  else if (e.key.length === 1) {   // type a letter: jump to the next species starting with it
+    const k = e.key.toLowerCase();
+    const items = [...menu.children];
+    const next = items.findIndex((li, i) => i > activeIdx && li.dataset.name.toLowerCase().startsWith(k));
+    const idx = next >= 0 ? next : items.findIndex((li) => li.dataset.name.toLowerCase().startsWith(k));
+    if (idx >= 0) { activeIdx = idx; markActive(); }
+  }
+});
+document.addEventListener('click', (e) => { if (!picker.contains(e.target)) openMenu(false); });
+
+// --- male / female ----------------------------------------------------------------
+function setFemale(f) {
+  female = f;
+  for (const b of genderBox.querySelectorAll('button')) {
+    const on = (b.dataset.g === 'f') === f;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', String(on));
+  }
+  // The display colour means nothing on a female: dim its picker.
+  document.querySelector('.region-card[data-region="MaleDisplay"]')?.classList.toggle('off', f);
+  schedulePaint();
+}
+genderBox.addEventListener('click', (e) => { const b = e.target.closest('button[data-g]'); if (b) setFemale(b.dataset.g === 'f'); });
+
 window.skin3d = {
   setSkin(skin) { lastSkin = skin; schedulePaint(); },
-  /** The dino the player plays now: shown unless they picked a species themselves. */
-  suggestSpecies(raw) {
-    const name = speciesOf(raw);
-    if (!name || chosenByUser || current?.name === name || select.value === name) return;
-    select.value = name;
-    void showSpecies(name);
+  /**
+   * The dino played now (from /api/me): its species and sex. A new one (or the
+   * first seen) is shown at once, over whatever the player picked before.
+   */
+  follow(rawSpecies, isFemale) {
+    window.skin3dLive = { species: rawSpecies, female: isFemale };
+    if (!registry) return;
+    const name = speciesOf(rawSpecies);
+    const key = `${name}|${isFemale === true}`;
+    if (name !== liveName) { liveName = name; renderMenu(); }
+    if (!name || key === liveKey) return;
+    liveKey = key;
+    if (typeof isFemale === 'boolean') setFemale(isFemale);
+    pick(name, false);
   },
 };
 
@@ -257,14 +344,14 @@ window.skin3d = {
     registry = await (await fetch('/dino3d/registry.json', { cache: 'no-cache' })).json();
   } catch {
     showNote('Chưa có mô hình 3D trên server — xem màu theo từng ô.');
+    pickerVal.textContent = '—';
     return;
   }
-  const names = Object.keys(registry.species).sort();
-  select.innerHTML = names.map((n) => `<option value="${n}">${n}</option>`).join('');
-  select.addEventListener('change', () => { chosenByUser = true; void showSpecies(select.value); });
-  // Start with the dino played now if app.js already knows it, else the first one.
-  const first = speciesOf(window.skin3dSuggested) ?? names[0];
-  select.value = first;
   lastSkin = lastSkin ?? window.skin3dLastSkin ?? null;
-  await showSpecies(first);
+  const live = window.skin3dLive;
+  if (live && speciesOf(live.species)) {
+    window.skin3d.follow(live.species, live.female);   // in game already: that dino
+  } else {
+    pick(Object.keys(registry.species).sort()[0], false);
+  }
 })();

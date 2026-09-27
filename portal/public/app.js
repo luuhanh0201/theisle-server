@@ -281,14 +281,33 @@ const skinStrip = (skin) => {
 // 3. Skin editor: colours per region, pattern / theme / variation, a preview,
 //    and "apply" onto the dino played now (POST /api/skin → the game).
 // ============================================================================
+// 20 themed palettes: the 10 regions in REGIONS order (Body, Flank, Underbelly,
+// Markings, MaleDisplay, Detail1, Eyes, Teeth, Mouth, Claws), sRGB hex.
 const PRESETS = [
-  { name: 'Rừng Rậm (Jungle)', color: '#2d6a4f' },
-  { name: 'Sa Mạc (Savanna)', color: '#c68b59' },
-  { name: 'Hắc Ám (Obsidian)', color: '#1a1d20' },
-  { name: 'Bạch Tạng (Albino)', color: '#e2e8f0' },
-  { name: 'Dung Nham (Volcanic)', color: '#9d0208' },
-  { name: 'Đầm Lầy (Swamp)', color: '#588157' },
-];
+  ['Rừng rậm', '#3f5a36 #2c4027 #8a8f62 #1c2616 #c9a227 #26301f #d9a21b #e8dcc0 #9c5a55 #2a2a24'],
+  ['Sa mạc', '#c49a6c #a67c52 #e6cfa8 #7a5230 #d2691e #5c4033 #e0b03a #efe6cf #b56b62 #3b3128'],
+  ['Hắc ám', '#1d1f22 #121315 #3a3d42 #050505 #8b0000 #2b2b2b #ff3b30 #d8d2c4 #5a2323 #111111'],
+  ['Bạch tạng', '#ece8e1 #d9d2c7 #f7f4ef #c7bfb3 #f2a0a8 #b8aea0 #e5484d #fbf7ee #e08a8f #cfc6b8'],
+  ['Dung nham', '#2a1d1a #3d2620 #6b3a2a #120c0b #ff4500 #ff8c00 #ffb000 #e6d8c3 #7a2b1f #1a1414'],
+  ['Đầm lầy', '#4a5a3a #3a4a2e #7d7a52 #262e1d #9acd32 #2f3a24 #c8b400 #ddd4b8 #8a5a4a #2d2b22'],
+  ['Băng giá', '#b8d4e3 #8fb3c9 #e8f1f5 #4f7891 #3fa9f5 #6a8fa6 #7fdbff #f4f8fa #9bb7c9 #3c4f5c'],
+  ['Hoàng hôn', '#d9774a #b3533a #f2c38b #6e2c2a #ff2d55 #8c3b2e #ffcc33 #f1e3cc #c8615a #3a2420'],
+  ['Đại dương', '#2d5f7a #1f4459 #a9c7cf #0f2633 #00c2d1 #173848 #4de1ff #e6eef0 #7a9aa3 #14242c'],
+  ['Hổ vằn', '#d9822b #b8641a #f2e1c4 #1a1310 #ff6a00 #2b1d14 #ffcf3a #f0e6d2 #b8584f #231a15'],
+  ['Báo đốm', '#d8b26a #bf9550 #f3e6c4 #3a2a18 #e3a33c #5a4128 #c9d23a #f1e8d4 #b76a5f #2e241a'],
+  ['Ngựa vằn', '#efefef #d6d6d6 #fafafa #111111 #2f6fff #333333 #3a86ff #f5f2ea #c47d80 #1a1a1a'],
+  ['Rừng thu', '#8a4b24 #6d3a1c #d6a86b #3f2412 #e25822 #5a3a20 #f2a23c #eadcc2 #a4533f #2e1f14'],
+  ['Hoàng gia', '#3b2a6b #2a1e4f #a693c9 #150f2b #d4af37 #5b4a8a #e3c565 #f0e9d8 #8c5a8c #1d1830'],
+  ['Ngọc bích', '#2f7d5b #215c43 #a8d5bd #0f3325 #19e68c #1d4a37 #7dffb3 #e9f3ec #7aa693 #14261e'],
+  ['Bờ biển', '#d8cdb6 #bdb095 #f1ebdf #8a7d63 #43b0f1 #6f6550 #5fb4ff #f7f3ea #c99a8f #4a4234'],
+  ['Huyết long', '#6e1414 #4d0e0e #b85c5c #1f0505 #ff1a1a #3a0a0a #ffdd00 #e8d7c9 #9e2b2b #140606'],
+  ['Thép xám', '#5d6570 #454c55 #9aa3ad #262a30 #5ac8fa #3a4048 #a0e9ff #e3e6ea #8a8f99 #1e2126'],
+  ['Độc tố', '#2b2b2b #1c1c1c #7fff00 #0a0a0a #bfff00 #39ff14 #adff2f #e0e8d0 #4f7f2f #121212'],
+  ['Hoàng thổ', '#7a6248 #5f4c37 #b8a489 #3b2f22 #b5651d #4a3c2d #d19a2a #e8dcc6 #a0685c #2c241b'],
+].map(([name, list]) => {
+  const hexes = list.split(' ');
+  return { name, colors: Object.fromEntries(REGIONS.map(([id], i) => [id, hexes[i]])) };
+});
 
 // What the editor starts with: a real Carnotaurus skin from this server
 // (the game's linear colours), so the preview looks like a dino at once.
@@ -329,7 +348,7 @@ function applySkin(skin) {
     if (!c) continue;
     const col = typeof c === 'string' ? c : hex(c);
     $(`picker-${id}`).value = col;
-    $(`hex-${id}`).textContent = col;
+    $(`hex-${id}`).value = col;
   }
   const pattern = skin.pattern ?? skin.patternIndex;
   const theme = skin.theme ?? skin.themeIndex;
@@ -441,24 +460,29 @@ function initSkinEditor() {
   grid.innerHTML = REGIONS.map(([id, label]) => {
     const col = hex(DEFAULT_SKIN.colors[id]);
     return `
-    <div class="region-card" data-region="${id}">
-      <div class="region-info">
-        <h4>${label}</h4>
-      </div>
-      <div class="region-controls">
-        <input type="color" class="color-picker-input" id="picker-${id}" value="${col}">
-        <span class="hex-display" id="hex-${id}">${col}</span>
-      </div>
-    </div>`;
+    <label class="region-card" data-region="${id}">
+      <input type="color" class="color-picker-input" id="picker-${id}" value="${col}" aria-label="${label}">
+      <span class="region-name">${label}</span>
+      <input type="text" class="hex-input" id="hex-${id}" value="${col}" maxlength="7" spellcheck="false" aria-label="${label} (mã hex)">
+    </label>`;
   }).join('');
 
   for (const [id] of REGIONS) {
     const input = $(`picker-${id}`);
-    const hexSpan = $(`hex-${id}`);
+    const hexIn = $(`hex-${id}`);
     input.addEventListener('input', () => {
-      hexSpan.textContent = input.value;
+      hexIn.value = input.value;
+      hexIn.classList.remove('bad');
       skinChanged();
     });
+    // Typing a hex code: taken once it is a full colour.
+    hexIn.addEventListener('input', () => {
+      const v = hexIn.value.trim().toLowerCase();
+      const m = /^#?([0-9a-f]{6})$/.exec(v);
+      hexIn.classList.toggle('bad', !m && v.length >= 6);
+      if (m) { input.value = `#${m[1]}`; skinChanged(); }
+    });
+    hexIn.addEventListener('blur', () => { hexIn.value = input.value; hexIn.classList.remove('bad'); });
   }
   for (const id of ['skin-pattern', 'skin-theme']) $(id).addEventListener('input', skinChanged);
   $('skin-variation').addEventListener('input', () => {
@@ -466,20 +490,20 @@ function initSkinEditor() {
     skinChanged();
   });
 
-  // Presets: one colour for the body, a darker one for the markings.
+  // Presets: a whole palette per theme — a tile with its first five colours.
   const presetsBar = $('skin-presets-bar');
-  presetsBar.innerHTML = PRESETS.map((p) => `
-    <button type="button" class="btn btn-ghost" style="padding:5px 12px;font-size:12px;gap:6px" data-preset="${p.color}">
-      <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color}"></i>
-      ${p.name}
-    </button>
-  `).join('');
+  presetsBar.innerHTML = PRESETS.map((p, i) => `
+    <button type="button" class="preset-tile" data-preset="${i}" title="${esc(p.name)}">
+      <div class="preset-stripe">${REGIONS.slice(0, 5).map(([id]) => `<i style="background:${p.colors[id]}"></i>`).join('')}</div>
+      <span>${esc(p.name)}</span>
+    </button>`).join('');
   presetsBar.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-preset]');
     if (!btn) return;
-    const base = linearOf(btn.dataset.preset);
-    const shade = (k) => ({ r: Math.min(1, base.r * k), g: Math.min(1, base.g * k), b: Math.min(1, base.b * k) });
-    applySkin({ colors: { Body: base, Flank: shade(0.6), Underbelly: shade(1.6), Markings: shade(0.25) } });
+    const p = PRESETS[Number(btn.dataset.preset)];
+    if (!p) return;
+    applySkin({ colors: p.colors });   // the preview shows it; "Áp dụng" puts it in game
+    for (const t of presetsBar.children) t.classList.toggle('on', t === btn);
   });
 
   // Load from the dino played now.
@@ -615,8 +639,8 @@ function renderGame(me) {
     $('game-prime-content').innerHTML = renderPrimeBoard(me.dino.prime);
 
     // The skin preview shows the dino played now (skin3d.js), unless the player picked another.
-    window.skin3dSuggested = me.dino.species;
-    window.skin3d?.suggestSpecies?.(me.dino.species);
+    window.skin3dLive = { species: me.dino.species, female: me.dino.skin?.female };
+    window.skin3d?.follow?.(me.dino.species, me.dino.skin?.female);
 
     // Active skin swatches
     if (me.dino.skin && me.dino.skin.colors) {
