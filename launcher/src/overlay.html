@@ -62,8 +62,11 @@
 
   /* dino */
   .dino { width: 100%; }
-  .dino .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: calc(4px * var(--scale)); }
-  .dino .sp-name { font-weight: 800; font-size: 1.1em; }
+  /* Name · 🌱 growth · 👑 on one line: the name gives way (…), never a second line. */
+  .dino .head { display: flex; align-items: center; gap: calc(8px * var(--scale)); margin-bottom: calc(2px * var(--scale)); white-space: nowrap; min-width: 0; }
+  .dino .sp-name { font-weight: 800; font-size: 1.1em; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .dino .head .sub { flex: none; font-variant-numeric: tabular-nums; }
+  .dino .head .prime { flex: none; }
   .dino .prime { font-size: 1.05em; line-height: 1; }
   .dino .prime.dim { opacity: .45; filter: grayscale(.4); }
   /* One grid for every row — name | bar | number | % — so the bars are the

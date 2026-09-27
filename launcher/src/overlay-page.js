@@ -353,7 +353,7 @@
     dinoEl.species.hidden = !show.species;
     setText(dinoEl.species, d.species || 'Dino');
     dinoEl.growth.hidden = !(show.growth && typeof d.growth === 'number');
-    if (typeof d.growth === 'number') setText(dinoEl.growth, `Growth ${(d.growth * 100).toFixed(1)}%`);
+    if (typeof d.growth === 'number') setText(dinoEl.growth, `🌱 ${(d.growth * 100).toFixed(1)}%`);
     const primeOn = show.prime && d.prime && (d.prime.isPrime || d.prime.eligible);
     dinoEl.prime.hidden = !primeOn;
     // Icon only: 👑 prime; faded 👑 eligible (five tasks done, not prime yet).
