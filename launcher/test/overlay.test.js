@@ -103,4 +103,15 @@ test('editing done shows the widgets again, even hidden by the overlay key befor
   o.edit(false);
   assert.equal(o.hiddenByKey, false);
   assert.equal(dino().isVisible(), true, 'editing done: shown again, not hidden by the old F8');
+  // No dino (the launcher on another account than the game's): hidden on the desktop…
+  o.setGame({ dino: null, player: { name: 'Dev-Lucii', online: false } });
+  o.contentAt = {};
+  o.apply();
+  assert.equal(dino().isVisible(), false, 'no dino, not playing: hidden');
+  // …but in game mode it stays up, to say whose dino it waits for.
+  o.gameMode = true;
+  o.keep = { voice: true, map: true, dino: true, quests: false };
+  o.apply();
+  assert.equal(dino().isVisible(), true, 'game mode: shown, with "no dino of Dev-Lucii in the game"');
+  clearTimeout(o.graceTimer);
 });

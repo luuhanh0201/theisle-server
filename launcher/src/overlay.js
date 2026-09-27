@@ -253,6 +253,11 @@ class Overlay {
   /** Is there anything for this widget to show (now, or until a moment ago: CONTENT_GRACE_MS)? */
   #hasContent(id) {
     const now = Date.now();
+    // Game mode: the player is playing — the dino / map / quest widgets stay
+    // up and say what they miss ("no dino of <account> in the game": the
+    // launcher logged in on another Steam account than the game's). They
+    // only showed while editing, and vanished after (2026-09-28).
+    if (id !== 'voice' && this.gameMode) return true;
     const has = id === 'voice' ? Boolean(this.voice?.connected) : Boolean(this.game?.dino);
     if (has) { this.contentAt[id] = now; return true; }
     const shown = contentShown(false, this.contentAt[id] ?? 0, now);

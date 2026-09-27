@@ -149,7 +149,7 @@
     mapKey = key;
     $('map-none').hidden = Boolean(map.data && pos);
     if (!map.data) { $('map-none').textContent = 'Đang tải bản đồ…'; return; }
-    if (!pos) { $('map-none').textContent = 'Vào game để thấy vị trí'; }
+    if (!pos) { $('map-none').textContent = noDinoText(g); }
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
     const ctx = canvas.getContext('2d');
@@ -331,6 +331,12 @@
   }
 
   const fmtHp = (n) => Math.round(n).toLocaleString('vi-VN');
+  /** Why there is no dino to show: whose (the launcher's account), or not logged in. */
+  function noDinoText(g) {
+    const p = g && g.player;
+    if (!p) return 'Launcher chưa đăng nhập';
+    return `Chưa thấy dino của ${p.name || 'tài khoản này'} trong game`;
+  }
   function renderDino() {
     if (!dinoEl.rows) buildDino();
     const g = preview() ? SAMPLE_GAME : game;
@@ -339,6 +345,7 @@
     if ($('dino').className !== `box dino l-${settings.layout}`) $('dino').className = `box dino l-${settings.layout}`;
     const show = settings.show;
     dinoEl.none.hidden = Boolean(d);
+    if (!d) setText(dinoEl.none, noDinoText(g));
     dinoEl.head.hidden = !d;
     for (const k of Object.keys(dinoEl.rows)) dinoEl.rows[k].row.hidden = true;
     if (!d) return;
@@ -424,7 +431,7 @@
     questsKey = key;
     $('w-quests').className = `wrap a-${settings.anchor}`;
     const el = $('quests');
-    if (!g || !g.dino) { el.textContent = 'Chưa có dino trong game'; return; }
+    if (!g || !g.dino) { el.textContent = noDinoText(g); return; }
     if (!pb) { el.textContent = 'Dino này chưa có nhiệm vụ Prime'; return; }
     const h = document.createElement('h3');
     const t = document.createElement('span'); t.textContent = '🏆 Nhiệm vụ Prime';

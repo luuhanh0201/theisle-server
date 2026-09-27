@@ -46,6 +46,14 @@ function parseBinding(raw, fallback = DEFAULT_PTT) {
 const REPRESS_AFTER_MS = 1200;
 
 /**
+ * X11's key auto-repeat sends a release and a press again for every repeat
+ * (Windows sends presses only): a key held a moment toggled the overlay a
+ * dozen times, every ~170 ms (2026-09-28). A release is only taken once no
+ * press follows it this soon — so the talk key lets go this much later.
+ */
+const RELEASE_SETTLE_MS = 40;
+
+/**
  * Tracks held / released for one binding and calls onChange only on a change
  * (keys auto-repeat while held). Used for the talk key, the range key and the
  * overlay keys. A lost release used to eat the next press — the overlay key
@@ -53,14 +61,16 @@ const REPRESS_AFTER_MS = 1200;
  * event of that key is a new press (released, then held again).
  */
 class PushToTalk {
-  constructor(hook, binding, onChange, fallback = DEFAULT_PTT, clock = Date.now) {
+  constructor(hook, binding, onChange, fallback = DEFAULT_PTT, clock = Date.now, timers = { setTimeout, clearTimeout }) {
     this.hook = hook;
     this.fallback = fallback;
     this.binding = parseBinding(binding, fallback);
     this.onChange = onChange;
     this.clock = clock;
+    this.timers = timers;
     this.held = false;
     this.lastDownAt = 0;
+    this.releaseTimer = null;
     this.capture = null;
     const on = (kind, down) => (e) => this.#event(kind, kind === 'key' ? e.keycode : e.button, down);
     hook.on('keydown', on('key', true));
@@ -79,15 +89,29 @@ class PushToTalk {
       return;
     }
     if (kind !== this.binding.kind || code !== this.binding.code) return;
-    if (down) {
-      const now = this.clock();
-      const missedRelease = this.held && now - this.lastDownAt > REPRESS_AFTER_MS;
-      this.lastDownAt = now;
-      if (missedRelease) { this.held = false; this.onChange(false); }
+    if (!down) {
+      // Wait a moment: an auto-repeat's press may follow at once.
+      if (!this.held || this.releaseTimer !== null) return;
+      this.releaseTimer = this.timers.setTimeout(() => {
+        this.releaseTimer = null;
+        if (this.held) { this.held = false; this.onChange(false); }
+      }, RELEASE_SETTLE_MS);
+      return;
     }
-    if (down !== this.held) {
-      this.held = down;
-      this.onChange(down);
+    if (this.releaseTimer !== null) {
+      // A release and a press together: the key is still held (auto-repeat).
+      this.timers.clearTimeout(this.releaseTimer);
+      this.releaseTimer = null;
+      this.lastDownAt = this.clock();
+      return;
+    }
+    const now = this.clock();
+    const missedRelease = this.held && now - this.lastDownAt > REPRESS_AFTER_MS;
+    this.lastDownAt = now;
+    if (missedRelease) { this.held = false; this.onChange(false); }
+    if (!this.held) {
+      this.held = true;
+      this.onChange(true);
     }
   }
 
@@ -100,6 +124,7 @@ class PushToTalk {
   }
 
   set(binding) {
+    if (this.releaseTimer !== null) { this.timers.clearTimeout(this.releaseTimer); this.releaseTimer = null; }
     this.binding = parseBinding(binding, this.fallback);
     if (this.held) { this.held = false; this.onChange(false); }
   }
@@ -119,6 +144,7 @@ class PushToTalk {
 
   /** Focus left everything (lock screen, alt-tab mid-press): never stay stuck "talking". */
   release() {
+    if (this.releaseTimer !== null) { this.timers.clearTimeout(this.releaseTimer); this.releaseTimer = null; }
     if (this.held) { this.held = false; this.onChange(false); }
   }
 }
@@ -147,4 +173,4 @@ function distinctBindings(wanted) {
   return out;
 }
 
-module.exports = { DEFAULT_PTT, DEFAULT_RANGE, REPRESS_AFTER_MS, clashOf, distinctBindings, label, parseBinding, PushToTalk, sameBinding };
+module.exports = { DEFAULT_PTT, DEFAULT_RANGE, REPRESS_AFTER_MS, RELEASE_SETTLE_MS, clashOf, distinctBindings, label, parseBinding, PushToTalk, sameBinding };

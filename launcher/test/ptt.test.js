@@ -5,11 +5,21 @@ const { EventEmitter } = require('node:events');
 const { UiohookKey } = require('uiohook-napi');
 const { PushToTalk, label, parseBinding, DEFAULT_PTT, REPRESS_AFTER_MS } = require('../src/ptt.js');
 
+// Timers the test runs by hand: a release is only taken RELEASE_SETTLE_MS later.
+const fakeTimers = () => {
+  const q = new Map(); let n = 0;
+  return {
+    setTimeout: (fn) => { q.set(++n, fn); return n; },
+    clearTimeout: (id) => { q.delete(id); },
+    flush: () => { for (const [id, fn] of [...q]) { q.delete(id); fn(); } },
+  };
+};
 const setup = (binding) => {
   const hook = new EventEmitter();
   const seen = [];
-  const ptt = new PushToTalk(hook, binding, (h) => seen.push(h));
-  return { hook, seen, ptt };
+  const timers = fakeTimers();
+  const ptt = new PushToTalk(hook, binding, (h) => seen.push(h), undefined, Date.now, timers);
+  return { hook, seen, ptt, flush: timers.flush };
 };
 
 test('default is V; labels in Vietnamese', () => {
@@ -22,22 +32,40 @@ test('default is V; labels in Vietnamese', () => {
 });
 
 test('held once, released once, other keys ignored (auto-repeat too)', () => {
-  const { hook, seen } = setup(undefined);
+  const { hook, seen, flush } = setup(undefined);
   hook.emit('keydown', { keycode: UiohookKey.W });
   hook.emit('keydown', { keycode: UiohookKey.V });
   hook.emit('keydown', { keycode: UiohookKey.V });
   hook.emit('keyup', { keycode: UiohookKey.V });
+  assert.deepEqual(seen, [true], 'the release waits a moment');
+  flush();
   assert.deepEqual(seen, [true, false]);
 });
 
+test("X11 auto-repeat (a release and a press together, every ~170 ms) is still one press", () => {
+  const { hook, seen, flush } = setup({ kind: 'key', code: UiohookKey.F8 });
+  hook.emit('keydown', { keycode: UiohookKey.F8 });
+  for (let i = 0; i < 12; i++) {
+    hook.emit('keyup', { keycode: UiohookKey.F8 });
+    hook.emit('keydown', { keycode: UiohookKey.F8 });
+  }
+  assert.deepEqual(seen, [true], 'held: not toggled twelve times');
+  hook.emit('keyup', { keycode: UiohookKey.F8 });
+  flush();
+  assert.deepEqual(seen, [true, false]);
+  hook.emit('keydown', { keycode: UiohookKey.F8 });
+  assert.deepEqual(seen, [true, false, true], 'the next real press counts');
+});
+
 test('capture: next key or side button becomes the key; Esc cancels; left click ignored', async () => {
-  const { hook, seen, ptt } = setup(undefined);
+  const { hook, seen, ptt, flush } = setup(undefined);
   const p = ptt.captureNext();
   hook.emit('mousedown', { button: 1 });
   hook.emit('mousedown', { button: 4 });
   assert.deepEqual(await p, { kind: 'mouse', code: 4 });
   hook.emit('mousedown', { button: 4 });
   hook.emit('mouseup', { button: 4 });
+  flush();
   assert.deepEqual(seen, [true, false]);
   const q = ptt.captureNext();
   hook.emit('keydown', { keycode: UiohookKey.Escape });
@@ -56,12 +84,14 @@ test('range key: ` by default, its own binding next to the talk key', () => {
   const { DEFAULT_RANGE } = require('../src/ptt.js');
   const hook = new EventEmitter();
   const talk = []; const range = [];
-  new PushToTalk(hook, undefined, (h) => talk.push(h));
-  new PushToTalk(hook, undefined, (d) => range.push(d), DEFAULT_RANGE);
+  const timers = fakeTimers();
+  new PushToTalk(hook, undefined, (h) => talk.push(h), undefined, Date.now, timers);
+  new PushToTalk(hook, undefined, (d) => range.push(d), DEFAULT_RANGE, Date.now, timers);
   assert.equal(DEFAULT_RANGE.code, UiohookKey.Backquote);
   assert.equal(label(DEFAULT_RANGE, UiohookKey), '` ~');
   hook.emit('keydown', { keycode: UiohookKey.Backquote });
   hook.emit('keyup', { keycode: UiohookKey.Backquote });
+  timers.flush();
   assert.deepEqual(range, [true, false]);
   assert.deepEqual(talk, []);
   assert.deepEqual(parseBinding({ kind: 'mouse', code: 1 }, DEFAULT_RANGE), DEFAULT_RANGE);
@@ -100,7 +130,8 @@ test('a lost release does not eat the next press (the overlay key worked every o
   const hook = new EventEmitter();
   const seen = [];
   let now = 1000;
-  new PushToTalk(hook, { kind: 'key', code: UiohookKey.F8 }, (h) => seen.push(h), undefined, () => now);
+  const timers = fakeTimers();
+  new PushToTalk(hook, { kind: 'key', code: UiohookKey.F8 }, (h) => seen.push(h), undefined, () => now, timers);
   hook.emit('keydown', { keycode: UiohookKey.F8 });          // pressed; its keyup never arrives
   now += 5000;
   hook.emit('keydown', { keycode: UiohookKey.F8 });          // pressed again, seconds later
@@ -111,5 +142,6 @@ test('a lost release does not eat the next press (the overlay key worked every o
   now += 33;
   hook.emit('keydown', { keycode: UiohookKey.F8 });
   hook.emit('keyup', { keycode: UiohookKey.F8 });
+  timers.flush();
   assert.deepEqual(seen, [true, false, true, false]);
 });

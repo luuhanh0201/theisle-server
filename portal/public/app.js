@@ -1173,7 +1173,7 @@ async function refresh() {
 
     if (me.status === 401) {
       lastMeData = null;
-      pushOverlayGame(null);
+      pushOverlayGame(null, null);
       renderAuth(null);
       // Disable guest restrictions gracefully
     } else if (me.status === 200) {
@@ -1202,9 +1202,11 @@ async function refresh() {
 // Xóm Gáy Launcher's overlay (mini map, dino numbers, prime quests): the same
 // data this page shows, handed over each second. Nothing else leaves the page.
 let lastAi = [];
-function pushOverlayGame(dino) {
+function pushOverlayGame(dino, me = lastMeData) {
   if (!window.isleLauncher?.overlayGame) return;
   window.isleLauncher.overlayGame({
+    // Whose account the launcher is on: the widgets say it when no dino shows.
+    player: me ? { name: me.name ?? null, online: me.online === true } : null,
     dino: dino ? {
       species: dino.species, growth: dino.growth, vitals: dino.vitals, max: dino.max,
       position: dino.position, trail: dino.trail, prime: dino.prime,
