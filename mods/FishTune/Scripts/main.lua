@@ -15,6 +15,15 @@
 --     "separation": 120, "debug": true, "census": true }
 -- (any field left out is not written); each new id is applied once, on the
 -- game thread, then read back into Saved/applied.json and UE4SS.log.
+--
+-- Keeping fish (Saved/keep.json, read every 5 s, kept across restarts):
+--   { "enabled": true, "despawnDelay": 86400, "maxTotal": 150 }
+-- Each fish the game places gets DespawnDelaySeconds = despawnDelay (game:
+-- 25 s once no player is within its RelevanceDistance, 100 m), so fish stay
+-- in the waters players have left: spread over the map instead of only
+-- around players. RelevanceDistance is left alone (likely also who gets the
+-- fish over the network). Past maxTotal kept fish, new ones are left to the
+-- game. Flag first on the first write of a run, like the spawner writes.
 -- "debug" turns the game's own fish-spawn logging on (bDebugAmbientFishVerbose:
 -- why a spawn failed, in TheIsle.log). "census" counts every TIAmbientFish the
 -- game made — placed, or parked at (0, 0, 0) — by class.
@@ -143,6 +152,52 @@ local function poll()
     writeFile(DIR .. "applied.json", json.encode({ id = req.id, t = os.time(), before = before, after = after, census = census }))
 end
 
-H.every(5000, MOD .. ": poll", poll)
+-- Keeping fish: every placed fish written once (by address), up to maxTotal.
+local kept = {}          -- address -> true: fish given the long despawn delay
+local keptLog = 0
+local function addressOf(obj)
+    local ok, a = pcall(function() return obj:GetAddress() end)
+    return ok and type(a) == "number" and a ~= 0 and a or nil
+end
+local function keepFish()
+    if blocked then return end
+    local k = readJson(DIR .. "keep.json")
+    if k == nil or k.enabled ~= true then return end
+    local delay = tonumber(k.despawnDelay) or 86400
+    local maxTotal = math.floor(tonumber(k.maxTotal) or 150)
+    if delay < 25 or delay > 604800 or maxTotal < 0 or maxTotal > 1000 then return end
+    local okF, all = pcall(function() return FindAllOf("TIAmbientFish") or {} end)
+    if not okF then return end
+    local seen, count, placed, fresh = {}, 0, 0, 0
+    for _, a in ipairs(all) do
+        local addr = addressOf(a)
+        if addr then
+            local okL, v = pcall(function() return a:K2_GetActorLocation() end)
+            local parked = okL and v and (math.abs(v.X) + math.abs(v.Y) + math.abs(v.Z)) < 1
+            if okL and v and not parked then
+                placed = placed + 1
+                seen[addr] = true
+                if kept[addr] then
+                    count = count + 1
+                elseif count < maxTotal then
+                    local first = clearFlagAt == nil and next(kept) == nil
+                    if first then writeFile(FLAG, tostring(os.time())); clearFlagAt = os.time() + 60 end
+                    if pcall(function() a.DespawnDelaySeconds = delay end) then
+                        kept[addr] = true
+                        count = count + 1
+                        fresh = fresh + 1
+                    end
+                end
+            end
+        end
+    end
+    for addr in pairs(kept) do if not seen[addr] then kept[addr] = nil end end
+    if (fresh > 0 and os.time() - keptLog >= 60) or os.time() - keptLog >= 300 then
+        keptLog = os.time()
+        H.log(string.format("%s: keep — %d fish kept (+%d), %d placed in all, max %d", MOD, count, fresh, placed, maxTotal))
+    end
+end
+
+H.every(5000, MOD .. ": poll", function() poll(); keepFish() end)
 local ws = spawner()
 H.log(MOD .. ": loaded — spawner now " .. (ws and json.encode(readBack(ws)) or "not found yet"))

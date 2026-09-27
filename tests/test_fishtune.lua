@@ -65,6 +65,41 @@ clock = clock + 61
 poll.fn()
 check("the flag comes down after a minute", io.open("Mods/FishTune/Saved/writing.flag", "r") == nil)
 
+say("\n-- 2b. keeping fish: a long despawn delay on placed fish, up to maxTotal --")
+local nextAddr = 100
+local function swimmer(x)
+  nextAddr = nextAddr + 1
+  local addr = nextAddr
+  local o = { DespawnDelaySeconds = 25 }
+  return setmetatable(o, { __index = function(_, k)
+    if k == "GetAddress" then return function() return addr end end
+    if k == "IsValid" then return function() return true end end
+    if k == "K2_GetActorLocation" then return function() return { X = x, Y = 0, Z = 0 } end end
+  end })
+end
+local lake = { swimmer(5000), swimmer(0), swimmer(7000), swimmer(9000) }   -- the 2nd is parked
+_G.FindAllOf = function(c)
+  if c == "TIAIWorldSpawner" then return { spawnerObj } end
+  if c == "TIAmbientFish" then return lake end
+  return {}
+end
+poll.fn()
+check("keep off by default: fish untouched", rawget(lake[1], "DespawnDelaySeconds") == 25)
+local kf = assert(io.open("Mods/FishTune/Saved/keep.json", "w"))
+kf:write(json.encode({ enabled = true, despawnDelay = 86400, maxTotal = 2 })); kf:close()
+poll.fn()
+check("placed fish kept, up to maxTotal", rawget(lake[1], "DespawnDelaySeconds") == 86400 and rawget(lake[3], "DespawnDelaySeconds") == 86400)
+check("a parked fish is left alone", rawget(lake[2], "DespawnDelaySeconds") == 25)
+check("past maxTotal, left to the game", rawget(lake[4], "DespawnDelaySeconds") == 25)
+table.remove(lake, 1)                          -- one kept fish eaten
+poll.fn()
+check("room again: the next fish is kept", rawget(lake[3], "DespawnDelaySeconds") == 86400)
+kf = assert(io.open("Mods/FishTune/Saved/keep.json", "w")); kf:write(json.encode({ enabled = false })); kf:close()
+local newcomer = swimmer(8000); lake[#lake + 1] = newcomer
+poll.fn()
+check("turned off: new fish left to the game", rawget(newcomer, "DespawnDelaySeconds") == 25)
+os.remove("Mods/FishTune/Saved/keep.json")
+
 say("\n-- 3. a run that stopped during a write: no more writes --")
 H.reset()
 local fl = assert(io.open("Mods/FishTune/Saved/writing.flag", "w")); fl:close()
