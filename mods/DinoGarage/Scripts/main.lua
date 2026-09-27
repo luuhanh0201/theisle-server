@@ -38,6 +38,7 @@ local Restore = require("garage.restore")
 local Inbox   = require("garage.inbox")
 local Settings = require("garage.settings")
 local PrimeFix = require("garage.primefix")
+local Skin    = require("garage.skin")
 
 local MOD = "DinoGarage"
 
@@ -476,6 +477,28 @@ Inbox.on("store", function(c, cmd, say)
 end)
 Inbox.on("redeem", function(c, cmd, say)
     return doRedeem(c, cmd.steamId, cmd.slot, cmd.where, say)
+end)
+-- The player's own skin from the web (garage/skin.lua): onto the dino they play now.
+Inbox.on("skin", function(c, cmd, say)
+    local skin, why = Skin.validate(cmd.skin)
+    if skin == nil then
+        H.logError("skin: refused for " .. cmd.steamId .. ": " .. tostring(why))
+        Msg.say(say, "skin.failed", "Không đổi được màu dino. Thử lại sau.")
+        return false
+    end
+    local pawn = H.livePawnFromCtrl(c)
+    local okH, hp = pcall(function() return pawn and pawn:GetHealth() end)
+    if pawn == nil or not okH or type(hp) ~= "number" or hp <= 0 then
+        Msg.say(say, "skin.noDino", "Bạn cần đang điều khiển một con dino còn sống để đổi màu.")
+        return false
+    end
+    local wrote = Skin.apply(pawn, skin)
+    if not wrote or wrote == 0 then
+        Msg.say(say, "skin.failed", "Không đổi được màu dino. Thử lại sau.")
+        return false
+    end
+    Msg.say(say, "skin.applied", "Đã đổi màu dino của bạn.")
+    return true
 end)
 
 -- A game-thread loop (H.every): the poll reads one small file and acts right

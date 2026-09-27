@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
 import { isSteamId, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
-import { queuePlayerCommand, TooSoonError } from './commands.js';
+import { queuePlayerCommand, queueSkin, TooSoonError } from './commands.js';
 import type { LifeRecord, PlayerStats, Store, TrailPoint } from './store.js';
 import type { Skin } from './events.js';
 import { readAiZones, readAiZonesStatus } from './ai-zones.js';
@@ -27,6 +27,7 @@ import { readVoiceSettings, shownName } from './voice-settings.js';
  *   GET /player-api/ai               the AI alive on the server now (species + position), fish apart
  *   GET /player-api/ai-zones         the AI zones admins drew (name, circle, AI kinds)
  *   POST /player-api/garage/<steamId>          { action: store|redeem, slot?, where? }
+ *   POST /player-api/skin/<steamId>            { colors: { Body: {r,g,b}… (linear 0–1) }, pattern?, theme?, variation? }
  *        — that player's own store / redeem, run by DinoGarage exactly like
  *          the chat command (commands.ts → inbox). 202 { id }.
  *   GET /player-api/command/<steamId>/<id>     its outcome once the mod ran it
@@ -277,6 +278,21 @@ export async function handlePlayerApi(
     if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
     try {
       const cmd = await queuePlayerCommand(garageCmd[1] as string, body['action'], { slot: body['slot'], where: body['where'] });
+      send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt });
+    } catch (err) {
+      if (err instanceof TooSoonError) send(res, 429, { error: 'too many requests' });
+      else if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
+  const skinCmd = /^\/player-api\/skin\/(\d{17})$/.exec(path);
+  if (skinCmd !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    try {
+      const cmd = await queueSkin(skinCmd[1] as string, body);
       send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt });
     } catch (err) {
       if (err instanceof TooSoonError) send(res, 429, { error: 'too many requests' });

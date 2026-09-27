@@ -210,3 +210,19 @@ test('me: the garage rules the web garage shows', async () => {
   assert.equal(body.garageRules.storeCountdown, 30);
   assert.equal(body.garageRules.redeemAt, 'current');
 });
+
+test('skin from the web: checked, queued to the inbox for the mod, one every few seconds', async () => {
+  const PAINTER = '76561198000000099';
+  const skin = { colors: { Body: { r: 0.9, g: 0.1, b: 0.2 }, Eyes: { r: 0, g: 0, b: 0 } }, pattern: 2, theme: 1, variation: 5 };
+  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'GET' })).status, 405, 'writes are POST only');
+  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: skin, token: null })).status, 403);
+  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { colors: { Tail: { r: 0, g: 0, b: 0 } } } })).status, 400, 'unknown region');
+  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { colors: { Body: { r: 2, g: 0, b: 0 } } } })).status, 400, 'linear 0–1 only');
+  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { ...skin, pattern: 1.5 } })).status, 400);
+  const r = await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: skin });
+  assert.equal(r.status, 202);
+  const inbox = JSON.parse(readFileSync(join(root, 'inbox.json'), 'utf8'));
+  const cmd = inbox.commands.find((c) => c.id === r.body.id);
+  assert.deepEqual([cmd.type, cmd.steamId, cmd.skin], ['skin', PAINTER, skin]);
+  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: skin })).status, 429, 'one every few seconds');
+});

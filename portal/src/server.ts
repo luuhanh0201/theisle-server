@@ -26,6 +26,8 @@ import { LauncherLogins, STATE_RE } from './launcher-login.js';
  *        your own store / redeem, run in game like the chat command. The only
  *        write: same-origin only (Origin, or Sec-Fetch-Site), JSON only, a
  *        few per minute per player — and the SteamID is the session's.
+ *   POST /api/skin              { colors, pattern?, theme?, variation? } (login, same-origin, JSON)
+ *        the colours of the dino you play now, written in game (DinoGarage)
  *   GET  /api/command/<id>      the outcome of one of your commands      (login)
  *   POST /api/voice/token       join the proximity voice room (voice.html) (login, same-origin)
  *   GET  /api/voice             who you can hear now: volume + pan per voice user (login)
@@ -296,6 +298,19 @@ export function createPortal(opts: PortalOptions): Server {
         if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
         // Only these three fields, and never a SteamID from the browser.
         const r = await opts.bridge.garage(me, { action: body['action'], slot: body['slot'], where: body['where'] });
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/skin') {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
+        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) { send(res, 415, { error: 'JSON only' }); return; }
+        if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
+        const body = await readSmallJson(req);
+        if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
+        // Only these fields, and never a SteamID from the browser.
+        const r = await opts.bridge.skin(me, { colors: body['colors'], pattern: body['pattern'], theme: body['theme'], variation: body['variation'] });
         send(res, r.status, r.body);
         return;
       }

@@ -892,6 +892,27 @@
   .leaderboard-rank.top-3 { background: linear-gradient(135deg, #b45309, #78350f); color: #fff; }
 
   /* SKIN PAGE STYLES */
+  .skin-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 900px) { .skin-layout { grid-template-columns: 1fr; } }
+  .skin-preview { position: relative; height: 320px; border-radius: 12px; border: 1px solid var(--border);
+    background: radial-gradient(ellipse at 50% 60%, rgba(34,197,94,.12), rgba(2,6,23,.6)); overflow: hidden; }
+  .skin-preview-3d { position: absolute; inset: 0; }
+  .skin-preview-3d canvas { width: 100% !important; height: 100% !important; display: block; }
+  .skin-preview-flat { position: absolute; inset: 24px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-content: center; }
+  .skin-preview-flat div { border-radius: 10px; height: 88px; border: 1px solid rgba(255,255,255,.15); display: flex; align-items: flex-end;
+    padding: 6px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000; }
+  .skin-preview-note { position: absolute; left: 12px; bottom: 8px; font-size: 11.5px; }
+  .skin-controls { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; margin-top: 12px; }
+  .skin-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; }
+  .skin-controls input[type=number], .skin-code input, .skin-saved input { background: rgba(2,6,23,.5); border: 1px solid var(--border);
+    border-radius: 8px; color: inherit; padding: 8px 10px; font: inherit; min-width: 0; }
+  .skin-code input { flex: 1; font-family: ui-monospace, monospace; font-size: 12px; }
+  .skin-saved input { flex: 1; }
+  .skin-code, .skin-saved { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .skin-code h4, .skin-saved h4 { margin: 0 0 10px; font-size: 13px; color: var(--text-muted); }
+  #skin-saved-list { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; }
+  #skin-saved-list li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  #skin-saved-list li span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .regions-grid {
     display: grid;
     gap: 14px;
@@ -1520,33 +1541,70 @@
     <div class="card">
       <div class="card-header">
         <div>
-          <h3 class="card-title">🎨 Tùy Chỉnh Màu Sắc Dino</h3>
-          <span class="card-subtitle">Phối màu các vùng cơ thể theo chuẩn sRGB Unreal Engine</span>
+          <h3 class="card-title">🎨 Chỉnh màu dino</h3>
+          <span class="card-subtitle">Phối màu từng vùng, xem trước, rồi áp thẳng vào dino bạn đang chơi trong game.</span>
         </div>
         <div style="display:flex;gap:8px">
           <button type="button" class="btn btn-ghost" id="btn-load-my-skin" style="font-size:12px;padding:6px 12px">
-            Lấy màu từ Dino đang chơi
+            Lấy màu từ dino đang chơi
           </button>
         </div>
       </div>
 
-      <!-- Active skin swatches summary -->
-      <div id="skin-active-swatches-box" style="margin-bottom:20px" hidden>
-        <h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted)">Bảng màu đang sử dụng ingame:</h4>
-        <div id="skin-active-swatches" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-      </div>
+      <div class="skin-layout">
+        <div class="skin-main">
+          <!-- Preview: the 3D model when the server has it (skin3d.js), else the colours side by side -->
+          <div class="skin-preview" id="skin-preview">
+            <div class="skin-preview-3d" id="skin-3d" hidden></div>
+            <div class="skin-preview-flat" id="skin-flat"></div>
+            <span class="skin-preview-note muted" id="skin-preview-note"></span>
+          </div>
+          <div class="skin-controls">
+            <label>Kiểu hoa văn <input type="number" id="skin-pattern" min="0" max="2" step="1" value="0"></label>
+            <label>Tông <input type="number" id="skin-theme" min="0" max="20" step="1" value="0"></label>
+            <label class="skin-variation">Biến thể: <b id="skin-variation-val">0</b>
+              <input type="range" id="skin-variation" min="0" max="20" step="1" value="0"></label>
+          </div>
+          <button type="button" class="btn btn-emerald" id="btn-skin-apply" style="width:100%;margin-top:12px">Áp dụng lên dino đang chơi</button>
+          <div class="garage-status" id="skin-status" hidden></div>
 
-      <!-- Region Color Pickers -->
-      <h3 style="margin:0 0 14px;font-size:15px;font-weight:700">Chỉnh màu theo 10 vùng cơ thể:</h3>
-      <div class="regions-grid" id="skin-regions-grid">
-        <!-- Injected via JavaScript -->
-      </div>
+          <div class="skin-code">
+            <h4>Mã skin (chia sẻ cho người khác)</h4>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn btn-ghost" id="btn-skin-export" style="font-size:12px">Xuất mã</button>
+              <input type="text" id="skin-code" placeholder="Dán mã vào đây…" spellcheck="false">
+              <button type="button" class="btn btn-ghost" id="btn-skin-import" style="font-size:12px">Nạp mã</button>
+            </div>
+          </div>
+        </div>
 
-      <!-- Preset palettes -->
-      <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border)">
-        <h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted)">Bảng màu gợi ý (Presets):</h4>
-        <div style="display:flex;flex-wrap:wrap;gap:8px" id="skin-presets-bar">
-          <!-- Injected via JS -->
+        <div class="skin-side">
+          <!-- Active skin swatches summary -->
+          <div id="skin-active-swatches-box" style="margin-bottom:16px" hidden>
+            <h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted)">Màu dino đang dùng trong game:</h4>
+            <div id="skin-active-swatches" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+          </div>
+          <h3 style="margin:0 0 12px;font-size:15px;font-weight:700">Màu từng vùng</h3>
+          <div class="regions-grid" id="skin-regions-grid">
+            <!-- Injected via JavaScript -->
+          </div>
+
+          <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+            <h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted)">Bảng màu gợi ý:</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:8px" id="skin-presets-bar">
+              <!-- Injected via JS -->
+            </div>
+          </div>
+
+          <div class="skin-saved">
+            <h4>Skin đã lưu (trên máy này)</h4>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="skin-save-name" placeholder="Tên skin…" maxlength="40">
+              <button type="button" class="btn btn-emerald" id="btn-skin-save" style="font-size:12px">Lưu</button>
+            </div>
+            <ul id="skin-saved-list"></ul>
+            <p class="muted" style="font-size:11.5px;margin:6px 0 0">Chỉ lưu trên trình duyệt này, không đồng bộ giữa các máy.</p>
+          </div>
         </div>
       </div>
     </div>

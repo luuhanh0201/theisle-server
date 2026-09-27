@@ -26,6 +26,9 @@
                   player the command names, only while that player is online.
                   Outcome: a `portal_command` event with the replies the
                   player also gets in chat.
+      "skin"    — (the player, from the web) { skin = { colors, pattern,
+                  theme, variation } } onto the dino they play now
+                  (garage/skin.lua), same outcome event.
     Anything else is refused.
 
     Threads: poll() runs ON THE GAME THREAD (H.every in main.lua): it reads

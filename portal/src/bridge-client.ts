@@ -28,6 +28,9 @@ export class BridgeClient {
   garage(steamId: string, body: { action: unknown; slot: unknown; where: unknown }) {
     return this.post(`/player-api/garage/${steamId}`, body);
   }
+  skin(steamId: string, body: { colors: unknown; pattern: unknown; theme: unknown; variation: unknown }) {
+    return this.post(`/player-api/skin/${steamId}`, body);
+  }
   command(steamId: string, id: number) { return this.get(`/player-api/command/${steamId}/${id}`); }
   leaderboard() { return this.get('/player-api/leaderboard'); }
   server() { return this.get('/player-api/server'); }

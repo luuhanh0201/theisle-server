@@ -572,6 +572,36 @@ fixLoop.fn()
 check("past primeAt: prime asked too (it would have turned prime at 75 %)", grown.__prime.bPrimeCondition6 == true and primeAsked())
 os.remove("Mods/DinoGarage/Saved/prime-fixes.json"); os.remove("Mods/DinoGarage/Saved/prime-fixes.done.json")
 
+say("\n-- skin from the web: written field by field onto the dino played now --")
+local function sendSkin(skin, sid)
+  nextId = nextId + 1
+  local c = { id = nextId, type = "skin", steamId = sid or STEAM, createdAt = clock, expiresAt = clock + 600, skin = skin }
+  local fs = assert(io.open("Mods/DinoGarage/Saved/inbox.json", "w"))
+  fs:write(json.encode({ commands = { c } })); fs:close()
+  poll.fn()
+  return nextId
+end
+local painted = H.makePawn({ growth = 0.5 })
+local paintCtrl = H.makeCtrl(STEAM, painted)
+useCtrl(paintCtrl)
+os.remove("Mods/DinoGarage/Saved/skin-write.trying")
+local sid = sendSkin({ colors = { Body = { r = 0.9, g = 0.1, b = 0.2 }, Underbelly = { r = 0, g = 0.5, b = 1 } }, pattern = 2, theme = 1, variation = 5 })
+local sk = painted.__skin
+check("colours written into CustomizerData", sk.BodyColor.R == 0.9 and sk.BodyColor.G == 0.1 and sk.BodyColor.B == 0.2
+      and sk.UnderbellyColor.B == 1, json.encode(sk.BodyColor))
+check("pattern, theme, variation written", sk.PatternIndex == 2 and sk.ThemeIndex == 1 and sk.SkinVariation == 5)
+check("the player is told, the web gets ok", started(sid) and started(sid).ok == true and lastMsg(paintCtrl):find("Đã đổi màu", 1, true) ~= nil,
+      lastMsg(paintCtrl))
+check("no struct passed by value (no SetCustomizerData call)", H.countCalls("SetCustomizerData") == 0)
+check("the crash flag is down after the first write", io.open("Mods/DinoGarage/Saved/skin-write.trying", "r") == nil)
+local bad = sendSkin({ colors = { Body = { r = 3, g = 0, b = 0 } } })
+check("a colour out of 0–1 is refused, nothing written", started(bad) and started(bad).ok == false and sk.BodyColor.R == 0.9)
+local dead = H.makePawn({ growth = 0.5, health = 0 })
+local deadCtrl = H.makeCtrl(STEAM, dead)
+useCtrl(deadCtrl)
+local nd = sendSkin({ colors = { Body = { r = 0.1, g = 0.1, b = 0.1 } } })
+check("a dead dino is not painted", started(nd) and started(nd).ok == false and lastMsg(deadCtrl):find("dino còn sống", 1, true) ~= nil)
+
 say("")
 say("-- threads: nothing the mod ran from an async callback touched the engine --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))

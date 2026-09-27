@@ -245,18 +245,18 @@ function renderPrimeBoard(pb) {
     </p>`;
 }
 
-// 10 Unreal regions
+// The 10 skin regions (pawn.CustomizerData <Region>Color), in the order players know them.
 const REGIONS = [
-  ['Body', 'Thân (Body)'],
-  ['Markings', 'Hoa văn (Markings)'],
-  ['Flank', 'Sườn (Flank)'],
-  ['Underbelly', 'Bụng (Underbelly)'],
-  ['Detail1', 'Chi tiết (Detail 1)'],
-  ['Eyes', 'Mắt (Eyes)'],
-  ['MaleDisplay', 'Trưng bày (Display)'],
-  ['Teeth', 'Răng (Teeth)'],
-  ['Mouth', 'Miệng (Mouth)'],
-  ['Claws', 'Móng (Claws)'],
+  ['Body', 'Thân'],
+  ['Flank', 'Hông'],
+  ['Underbelly', 'Bụng'],
+  ['Markings', 'Hoa văn'],
+  ['MaleDisplay', 'Màu phô trương (đực)'],
+  ['Detail1', 'Chi tiết'],
+  ['Eyes', 'Mắt'],
+  ['Teeth', 'Răng'],
+  ['Mouth', 'Miệng'],
+  ['Claws', 'Móng'],
 ];
 
 function hex(c) {
@@ -278,7 +278,8 @@ const skinStrip = (skin) => {
 };
 
 // ============================================================================
-// 3. Skin Color Picker & Presets Setup
+// 3. Skin editor: colours per region, pattern / theme / variation, a preview,
+//    and "apply" onto the dino played now (POST /api/skin → the game).
 // ============================================================================
 const PRESETS = [
   { name: 'Rừng Rậm (Jungle)', color: '#2d6a4f' },
@@ -299,19 +300,139 @@ const DEFAULT_SKIN = {
     MaleDisplay: { r: 0.342, g: 0.1, b: 0.06 }, Teeth: { r: 0.62, g: 0.55, b: 0.42 },
     Mouth: { r: 0.4, g: 0.223, b: 0.179 }, Claws: { r: 0.05, g: 0.041, b: 0.033 },
   },
-  patternIndex: 0,
-  female: false,
+  patternIndex: 0, themeIndex: 0, variation: 0,
 };
 
-/** Put a skin's colours (the game's linear values) in the pickers. */
+/** "#rrggbb" (sRGB, what the pickers show) → the game's linear colour. */
+function linearOf(hexText) {
+  const n = parseInt(String(hexText).replace('#', ''), 16);
+  const ch = (v) => { const x = v / 255; return Math.round((x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4) * 10000) / 10000; };
+  return { r: ch((n >> 16) & 255), g: ch((n >> 8) & 255), b: ch(n & 255) };
+}
+
+/** The editor's skin now: colours as "#rrggbb" per region, pattern, theme, variation. */
+function editorSkin() {
+  const colors = {};
+  for (const [id] of REGIONS) colors[id] = $(`picker-${id}`).value;
+  return {
+    colors,
+    pattern: Math.max(0, Math.min(2, Math.round(Number($('skin-pattern').value) || 0))),
+    theme: Math.max(0, Math.min(20, Math.round(Number($('skin-theme').value) || 0))),
+    variation: Math.max(0, Math.min(20, Math.round(Number($('skin-variation').value) || 0))),
+  };
+}
+
+/** Put a skin in the editor: `colors` in the game's linear values (from the game) or "#rrggbb" (a code, a saved skin). */
 function applySkin(skin) {
   for (const [id] of REGIONS) {
     const c = skin.colors?.[id];
     if (!c) continue;
-    const col = hex(c);
+    const col = typeof c === 'string' ? c : hex(c);
     $(`picker-${id}`).value = col;
     $(`hex-${id}`).textContent = col;
   }
+  const pattern = skin.pattern ?? skin.patternIndex;
+  const theme = skin.theme ?? skin.themeIndex;
+  if (typeof pattern === 'number') $('skin-pattern').value = String(pattern);
+  if (typeof theme === 'number') $('skin-theme').value = String(theme);
+  if (typeof skin.variation === 'number') {
+    $('skin-variation').value = String(Math.round(skin.variation));
+    $('skin-variation-val').textContent = String(Math.round(skin.variation));
+  }
+  skinChanged();
+}
+
+/** The preview follows the editor: the 3D model (skin3d.js) when there is one, else the colours side by side. */
+function skinChanged() {
+  const sk = editorSkin();
+  $('skin-flat').innerHTML = REGIONS.map(([id, label]) =>
+    `<div style="background:${sk.colors[id]}">${esc(label)}</div>`).join('');
+  window.skin3d?.setSkin?.(sk);
+}
+
+function skinStatus(kind, html) {
+  const el = $('skin-status');
+  el.hidden = !html;
+  el.className = `garage-status${kind ? ` ${kind}` : ''}`;
+  el.innerHTML = html ?? '';
+}
+
+let skinBusy = false;
+async function sendSkin() {
+  if (skinBusy) return;
+  if (!lastMeData?.dino) { skinStatus('bad', 'Vào game và điều khiển một con dino để áp dụng. Bạn vẫn chỉnh và xem trước được.'); return; }
+  skinBusy = true;
+  $('btn-skin-apply').disabled = true;
+  const sk = editorSkin();
+  const body = { pattern: sk.pattern, theme: sk.theme, variation: sk.variation, colors: {} };
+  for (const [id] of REGIONS) body.colors[id] = linearOf(sk.colors[id]);
+  skinStatus('', 'Đang gửi…');
+  try {
+    const r = await fetch('/api/skin', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const res = await r.json().catch(() => null);
+    if (r.status === 429) { skinStatus('bad', 'Chậm lại chút: mỗi vài giây chỉ một lần.'); return; }
+    if (r.status !== 202 || typeof res?.id !== 'number') {
+      skinStatus('bad', `Không gửi được${res?.error ? `: ${esc(res.error)}` : ''}.`);
+      return;
+    }
+    skinStatus('', 'Đã gửi — chờ game đổi màu…');
+    const done = await waitCommand(res.id, 20, (b) => b?.status === 'done');
+    if (done === null) { skinStatus('bad', 'Chưa thấy game trả lời. Thử lại sau ít phút.'); return; }
+    const msgs = (done.messages ?? []).map((m) => esc(m)).join(' ');
+    if (!done.ok) {
+      const err = done.error ? esc(ERROR_VI[done.error] ?? done.error) : '';
+      skinStatus('bad', `❌ ${msgs || err || 'Game không đổi được màu.'}`);
+      return;
+    }
+    skinStatus('ok', `✅ ${msgs || 'Đã đổi màu dino.'} Nhìn lại dino trong game.`);
+  } catch {
+    skinStatus('bad', 'Mất kết nối, thử lại.');
+  } finally {
+    skinBusy = false;
+    $('btn-skin-apply').disabled = false;
+  }
+}
+
+// A skin code: "XG1." + base64url of { p, t, v, c: { Body: "rrggbb", … } } — short enough to paste in chat.
+function skinCode(sk) {
+  const c = {};
+  for (const [id] of REGIONS) c[id] = sk.colors[id].replace('#', '');
+  const b64 = btoa(JSON.stringify({ p: sk.pattern, t: sk.theme, v: sk.variation, c }));
+  return `XG1.${b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+}
+function parseSkinCode(text) {
+  const m = /^XG1\.([A-Za-z0-9_-]+)$/.exec(String(text).trim());
+  if (!m) return null;
+  try {
+    const d = JSON.parse(atob(m[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const colors = {};
+    for (const [id] of REGIONS) if (/^[0-9a-f]{6}$/i.test(d.c?.[id] ?? '')) colors[id] = `#${d.c[id].toLowerCase()}`;
+    if (Object.keys(colors).length === 0) return null;
+    return { colors, pattern: Number(d.p) || 0, theme: Number(d.t) || 0, variation: Number(d.v) || 0 };
+  } catch {
+    return null;
+  }
+}
+
+// Saved skins: this browser only (localStorage may be off — then nothing is kept).
+const SKINS_KEY = 'xg.skins.v1';
+function loadSaved() {
+  try { const v = JSON.parse(localStorage.getItem(SKINS_KEY) ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function storeSaved(list) {
+  try { localStorage.setItem(SKINS_KEY, JSON.stringify(list.slice(0, 30))); } catch { /* private window: not kept */ }
+}
+function renderSaved() {
+  const list = loadSaved();
+  $('skin-saved-list').innerHTML = list.length === 0 ? '<li class="muted" style="font-size:12.5px">Chưa có skin nào được lưu.</li>'
+    : list.map((it, i) => `<li><i style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${esc(parseSkinCode(it.code)?.colors.Body ?? '#888')}"></i>
+        <span title="${esc(it.name)}">${esc(it.name)}</span>
+        <button type="button" class="btn btn-ghost" data-load="${i}" style="font-size:11.5px;padding:3px 10px">Nạp</button>
+        <button type="button" class="btn btn-ghost" data-del="${i}" style="font-size:11.5px;padding:3px 10px">Xoá</button></li>`).join('');
 }
 
 function initSkinEditor() {
@@ -322,7 +443,6 @@ function initSkinEditor() {
     <div class="region-card" data-region="${id}">
       <div class="region-info">
         <h4>${label}</h4>
-        <span class="muted">${id}</span>
       </div>
       <div class="region-controls">
         <input type="color" class="color-picker-input" id="picker-${id}" value="${col}">
@@ -336,11 +456,16 @@ function initSkinEditor() {
     const hexSpan = $(`hex-${id}`);
     input.addEventListener('input', () => {
       hexSpan.textContent = input.value;
+      skinChanged();
     });
   }
+  for (const id of ['skin-pattern', 'skin-theme']) $(id).addEventListener('input', skinChanged);
+  $('skin-variation').addEventListener('input', () => {
+    $('skin-variation-val').textContent = $('skin-variation').value;
+    skinChanged();
+  });
 
-
-  // Presets
+  // Presets: one colour for the body, a darker one for the markings.
   const presetsBar = $('skin-presets-bar');
   presetsBar.innerHTML = PRESETS.map((p) => `
     <button type="button" class="btn btn-ghost" style="padding:5px 12px;font-size:12px;gap:6px" data-preset="${p.color}">
@@ -348,29 +473,56 @@ function initSkinEditor() {
       ${p.name}
     </button>
   `).join('');
-
   presetsBar.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-preset]');
     if (!btn) return;
-    const col = btn.dataset.preset;
-    for (const [id] of REGIONS) {
-      const input = $(`picker-${id}`);
-      const hexSpan = $(`hex-${id}`);
-      if (input && hexSpan) {
-        input.value = col;
-        hexSpan.textContent = col;
-      }
-    }
+    const base = linearOf(btn.dataset.preset);
+    const shade = (k) => ({ r: Math.min(1, base.r * k), g: Math.min(1, base.g * k), b: Math.min(1, base.b * k) });
+    applySkin({ colors: { Body: base, Flank: shade(0.6), Underbelly: shade(1.6), Markings: shade(0.25) } });
   });
 
-  // Load from active dino button
+  // Load from the dino played now.
   $('btn-load-my-skin').addEventListener('click', () => {
     if (!lastMeData?.dino?.skin?.colors) {
-      alert('Chưa có dữ liệu skin dino đang chơi. Hãy đăng nhập và vào game điều khiển dino!');
+      skinStatus('bad', 'Chưa có dữ liệu skin của dino đang chơi. Hãy vào game và điều khiển dino.');
       return;
     }
     applySkin(lastMeData.dino.skin);
+    skinStatus('', 'Đã lấy màu từ dino đang chơi.');
   });
+
+  $('btn-skin-apply').addEventListener('click', () => { void sendSkin(); });
+
+  $('btn-skin-export').addEventListener('click', () => {
+    const code = skinCode(editorSkin());
+    $('skin-code').value = code;
+    navigator.clipboard?.writeText(code).then(() => skinStatus('ok', 'Đã chép mã skin.'), () => undefined);
+  });
+  $('btn-skin-import').addEventListener('click', () => {
+    const sk = parseSkinCode($('skin-code').value);
+    if (!sk) { skinStatus('bad', 'Mã skin không hợp lệ.'); return; }
+    applySkin(sk);
+    skinStatus('ok', 'Đã nạp mã skin — bấm "Áp dụng" để đổi màu trong game.');
+  });
+
+  $('btn-skin-save').addEventListener('click', () => {
+    const name = $('skin-save-name').value.trim() || `Skin ${new Date().toLocaleString('vi-VN')}`;
+    const list = loadSaved().filter((it) => it.name !== name);
+    list.unshift({ name, code: skinCode(editorSkin()) });
+    storeSaved(list);
+    $('skin-save-name').value = '';
+    renderSaved();
+  });
+  $('skin-saved-list').addEventListener('click', (e) => {
+    const load = e.target.closest('[data-load]');
+    const del = e.target.closest('[data-del]');
+    const list = loadSaved();
+    if (load) { const sk = parseSkinCode(list[Number(load.dataset.load)]?.code); if (sk) applySkin(sk); }
+    if (del) { list.splice(Number(del.dataset.del), 1); storeSaved(list); renderSaved(); }
+  });
+
+  renderSaved();
+  applySkin(DEFAULT_SKIN);
 }
 
 // ============================================================================

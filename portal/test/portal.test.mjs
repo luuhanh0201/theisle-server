@@ -104,6 +104,7 @@ const bridge = {
   ai: async () => { bridgeCalls.push('ai'); return { status: 200, body: { t: 1, stale: false, count: 1, list: [{ s: 'Boar', x: 1, y: 2 }] } }; },
   aiZones: async () => ({ status: 200, body: { zones: [{ name: 'Đồng cỏ', x: 1, y: 2, radiusM: 300, species: ['Heo rừng'], count: 3 }] } }),
   garage: async (id, body) => { bridgeCalls.push({ garage: id, body }); return { status: 202, body: { id: 5, action: body.action } }; },
+  skin: async (id, body) => { bridgeCalls.push({ skin: id, body }); return { status: 202, body: { id: 6, action: 'skin' } }; },
   command: async (id, n) => { bridgeCalls.push(`command:${id}:${n}`); return { status: 200, body: { status: 'pending' } }; },
   voice: async (id) => { bridgeCalls.push(`voice:${id}`); return { status: 200, body: { inGame: true, peers: [] } }; },
   voiceRange: async (id, range) => { bridgeCalls.push({ voiceRange: id, range }); return { status: 200, body: { range } }; },
@@ -195,6 +196,22 @@ test('web garage: login, same-origin, JSON only; the SteamID is the session\'s',
   assert.equal(bridgeCalls[bridgeCalls.length - 1], `command:${ME}:5`);
   assert.equal((await get('/api/command/5')).status, 401);
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/garage`, { headers: { cookie } })).status, 405, 'GET is not a write');
+});
+
+test('skin: login, same-origin, JSON only; the SteamID is the session\'s, only the skin fields forwarded', async () => {
+  const cookie = `${COOKIE}=${sign(SECRET, ME, Math.floor(Date.now() / 1000) + 600)}`;
+  const origin = new URL(BASE).origin;
+  const post = (headers, body) => fetch(`http://127.0.0.1:${port}/api/skin`, { method: 'POST', headers, body, redirect: 'manual' });
+  const json = { 'content-type': 'application/json' };
+  const skin = { colors: { Body: { r: 0.5, g: 0.2, b: 0.1 } }, pattern: 1, theme: 0, variation: 3 };
+  assert.equal((await post({ ...json, origin }, JSON.stringify(skin))).status, 401, 'no login');
+  assert.equal((await post({ ...json, cookie, origin: 'https://evil.example' }, JSON.stringify(skin))).status, 403, 'another site');
+  assert.equal((await post({ cookie, origin, 'content-type': 'text/plain' }, JSON.stringify(skin))).status, 415);
+  const before = bridgeCalls.length;
+  const r = await post({ ...json, cookie, origin }, JSON.stringify({ ...skin, steamId: '76561198000000002' }));
+  assert.equal(r.status, 202);
+  assert.deepEqual(bridgeCalls.slice(before), [{ skin: ME, body: skin }]);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/skin`, { headers: { cookie } })).status, 405);
 });
 
 test('voice: login; the token only by POST from our own page; the CSP allows the voice server', async () => {

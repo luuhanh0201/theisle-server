@@ -5,7 +5,8 @@ import { assertSlot, assertSteamId, ValidationError } from './garage.js';
 
 /**
  * Commands for the game, delivered through DinoGarage's inbox — the admin
- * "kill", and a player's own "store" / "redeem" from the web garage
+ * "kill", a player's own "store" / "redeem" from the web garage, and their
+ * "skin" (the colours of the dino they play now, from the web)
  * (mods/DinoGarage/Scripts/garage/inbox.lua). The bridge cannot touch the
  * game; it writes a file the mod polls every 2s.
  *
@@ -24,11 +25,23 @@ interface CommandBase { id: number; steamId: string; createdAt: number; expiresA
 export type InboxCommand =
   | CommandBase & { type: 'kill'; reason: string }
   | CommandBase & { type: 'store'; slot: string }
-  | CommandBase & { type: 'redeem'; slot?: string; where?: 'stored' | 'here' };
+  | CommandBase & { type: 'redeem'; slot?: string; where?: 'stored' | 'here' }
+  | CommandBase & { type: 'skin'; skin: SkinRequest };
 type NewCommand =
   | { type: 'kill'; steamId: string; reason: string }
   | { type: 'store'; steamId: string; slot: string }
-  | { type: 'redeem'; steamId: string; slot?: string; where?: 'stored' | 'here' };
+  | { type: 'redeem'; steamId: string; slot?: string; where?: 'stored' | 'here' }
+  | { type: 'skin'; steamId: string; skin: SkinRequest };
+
+/** The skin regions of pawn.CustomizerData (<Region>Color), as the mods read and write them. */
+export const SKIN_REGIONS = ['Body', 'Flank', 'Underbelly', 'Markings', 'MaleDisplay', 'Detail1', 'Eyes', 'Teeth', 'Mouth', 'Claws'] as const;
+/** Colours are the game's LINEAR values 0–1 (the portal converts from the sRGB hex it shows). */
+export interface SkinRequest {
+  colors: Partial<Record<(typeof SKIN_REGIONS)[number], { r: number; g: number; b: number }>>;
+  pattern?: number;
+  theme?: number;
+  variation?: number;
+}
 
 const inboxPath = (): string => join(config.garageRoot, 'inbox.json');
 const ackPath = (): string => join(config.garageRoot, 'inbox.ack.json');
@@ -130,4 +143,44 @@ export async function queuePlayerCommand(
   return action === 'store'
     ? enqueue({ type: 'store', steamId, slot: slot ?? 'default' })
     : enqueue({ type: 'redeem', steamId, ...(slot !== undefined ? { slot } : {}), ...(where !== undefined ? { where } : {}) });
+}
+
+/** Check a skin from the web: every colour 0–1, known regions only; pattern / theme whole numbers; variation 0–100. */
+export function validateSkin(raw: unknown): SkinRequest {
+  if (typeof raw !== 'object' || raw === null) throw new ValidationError('skin must be an object');
+  const r = raw as Record<string, unknown>;
+  const colorsRaw = r['colors'];
+  if (typeof colorsRaw !== 'object' || colorsRaw === null || Array.isArray(colorsRaw)) throw new ValidationError('colors must be an object');
+  const colors: SkinRequest['colors'] = {};
+  const unit = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;
+  for (const [k, v] of Object.entries(colorsRaw as Record<string, unknown>)) {
+    if (!(SKIN_REGIONS as readonly string[]).includes(k)) throw new ValidationError(`unknown region "${k}"`);
+    const c = v as Record<string, unknown> | null;
+    if (typeof c !== 'object' || c === null || !unit(c['r']) || !unit(c['g']) || !unit(c['b'])) throw new ValidationError(`${k}: r, g, b must be 0–1`);
+    colors[k as (typeof SKIN_REGIONS)[number]] = { r: Math.round(c['r'] * 10000) / 10000, g: Math.round(c['g'] * 10000) / 10000, b: Math.round(c['b'] * 10000) / 10000 };
+  }
+  if (Object.keys(colors).length === 0) throw new ValidationError('at least one colour');
+  const out: SkinRequest = { colors };
+  for (const k of ['pattern', 'theme'] as const) {
+    const v = r[k];
+    if (v === undefined || v === null) continue;
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 20) throw new ValidationError(`${k} must be a whole number 0–20`);
+    out[k] = v;
+  }
+  const variation = r['variation'];
+  if (variation !== undefined && variation !== null) {
+    if (typeof variation !== 'number' || !Number.isFinite(variation) || variation < 0 || variation > 100) throw new ValidationError('variation must be 0–100');
+    out.variation = variation;
+  }
+  return out;
+}
+
+/** Queue a player's own skin onto the dino they play now (one command every few seconds, like the garage). */
+export async function queueSkin(steamId: string, raw: unknown, now = Date.now()): Promise<InboxCommand> {
+  assertSteamId(steamId);
+  const skin = validateSkin(raw);
+  const last = lastPlayerCommand.get(steamId);
+  if (last !== undefined && now - last < PLAYER_COMMAND_GAP_MS) throw new TooSoonError('one command every few seconds');
+  lastPlayerCommand.set(steamId, now);
+  return enqueue({ type: 'skin', steamId, skin });
 }

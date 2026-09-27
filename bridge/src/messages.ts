@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello' | 'prime';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello' | 'prime' | 'skin';
 
 export interface MessageDef {
   key: string;
@@ -133,6 +133,10 @@ export const MESSAGES: readonly MessageDef[] = [
   // --- admin actions (mods/DinoGarage inbox) ---
   { key: 'admin.kill', group: 'admin', label: 'Admin xoá dino (không lý do)', default: 'An admin removed your dino.', vars: [] },
   { key: 'admin.killReason', group: 'admin', label: 'Admin xoá dino (có lý do)', default: 'An admin removed your dino. Reason: {reason}', vars: ['reason'] },
+  // --- skin from the web (mods/DinoGarage garage/skin.lua) ---
+  { key: 'skin.applied', group: 'skin', label: 'Đổi màu dino thành công', default: 'Đã đổi màu dino của bạn.', vars: [] },
+  { key: 'skin.noDino', group: 'skin', label: 'Đổi màu: chưa điều khiển dino', default: 'Bạn cần đang điều khiển một con dino còn sống để đổi màu.', vars: [] },
+  { key: 'skin.failed', group: 'skin', label: 'Đổi màu thất bại', default: 'Không đổi được màu dino. Thử lại sau.', vars: [] },
   // --- prime tasks (prime-notify.ts): sent by the bridge when a task turns on ---
   { key: 'prime.conditionDone', group: 'prime', label: 'Hoàn thành một nhiệm vụ prime ({task} = tên nhiệm vụ)', default: '✅ Đã hoàn thành nhiệm vụ prime: {task} ({done}/10 — cần {needed} để đủ điều kiện prime).', vars: ['task', 'n', 'done', 'needed'] },
   { key: 'prime.eligible', group: 'prime', label: 'Dino vừa đủ điều kiện prime', default: '🌟 Dino của bạn đã đủ điều kiện prime ({done}/10)! Game xét prime khi dino đạt 75% growth.', vars: ['done', 'needed'] },
