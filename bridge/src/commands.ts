@@ -35,9 +35,17 @@ type NewCommand =
 
 /** The skin regions of pawn.CustomizerData (<Region>Color), as the mods read and write them. */
 export const SKIN_REGIONS = ['Body', 'Flank', 'Underbelly', 'Markings', 'MaleDisplay', 'Detail1', 'Eyes', 'Teeth', 'Mouth', 'Claws'] as const;
-/** Colours are the game's LINEAR values 0–1 (the portal converts from the sRGB hex it shows). */
+/** Skin effects (pawn.SkinEffects) a player may set, 0–1 — they dry / fade in game as usual. */
+export const SKIN_EFFECTS = ['Wet', 'Mud', 'Blood', 'Dirt', 'Dust', 'Duckweed'] as const;
+/**
+ * A colour channel may go above 1 ("glow": the game keeps it — tried on a test
+ * server, 2026-09-27; how it LOOKS in game is to be seen). The mod takes up to 10.
+ */
+export const SKIN_CHANNEL_MAX = 4;
+/** Colours are the game's LINEAR values 0–SKIN_CHANNEL_MAX (the portal converts from the sRGB hex it shows). */
 export interface SkinRequest {
   colors: Partial<Record<(typeof SKIN_REGIONS)[number], { r: number; g: number; b: number }>>;
+  effects?: Partial<Record<(typeof SKIN_EFFECTS)[number], number>>;
   pattern?: number;
   theme?: number;
   variation?: number;
@@ -145,22 +153,33 @@ export async function queuePlayerCommand(
     : enqueue({ type: 'redeem', steamId, ...(slot !== undefined ? { slot } : {}), ...(where !== undefined ? { where } : {}) });
 }
 
-/** Check a skin from the web: every colour 0–1, known regions only; pattern / theme whole numbers; variation 0–100. */
+/** Check a skin from the web: every colour channel 0–SKIN_CHANNEL_MAX, known regions only; effects 0–1; pattern / theme whole numbers; variation 0–100. */
 export function validateSkin(raw: unknown): SkinRequest {
   if (typeof raw !== 'object' || raw === null) throw new ValidationError('skin must be an object');
   const r = raw as Record<string, unknown>;
   const colorsRaw = r['colors'];
   if (typeof colorsRaw !== 'object' || colorsRaw === null || Array.isArray(colorsRaw)) throw new ValidationError('colors must be an object');
   const colors: SkinRequest['colors'] = {};
-  const unit = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;
+  const unit = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= SKIN_CHANNEL_MAX;
   for (const [k, v] of Object.entries(colorsRaw as Record<string, unknown>)) {
     if (!(SKIN_REGIONS as readonly string[]).includes(k)) throw new ValidationError(`unknown region "${k}"`);
     const c = v as Record<string, unknown> | null;
-    if (typeof c !== 'object' || c === null || !unit(c['r']) || !unit(c['g']) || !unit(c['b'])) throw new ValidationError(`${k}: r, g, b must be 0–1`);
+    if (typeof c !== 'object' || c === null || !unit(c['r']) || !unit(c['g']) || !unit(c['b'])) throw new ValidationError(`${k}: r, g, b must be 0–${SKIN_CHANNEL_MAX}`);
     colors[k as (typeof SKIN_REGIONS)[number]] = { r: Math.round(c['r'] * 10000) / 10000, g: Math.round(c['g'] * 10000) / 10000, b: Math.round(c['b'] * 10000) / 10000 };
   }
   if (Object.keys(colors).length === 0) throw new ValidationError('at least one colour');
   const out: SkinRequest = { colors };
+  const effectsRaw = r['effects'];
+  if (effectsRaw !== undefined && effectsRaw !== null) {
+    if (typeof effectsRaw !== 'object' || Array.isArray(effectsRaw)) throw new ValidationError('effects must be an object');
+    const effects: NonNullable<SkinRequest['effects']> = {};
+    for (const [k, v] of Object.entries(effectsRaw as Record<string, unknown>)) {
+      if (!(SKIN_EFFECTS as readonly string[]).includes(k)) throw new ValidationError(`unknown effect "${k}"`);
+      if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1) throw new ValidationError(`${k} must be 0–1`);
+      effects[k as (typeof SKIN_EFFECTS)[number]] = Math.round(v * 1000) / 1000;
+    }
+    if (Object.keys(effects).length > 0) out.effects = effects;
+  }
   for (const k of ['pattern', 'theme'] as const) {
     const v = r[k];
     if (v === undefined || v === null) continue;

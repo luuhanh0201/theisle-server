@@ -46,6 +46,9 @@ FishSpawnTest : 0
 ; keep.json is off and there is no apply.json, so it writes nothing on the game —
 ; the server stays as at 08:50. Only where Mods/FishTune/Saved/ENABLED exists.
 FishTune : 1
+; SkinLab: TEST SERVER ONLY (scripts/test-server.sh turns it on in the test copy):
+; spawns a dino nobody plays and tries skin writes / effect setters on it.
+SkinLab : 0
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,

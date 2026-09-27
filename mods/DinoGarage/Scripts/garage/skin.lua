@@ -13,6 +13,13 @@
     crashed RequestRespawn (docs/garage.md) — only numbers are written here,
     field by field, the way the prime conditions are (restore.lua).
 
+    Skin effects (skin.effects = { Wet, Mud, Blood, Dirt, Dust, Duckweed }, 0–1):
+    pawn.SkinEffects (FSkinEffects: WetAmount, DuckweedAmount, MudAmount,
+    BloodAmount, DirtAmount, DustAmount, their Dry* and VomitAmount — read on
+    the test server, 2026-09-27). Mud, blood and dirt through the game's own
+    SetMudAmount / SetBloodAmount / SetDirtAmount (tried there: set, then they
+    dry as in game); the others field by field, like the colours.
+
     Flag first, like every first-time engine write: Saved/skin-write.trying
     is written before the first write of a run and removed after it; found
     at load, skins are not written this run (a crash stays one crash).
@@ -26,6 +33,15 @@ local S = {}
 
 S.FLAG = "Mods/DinoGarage/Saved/skin-write.trying"
 S.REGIONS = { "Body", "Flank", "Underbelly", "Markings", "MaleDisplay", "Detail1", "Eyes", "Teeth", "Mouth", "Claws" }
+-- effect -> { setter or nil, field in pawn.SkinEffects }
+S.EFFECTS = {
+    Wet      = { nil, "WetAmount" },
+    Mud      = { "SetMudAmount", "MudAmount" },
+    Blood    = { "SetBloodAmount", "BloodAmount" },
+    Dirt     = { "SetDirtAmount", "DirtAmount" },
+    Dust     = { nil, "DustAmount" },
+    Duckweed = { nil, "DuckweedAmount" },
+}
 
 local writes = nil   -- nil = not tried this run, true = worked, false = off
 do
@@ -62,7 +78,15 @@ function S.validate(skin)
             out.colors[region] = { r = r, g = g, b = b }
         end
     end
-    if next(out.colors) == nil then return nil, "no colours" end
+    if type(skin.effects) == "table" then
+        out.effects = {}
+        for name, v in pairs(skin.effects) do
+            local n = tonumber(v)
+            if S.EFFECTS[name] == nil or n == nil or n ~= n or n < 0 or n > 1 then return nil, "bad effect " .. tostring(name) end
+            out.effects[name] = n
+        end
+    end
+    if next(out.colors) == nil and next(out.effects or {}) == nil then return nil, "no colours" end
     for _, k in ipairs({ "pattern", "theme" }) do
         if skin[k] ~= nil then
             local n = tonumber(skin[k])
@@ -101,6 +125,16 @@ function S.apply(pawn, skin)
     if skin.pattern ~= nil and pcall(function() data.PatternIndex = skin.pattern end) then wrote = wrote + 1 end
     if skin.theme ~= nil and pcall(function() data.ThemeIndex = skin.theme end) then wrote = wrote + 1 end
     if skin.variation ~= nil and pcall(function() data.SkinVariation = skin.variation end) then wrote = wrote + 1 end
+    if skin.effects ~= nil then
+        local okE, fx = pcall(function() return pawn.SkinEffects end)
+        for name, v in pairs(skin.effects) do
+            local how = S.EFFECTS[name]
+            local ok = false
+            if how[1] ~= nil then ok = pcall(function() pawn[how[1]](pawn, v) end) end
+            if not ok and okE and fx ~= nil then ok = pcall(function() fx[how[2]] = v end) end
+            if ok then wrote = wrote + 1 end
+        end
+    end
     if first then
         os.remove(S.FLAG)
         writes = true

@@ -19,6 +19,10 @@
 // that dino changes (a new species or sex, a new life).
 // Shading: the RAC map's blue channel (crevices) and green (surface detail) are
 // baked into the colour; the normal map gives the relief.
+// Effects (mud, blood, dirt, dust, duckweed) are a hint, not the game's look: a
+// tint over the whole body, stronger in the crevices; wet skin is glossier.
+// Glow ("brighter than white", sent as colour channels above 1) lights the
+// model with its own colours.
 
 import * as THREE from '/vendor/three-0.170.0/three.module.min.js';
 import { GLTFLoader } from '/vendor/three-0.170.0/GLTFLoader.js';
@@ -33,6 +37,12 @@ const REGION_CODES = [             // [region, code colour in the region map]
   ['Markings', [255, 0, 255]],
   ['MaleDisplay', [255, 0, 0]],
   ['Detail1', [255, 255, 0]],
+];
+
+// [effect, tint (sRGB), strength]: a hint of how each looks, not the game's texture.
+const FX_TINTS = [
+  ['Mud', [74, 52, 34], 0.85], ['Dirt', [92, 82, 68], 0.6], ['Dust', [190, 172, 140], 0.55],
+  ['Duckweed', [79, 122, 42], 0.6], ['Blood', [110, 8, 8], 0.8],
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -113,7 +123,31 @@ function paint() {
     d[i * 4 + 2] = (c1[2] + (c2[2] - c1[2]) * w) * s;
     d[i * 4 + 3] = 255;
   }
+  // Effects: each a tint, mixed in by its amount (more where the skin is creased).
+  const fx = lastSkin.effects;
+  if (fx) {
+    const tints = FX_TINTS.filter(([id]) => (fx[id] ?? 0) > 0).map(([id, c, k]) => [c, fx[id] * k]);
+    if (tints.length > 0) {
+      for (let i = 0, n = SIZE * SIZE; i < n; i++) {
+        const crease = 1.25 - sh[i] / 255;          // 0.25 on flat skin … 1.25 in a crevice
+        for (const [c, amt] of tints) {
+          const w = Math.min(1, amt * crease);
+          d[i * 4] += (c[0] - d[i * 4]) * w;
+          d[i * 4 + 1] += (c[1] - d[i * 4 + 1]) * w;
+          d[i * 4 + 2] += (c[2] - d[i * 4 + 2]) * w;
+        }
+      }
+    }
+  }
   current.ctx.putImageData(img, 0, 0);
+  const wet = fx?.Wet ?? 0, glow = Math.max(1, lastSkin.glow ?? 1);
+  for (const m of current.bodyMats) {
+    m.roughness = 0.82 - 0.62 * wet;
+    m.emissiveMap = glow > 1 ? current.texture : null;
+    m.emissive.setRGB(glow > 1 ? 1 : 0, glow > 1 ? 1 : 0, glow > 1 ? 1 : 0);
+    m.emissiveIntensity = (glow - 1) * 0.55;
+    m.needsUpdate = true;
+  }
   current.texture.needsUpdate = true;
   const eye = srgb(lastSkin.colors?.Eyes ?? '#806020');
   for (const m of current.eyeMats) m.color.setRGB(eye[0] / 255, eye[1] / 255, eye[2] / 255, THREE.SRGBColorSpace);

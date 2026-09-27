@@ -210,7 +210,7 @@ test('skin: login, same-origin, JSON only; the SteamID is the session\'s, only t
   const before = bridgeCalls.length;
   const r = await post({ ...json, cookie, origin }, JSON.stringify({ ...skin, steamId: '76561198000000002' }));
   assert.equal(r.status, 202);
-  assert.deepEqual(bridgeCalls.slice(before), [{ skin: ME, body: skin }]);
+  assert.deepEqual(bridgeCalls.slice(before), [{ skin: ME, body: { ...skin, effects: undefined } }]);
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/skin`, { headers: { cookie } })).status, 405);
 });
 

@@ -952,6 +952,22 @@
   .skin-controls label > span, .skin-field > span { white-space: nowrap; line-height: 18px; }
   .skin-controls input[type=number], .xsel-btn, .xseg { height: 38px; box-sizing: border-box; }
   .skin-controls input[type=range] { margin: 10px 0 0; width: 100%; accent-color: #34d399; }
+  .skin-fx { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-surface); }
+  .skin-fx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .skin-fx-head .muted { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .skin-fx-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .skin-fx-toggle input { accent-color: #34d399; width: 16px; height: 16px; margin: 0; }
+  .skin-fx-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 16px; }
+  .skin-fx-grid.off { opacity: .45; }
+  .fx-item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; font-size: 12px; font-weight: 600; }
+  .fx-item b { font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
+  .fx-item input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: #34d399; }
+  .skin-glow { display: grid; grid-template-columns: auto 1fr 44px; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border); font-size: 12.5px; font-weight: 600; }
+  .skin-glow span { white-space: nowrap; }
+  .skin-glow em { font-style: normal; font-size: 10.5px; font-weight: 700; color: #fbbf24; border: 1px solid rgba(251,191,36,.45); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+  .skin-glow input { width: 100%; margin: 0; accent-color: #fbbf24; }
+  .skin-glow b { text-align: right; }
   .skin-presets { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
   .skin-presets h4 { margin: 0 0 10px; font-size: 13px; color: var(--text-muted); }
   .skin-presets h4 .muted { font-weight: 500; font-size: 11.5px; }
@@ -1636,6 +1652,18 @@
             <label><span>Tông</span><input type="number" id="skin-theme" min="0" max="20" step="1" value="0"></label>
             <label class="skin-variation"><span>Biến thể: <b id="skin-variation-val">0</b></span>
               <input type="range" id="skin-variation" min="0" max="20" step="1" value="0"></label>
+          </div>
+          <div class="skin-fx">
+            <div class="skin-fx-head">
+              <label class="skin-fx-toggle"><input type="checkbox" id="skin-fx-on"><span>Hiệu ứng da</span></label>
+              <span class="muted">bùn, máu… tự khô và phai dần như trong game</span>
+            </div>
+            <div class="skin-fx-grid" id="skin-fx-grid"></div>
+            <div class="skin-glow">
+              <span>Phát sáng <em>thử nghiệm</em></span>
+              <input type="range" id="skin-glow" min="1" max="4" step="0.1" value="1">
+              <b id="skin-glow-val">1.0×</b>
+            </div>
           </div>
           <button type="button" class="btn btn-emerald" id="btn-skin-apply" style="width:100%;margin-top:12px">Áp dụng lên dino đang chơi</button>
           <div class="garage-status" id="skin-status" hidden></div>

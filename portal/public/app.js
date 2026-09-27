@@ -259,6 +259,11 @@ const REGIONS = [
   ['Claws', 'Móng'],
 ];
 
+// Skin effects a player may set (pawn.SkinEffects), 0–1; they dry / fade in game.
+const EFFECTS = [['Wet', 'Ướt'], ['Mud', 'Bùn'], ['Blood', 'Máu'], ['Dirt', 'Bẩn'], ['Dust', 'Bụi'], ['Duckweed', 'Bèo']];
+/** Glow multiplies every colour ("brighter than white"); the game keeps channels up to 4. */
+const GLOW_MAX = 4;
+
 function hex(c) {
   if (!c) return '#ffffff';
   const ch = (v) => {
@@ -338,6 +343,10 @@ function editorSkin() {
     pattern: Math.max(0, Math.min(2, Math.round(Number($('skin-pattern').value) || 0))),
     theme: Math.max(0, Math.min(20, Math.round(Number($('skin-theme').value) || 0))),
     variation: Math.max(0, Math.min(20, Math.round(Number($('skin-variation').value) || 0))),
+    glow: Math.max(1, Math.min(GLOW_MAX, Number($('skin-glow').value) || 1)),
+    effects: $('skin-fx-on').checked
+      ? Object.fromEntries(EFFECTS.map(([id]) => [id, Math.max(0, Math.min(1, (Number($(`fx-${id}`).value) || 0) / 100))]))
+      : null,
   };
 }
 
@@ -358,7 +367,22 @@ function applySkin(skin) {
     $('skin-variation').value = String(Math.round(skin.variation));
     $('skin-variation-val').textContent = String(Math.round(skin.variation));
   }
+  if (typeof skin.glow === 'number') setGlow(skin.glow);
+  if (skin.effects && typeof skin.effects === 'object') {
+    $('skin-fx-on').checked = true;
+    for (const [id] of EFFECTS) setEffect(id, Math.round((Number(skin.effects[id]) || 0) * 100));
+  }
   skinChanged();
+}
+
+function setGlow(g) {
+  const v = Math.max(1, Math.min(GLOW_MAX, Number(g) || 1));
+  $('skin-glow').value = String(v);
+  $('skin-glow-val').textContent = `${v.toFixed(1)}×`;
+}
+function setEffect(id, pct) {
+  $(`fx-${id}`).value = String(pct);
+  $(`fx-${id}-val`).textContent = `${pct}%`;
 }
 
 /** The preview follows the editor: the 3D model (skin3d.js) when there is one, else the colours side by side. */
@@ -385,7 +409,9 @@ async function sendSkin() {
   $('btn-skin-apply').disabled = true;
   const sk = editorSkin();
   const body = { pattern: sk.pattern, theme: sk.theme, variation: sk.variation, colors: {} };
-  for (const [id] of REGIONS) body.colors[id] = linearOf(sk.colors[id]);
+  const k = (v) => Math.min(GLOW_MAX, Math.round(v * sk.glow * 10000) / 10000);
+  for (const [id] of REGIONS) { const c = linearOf(sk.colors[id]); body.colors[id] = { r: k(c.r), g: k(c.g), b: k(c.b) }; }
+  if (sk.effects) body.effects = sk.effects;
   skinStatus('', 'Đang gửi…');
   try {
     const r = await fetch('/api/skin', {
@@ -421,7 +447,10 @@ async function sendSkin() {
 function skinCode(sk) {
   const c = {};
   for (const [id] of REGIONS) c[id] = sk.colors[id].replace('#', '');
-  const b64 = btoa(JSON.stringify({ p: sk.pattern, t: sk.theme, v: sk.variation, c }));
+  const extra = {};
+  if (sk.glow > 1) extra.g = Math.round(sk.glow * 10) / 10;
+  if (sk.effects) extra.e = Object.fromEntries(Object.entries(sk.effects).map(([id, v]) => [id, Math.round(v * 100)]));
+  const b64 = btoa(JSON.stringify({ p: sk.pattern, t: sk.theme, v: sk.variation, c, ...extra }));
   return `XG1.${b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
 }
 function parseSkinCode(text) {
@@ -432,7 +461,10 @@ function parseSkinCode(text) {
     const colors = {};
     for (const [id] of REGIONS) if (/^[0-9a-f]{6}$/i.test(d.c?.[id] ?? '')) colors[id] = `#${d.c[id].toLowerCase()}`;
     if (Object.keys(colors).length === 0) return null;
-    return { colors, pattern: Number(d.p) || 0, theme: Number(d.t) || 0, variation: Number(d.v) || 0 };
+    const effects = d.e && typeof d.e === 'object'
+      ? Object.fromEntries(EFFECTS.map(([id]) => [id, Math.max(0, Math.min(100, Number(d.e[id]) || 0)) / 100])) : null;
+    return { colors, pattern: Number(d.p) || 0, theme: Number(d.t) || 0, variation: Number(d.v) || 0,
+      glow: Number(d.g) || 1, ...(effects ? { effects } : {}) };
   } catch {
     return null;
   }
@@ -485,6 +517,22 @@ function initSkinEditor() {
     hexIn.addEventListener('blur', () => { hexIn.value = input.value; hexIn.classList.remove('bad'); });
   }
   for (const id of ['skin-pattern', 'skin-theme']) $(id).addEventListener('input', skinChanged);
+
+  // Skin effects: sliders, off until ticked (then sent with "Áp dụng").
+  $('skin-fx-grid').innerHTML = EFFECTS.map(([id, label]) => `
+    <label class="fx-item"><span>${label}</span><b id="fx-${id}-val">0%</b>
+      <input type="range" id="fx-${id}" min="0" max="100" step="5" value="0"></label>`).join('');
+  const fxOn = () => $('skin-fx-grid').classList.toggle('off', !$('skin-fx-on').checked);
+  $('skin-fx-on').addEventListener('change', () => { fxOn(); skinChanged(); });
+  for (const [id] of EFFECTS) {
+    $(`fx-${id}`).addEventListener('input', () => {
+      $(`fx-${id}-val`).textContent = `${$(`fx-${id}`).value}%`;
+      if (!$('skin-fx-on').checked) { $('skin-fx-on').checked = true; fxOn(); }
+      skinChanged();
+    });
+  }
+  fxOn();
+  $('skin-glow').addEventListener('input', () => { setGlow($('skin-glow').value); skinChanged(); });
   $('skin-variation').addEventListener('input', () => {
     $('skin-variation-val').textContent = $('skin-variation').value;
     skinChanged();

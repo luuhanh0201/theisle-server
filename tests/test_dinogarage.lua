@@ -598,6 +598,17 @@ local bad = sendSkin({ colors = { Body = { r = 12, g = 0, b = 0 } } })
 check("a channel past 10 is refused, nothing written", started(bad) and started(bad).ok == false and sk.BodyColor.R == 0.9)
 local hdr = sendSkin({ colors = { Body = { r = 3, g = 0.5, b = 0 } } })
 check("HDR (above 1, up to 10) is written: the bridge decides what players may send", started(hdr) and started(hdr).ok == true and sk.BodyColor.R == 3)
+local mudSet = nil
+local fxStruct = { WetAmount = 0, MudAmount = 0 }
+rawset(painted, "SetMudAmount", function(_, v) mudSet = v end)
+rawset(painted, "SkinEffects", fxStruct)
+local fxId = sendSkin({ colors = { Body = { r = 0.5, g = 0.5, b = 0.5 } }, effects = { Mud = 0.8, Wet = 0.6 } })
+check("mud through the game's SetMudAmount, wet into the SkinEffects field", started(fxId) and started(fxId).ok == true
+      and mudSet == 0.8 and fxStruct.WetAmount == 0.6 and fxStruct.MudAmount == 0)
+local badFx = sendSkin({ colors = { Body = { r = 0.5, g = 0.5, b = 0.5 } }, effects = { Vomit = 1 } })
+check("an unknown effect is refused", started(badFx) and started(badFx).ok == false)
+local badAmt = sendSkin({ colors = { Body = { r = 0.5, g = 0.5, b = 0.5 } }, effects = { Mud = 2 } })
+check("an effect past 1 is refused", started(badAmt) and started(badAmt).ok == false and mudSet == 0.8)
 local dead = H.makePawn({ growth = 0.5, health = 0 })
 local deadCtrl = H.makeCtrl(STEAM, dead)
 useCtrl(deadCtrl)
