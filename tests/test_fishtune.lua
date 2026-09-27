@@ -29,7 +29,7 @@ local m = assert(io.open("Mods/FishTune/Saved/ENABLED", "w")); m:close()
 os.remove("Mods/FishTune/Saved/writing.flag")
 dofile(RUN .. "/Mods/FishTune/Scripts/main.lua")
 local poll = H.gameLoops[1]
-check("a 5 s game-thread loop", poll ~= nil and poll.ms == 5000)
+check("a 2 s game-thread loop", poll ~= nil and poll.ms == 2000)
 poll.fn()
 check("nothing written before a request", spawnerObj.MaxAmbientFishPerPlayer == 12)
 local f = assert(io.open("Mods/FishTune/Saved/apply.json", "w"))
@@ -103,7 +103,7 @@ os.remove("Mods/FishTune/Saved/keep.json")
 say("\n-- 2c. keeping: at most perWindow new ones per window, near the crocodiles first --")
 local croc = H.makePawn({ class = "BP_Deinosuchus_C", loc = { X = 1000000, Y = 0, Z = 0 } })
 local crocCtrl = H.makeCtrl("76561190000000009", croc)
-local far1, far2, near1, near2 = swimmer(5000), swimmer(6000), swimmer(1000500), swimmer(1001000)
+local far1, far2, near1, near2 = swimmer(5000), swimmer(6000), swimmer(1020000), swimmer(1030000)   -- 200 / 300 m from the crocodile
 lake = { far1, far2, near1, near2 }
 _G.FindAllOf = function(c)
   if c == "TIAIWorldSpawner" then return { spawnerObj } end
@@ -144,7 +144,7 @@ check("a big one kept", rawget(cat, "DespawnDelaySeconds") == 3600)
 check("a small one left to the game", rawget(hop, "DespawnDelaySeconds") == 25)
 
 say("\n-- 2e. watching the kept kinds: a jump and a disappearance are logged --")
-local pos = { X = 1000000, Y = 0, Z = 0 }
+local pos = { X = 1020000, Y = 0, Z = 0 }   -- 200 m from the crocodile
 local coel = setmetatable({ DespawnDelaySeconds = 25 }, { __index = function(_, k)
   if k == "GetAddress" then return function() return 9001 end end
   if k == "IsValid" then return function() return true end end
@@ -162,10 +162,25 @@ local function logged(t) for _, l in ipairs(H.log) do if l:find(t, 1, true) then
 check("a jump is logged as moved by the game", logged("fish moved — BP_Coalecanth_C jumped 200 m") ~= nil, table.concat(H.log, " | "))
 pos.X = 1000300          -- back next to the crocodile (3 m)…
 poll.fn()
+check("a player close: handed back to the game's 25 s (so it can be caught)", rawget(coel, "DespawnDelaySeconds") == 25)
+check("…and not kept again while the player is near", (function() poll.fn(); return rawget(coel, "DespawnDelaySeconds") == 25 end)())
 lake = {}                -- …and gone
 poll.fn()
 local gone = logged("fish gone — BP_Coalecanth_C")
 check("gone, with the nearest player: close by", gone ~= nil and gone:find("close by", 1, true) ~= nil, gone)
+
+say("\n-- 2f. a fresh fish next to a player is not kept; turning keep off hands every kept fish back --")
+local byMe, away = swimmer(1001000), swimmer(1100000)   -- 10 m and 1 km from the crocodile
+lake = { byMe, away }
+kf = assert(io.open("Mods/FishTune/Saved/keep.json", "w"))
+kf:write(json.encode({ enabled = true, despawnDelay = 3600, maxTotal = 60 })); kf:close()
+clock = clock + 301
+poll.fn()
+check("next to a player: left alone", rawget(byMe, "DespawnDelaySeconds") == 25)
+check("1 km away: kept", rawget(away, "DespawnDelaySeconds") == 3600)
+kf = assert(io.open("Mods/FishTune/Saved/keep.json", "w")); kf:write(json.encode({ enabled = false })); kf:close()
+poll.fn()
+check("keep off: the kept one handed back", rawget(away, "DespawnDelaySeconds") == 25)
 os.remove("Mods/FishTune/Saved/keep.json")
 
 say("\n-- 3. a run that stopped during a write: no more writes --")

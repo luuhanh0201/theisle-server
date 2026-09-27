@@ -23,6 +23,10 @@
 --     "onlyClasses": ["BP_Catfish_C", "BP_Coalecanth_C", "BP_Muskel_C", "BP_Forktail_C"] }
 -- onlyClasses: only these kinds are kept (the big and middle ones), the rest
 -- go after 25 s as the game has it — DisallowedAIClasses does not stop fish.
+-- A fish with a long despawn delay could not be caught: bitten, it went
+-- without feeding the crocodile (2026-09-27). So a fish is kept only while
+-- nobody is within keepFromM (80 m), and handed back to the game (25 s) as
+-- soon as a player comes within releaseM (40 m) — before they can bite it.
 -- Each fish the game places gets DespawnDelaySeconds = despawnDelay (game:
 -- 25 s once no player is within its RelevanceDistance, 100 m), so fish stay
 -- in the waters players have left: spread over the map instead of only
@@ -174,7 +178,8 @@ local windowStart, windowCount = 0, 0
 -- that jumps (moved by the game) or goes away is logged with how far the
 -- nearest player was when last seen — eaten, removed by the game, or moved.
 local track = {}         -- address -> { cls, x, y, z, since, near, who }
-local JUMP_CM = 6000     -- more than 60 m in one 5 s look: moved, not swum
+local JUMP_CM = 6000     -- more than 60 m in one 2 s look: moved, not swum
+local GAME_DELAY = 25    -- the game's own DespawnDelaySeconds
 
 --- Every player's place (game thread): { {id, x, y}, … }.
 local function allPlayers()
@@ -214,12 +219,27 @@ end
 local function keepFish()
     if blocked then return end
     local k = readJson(DIR .. "keep.json")
-    if k == nil or k.enabled ~= true then return end
+    if k == nil or k.enabled ~= true then
+        -- Turned off: every fish still kept goes back to the game's delay.
+        if next(kept) ~= nil then
+            local okF, all = pcall(function() return FindAllOf("TIAmbientFish") or {} end)
+            local back = 0
+            for _, a in ipairs(okF and all or {}) do
+                local addr = addressOf(a)
+                if addr and kept[addr] and pcall(function() a.DespawnDelaySeconds = GAME_DELAY end) then back = back + 1 end
+            end
+            kept = {}
+            H.log(string.format("%s: keep turned off — %d fish handed back to the game", MOD, back))
+        end
+        return
+    end
     local delay = tonumber(k.despawnDelay) or 3600
     local maxTotal = math.floor(tonumber(k.maxTotal) or 60)
     local perWindow = math.floor(tonumber(k.perWindow) or 1000)
     local windowSec = tonumber(k.windowSec) or 300
     local nearCm = (tonumber(k.nearM) or 0) * 100
+    local releaseCm = (tonumber(k.releaseM) or 40) * 100
+    local keepFromCm = math.max((tonumber(k.keepFromM) or 80) * 100, releaseCm)
     if delay < 25 or delay > 604800 or maxTotal < 0 or maxTotal > 1000 or perWindow < 0 or windowSec < 10 then return end
     local now = os.time()
     if now - windowStart >= windowSec then windowStart, windowCount = now, 0 end
@@ -232,7 +252,7 @@ local function keepFish()
         only = {}
         for _, c in ipairs(k.onlyClasses) do if type(c) == "string" then only[c] = true end end
     end
-    local seen, count, placed, fresh = {}, 0, 0, 0
+    local seen, count, placed, fresh, released = {}, 0, 0, 0, 0
     local near, far = {}, {}
     local players = allPlayers()
     for _, a in ipairs(all) do
@@ -253,6 +273,14 @@ local function keepFish()
                         track[addr] = t
                     end
                 end
+                local nd = nearestOf(players, v.X, v.Y)
+                if kept[addr] and nd ~= nil and nd < releaseCm then
+                    -- A player is coming: a plain fish again, so it can be caught.
+                    pcall(function() a.DespawnDelaySeconds = GAME_DELAY end)
+                    kept[addr] = nil
+                    released = released + 1
+                end
+                if not kept[addr] and nd ~= nil and nd < keepFromCm then wanted = false end
                 if t ~= nil then
                     local jump = math.sqrt((v.X - t.x) ^ 2 + (v.Y - t.y) ^ 2 + (v.Z - t.z) ^ 2)
                     if jump > JUMP_CM then
@@ -296,13 +324,15 @@ local function keepFish()
             track[addr] = nil
         end
     end
-    if (fresh > 0 and now - keptLog >= 60) or now - keptLog >= 300 then
+    if ((fresh > 0 or released > 0) and now - keptLog >= 60) or now - keptLog >= 300 then
         keptLog = now
-        H.log(string.format("%s: keep — %d fish kept (+%d), %d placed in all, %d near %d crocodile(s), max %d, %d/%d this window",
-            MOD, count, fresh, placed, #near, #crocs, maxTotal, windowCount, perWindow))
+        H.log(string.format("%s: keep — %d fish kept (+%d, %d handed back: a player near), %d placed in all, %d near %d crocodile(s), max %d, %d/%d this window",
+            MOD, count, fresh, released, placed, #near, #crocs, maxTotal, windowCount, perWindow))
     end
 end
 
-H.every(5000, MOD .. ": poll", function() poll(); keepFish() end)
+-- Every 2 s: a crocodile swims ~5 m/s, so a kept fish is handed back well
+-- before one closing in from 40 m can bite it.
+H.every(2000, MOD .. ": poll", function() poll(); keepFish() end)
 local ws = spawner()
 H.log(MOD .. ": loaded — spawner now " .. (ws and json.encode(readBack(ws)) or "not found yet"))
