@@ -165,7 +165,7 @@ export const MANAGED: Record<string, ManagedKey> = {
   AIDensity: { section: S, group: 'ai', type: 'float', min: 0, max: 5, step: 0.05, default: 1,
     label: 'Mật độ AI', help: '0.25 thưa (nhẹ máy) · 1 mặc định · 2 dày (nặng).' },
   AISpawnInterval: { section: S, group: 'ai', type: 'float', min: 5, max: 600, step: 1, default: 40,
-    label: 'Chu kỳ sinh AI (giây)', help: 'Bao lâu server kiểm tra để sinh thêm AI.' },
+    label: 'Chu kỳ sinh AI (giây)', help: 'Bao lâu server kiểm tra để sinh thêm AI — kể cả CÁ: để 600 thì cá sấu đứng cả chục phút chỉ thấy 1 con, 40 (mặc định) thì 8–9 con có cá to (đo 27/9). Muốn bớt AI trên bờ thì cấm loài hoặc dùng vùng AI, đừng tăng số này.' },
   DisallowedAIClasses: { section: S, group: 'ai', type: 'list', item: NAME, max: 100,
     itemHelp: 'tên AI, vd. Boar', label: 'Cấm loài AI',
     // Dryosaurus, Gallimimus: also AI the game spawns (seen on the live map

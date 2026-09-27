@@ -41,7 +41,7 @@ ZoneGuard : 1
 FishFind : 0
 ; Done 2026-09-26: a fish a mod spawns is removed by the game within 10 s (fishspawn7.txt).
 FishSpawnTest : 0
-; FishTune: writes the fish spawner, only where Mods/FishTune/ENABLED exists and
+; FishTune: writes the fish spawner, only where Mods/FishTune/Saved/ENABLED exists and
 ; only on an admin's apply.json (idle otherwise).
 FishTune : 1
 

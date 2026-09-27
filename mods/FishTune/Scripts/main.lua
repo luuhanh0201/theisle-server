@@ -5,7 +5,8 @@
 -- the test server, 2026-09-27). A Lua write on this spawner (GlobalAISpawnLimit,
 -- FishControl) crash-looped the live server on 2026-09-26; these four fish
 -- numbers were written on the test server with no crash (2026-09-27). Runs only
--- where an admin made Mods/FishTune/ENABLED (a second server on the same VPS
+-- where an admin made Mods/FishTune/Saved/ENABLED — in Saved/, which a deploy
+-- leaves alone (a marker next to Scripts/ was deleted by one; a second server on the same VPS
 -- could not be joined — its listing pointed at the live port).
 --
 -- It writes nothing by itself. An admin drops Mods/FishTune/Saved/apply.json:
@@ -30,9 +31,9 @@ local MOD  = "FishTune"
 local DIR  = "Mods/FishTune/Saved/"
 local FLAG = DIR .. "writing.flag"
 
-local marker = io.open("Mods/FishTune/ENABLED", "r")
+local marker = io.open("Mods/FishTune/Saved/ENABLED", "r")
 if not marker then
-    H.log(MOD .. ": off (no Mods/FishTune/ENABLED) — nothing to do")
+    H.log(MOD .. ": off (no Mods/FishTune/Saved/ENABLED) — nothing to do")
     return
 end
 marker:close()
