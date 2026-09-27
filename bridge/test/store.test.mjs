@@ -362,3 +362,18 @@ test('damage, bite by bite: a repeat of the hook counts once; a hold bite is one
   assert.equal(Math.round(a.damageDealt * 10) / 10, 3718.2);
   assert.equal(Math.round(s.player(B).player.damageTaken * 10) / 10, 3718.2);
 });
+
+test('damage from a StatsLogger that names its bites: grouped by the id', () => {
+  const s = new Store();
+  const t = now();
+  const hit = (dt, amount, bite, tick) => ({ t: t + dt, type: 'damage', attacker: A, victim: B, amount, bite, tick });
+  feed(s, [
+    { t, type: 'session_start', steamId: A }, { t, type: 'session_start', steamId: B },
+    hit(0, 500, '1-1', 1),
+    hit(1, 339, '1-2', 1), hit(1, 329, '1-2', 2), hit(2, 320, '1-2', 3),     // a hold bite across a second
+    hit(3, 320, '1-3', 1),                                                    // the same number: another bite
+  ]);
+  const bites = s.feed(10, new Set(['damage'])).reverse();
+  assert.deepEqual(bites.map((b) => [b.amount, b.ticks]), [[500, 1], [988, 3], [320, 1]]);
+  assert.equal(s.player(A).player.hits, 3);
+});

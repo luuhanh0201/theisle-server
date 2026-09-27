@@ -143,6 +143,27 @@ if dmg then
 end
 
 say("")
+say("-- 4b. one event per bite: the hook's repeats dropped, a hold bite's ticks share its id --")
+do
+  local before = count("damage")
+  for _ = 1, 4 do H.fire(DAMAGE_HOOK, H.param(pawnA), H.param(pawnB), H.param(508.9)) end   -- one bite, four calls
+  for _, amt in ipairs({ 339.3, 328.8, 319.6 }) do H.fire(DAMAGE_HOOK, H.param(pawnA), H.param(pawnB), H.param(amt)) end
+  H.fire(DAMAGE_HOOK, H.param(pawnA), H.param(pawnB), H.param(120))                      -- far lower: a new bite
+  poll()
+  local list = ofType("damage")
+  local mine = {}
+  for i = before + 1, #list do mine[#mine + 1] = list[i] end
+  check("five events: the repeats are gone", #mine == 5, tostring(#mine))
+  if #mine == 5 then
+    check("each carries its bite id, tick and clock", mine[1].bite ~= nil and mine[1].tick == 1 and type(mine[1].clockMs) == "number")
+    check("the hold bite's ticks: one id, ticks 1..3", mine[2].bite == mine[3].bite and mine[3].bite == mine[4].bite
+          and mine[2].bite ~= mine[1].bite and mine[2].tick == 1 and mine[4].tick == 3,
+          json.encode({ mine[2].bite, mine[2].tick, mine[4].bite, mine[4].tick }))
+    check("a far lower hit is a new bite", mine[5].bite ~= mine[4].bite and mine[5].tick == 1)
+  end
+end
+
+say("")
 say("-- 5. a hit from an AI pawn is labelled, not dropped --")
 local aiPawn = H.makePawn({})          -- no controller attached
 H.fire(DAMAGE_HOOK, H.param(aiPawn), H.param(pawnB), H.param(7))

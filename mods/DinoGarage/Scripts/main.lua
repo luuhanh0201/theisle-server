@@ -252,6 +252,24 @@ local function doStore(ctrl, steamId, say, cmdId)
         Msg.say(say, "garage.full", "Gara đã đầy ({maxSlots} slot). Lấy bớt một con ra trước.", { maxSlots = settings.maxSlots })
         return false
     end
+    -- The admin's minimums (panel: garage settings): a dino too hurt or too
+    -- young is not taken. A reading that fails lets it through, as before.
+    if settings.minHealthPct > 0 then
+        local hp, maxHp = callNumber(pawn, "GetHealth"), callNumber(pawn, "GetMaxHealth")
+        if hp and maxHp and maxHp > 0 and hp / maxHp * 100 < settings.minHealthPct then
+            Msg.say(say, "garage.lowHealth", "Máu phải từ {minHealth}% trở lên mới cất được (đang {health}%).",
+                { minHealth = settings.minHealthPct, health = math.floor(hp / maxHp * 100) })
+            return false
+        end
+    end
+    if settings.minGrowthPct > 0 then
+        local g = callNumber(pawn, "GetGrowth")
+        if g and g * 100 < settings.minGrowthPct - 1e-6 then
+            Msg.say(say, "garage.lowGrowth", "Dino phải lớn từ {minGrowth}% trở lên mới cất được (đang {growth}%).",
+                { minGrowth = settings.minGrowthPct, growth = math.floor(g * 100) })
+            return false
+        end
+    end
     local origin = locOf(pawn)
     if origin == nil then
         Msg.say(say, "garage.noLocation", "Không đọc được vị trí dino. Thử lại.")

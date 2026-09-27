@@ -18,6 +18,8 @@
                garage (0–300, default 30). Nothing is saved until it ends.
       cooldown seconds a player must wait between two garage uses (!store or
                !redeem; 0–86400, default 60).
+      minHealthPct  health (% of the dino's max) needed to store (0–100, default 0 = any)
+      minGrowthPct  growth (%) needed to store (0–100, default 0 = any)
 ]]
 
 local json = require("shared.isle.json")
@@ -25,7 +27,7 @@ local json = require("shared.isle.json")
 local S = {}
 
 S.PATH = "Mods/DinoGarage/Saved/garage-settings.json"
-S.DEFAULTS = { redeemAt = "current", maxSlots = 2, storeCountdown = 30, cooldown = 60 }
+S.DEFAULTS = { redeemAt = "current", maxSlots = 2, storeCountdown = 30, cooldown = 60, minHealthPct = 0, minGrowthPct = 0 }
 S.MAX_SLOTS_RANGE = { 1, 20 }
 S.REDEEM_AT = { current = true, stored = true, choice = true }
 
@@ -47,6 +49,8 @@ function S.read()
         out.maxSlots = whole(data.maxSlots, S.MAX_SLOTS_RANGE[1], S.MAX_SLOTS_RANGE[2]) or out.maxSlots
         out.storeCountdown = whole(data.storeCountdown, 0, 300) or out.storeCountdown
         out.cooldown = whole(data.cooldown, 0, 86400) or out.cooldown
+        out.minHealthPct = whole(data.minHealthPct, 0, 100) or out.minHealthPct
+        out.minGrowthPct = whole(data.minGrowthPct, 0, 100) or out.minGrowthPct
     end
     return out
 end

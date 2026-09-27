@@ -743,6 +743,31 @@ seq = table.concat(events, ", ")
 check("off: dimmed, detached, destroyed", started(loff) and started(loff).ok == true and seq == "intensity 0, detach, destroy", seq)
 _G.StaticFindObject, _G.FindAllOf = savedSFO, savedFAO
 
+say("\n-- the admin's minimums: health and growth needed to store --")
+do
+  writeSettings('{"storeCountdown":30,"cooldown":0,"maxSlots":20,"minHealthPct":80,"minGrowthPct":50}')
+  clock = clock + 100
+  local MIN = STEAM
+  local hurt = H.makePawn({ growth = 0.9, health = 50 })
+  local hurtCtrl = H.makeCtrl(MIN, hurt)
+  useCtrl(hurtCtrl)
+  local r1 = send("store")
+  check("50 % health, 80 % needed: refused, told why", started(r1) and started(r1).ok == false
+        and lastMsg(hurtCtrl):find("80%", 1, true) ~= nil and lastMsg(hurtCtrl):find("50%", 1, true) ~= nil, lastMsg(hurtCtrl))
+  local young = H.makePawn({ growth = 0.3, health = 100 })
+  local youngCtrl = H.makeCtrl(MIN, young)
+  useCtrl(youngCtrl)
+  local r2 = send("store")
+  check("30 % growth, 50 % needed: refused, told why", started(r2) and started(r2).ok == false
+        and lastMsg(youngCtrl):find("50%", 1, true) ~= nil and lastMsg(youngCtrl):find("30%", 1, true) ~= nil, lastMsg(youngCtrl))
+  local fine = H.makePawn({ growth = 0.9, health = 90 })
+  useCtrl(H.makeCtrl(MIN, fine))
+  local r3 = send("store")
+  check("90 % health, 90 % growth: the countdown starts", started(r3) and started(r3).ok == true,
+        started(r3) and json.encode(started(r3)))
+  writeSettings('{"storeCountdown":30,"cooldown":60,"maxSlots":5}')
+end
+
 say("\n-- unlock heal: a mutation in its slot but not unlocked gets its unlock back, once --")
 local healLoop
 for _, l in ipairs(H.gameLoops) do if l.ms == 15000 then healLoop = l end end

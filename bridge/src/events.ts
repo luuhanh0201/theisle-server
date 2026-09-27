@@ -39,6 +39,10 @@ export interface DamageEvent extends BaseEvent {
   loc?: Loc;
   /** Set by the bridge (store.ts): the hold bite's ticks this bite is the sum of (1: a plain bite). */
   ticks?: number;
+  /** StatsLogger (from 2026-09-28): the bite this hit belongs to, its tick in it, ms clock. */
+  bite?: string;
+  tick?: number;
+  clockMs?: number;
 }
 
 export interface SnapshotEvent extends BaseEvent {

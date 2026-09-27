@@ -358,7 +358,8 @@ export async function handlePlayerApi(
     send(res, 200, {
       ...playerView(steamId, detail?.player ?? null, detail?.lives ?? [], await readPlayerGarage(steamId), live, trail),
       // The garage rules the web garage shows (and the mod enforces).
-      garageRules: { maxSlots: gs.maxSlots, redeemAt: gs.redeemAt, storeCountdown: gs.storeCountdown, cooldown: gs.cooldown },
+      garageRules: { maxSlots: gs.maxSlots, redeemAt: gs.redeemAt, storeCountdown: gs.storeCountdown, cooldown: gs.cooldown,
+        minHealthPct: gs.minHealthPct, minGrowthPct: gs.minGrowthPct },
       // Colours kept for the next times, by species (kept-skins.ts).
       keptSkins: await keptSkinsOf(steamId),
     });

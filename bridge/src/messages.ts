@@ -95,6 +95,8 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'garage.cooldown', group: 'garage', label: 'Gara đang hồi', default: 'Gara đang hồi: chờ {seconds} giây.', vars: ['seconds'] },
   { key: 'garage.noDino', group: 'garage', label: 'Chưa điều khiển dino', default: 'Bạn cần đang điều khiển dino để cất.', vars: [] },
   { key: 'garage.full', group: 'garage', label: 'Gara đầy', default: 'Gara đã đầy ({maxSlots} slot). Lấy bớt một con ra trước.', vars: ['maxSlots'] },
+  { key: 'garage.lowHealth', group: 'garage', label: 'Máu dưới mức tối thiểu để cất', default: 'Máu phải từ {minHealth}% trở lên mới cất được (đang {health}%).', vars: ['minHealth', 'health'] },
+  { key: 'garage.lowGrowth', group: 'garage', label: 'Chưa đủ lớn để cất', default: 'Dino phải lớn từ {minGrowth}% trở lên mới cất được (đang {growth}%).', vars: ['minGrowth', 'growth'] },
   { key: 'garage.noLocation', group: 'garage', label: 'Không đọc được vị trí', default: 'Không đọc được vị trí dino. Thử lại.', vars: [] },
   { key: 'garage.useWeb', group: 'garage', label: 'Gõ !store / !redeem trong game', default: 'Gara giờ dùng trên trang web của server (mục Gara): cất và lấy dino ở đó.', vars: [] },
   // --- garage: taking out ---

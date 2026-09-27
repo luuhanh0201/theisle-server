@@ -243,14 +243,28 @@
   /* ---- feed ----------------------------------------------------------- */
   .feed { list-style: none; margin: 0; padding: 0; max-height: 620px; overflow-y: auto; }
   .feed.tall { max-height: none; }
-  .feed li { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+  /* Every log as columns: time | kind | what happened | value — one line per event, easy to scan and compare. */
+  .feed li { display: grid; grid-template-columns: 66px 30px 96px minmax(0, 1fr) minmax(72px, auto); column-gap: 10px;
+             padding: 8px 0; border-top: 1px solid var(--border); align-items: center; }
   .feed li:first-child { border-top: 0; }
+  .feed li.feed-head { position: sticky; top: 0; z-index: 1; background: var(--surface); padding: 4px 0 6px; font-size: 11px;
+                       font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+  .feed li.feed-head + li { border-top: 1px solid var(--border); }
+  .feed li.empty { display: block; }
+  .feed .ev-kind { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed .ev-val { text-align: right; font-size: 13px; font-weight: 800; color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .feed .ev-val small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .feed .ev-time small { display: block; font-size: 10.5px; }
+  @media (max-width: 640px) {
+    .feed li { grid-template-columns: 58px 26px minmax(0, 1fr) auto; }
+    .feed .ev-kind { display: none; }
+  }
   .feed .ev-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; }
   .feed .ev-ico svg.i { width: 15px; height: 15px; }
   .feed .ev-body { flex: 1; min-width: 0; font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; }
   .feed .ev-body b { color: var(--text); }
   .feed .ev-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
-  .feed .ev-time { font-size: 11.5px; color: var(--muted); flex: none; padding-top: 6px; font-variant-numeric: tabular-nums; }
+  .feed .ev-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .feed li.new { animation: slide-in .45s ease; }
   @keyframes slide-in { from { opacity: 0; transform: translateY(-6px); background: var(--accent-soft); } to { opacity: 1; transform: none; } }
   .kill { color: var(--kill); font-weight: 700; }
@@ -1437,6 +1451,12 @@
             <div class="cfg-field"><label for="gs-cooldown">Chờ giữa hai lần dùng gara (giây)<span class="mono">cooldown</span></label>
               <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
               <div class="step-hint">Sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người (cất thất bại không tính). Mặc định 60.</div></div>
+            <div class="cfg-field"><label for="gs-min-health">Máu tối thiểu để cất (%)<span class="mono">minHealthPct</span></label>
+              <input id="gs-min-health" type="number" min="0" max="100" step="1">
+              <div class="step-hint">Máu hiện tại so với máu tối đa của dino. Thấp hơn thì không cất được (người chơi được báo đang bao nhiêu %). 0 = không giới hạn.</div></div>
+            <div class="cfg-field"><label for="gs-min-growth">Tăng trưởng tối thiểu để cất (%)<span class="mono">minGrowthPct</span></label>
+              <input id="gs-min-growth" type="number" min="0" max="100" step="1">
+              <div class="step-hint">Dino nhỏ hơn mức này thì không cất được. 0 = không giới hạn.</div></div>
           </div>
           <div class="row"><button type="button" class="btn" id="gs-save">Lưu cài đặt</button></div>
           <div class="step-hint" id="gs-help"></div>
@@ -2386,10 +2406,8 @@ const WEB_CMD_ERRORS = { offline: 'người chơi không online', expired: 'game
 function describe(e) {
   switch (e.type) {
     case 'damage': {
-      // One entry per bite; a hold bite (mouse held) is the sum of its ticks.
-      const amt = e.amount === null || e.amount === undefined ? '' : ` <b>−${num(e.amount)}</b>`;
-      const hold = e.ticks > 1 ? ` <span class="chip tone-dmg">cắn giữ · ${e.ticks} nhịp</span>` : '';
-      return [`${who(e.attacker, e.attackerName)} cắn ${who(e.victim, e.victimName)}${amt}${hold}`,
+      // One entry per bite; the damage (a hold bite: its ticks summed) is in the value column.
+      return [`${who(e.attacker, e.attackerName)} <span class="muted">cắn</span> ${who(e.victim, e.victimName)}`,
         `${esc(dino(e.attackerSpecies))} → ${esc(dino(e.victimSpecies))}${locText(e.loc)}`];
     }
     case 'death': {
@@ -2462,15 +2480,41 @@ function renderFeed(el, events, emptyText = 'Chưa có sự kiện') {
   }
   const prev = seen.get(el.id);
   seen.set(el.id, Math.max(...events.map((e) => e.id)));
-  el.innerHTML = events.map((e) => {
-    const [ic, tone] = EV[e.type] ?? ['warn', 'tone-neutral'];
-    const [main, meta] = describe(e);
-    const fresh = prev !== undefined && e.id > prev ? ' class="new"' : '';
-    return `<li${fresh}>
-      <span class="ev-ico ${tone}">${icon(ic)}</span>
-      <div class="ev-body">${main}${meta ? `<div class="ev-meta">${meta}</div>` : ''}</div>
-      <span class="ev-time" title="${esc(dateTime(e.t))}">${clock(e.t)}</span></li>`;
-  }).join('');
+  const today = new Date().toDateString();
+  el.innerHTML = '<li class="feed-head"><span>Giờ</span><span></span><span class="ev-kind">Loại</span><span>Nội dung</span><span class="ev-val">Giá trị</span></li>'
+    + events.map((e) => {
+      const [ic, tone] = EV[e.type] ?? ['warn', 'tone-neutral'];
+      const [main, meta] = describe(e);
+      const fresh = prev !== undefined && e.id > prev ? ' class="new"' : '';
+      const d = new Date(e.t * 1000);
+      const day = d.toDateString() === today ? '' : `<small>${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}</small>`;
+      return `<li${fresh}>
+        <span class="ev-time" title="${esc(dateTime(e.t))}">${clock(e.t)}${day}</span>
+        <span class="ev-ico ${tone}">${icon(ic)}</span>
+        <span class="ev-kind">${esc(EV_LABEL[e.type] ?? e.type)}</span>
+        <div class="ev-body">${main}${meta ? `<div class="ev-meta">${meta}</div>` : ''}</div>
+        <span class="ev-val">${valueOf(e)}</span></li>`;
+    }).join('');
+}
+
+/** What the "Loại" column says for each event type. */
+const EV_LABEL = {
+  damage: 'Sát thương', death: 'Chết', spawn: 'Spawn', session_start: 'Vào game', session_end: 'Thoát game',
+  chat: 'Chat', growth: 'Tăng trưởng', growth_set: 'Đặt growth', mutation: 'Mutation', admin_kill: 'Admin xoá',
+  garage_store: 'Cất gara', garage_redeem: 'Lấy gara', portal_command: 'Lệnh web',
+};
+/** The number an event is about, for the "Giá trị" column. */
+function valueOf(e) {
+  const pctOf = (g) => (isNum(g) ? `${Math.round(g * 1000) / 10}%` : '');
+  switch (e.type) {
+    case 'damage':
+      if (!isNum(e.amount)) return '';
+      return `−${num(e.amount)}${e.ticks > 1 ? `<small>cắn giữ ×${e.ticks}</small>` : '<small>1 phát</small>'}`;
+    case 'death': return isNum(e.growth) ? `${pctOf(e.growth)}<small>growth</small>` : '';
+    case 'spawn': return isNum(e.growth) ? `${pctOf(e.growth)}<small>growth</small>` : '';
+    case 'growth': case 'growth_set': return pctOf(e.growth ?? e.to);
+    default: return '';
+  }
 }
 
 // --- navigation ---------------------------------------------------------------
@@ -6712,9 +6756,11 @@ function renderGarageSettings(gs) {
   $('gs-max-slots').value = gs.maxSlots;
   $('gs-countdown').value = gs.storeCountdown;
   $('gs-cooldown').value = gs.cooldown;
+  $('gs-min-health').value = gs.minHealthPct ?? 0;
+  $('gs-min-growth').value = gs.minGrowthPct ?? 0;
   $('gs-help').innerHTML = GS_HELP[gs.redeemAt] ?? '';
 }
-for (const id of ['gs-max-slots', 'gs-countdown', 'gs-cooldown']) $(id).addEventListener('input', () => { gsDirty = true; });
+for (const id of ['gs-max-slots', 'gs-countdown', 'gs-cooldown', 'gs-min-health', 'gs-min-growth']) $(id).addEventListener('input', () => { gsDirty = true; });
 $('gs-redeem-at').addEventListener('change', () => {
   gsDirty = true;
   $('gs-help').innerHTML = GS_HELP[$('gs-redeem-at').value] ?? '';
@@ -6725,6 +6771,8 @@ $('gs-save').addEventListener('click', () => withToken('lưu cài đặt gara', 
     maxSlots: Number($('gs-max-slots').value),
     storeCountdown: Number($('gs-countdown').value),
     cooldown: Number($('gs-cooldown').value),
+    minHealthPct: Number($('gs-min-health').value),
+    minGrowthPct: Number($('gs-min-growth').value),
   });
   gsDirty = false;
   toast('Đã lưu — áp dụng ngay cho lần cất / lấy ra kế tiếp.');

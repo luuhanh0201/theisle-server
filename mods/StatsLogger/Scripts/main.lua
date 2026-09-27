@@ -367,6 +367,43 @@ local recentHits = {}   -- victimSteamId -> last player hit on them
 -- The remaining parameters are NOT yet verified, so we read them positionally
 -- and defensively rather than pretending to know their names.
 
+-- One event per bite. The game calls ApplyDamage several times for one bite
+-- with the same number (a T-Rex bite logged up to six times; the victim lost
+-- it once — 2026-09-28): those repeats are dropped here, before anything is
+-- read. A hold bite (mouse held) deals ticks, each a little lower: they keep
+-- the bite's id with their tick number, so the bridge adds them into one bite.
+-- os.clock (ms, since the server started) orders them within a second.
+local REPEAT_WITHIN_S = 0.25
+local TICK_WITHIN_S   = 1.0
+local lastBite = {}     -- "<attacker addr>><victim addr>" -> { at, amount, bite, tick }
+local biteSeq = 0
+
+--- "repeat" (drop it), or the bite id and tick number this hit belongs to.
+local function biteOf(attacker, target, amount)
+    local okA, a = pcall(function() return attacker:GetAddress() end)
+    local okV, v = pcall(function() return target:GetAddress() end)
+    local key = (okA and tostring(a) or "?") .. ">" .. (okV and tostring(v) or "?")
+    local now = os.clock()
+    local prev = lastBite[key]
+    if prev and amount and prev.amount then
+        local dt = now - prev.at
+        if dt >= 0 and dt < REPEAT_WITHIN_S and math.abs(amount - prev.amount) < 0.01 then return "repeat" end
+        local drop = prev.amount - amount
+        if dt >= 0 and dt < TICK_WITHIN_S and drop > 0 and drop < prev.amount * 0.1 then
+            prev.at, prev.amount, prev.tick = now, amount, prev.tick + 1
+            return prev.bite, prev.tick, now
+        end
+    end
+    biteSeq = biteSeq + 1
+    local bite = string.format("%d-%d", os.time(), biteSeq)
+    lastBite[key] = { at = now, amount = amount, bite = bite, tick = 1 }
+    -- Forget pairs that fought long ago (the table stays small).
+    if biteSeq % 200 == 0 then
+        for k, b in pairs(lastBite) do if now - b.at > 60 then lastBite[k] = nil end end
+    end
+    return bite, 1, now
+end
+
 RegisterHook("/Script/TheIsle.TICharacterBase:ApplyDamage",
 H.timed(MOD .. ": damage hook", function(selfParam, targetParam, amountParam)
     H.try(MOD .. ": ApplyDamage", function()
@@ -379,6 +416,8 @@ H.timed(MOD .. ": damage hook", function(selfParam, targetParam, amountParam)
             local got, v = pcall(function() return amountParam:get() end)
             if got then amount = tonumber(v) end
         end
+        local bite, tick, clock = biteOf(attacker, target, amount)
+        if bite == "repeat" then return end
 
         -- A pawn's controller is how we reach a SteamID. Missing controller
         -- means AI, so we record the side we can identify and mark the other.
@@ -409,6 +448,9 @@ H.timed(MOD .. ": damage hook", function(selfParam, targetParam, amountParam)
             victimName      = victimId and names[victimId] or nil,
             victimSpecies   = victimSpecies,
             amount          = amount,
+            bite            = bite,
+            tick            = tick,
+            clockMs         = math.floor(clock * 1000),
             loc             = locationOf(target),
         })
     end)

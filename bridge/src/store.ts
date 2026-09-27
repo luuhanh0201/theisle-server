@@ -273,7 +273,7 @@ export class Store {
         }
         if (kind === 'bite') {
           const entry = this.#push({ ...event, ticks: 1 }, [event.attacker, event.victim]) as FeedEntry & DamageBite;
-          this.#lastBite.set(`${event.attacker}>${event.victim}`, { t: event.t, last: amount, entry });
+          this.#lastBite.set(`${event.attacker}>${event.victim}`, { t: event.t, last: amount, bite: event.bite, entry });
         }
         break;
       }
@@ -733,7 +733,7 @@ export class Store {
   }
 
   /** attacker>victim -> the last bite logged between them (for repeats and hold-bite ticks). */
-  readonly #lastBite = new Map<string, { t: number; last: number; entry: FeedEntry & DamageBite }>();
+  readonly #lastBite = new Map<string, { t: number; last: number; bite: string | undefined; entry: FeedEntry & DamageBite }>();
 
   /**
    * What a "damage" event is, bite by bite. The ApplyDamage hook fires several
@@ -742,8 +742,19 @@ export class Store {
    * (mouse held) deals ticks a little lower each time, within the same
    * second: a tick, added to its bite. Anything else is a new bite.
    */
-  #biteOf(event: { t: number; attacker: string; victim: string }, amount: number): 'repeat' | 'tick' | 'bite' {
+  #biteOf(event: { t: number; attacker: string; victim: string; bite?: string; tick?: number }, amount: number): 'repeat' | 'tick' | 'bite' {
     const prev = this.#lastBite.get(`${event.attacker}>${event.victim}`);
+    // Newer StatsLogger names the bite itself (its repeats already dropped): exact.
+    if (typeof event.bite === 'string') {
+      if (prev !== undefined && prev.bite === event.bite && (event.tick ?? 1) > 1) {
+        prev.entry.amount = Math.round(((prev.entry.amount ?? 0) + amount) * 1000) / 1000;
+        prev.entry.ticks += 1;
+        prev.last = amount;
+        prev.t = event.t;
+        return 'tick';
+      }
+      return 'bite';
+    }
     if (prev === undefined || event.t - prev.t > 1 || event.t < prev.t) return 'bite';
     // The hook's repeats come within the same moment. The same number a second
     // later is another bite: out of stamina, bites hit the same floor.

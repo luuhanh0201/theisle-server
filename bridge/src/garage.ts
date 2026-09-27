@@ -494,10 +494,14 @@ export interface GarageSettings {
   storeCountdown: number;
   /** Seconds between two garage uses (!store or !redeem) by one player. */
   cooldown: number;
+  /** Health needed to store, % of the dino's max (0 = any). */
+  minHealthPct: number;
+  /** Growth needed to store, % (0 = any). */
+  minGrowthPct: number;
 }
-export const GARAGE_SETTINGS_DEFAULTS: GarageSettings = { redeemAt: 'current', maxSlots: 2, storeCountdown: 30, cooldown: 60 };
+export const GARAGE_SETTINGS_DEFAULTS: GarageSettings = { redeemAt: 'current', maxSlots: 2, storeCountdown: 30, cooldown: 60, minHealthPct: 0, minGrowthPct: 0 };
 /** Same ranges as mods/DinoGarage/Scripts/garage/settings.lua. */
-const RANGES = { maxSlots: [1, 20], storeCountdown: [0, 300], cooldown: [0, 86400] } as const;
+const RANGES = { maxSlots: [1, 20], storeCountdown: [0, 300], cooldown: [0, 86400], minHealthPct: [0, 100], minGrowthPct: [0, 100] } as const;
 
 const settingsPath = (): string => join(config.garageRoot, 'garage-settings.json');
 

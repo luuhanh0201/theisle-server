@@ -960,12 +960,20 @@ function renderGara(me) {
   // Store: needs a dino in game, a free place, nothing in flight.
   const playing = Boolean(me.online && me.dino);
   const full = me.garage.length >= rules.maxSlots;
-  $('gara-store-btn').disabled = garageBusy || Boolean(storing) || !playing || full;
+  // The admin's minimums (the game checks them again when storing).
+  const d = me.dino;
+  const hpPct = d && typeof d.vitals?.health === 'number' && d.max?.health > 0 ? d.vitals.health / d.max.health * 100 : null;
+  const growPct = d && typeof d.growth === 'number' ? d.growth * 100 : null;
+  const lowHp = rules.minHealthPct > 0 && hpPct !== null && hpPct < rules.minHealthPct;
+  const young = rules.minGrowthPct > 0 && growPct !== null && growPct < rules.minGrowthPct - 1e-6;
+  $('gara-store-btn').disabled = garageBusy || Boolean(storing) || !playing || full || lowHp || young;
   $('gara-store-hint').textContent = storing
     ? `Đang cất: còn ${Math.max(0, Math.ceil((storing.until - Date.now()) / 1000))} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.`
     : !me.online ? 'Vào game để cất / lấy dino.'
     : !me.dino ? 'Chọn loài và spawn dino trước.'
     : full ? `Gara đã đầy (${rules.maxSlots}) — lấy bớt một con ra trước.`
+    : lowHp ? `Máu phải từ ${rules.minHealthPct}% trở lên mới cất được (đang ${Math.floor(hpPct)}%).`
+    : young ? `Dino phải lớn từ ${rules.minGrowthPct}% trở lên mới cất được (đang ${Math.floor(growPct)}%).`
     : `Cất ${me.dino.species ?? 'dino'} đang chơi: đếm ngược ${rules.storeCountdown} giây, trong lúc đó đứng yên (trong 5 m), không đánh và không bị đánh.`;
 
   if (me.garage.length === 0) {
