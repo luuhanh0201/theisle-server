@@ -34,7 +34,8 @@ writeSettings('{"storeCountdown":30,"cooldown":0}')
 
 -- Load the mod exactly as UE4SS would.
 -- gasVitals: like the live server, vitals are only reachable through getters.
-local pawn = H.makePawn({ growth = 0.9, mutation = "MUT_Life", gasVitals = true })
+local pawn = H.makePawn({ growth = 0.9, mutation = "MUT_Life", gasVitals = true,
+  unlocks = { "Traumatic Thrombosis", "Reniculate Kidneys" } })      -- drank enough saltwater
 local ctrl = H.makeCtrl(STEAM, pawn)
 _G.FindAllOf = function() H.touch("FindAllOf"); return { ctrl } end
 
@@ -132,6 +133,8 @@ if okDecode then
   check("inherited mutation captured", state.mutations.ParentSlot1 == "MUT_Parent",
         tostring(state.mutations.ParentSlot1))
   check("'None' slot stored as nil", state.mutations.Slot2 == nil, tostring(state.mutations.Slot2))
+  check("the quest-unlocked mutations stored (drink saltwater…)", type(state.unlockedMutations) == "table"
+        and state.unlockedMutations[2] == "Reniculate Kidneys", json.encode(state.unlockedMutations))
   check("elder stacks captured", state.elderStacks == 3, tostring(state.elderStacks))
   check("skin captured with the slot", state.skin and state.skin.colors.Body and state.skin.patternIndex == 3,
         state.skin and "ok" or "no skin")
@@ -182,6 +185,21 @@ check("final vitals come after the growth wipe", lastIndex("__vitals_wiped_by_gr
 check("elder stacks after the last mutation push",
       lastIndex("SetReplicatedMutationsData") < firstIndex("SetElderReplicationStacks"))
 check("FName objects written to slots, not strings", H.countCalls("field:MutationSlot1") >= 1)
+check("the unlocked quest mutation given back (+ the slots' own), none duplicated",
+      table.concat(freshPawn.MutationsRequirementsData.UnlockRequiredMutations.__names, ",") == "Traumatic Thrombosis,Reniculate Kidneys,MUT_Life",
+      table.concat(freshPawn.MutationsRequirementsData.UnlockRequiredMutations.__names, ","))
+do
+  local Restore = require("garage.restore")
+  -- Stored before the list was kept (or made by an admin): the slots' mutations count as unlocked.
+  check("an old slot: its slot mutations become the unlocked list",
+        table.concat(Restore.unlocksFor({ mutations = { Slot1 = "Hydrodynamic", Slot3 = "Reniculate Kidneys", ParentSlot1 = "X" } }), ",")
+        == "Hydrodynamic,Reniculate Kidneys")
+end
+check("…pushed, before the active slots, then the mutation list redrawn",
+      H.countCalls("SetMutationRequirementsData") == 1 and H.countCalls("ClientUpdateMutations") == 1
+      and firstIndex("SetMutationRequirementsData") < lastIndex("SetReplicatedMutationsData")
+      and lastIndex("SetReplicatedMutationsData") < firstIndex("ClientUpdateMutations"))
+check("the unlock-write flag is gone", io.open("Mods/DinoGarage/Saved/unlock-write.trying", "r") == nil)
 check("slot 1 is free again", Storage.listSlots(STEAM)["1"] == nil)
 
 print("\n-- 6. the stand-still test: 5 m, no damage — a failure costs no cooldown --")

@@ -67,6 +67,72 @@ local INHERITED_SLOTS = {
     { key = "ElderSlot4B", field = "ElderMutationSlot4B" },
 }
 
+-- The quest-unlocked mutations (MutationsRequirementsData.UnlockRequiredMutations)
+-- go back before the slots: without them a quest mutation written back into
+-- its slot ("Reniculate Kidneys", drink saltwater) was neither shown nor
+-- working (2026-09-27). Appending to that TArray and SetMutationRequirementsData
+-- were tried on a test server (MutLab, 2026-09-28); on the live server they
+-- are new, so flag first like the other first-time writes.
+local UNLOCK_FLAG = "Mods/DinoGarage/Saved/unlock-write.trying"
+local unlockWrites = nil   -- nil = not tried this run, true = worked, false = off
+do
+    local f = io.open(UNLOCK_FLAG, "r")
+    if f then
+        f:close()
+        unlockWrites = false
+        H.logError("restore: the last run stopped while writing unlocked mutations — they are not written. Delete "
+            .. UNLOCK_FLAG .. " to try again.")
+    end
+end
+
+--- What to give back as unlocked: the stored list, plus every mutation in the
+--- active slots — a mutation in its slot but not unlocked is what the game
+--- hid and switched off. Covers the dinos stored before the list was kept
+--- (2026-09-28) and the admin-made ones, which carry no list.
+function R.unlocksFor(state)
+    local names, seen = {}, {}
+    local function add(n)
+        if type(n) == "string" and n ~= "" and n ~= "None" and not seen[n] then seen[n] = true; names[#names + 1] = n end
+    end
+    if type(state.unlockedMutations) == "table" then for _, n in ipairs(state.unlockedMutations) do add(n) end end
+    local m = type(state.mutations) == "table" and state.mutations or {}
+    for _, slot in ipairs(ACTIVE_SLOTS) do add(m[slot.key]) end
+    return names
+end
+
+--- Add the stored unlocked mutations the fresh dino lacks (never removes any).
+--- @return how many were added, or nil when not written
+function R.applyUnlocks(pawn, names)
+    if type(names) ~= "table" or #names == 0 or unlockWrites == false then return nil end
+    local first = unlockWrites == nil
+    if first then
+        local f = io.open(UNLOCK_FLAG, "w")
+        if f then f:write(tostring(os.time())); f:close() end
+    end
+    local added = 0
+    local ok, err = pcall(function()
+        local req = pawn.MutationsRequirementsData
+        local arr = req.UnlockRequiredMutations
+        local have = {}
+        arr:ForEach(function(_, e) have[tostring(e:get():ToString())] = true end)
+        for _, n in ipairs(names) do
+            if type(n) == "string" and n ~= "" and n ~= "None" and not have[n] then
+                arr[arr:GetArrayNum() + 1] = FName(n)
+                have[n] = true
+                added = added + 1
+            end
+        end
+        if added > 0 then pawn:SetMutationRequirementsData(req) end
+    end)
+    if first then
+        os.remove(UNLOCK_FLAG)
+        unlockWrites = true
+    end
+    if not ok then H.logError("restore: unlocked mutations: " .. tostring(err)); return nil end
+    H.log(string.format("restore: unlocked mutations +%d (%s)", added, table.concat(names, ", ")))
+    return added
+end
+
 local NUTRIENTS = {
     { key = "carbValue",        field = "CarbValue" },
     { key = "proteinValue",     field = "ProteinValue" },
@@ -302,8 +368,11 @@ function R.apply(pawn, state, onDone)
             return
         end
 
-        -- Step 2 — active mutation slots.
+        -- Step 2 — the unlocked quest mutations, then the active mutation
+        -- slots, then the player's mutation list redrawn.
+        R.applyUnlocks(pawn, R.unlocksFor(state))
         applyMutations(pawn, state, ACTIVE_SLOTS)
+        H.try("restore: ClientUpdateMutations", function() pawn:ClientUpdateMutations() end)
 
         -- Step 5 — re-apply vitals. Rule 1: SetGrowth above wiped them.
         applyVitals(pawn, state)

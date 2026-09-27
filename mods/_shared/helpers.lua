@@ -161,6 +161,24 @@ end
 --- from the engine's reflection data: value:GetProperty():GetStruct() is the
 --- UScriptStruct, whose ForEachProperty lists its fields. Lets a mod copy a
 --- whole struct without guessing names. Empty list on any failure.
+--- The quest-unlocked mutations the game keeps on a dino, as plain names, or
+--- nil when unreadable. They live apart from the slots, in
+--- MutationsRequirementsData.UnlockRequiredMutations (a TArray<FName>; read
+--- and written on a test server, MutLab 2026-09-28): a dino taken out of the
+--- garage without them had "Reniculate Kidneys" (drink saltwater) back in its
+--- slot, yet neither shown nor working (2026-09-27).
+function M.readUnlockedMutations(pawn)
+    local ok, list = pcall(function()
+        local names = {}
+        pawn.MutationsRequirementsData.UnlockRequiredMutations:ForEach(function(_, e)
+            local n = e:get():ToString()
+            if n ~= nil and n ~= "" and n ~= "None" then names[#names + 1] = tostring(n) end
+        end)
+        return names
+    end)
+    return ok and list or nil
+end
+
 function M.structFields(value)
     local names = {}
     pcall(function()

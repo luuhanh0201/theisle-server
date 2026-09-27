@@ -444,6 +444,7 @@ local function checkLife(id, name, pawn, snap)
         and prev.species ~= "unknown" and prev.species ~= snap.species
     if alive and (prev == nil or prev.dead or swapped) then
         local muts = mutationsOf(pawn)
+        local unlocks = H.readUnlockedMutations(pawn)
         queue({
             type      = "spawn",
             steamId   = id,
@@ -452,6 +453,7 @@ local function checkLife(id, name, pawn, snap)
             classPath = classPathOf(pawn),
             growth    = snap.growth,
             mutations = muts,
+            unlockedMutations = unlocks,
             loc       = snap.loc,
         })
         local skin = H.readSkin(pawn)
@@ -463,6 +465,7 @@ local function checkLife(id, name, pawn, snap)
             loc       = snap.loc,
             spawnedAt = now,
             mutations = muts,
+            unlocksKey = unlocks and table.concat(unlocks, ",") or nil,
             skinKey   = H.skinKey(skin),
             primeKey  = primeKey(prime),
         }
@@ -576,6 +579,16 @@ local function checkLife(id, name, pawn, snap)
         end
     end
     if muts ~= nil then prev.mutations = muts end
+
+    -- Quest mutations unlocked (drink saltwater, jump 50 times…): an event
+    -- when the list changes — what the garage must give back (restore.lua).
+    local unlocks = H.readUnlockedMutations(pawn)
+    local unlocksKey = unlocks and table.concat(unlocks, ",") or nil
+    if unlocksKey ~= nil and prev.unlocksKey ~= nil and unlocksKey ~= prev.unlocksKey then
+        queue({ type = "mutation_unlocks", steamId = id, name = name, species = snap.species,
+                unlocked = unlocks, growth = g1 })
+    end
+    if unlocksKey ~= nil then prev.unlocksKey = unlocksKey end
 
     prev.health = health
     if g1 ~= nil then prev.growth = g1 end

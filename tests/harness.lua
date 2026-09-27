@@ -124,6 +124,27 @@ _G.FName = function(s)
   return setmetatable({ _n = s }, { __index = { ToString = function(self) return self._n end } })
 end
 
+--- A TArray<FName> as UE4SS hands it: GetArrayNum, ForEach (elements with
+--- :get()), 1-based reads, and a write one past the end appends (MutLab,
+--- 2026-09-28). Any other index errors, like the engine would refuse.
+function Harness.fnameArray(names)
+  local items = {}
+  for i, n in ipairs(names or {}) do items[i] = _G.FName(n) end
+  return setmetatable({}, {
+    __index = function(_, k)
+      if k == "GetArrayNum" then return function() return #items end end
+      if k == "ForEach" then return function(_, fn) for i, v in ipairs(items) do fn(i, { get = function() return v end }) end end end
+      if k == "__names" then local out = {}; for i, v in ipairs(items) do out[i] = v:ToString() end; return out end
+      if type(k) == "number" then return items[k] end
+      return nil
+    end,
+    __newindex = function(_, k, v)
+      if type(k) ~= "number" or k < 1 or k > #items + 1 then error("TArray: index " .. tostring(k) .. " out of range") end
+      items[k] = v
+    end,
+  })
+end
+
 -- A hook parameter wrapper: UE4SS hands params as objects with :get()
 function Harness.param(v) return { get = function() return v end } end
 
@@ -195,7 +216,7 @@ function Harness.makePawn(opts)
     "SetBlood","SetFood","SetWaterLevel","SetMaxHunger","SetMaxFoodValue",
     "SetMaxThirst","SetMaxStamina","ServerSetPrimeEligible",
     "SetReplicatedMutationsData","SetNutrientsStruct","SetElderReplicationStacks",
-    "SetIsBeingPickedUp",
+    "SetIsBeingPickedUp","SetMutationRequirementsData","ClientUpdateMutations",
   }) do
     methods[m] = function(_, v)
       Harness.record(m, v)
@@ -248,6 +269,8 @@ function Harness.makePawn(opts)
   methods.GetAddress = function() return address end
 
   local mutStruct = makeStruct(mutFields)
+  -- pawn.MutationsRequirementsData: a fresh dino has a leftover of the game in it (MutLab).
+  local reqData = { UnlockRequiredMutations = Harness.fnameArray(opts.unlocks or { "Traumatic Thrombosis" }), FractureMovementTime = 0 }
   local nutStruct = makeStruct(nutFields, nutNames)
   -- pawn.CustomizerData, as reflection lists it (tests may recolour __skin).
   local skinFields = {
@@ -268,6 +291,7 @@ function Harness.makePawn(opts)
     __index = function(_, k)
       if type(k) ~= "string" or k:sub(1, 1) ~= "_" then Harness.touch("pawn." .. tostring(k)) end
       if k == "ReplicatedMutationsData" then return mutStruct end
+      if k == "MutationsRequirementsData" then return reqData end
       if k == "NutrientsStruct" then return nutStruct end
       if k == "CustomizerData" then return skinStruct end
       if k == "EligiblePrimeElderData" then return primeData end

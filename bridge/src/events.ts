@@ -175,6 +175,20 @@ export interface SkinEffectsEvent extends BaseEvent {
   values: Record<string, number | boolean>;
 }
 
+/**
+ * The quest mutations a dino has unlocked (drink saltwater, jump 50 times…),
+ * MutationsRequirementsData.UnlockRequiredMutations, when the list changes.
+ * The garage stores and gives them back (DinoGarage capture / restore).
+ */
+export interface MutationUnlocksEvent extends BaseEvent {
+  type: 'mutation_unlocks';
+  steamId: string;
+  name?: string;
+  species?: string;
+  unlocked: string[];
+  growth?: number | null;
+}
+
 /** Sent on spawn and whenever the skin changes (not in every snapshot). */
 export interface SkinEvent extends BaseEvent {
   type: 'skin';
@@ -288,6 +302,7 @@ export type GameEvent =
   | NotifyEvent
   | SkinEvent
   | SkinEffectsEvent
+  | MutationUnlocksEvent
   | PrimeEvent
   | GrowthEvent
   | GrowthSetEvent
@@ -319,6 +334,8 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   skin: (e) => isString(e['steamId']) && typeof e['skin'] === 'object' && e['skin'] !== null
     && typeof (e['skin'] as Record<string, unknown>)['colors'] === 'object',
   skin_effects: (e) => isString(e['steamId']) && typeof e['values'] === 'object' && e['values'] !== null,
+  // Lua writes an empty list as {}.
+  mutation_unlocks: (e) => isString(e['steamId']) && typeof e['unlocked'] === 'object' && e['unlocked'] !== null,
   growth: (e) => isString(e['steamId']) && isNumber(e['milestone']),
   growth_set: (e) => isString(e['steamId']) && isNumber(e['from']) && isNumber(e['to']),
   mutation: (e) => isString(e['steamId']) && isString(e['slot']),

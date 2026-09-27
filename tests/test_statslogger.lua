@@ -362,6 +362,18 @@ check("unchanged: no repeat", count("prime") == primes0 + 1)
 pawnP.__prime.bPrimeCondition1 = true            -- e.g. walked into a sanctuary
 poll()
 check("a condition flipping is a new event", count("prime") == primes0 + 2 and last("prime").conditions["1"] == true)
+local spP = (function() local r; for _, e in ipairs(ofType("spawn")) do if e.steamId == PR then r = e end end; return r end)()
+check("spawn carries the quest-unlocked mutations", spP and type(spP.unlockedMutations) == "table"
+      and spP.unlockedMutations[1] == "Traumatic Thrombosis", spP and require("shared.isle.json").encode(spP.unlockedMutations or {}) or "-")
+local unlocks0 = count("mutation_unlocks")
+poll()
+check("unchanged unlocks: no event", count("mutation_unlocks") == unlocks0)
+local arr = pawnP.MutationsRequirementsData.UnlockRequiredMutations
+arr[arr:GetArrayNum() + 1] = FName("Reniculate Kidneys")   -- drank enough saltwater
+poll()
+local mu = last("mutation_unlocks")
+check("a newly unlocked quest mutation is an event", count("mutation_unlocks") == unlocks0 + 1 and mu.steamId == PR
+      and mu.unlocked[2] == "Reniculate Kidneys", mu and require("shared.isle.json").encode(mu) or "-")
 
 say("")
 say("-- 13g. live state: players every second, AI (every pawn nobody plays), one small file --")

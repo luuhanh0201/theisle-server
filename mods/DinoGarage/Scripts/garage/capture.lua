@@ -183,6 +183,8 @@ function C.capture(pawn)
         isFemale = H.readField(pawn, F.isFemale, "isFemale") == true,
 
         mutations = captureMutations(pawn),
+        -- Quest-unlocked mutations (drink saltwater, jump 50 times…): apart from the slots.
+        unlockedMutations = H.readUnlockedMutations(pawn),
         nutrients = captureNutrients(pawn),
     }
 

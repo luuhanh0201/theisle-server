@@ -105,9 +105,9 @@ check("classPath reported", (summaryLine("classPath") or ""):find("BP_Dilo.BP_Di
 check("mutation value logged as the game has it", has('"Reniculate Kidneys"'))
 check("hook param order confirmed", (summaryLine("ApplyDamage param order") or ""):find("OK  ", 1, true) ~= nil,
       summaryLine("ApplyDamage param order"))
--- The fake pawn has no MutationsRequirementsData: a miss must be reported,
--- not crash the probe or vanish.
-check("a missing struct is reported, not fatal", has("UnlockRequiredMutations: unreadable")
+-- The quest-unlocked mutations (MutationsRequirementsData, as a fresh dino
+-- has it on the server: MutLab 2026-09-28) are listed by name.
+check("the quest-unlocked mutations listed", has("UnlockRequiredMutations: [Traumatic Thrombosis]")
       and has("PROBE SUMMARY"))
 -- The fake mutation struct only has 3 of the 16 fields: that must be a FAIL
 -- with the real count, never "16 readable".
