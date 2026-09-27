@@ -347,6 +347,7 @@ function skinChanged() {
   const sk = editorSkin();
   $('skin-flat').innerHTML = REGIONS.map(([id, label]) =>
     `<div style="background:${sk.colors[id]}">${esc(label)}</div>`).join('');
+  window.skin3dLastSkin = sk;          // for skin3d.js if it loads after this
   window.skin3d?.setSkin?.(sk);
 }
 
@@ -612,6 +613,10 @@ function renderGame(me) {
 
     // Prime
     $('game-prime-content').innerHTML = renderPrimeBoard(me.dino.prime);
+
+    // The skin preview shows the dino played now (skin3d.js), unless the player picked another.
+    window.skin3dSuggested = me.dino.species;
+    window.skin3d?.suggestSpecies?.(me.dino.species);
 
     // Active skin swatches
     if (me.dino.skin && me.dino.skin.colors) {

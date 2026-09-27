@@ -56,6 +56,7 @@ const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon',
   '.json': 'application/json; charset=utf-8', '.webp': 'image/webp', '.wasm': 'application/wasm',
+  '.glb': 'model/gltf-binary',
 };
 
 /**
@@ -135,7 +136,8 @@ async function sendStatic(res: ServerResponse, urlPath: string): Promise<void> {
     // The map (2.5 MB image) is asked for with ?v=<map version>: cache it.
     // vendor/ files carry their version in the name (livekit-client-2.22.3…),
     // so a new version is a new URL: cache them for good.
-    const cache = rel.startsWith('map/') ? 'public, max-age=604800'
+    // dino3d/ (the skin preview's models, ~2 MB each) is asked for with ?v=<sha256 prefix> too.
+    const cache = rel.startsWith('map/') || rel.startsWith('dino3d/') ? 'public, max-age=604800'
       : rel.startsWith('vendor/') ? 'public, max-age=31536000, immutable' : 'no-cache';
     res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': TYPES[extname(file)] as string, 'cache-control': cache });
     res.end(body);

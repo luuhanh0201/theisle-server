@@ -30,3 +30,6 @@ bridge/data/
 portal/public/map/
 launcher/node_modules/
 launcher/dist/
+
+# 3D dino models / textures for the skin preview (portal/public/skin3d.js), from sv1.datviet.app (~50 MB), shipped by the portal deploy
+portal/public/dino3d/

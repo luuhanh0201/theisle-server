@@ -902,9 +902,10 @@
   .skin-preview-flat div { border-radius: 10px; height: 88px; border: 1px solid rgba(255,255,255,.15); display: flex; align-items: flex-end;
     padding: 6px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000; }
   .skin-preview-note { position: absolute; left: 12px; bottom: 8px; font-size: 11.5px; }
-  .skin-controls { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; margin-top: 12px; }
+  .skin-controls { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.6fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 640px) { .skin-controls { grid-template-columns: 1fr 1fr; } }
   .skin-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; }
-  .skin-controls input[type=number], .skin-code input, .skin-saved input { background: rgba(2,6,23,.5); border: 1px solid var(--border);
+  .skin-controls input[type=number], .skin-controls select, .skin-code input, .skin-saved input { background: rgba(2,6,23,.5); border: 1px solid var(--border);
     border-radius: 8px; color: inherit; padding: 8px 10px; font: inherit; min-width: 0; }
   .skin-code input { flex: 1; font-family: ui-monospace, monospace; font-size: 12px; }
   .skin-saved input { flex: 1; }
@@ -1560,6 +1561,7 @@
             <span class="skin-preview-note muted" id="skin-preview-note"></span>
           </div>
           <div class="skin-controls">
+            <label>Loài (xem trước) <select id="skin-species"></select></label>
             <label>Kiểu hoa văn <input type="number" id="skin-pattern" min="0" max="2" step="1" value="0"></label>
             <label>Tông <input type="number" id="skin-theme" min="0" max="20" step="1" value="0"></label>
             <label class="skin-variation">Biến thể: <b id="skin-variation-val">0</b>
@@ -1739,6 +1741,7 @@
 </div>
 
 <script type="module" src="/app.js"></script>
+<script type="module" src="/skin3d.js"></script>
 <script src="/voice.js" defer></script>
 <script src="/overlay-settings.js" defer></script>
 </body>
