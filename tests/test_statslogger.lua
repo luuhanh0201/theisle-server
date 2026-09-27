@@ -419,6 +419,52 @@ check("no temp file left behind", io.open(AI_FILE .. ".tmp", "r") == nil)
 _G.FindFirstOf = nil
 
 say("")
+say("-- 13d. skin effects probe: fields by reflection, only numbers read, an event on change --")
+local effVals = { MudAmount = 0.4, BloodAmount = 0, ScarsValue = 0.25, Locations = "ARRAY" }
+local arrayReads = 0
+local EFF_FIELDS = { { "MudAmount", "FloatProperty" }, { "BloodAmount", "FloatProperty" }, { "ScarsValue", "FloatProperty" }, { "Locations", "ArrayProperty" } }
+local eff = setmetatable({}, { __index = function(_, k)
+  if k == "GetProperty" then
+    return function() return { GetStruct = function() return { ForEachProperty = function(_, fn)
+      for _, f in ipairs(EFF_FIELDS) do
+        fn({ GetFName = function() return FName(f[1]) end, GetClass = function() return { GetFName = function() return FName(f[2]) end } end })
+      end
+    end } end } end
+  end
+  if k == "Locations" then arrayReads = arrayReads + 1 end
+  return effVals[k]
+end })
+local pawnE = H.makePawn({ growth = 0.4 })
+local ctrlE = H.makeCtrl("76561198000000005", pawnE, "Echo")
+H.attachController(pawnE, ctrlE)
+rawset(pawnE, "SkinEffects", eff)
+local savedOnline = online
+online = { ctrlE }
+local realTime = os.time
+local shift = 100
+os.time = function() return realTime() + shift end
+poll()                           -- the spawn
+shift = shift + 1
+poll()                           -- the first probe
+local se = last("skin_effects")
+check("an event with the struct's numbers", se ~= nil and se.struct == "SkinEffects" and se.values.MudAmount == 0.4
+      and se.values.ScarsValue == 0.25, se and json.encode(se))
+check("the array field is never read", arrayReads == 0 and se.values.Locations == nil)
+check("the crash flag is not left behind", io.open(SAVED .. "effects-probe.trying", "r") == nil)
+local n1 = count("skin_effects")
+effVals.MudAmount = 0.9
+poll()
+check("not read again within 30 s", count("skin_effects") == n1)
+effVals.MudAmount = 0.41; shift = shift + 31
+poll()
+check("a tiny change (mud drying) is not an event", count("skin_effects") == n1)
+effVals.MudAmount = 0.9; shift = shift + 31
+poll()
+check("a real change is", count("skin_effects") == n1 + 1 and last("skin_effects").values.MudAmount == 0.9)
+os.time = realTime
+online = savedOnline
+
+say("")
 say("-- 14. the mod never mutates the world --")
 local writes = {}
 for _, n in ipairs(H.callNames()) do

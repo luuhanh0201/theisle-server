@@ -160,6 +160,19 @@ export interface Skin {
   female?: boolean;
 }
 
+/**
+ * Skin effects (mud, dirt, blood, scars…) as StatsLogger's read-only probe
+ * finds them: the struct it read them from, and its numbers. On change only.
+ */
+export interface SkinEffectsEvent extends BaseEvent {
+  type: 'skin_effects';
+  steamId: string;
+  name?: string;
+  species?: string;
+  struct?: string;
+  values: Record<string, number | boolean>;
+}
+
 /** Sent on spawn and whenever the skin changes (not in every snapshot). */
 export interface SkinEvent extends BaseEvent {
   type: 'skin';
@@ -239,7 +252,7 @@ export interface PortalCommandEvent extends BaseEvent {
   id: number;
   steamId: string;
   name?: string;
-  action: 'store' | 'redeem';
+  action: 'store' | 'redeem' | 'skin';
   slot?: string;
   /** true = started (countdown running / restore scheduled); the final result is garage_store / garage_redeem. */
   ok: boolean;
@@ -272,6 +285,7 @@ export type GameEvent =
   | ChatEvent
   | NotifyEvent
   | SkinEvent
+  | SkinEffectsEvent
   | PrimeEvent
   | GrowthEvent
   | GrowthSetEvent
@@ -302,12 +316,13 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   prime: (e) => isString(e['steamId']),
   skin: (e) => isString(e['steamId']) && typeof e['skin'] === 'object' && e['skin'] !== null
     && typeof (e['skin'] as Record<string, unknown>)['colors'] === 'object',
+  skin_effects: (e) => isString(e['steamId']) && typeof e['values'] === 'object' && e['values'] !== null,
   growth: (e) => isString(e['steamId']) && isNumber(e['milestone']),
   growth_set: (e) => isString(e['steamId']) && isNumber(e['from']) && isNumber(e['to']),
   mutation: (e) => isString(e['steamId']) && isString(e['slot']),
   admin_kill: (e) => isString(e['steamId']) && typeof e['ok'] === 'boolean',
   portal_command: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean'
-    && (e['action'] === 'store' || e['action'] === 'redeem'),
+    && (e['action'] === 'store' || e['action'] === 'redeem' || e['action'] === 'skin'),
   garage_store_result: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean',
   garage_store: (e) => isString(e['steamId']) && isString(e['slot']),
   garage_redeem: (e) => isString(e['steamId']) && isString(e['slot']),

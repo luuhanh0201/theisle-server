@@ -21,6 +21,7 @@ writeFileSync(join(root, 'storage.json'), JSON.stringify({ schema: 1, players: {
   default: { classPath: 'BlueprintGeneratedClass /Game/X/BP_Carnotaurus.BP_Carnotaurus_C', growth: 1, capturedAt: 1000 },
 } } }));
 
+const { parseEvent } = await import('../dist/events.js');
 const { handlePlayerApi, shortSpecies, discordLink, publicServerInfo } = await import('../dist/player-api.js');
 const { Store } = await import('../dist/store.js');
 after(() => rmSync(root, { recursive: true, force: true }));
@@ -225,4 +226,13 @@ test('skin from the web: checked, queued to the inbox for the mod, one every few
   const cmd = inbox.commands.find((c) => c.id === r.body.id);
   assert.deepEqual([cmd.type, cmd.steamId, cmd.skin], ['skin', PAINTER, skin]);
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: skin })).status, 429, 'one every few seconds');
+  // The mod's answer reaches the web (a "skin" portal_command was once dropped as unknown).
+  const answer = parseEvent({ type: 'portal_command', t: Math.floor(Date.now() / 1000), id: r.body.id, steamId: PAINTER,
+    action: 'skin', ok: true, messages: ['Đã đổi màu dino của bạn.'] });
+  assert.ok(answer, 'a skin outcome is a known event');
+  store.apply(answer);
+  const c = await call(`/player-api/command/${PAINTER}/${r.body.id}`);
+  assert.deepEqual([c.body.status, c.body.action, c.body.ok, c.body.messages], ['done', 'skin', true, ['Đã đổi màu dino của bạn.']]);
+  assert.ok(parseEvent({ type: 'skin_effects', t: 1, steamId: PAINTER, struct: 'SkinEffects', values: { MudAmount: 0.4 } }),
+    'the skin effects probe is a known event');
 });

@@ -246,6 +246,65 @@ local function flush()
 end
 
 --------------------------------------------------------------------------
+-- Skin effects probe (mud, dirt, blood, scars) — READ ONLY (H.readSkinEffects)
+--------------------------------------------------------------------------
+-- What the game holds and in which shape, before anything writes it: the
+-- first read of a run logs the struct's fields and types; then each dino's
+-- values are an event (skin_effects) when they change, at most every
+-- EFFECTS_EVERY_S. Flag first: Saved/effects-probe.trying is written before
+-- the first read and removed after it; found at load, the probe stays off.
+local EFFECTS_FLAG = "Mods/StatsLogger/Saved/effects-probe.trying"
+local EFFECTS_EVERY_S = 30
+local effectsOff = false
+local effectsTried = false
+do
+    local f = io.open(EFFECTS_FLAG, "r")
+    if f then
+        f:close()
+        effectsOff = true
+        H.logError(MOD .. ": the last run stopped while probing skin effects — probe off. Delete " .. EFFECTS_FLAG .. " to try again.")
+    end
+end
+
+local function effectsText(e)
+    local parts = {}
+    for _, f in ipairs(e.fields or {}) do parts[#parts + 1] = f[1] .. ":" .. f[2] end
+    local vals = {}
+    for k, v in pairs(e.values or {}) do vals[#vals + 1] = k .. "=" .. tostring(v) end
+    table.sort(vals)
+    return string.format("%s [%s] values {%s}", tostring(e.struct or "no struct"), table.concat(parts, ", "), table.concat(vals, ", "))
+end
+
+--- Once every EFFECTS_EVERY_S per player: read, log the shape once, an event on change.
+local function effectsProbe(pawn, id, name, species, prev, now)
+    if effectsOff or (prev.effectsAt and now - prev.effectsAt < EFFECTS_EVERY_S) then return end
+    prev.effectsAt = now
+    local first = not effectsTried
+    if first then
+        local f = io.open(EFFECTS_FLAG, "w")
+        if f then f:write(tostring(now)); f:close() end
+    end
+    local e = H.readSkinEffects(pawn)
+    if first then
+        os.remove(EFFECTS_FLAG)
+        effectsTried = true
+        H.log(MOD .. ": skin effects probe (" .. tostring(species) .. "): " .. (e and effectsText(e) or "nothing found on the pawn"))
+    end
+    if e == nil then return end
+    -- Coarse key: mud drying a little every few seconds is not a change worth an event.
+    local keyParts = {}
+    for k, v in pairs(e.values) do
+        keyParts[#keyParts + 1] = k .. "=" .. (type(v) == "number" and string.format("%.2f", math.floor(v * 20 + 0.5) / 20) or tostring(v))
+    end
+    table.sort(keyParts)
+    local key = table.concat(keyParts, ",")
+    if key ~= prev.effectsKey then
+        prev.effectsKey = key
+        queue({ type = "skin_effects", steamId = id, name = name, species = species, struct = e.struct, values = e.values })
+    end
+end
+
+--------------------------------------------------------------------------
 -- Per-player state, keyed by SteamID only (never by UObject)
 --------------------------------------------------------------------------
 
@@ -439,6 +498,9 @@ local function checkLife(id, name, pawn, snap)
         queue({ type = "skin", steamId = id, name = name, species = snap.species, skin = skin })
         prev.skinKey = key
     end
+
+    -- Skin effects (probe, read only): see effectsProbe.
+    effectsProbe(pawn, id, name, snap.species, prev, now)
 
     -- Prime / elder: an event when it changes (and once per life).
     local prime = primeState(pawn)

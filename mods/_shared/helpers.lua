@@ -173,6 +173,53 @@ end
 
 local loggedSkinFields = false
 
+-- Skin effects (mud, dirt, blood, scars…): the game has SkinEffects /
+-- SetSkinEffects / SetMudAmount / SetBloodAmount / SetScars (strings in the
+-- server binary, 2026-09-27) — where and in which shape is probed here, READ
+-- ONLY. Reading an unknown non-scalar value once crashed the server
+-- (2026-09-24): the struct's fields are listed by reflection with their types
+-- first, and only numbers / booleans are read.
+local EFFECT_STRUCTS = { "SkinEffects", "SavedSkinEffects" }
+local EFFECT_SCALARS = { "MudAmount", "DryMudAmount", "DirtAmount", "BloodAmount", "DryBloodAmount", "ScarsValue" }
+local SCALAR_TYPES = { FloatProperty = true, DoubleProperty = true, IntProperty = true, ByteProperty = true, BoolProperty = true }
+
+--- { struct = name|nil, fields = { {name, type}… }, values = { name = number|bool } } or nil.
+function M.readSkinEffects(pawn)
+    local out = { fields = {}, values = {} }
+    for _, prop in ipairs(EFFECT_STRUCTS) do
+        local ok, data = pcall(function() return pawn[prop] end)
+        if ok and data ~= nil and type(data) ~= "number" and type(data) ~= "boolean" then
+            local fields = {}
+            pcall(function()
+                data:GetProperty():GetStruct():ForEachProperty(function(p)
+                    fields[#fields + 1] = { p:GetFName():ToString(), p:GetClass():GetFName():ToString() }
+                end)
+            end)
+            if #fields > 0 then
+                out.struct = prop
+                out.fields = fields
+                for _, f in ipairs(fields) do
+                    if SCALAR_TYPES[f[2]] then
+                        local okV, v = pcall(function() return data[f[1]] end)
+                        if okV and type(v) == "number" then out.values[f[1]] = math.floor(v * 1000 + 0.5) / 1000
+                        elseif okV and type(v) == "boolean" then out.values[f[1]] = v end
+                    end
+                end
+                break
+            end
+        end
+    end
+    -- The same names straight on the pawn, in case they are not in a struct.
+    for _, n in ipairs(EFFECT_SCALARS) do
+        if out.values[n] == nil then
+            local ok, v = pcall(function() return pawn[n] end)
+            if ok and type(v) == "number" then out.values["pawn." .. n] = math.floor(v * 1000 + 0.5) / 1000 end
+        end
+    end
+    if out.struct == nil and next(out.values) == nil then return nil end
+    return out
+end
+
 --- The dino's skin as the game holds it: pawn.CustomizerData (read-only here).
 -- Every *Color field (FLinearColor, linear 0..1 per channel) under its real
 -- name, plus PatternIndex / ThemeIndex / SkinVariation / bIsFemale. Names come
