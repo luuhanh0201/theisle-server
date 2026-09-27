@@ -106,8 +106,10 @@ function shading(rac) {
 const PART_TEETH = 1, PART_MOUTH = 2, PART_CLAWS = 3;
 const GLOSSY = 110;               // RAC red (roughness) below this: glossy (wet mouth, claws)
 const TEETH_MAX_AREA = 0.006;     // a UV piece this small (of the whole square) on the head / jaw: a tooth…
-const JAW_MARGIN = 0.2;           // …inside the lower jaw's box grown by this much (not a crest up on the head)…
-const JAW_NEAR = 0.06;            // …and this close (of the jaw's size) to the jaw itself
+const TOOTH_MAX_SIZE = 0.12;      // …small in the model too (of the head's size)…
+const TOOTH_ROW_GAP = 0.1;        // …with other such pieces this close (of the head's size)…
+const TOOTH_ROW_MIN = 2;          // …at least this many: a row of teeth, not a lone crest…
+const TOOTH_BEHIND = -1.2;        // …and not farther behind the jaw's middle than this (in jaw half-lengths)
 
 /** Per texel: 0, or PART_TEETH / PART_MOUTH / PART_CLAWS. */
 function parts(gltf, rac) {
@@ -150,33 +152,6 @@ function parts(gltf, rac) {
       cx /= nt; cy /= nt; cz /= nt;
       for (let v = 0; v < uv.count; v++) if (vcat[v] === core) reach = Math.max(reach, Math.hypot(pos.getX(v) - cx, pos.getY(v) - cy, pos.getZ(v) - cz));
     }
-    // The lower jaw's box (a little larger): the teeth, upper and lower, are in it; a crest up on the head is not.
-    const jb = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
-    for (let v = 0; v < uv.count; v++) {
-      if (vcat[v] !== JAW) continue;
-      const q = [pos.getX(v), pos.getY(v), pos.getZ(v)];
-      for (let k = 0; k < 3; k++) { jb[k] = Math.min(jb[k], q[k]); jb[k + 3] = Math.max(jb[k + 3], q[k]); }
-    }
-    const inJaw = (vs) => {
-      if (!Number.isFinite(jb[0])) return false;
-      const c = [0, 1, 2].map((k) => (k === 0 ? [pos.getX(vs[0]), pos.getX(vs[1]), pos.getX(vs[2])]
-        : k === 1 ? [pos.getY(vs[0]), pos.getY(vs[1]), pos.getY(vs[2])] : [pos.getZ(vs[0]), pos.getZ(vs[1]), pos.getZ(vs[2])]).reduce((a, b) => a + b) / 3);
-      return c.every((x, k) => { const m = (jb[k + 3] - jb[k]) * JAW_MARGIN; return x >= jb[k] - m && x <= jb[k + 3] + m; });
-    };
-    // …and right by the jaw: a tooth sits on its edge (a cheek boss, a neck quill does not).
-    const jawPts = [];
-    for (let v = 0; v < uv.count; v += 1) if (vcat[v] === JAW) jawPts.push(pos.getX(v), pos.getY(v), pos.getZ(v));
-    const jawDiag = Number.isFinite(jb[0]) ? Math.hypot(jb[3] - jb[0], jb[4] - jb[1], jb[5] - jb[2]) : 0;
-    const byJaw = (vs) => {
-      const x = (pos.getX(vs[0]) + pos.getX(vs[1]) + pos.getX(vs[2])) / 3, y = (pos.getY(vs[0]) + pos.getY(vs[1]) + pos.getY(vs[2])) / 3,
-        z = (pos.getZ(vs[0]) + pos.getZ(vs[1]) + pos.getZ(vs[2])) / 3;
-      const lim = (jawDiag * JAW_NEAR) ** 2;
-      for (let i = 0; i < jawPts.length; i += 3) {
-        const dx = jawPts[i] - x, dy = jawPts[i + 1] - y, dz = jawPts[i + 2] - z;
-        if (dx * dx + dy * dy + dz * dz <= lim) return true;
-      }
-      return false;
-    };
     /** A triangle within `k` × the tongue's reach of its middle. */
     const nearTongue = (vs, k) => {
       if (nt === 0) return false;
@@ -198,6 +173,62 @@ function parts(gltf, rac) {
       return Math.abs((uv.getX(b) - uv.getX(a)) * (uv.getY(c) - uv.getY(a)) - (uv.getY(b) - uv.getY(a)) * (uv.getX(c) - uv.getX(a))) / 2;
     };
     for (let t = 0; t < idx.length; t += 3) { const r = root(idx[t]); areaOf.set(r, (areaOf.get(r) ?? 0) + triArea(t)); }
+    // Teeth come in rows: a small piece on the head / jaw (on the UV map AND in the model)
+    // with other such pieces right beside it. A crest, a cheek boss, a horn stands alone.
+    const pieceInfo = new Map();   // root -> { n, x, y, z, min[3], max[3], head }
+    const hb = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+    for (let v = 0; v < uv.count; v++) {
+      const r = root(v), c = vcat[v];
+      const q = [pos.getX(v), pos.getY(v), pos.getZ(v)];
+      if (c === HEAD || c === JAW) for (let k = 0; k < 3; k++) { hb[k] = Math.min(hb[k], q[k]); hb[k + 3] = Math.max(hb[k + 3], q[k]); }
+      let pi = pieceInfo.get(r);
+      if (!pi) { pi = { n: 0, head: 0, s: [0, 0, 0], min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] }; pieceInfo.set(r, pi); }
+      pi.n++; if (c === HEAD || c === JAW) pi.head++;
+      for (let k = 0; k < 3; k++) { pi.s[k] += q[k]; pi.min[k] = Math.min(pi.min[k], q[k]); pi.max[k] = Math.max(pi.max[k], q[k]); }
+    }
+    const headDiag = Number.isFinite(hb[0]) ? Math.hypot(hb[3] - hb[0], hb[4] - hb[1], hb[5] - hb[2]) : 0;
+    // "Up" in the head: from the lower jaw's middle to the skull's. A tooth is below the
+    // skull's middle; a brow spike or a crest above it.
+    const mid = (cat0) => {
+      const m = [0, 0, 0]; let n = 0;
+      for (let v = 0; v < uv.count; v++) if (vcat[v] === cat0) { m[0] += pos.getX(v); m[1] += pos.getY(v); m[2] += pos.getZ(v); n++; }
+      return n ? m.map((x) => x / n) : null;
+    };
+    const skull = mid(HEAD), jaw = mid(JAW);
+    const up = skull && jaw ? [skull[0] - jaw[0], skull[1] - jaw[1], skull[2] - jaw[2]] : null;
+    const below = (x, y, z) => !up || ((x - skull[0]) * up[0] + (y - skull[1]) * up[1] + (z - skull[2]) * up[2]) < 0;
+    // "Forward" along the jaw: from its middle to its tip (its point farthest from the skull's
+    // middle). A tooth is not far behind the jaw's middle; a quill down the neck is.
+    let jawTip = null, far = -1;
+    if (skull && jaw) for (let v = 0; v < uv.count; v++) {
+      if (vcat[v] !== JAW) continue;
+      const d = (pos.getX(v) - skull[0]) ** 2 + (pos.getY(v) - skull[1]) ** 2 + (pos.getZ(v) - skull[2]) ** 2;
+      if (d > far) { far = d; jawTip = [pos.getX(v), pos.getY(v), pos.getZ(v)]; }
+    }
+    const fwd = jawTip ? [jawTip[0] - jaw[0], jawTip[1] - jaw[1], jawTip[2] - jaw[2]] : null;
+    const fwdLen2 = fwd ? fwd[0] ** 2 + fwd[1] ** 2 + fwd[2] ** 2 : 0;
+    // projection / |fwd|² : 0 at the jaw's middle, 1 at its tip, -1 one jaw-half behind.
+    const alongJaw = (x, y, z) => !fwd || fwdLen2 === 0 ? 0 : ((x - jaw[0]) * fwd[0] + (y - jaw[1]) * fwd[1] + (z - jaw[2]) * fwd[2]) / fwdLen2;
+    const cands = [];
+    for (const [r, pi] of pieceInfo) {
+      const extent = Math.hypot(pi.max[0] - pi.min[0], pi.max[1] - pi.min[1], pi.max[2] - pi.min[2]);
+      if (pi.head / pi.n < 0.5 || (areaOf.get(r) ?? 1) >= TEETH_MAX_AREA || extent > headDiag * TOOTH_MAX_SIZE) continue;
+      const cx0 = pi.s[0] / pi.n, cy0 = pi.s[1] / pi.n, cz0 = pi.s[2] / pi.n;
+      if (!below(cx0, cy0, cz0) || alongJaw(cx0, cy0, cz0) < TOOTH_BEHIND) continue;
+      cands.push([r, cx0, cy0, cz0]);
+    }
+    const teethPieces = new Set();
+    const near2 = (headDiag * TOOTH_ROW_GAP) ** 2;
+    for (const [r, x, y, z] of cands) {
+      let neighbours = 0;
+      for (const [r2, x2, y2, z2] of cands) {
+        if (r2 !== r && (x - x2) ** 2 + (y - y2) ** 2 + (z - z2) ** 2 <= near2) neighbours++;
+        if (neighbours >= TOOTH_ROW_MIN) break;
+      }
+      if (neighbours >= TOOTH_ROW_MIN) teethPieces.add(r);
+    }
+
+    const toothTris = [];
     // Paint each triangle's texels with its part.
     for (let t = 0; t < idx.length; t += 3) {
       const vs = [idx[t], idx[t + 1], idx[t + 2]];
@@ -205,9 +236,10 @@ function parts(gltf, rac) {
       const cat = cats[1];                               // the triangle's main group
       if (cat === 0) continue;
       const small = (areaOf.get(root(vs[0])) ?? 1) < TEETH_MAX_AREA;
-      const mouthy = (cat === HEAD || cat === JAW || cat === HYOID) && !small && nearTongue(vs, 1.6);
-      // A tooth: a small piece along the jaws — not a small crest / horn up on the head.
-      const tooth = (cat === JAW || cat === HEAD) && small && inJaw(vs) && byJaw(vs);
+      const mouthy = (cat === HEAD || cat === JAW || cat === HYOID) && nearTongue(vs, 1.6);
+      // A tooth gets its own material (below), not texels: some models reuse the teeth's
+      // texture area elsewhere (Dilophosaurus' neck quills) and would turn tooth-coloured.
+      if (teethPieces.has(root(vs[0]))) { toothTris.push(t); continue; }
       const p = vs.map((v) => [uv.getX(v) * SIZE, uv.getY(v) * SIZE]);
       const minX = Math.max(0, Math.floor(Math.min(p[0][0], p[1][0], p[2][0]))), maxX = Math.min(SIZE - 1, Math.ceil(Math.max(p[0][0], p[1][0], p[2][0])));
       const minY = Math.max(0, Math.floor(Math.min(p[0][1], p[1][1], p[2][1]))), maxY = Math.min(SIZE - 1, Math.ceil(Math.max(p[0][1], p[1][1], p[2][1])));
@@ -223,11 +255,23 @@ function parts(gltf, rac) {
           const glossy = rac ? rac[i * 4] < GLOSSY : false;
           let part = 0;
           if (cat === TONGUE) part = PART_MOUTH;
-          else if (cat === HEAD || cat === JAW || cat === HYOID) part = tooth ? PART_TEETH : (glossy && mouthy) ? PART_MOUTH : 0;
+          else if (cat === HEAD || cat === JAW || cat === HYOID) part = (glossy && mouthy && !small) ? PART_MOUTH : 0;
           else if (cat === CLAW) part = glossy ? PART_CLAWS : 0;
           if (part) out[i] = part;
         }
       }
+    }
+    // The teeth as the geometry's second group (material 1); the rest stays group 0.
+    if (toothTris.length > 0 && g.index) {
+      const isTooth = new Uint8Array(idx.length / 3);
+      for (const t of toothTris) isTooth[t / 3] = 1;
+      const order = new Uint32Array(idx.length);
+      let k = 0;
+      for (const pass of [0, 1]) for (let t = 0; t < idx.length; t += 3) if (isTooth[t / 3] === pass) { order[k++] = idx[t]; order[k++] = idx[t + 1]; order[k++] = idx[t + 2]; }
+      g.setIndex(new THREE.BufferAttribute(order, 1));
+      g.clearGroups();
+      g.addGroup(0, idx.length - toothTris.length * 3, 0);
+      g.addGroup(idx.length - toothTris.length * 3, toothTris.length * 3, 1);
     }
   });
   return out;
@@ -267,7 +311,8 @@ function speciesOf(raw) {
 // --- one viewer ------------------------------------------------------------------
 /**
  * A 3D view in `host`. opts: { note (element for a status line), interactive
- * (orbit, default true), autoRotate, fit (camera distance / model size, 1.5) }. Returns { show(species, skin), setSkin,
+ * (orbit, default true), autoRotate, fit (camera distance / model size, 1.5),
+ * alwaysRender (test pages: draw in a background tab too) }. Returns { show(species, skin), setSkin,
  * setFemale, name() }. skin: { colors: { Body: "#rrggbb"… }, female?, glow?, effects? }.
  */
 function create(host, opts = {}) {
@@ -300,7 +345,7 @@ function create(host, opts = {}) {
     clock = new THREE.Clock();
     const loop = () => {
       requestAnimationFrame(loop);
-      if (!host.isConnected || host.hidden || document.hidden || !host.offsetParent) return;   // not shown: nothing to draw
+      if (!host.isConnected || host.hidden || (document.hidden && !opts.alwaysRender) || !host.offsetParent) return;   // not shown: nothing to draw
       // Follow the box's size here: the tab can be hidden when the model loads (0 × 0).
       const w = host.clientWidth, h = host.clientHeight;
       if (w > 0 && h > 0 && (w !== sizeW || h !== sizeH)) {
@@ -363,6 +408,8 @@ function create(host, opts = {}) {
     }
     const eye = srgb(lastSkin.colors?.Eyes ?? '#806020');
     for (const m of current.eyeMats) m.color.setRGB(eye[0] / 255, eye[1] / 255, eye[2] / 255, THREE.SRGBColorSpace);
+    const tooth = srgb(lastSkin.colors?.Teeth ?? '#e6dcc4');
+    for (const m of current.teethMats) m.color.setRGB(tooth[0] / 255, tooth[1] / 255, tooth[2] / 255, THREE.SRGBColorSpace);
   }
 
   let paintQueued = false;
@@ -390,15 +437,20 @@ function create(host, opts = {}) {
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.flipY = false;               // glTF UVs
       const root = cloneSkinned(shared.gltf.scene);
-      const bodyMats = [], eyeMats = [];
+      const bodyMats = [], eyeMats = [], teethMats = [];
       root.traverse((o) => {
         if (!o.isMesh) return;
         o.frustumCulled = false;
         const eye = /eye/i.test(o.material?.name ?? '');
         const m = new THREE.MeshStandardMaterial({ roughness: eye ? 0.15 : 0.82, metalness: 0 });
-        if (eye) eyeMats.push(m);
-        else { m.map = texture; if (shared.normal) m.normalMap = shared.normal; bodyMats.push(m); }
-        o.material = m;
+        if (eye) { eyeMats.push(m); o.material = m; return; }
+        m.map = texture; if (shared.normal) m.normalMap = shared.normal; bodyMats.push(m);
+        if (o.geometry.groups.length === 2) {
+          const tm = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0 });
+          if (shared.normal) tm.normalMap = shared.normal;
+          teethMats.push(tm);
+          o.material = [m, tm];
+        } else o.material = m;
       });
       const sp = registry.species[name];
       root.scale.setScalar(sp.glbScale ?? 0.03);
@@ -414,9 +466,9 @@ function create(host, opts = {}) {
       controls.minDistance = dist * 0.35; controls.maxDistance = dist * 3;
       mixer = new THREE.AnimationMixer(root);
       if (shared.gltf.animations?.[0]) mixer.clipAction(shared.gltf.animations[0]).play();
-      current = { name, root, bodyMats, eyeMats, texture, ctx: canvas.getContext('2d'), shared };
+      current = { name, root, bodyMats, eyeMats, teethMats, texture, ctx: canvas.getContext('2d'), shared };
       paint();
-      note(opts.interactive === false ? '' : 'Kéo để xoay · cuộn để phóng to. Răng, miệng, móng không hiện trong bản xem trước.');
+      note(opts.interactive === false ? '' : 'Kéo để xoay · cuộn để phóng to.');
       return true;
     } catch (err) {
       if (my === loading) { console.error('[skin3d]', err); note('Không tải được mô hình 3D.'); }
@@ -437,6 +489,20 @@ function create(host, opts = {}) {
     setSkin(skin) { lastSkin = skin; schedulePaint(); },
     setFemale(f) { female = f; schedulePaint(); },
     name() { return current?.name ?? null; },
+    /** Test pages only: look at the head from `side` (x, y, z offsets in head sizes). */
+    lookAtHead(side = [1, 0.3, 0.6], zoom = 1) {
+      const head = current?.root.getObjectByName('DinoHead');
+      if (!head) return false;
+      current.root.updateMatrixWorld(true);
+      const p = head.getWorldPosition(new THREE.Vector3());
+      const box = new THREE.Box3().setFromObject(current.root);
+      const r = box.getSize(new THREE.Vector3()).length() * 0.12 / zoom;
+      controls.target.copy(p);
+      camera.position.set(p.x + side[0] * r, p.y + side[1] * r, p.z + side[2] * r);
+      camera.near = r / 50; camera.updateProjectionMatrix();
+      controls.minDistance = 0; controls.maxDistance = Infinity; mixer?.stopAllAction();
+      return { head: p.toArray().map((x) => +x.toFixed(2)), r: +r.toFixed(2), camera: camera.position.toArray().map((x) => +x.toFixed(2)) };
+    },
   };
 }
 
