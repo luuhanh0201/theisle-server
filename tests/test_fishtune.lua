@@ -123,6 +123,27 @@ poll.fn()
 check("next window: the far ones kept", rawget(far1, "DespawnDelaySeconds") == 3600 and rawget(far2, "DespawnDelaySeconds") == 3600)
 os.remove("Mods/FishTune/Saved/keep.json")
 
+say("\n-- 2d. keeping only some kinds (the big and middle fish) --")
+local function kind(x, cls)
+  local o = swimmer(x)
+  local mt = getmetatable(o)
+  local base = mt.__index
+  mt.__index = function(t, k)
+    if k == "GetClass" then return function() return { GetFName = function() return FName(cls) end } end end
+    return base(t, k)
+  end
+  return o
+end
+local cat, hop = kind(5000, "BP_Catfish_C"), kind(6000, "BP_Hoplo_C")
+lake = { cat, hop }
+kf = assert(io.open("Mods/FishTune/Saved/keep.json", "w"))
+kf:write(json.encode({ enabled = true, despawnDelay = 3600, maxTotal = 60, onlyClasses = { "BP_Catfish_C", "BP_Coalecanth_C" } })); kf:close()
+clock = clock + 301
+poll.fn()
+check("a big one kept", rawget(cat, "DespawnDelaySeconds") == 3600)
+check("a small one left to the game", rawget(hop, "DespawnDelaySeconds") == 25)
+os.remove("Mods/FishTune/Saved/keep.json")
+
 say("\n-- 3. a run that stopped during a write: no more writes --")
 H.reset()
 local fl = assert(io.open("Mods/FishTune/Saved/writing.flag", "w")); fl:close()

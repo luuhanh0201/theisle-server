@@ -19,7 +19,10 @@
 -- Keeping fish (Saved/keep.json, read every 5 s, kept across restarts):
 --   { "enabled": true, "despawnDelay": 3600, "maxTotal": 60,
 --     "perWindow": 10, "windowSec": 300,
---     "nearClass": "BP_Deinosuchus_C", "nearM": 5000 }
+--     "nearClass": "BP_Deinosuchus_C", "nearM": 5000,
+--     "onlyClasses": ["BP_Catfish_C", "BP_Coalecanth_C", "BP_Muskel_C", "BP_Forktail_C"] }
+-- onlyClasses: only these kinds are kept (the big and middle ones), the rest
+-- go after 25 s as the game has it — DisallowedAIClasses does not stop fish.
 -- Each fish the game places gets DespawnDelaySeconds = despawnDelay (game:
 -- 25 s once no player is within its RelevanceDistance, 100 m), so fish stay
 -- in the waters players have left: spread over the map instead of only
@@ -198,6 +201,11 @@ local function keepFish()
     local okF, all = pcall(function() return FindAllOf("TIAmbientFish") or {} end)
     if not okF then return end
     local crocs = nearCm > 0 and playersOn(k.nearClass) or {}
+    local only = nil
+    if type(k.onlyClasses) == "table" and #k.onlyClasses > 0 then
+        only = {}
+        for _, c in ipairs(k.onlyClasses) do if type(c) == "string" then only[c] = true end end
+    end
     local seen, count, placed, fresh = {}, 0, 0, 0
     local near, far = {}, {}
     for _, a in ipairs(all) do
@@ -208,9 +216,14 @@ local function keepFish()
             if okL and v and not parked then
                 placed = placed + 1
                 seen[addr] = true
+                local wanted = true
+                if only ~= nil and not kept[addr] then
+                    local okC, n = pcall(function() return a:GetClass():GetFName():ToString() end)
+                    wanted = okC and only[tostring(n)] == true
+                end
                 if kept[addr] then
                     count = count + 1
-                else
+                elseif wanted then
                     local close = false
                     for _, c in ipairs(crocs) do
                         if (v.X - c[1]) ^ 2 + (v.Y - c[2]) ^ 2 <= nearCm ^ 2 then close = true; break end
