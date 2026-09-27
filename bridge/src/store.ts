@@ -92,6 +92,8 @@ export type FeedInput =
   | (DeathEvent & { cause?: 'garage' | 'admin' });
 
 export type FeedEntry = FeedInput & { id: number };
+/** A "damage" feed entry is one bite: `ticks` > 1 for a hold bite (its amount is their sum). */
+export interface DamageBite { amount: number | null; ticks: number }
 
 export interface Leaderboard {
   kills: PlayerStats[];
@@ -253,10 +255,14 @@ export class Store {
 
       case 'damage': {
         const amount = event.amount ?? 0;
+        // One entry per bite (#biteOf): a repeat of the hook for the same
+        // bite counts nothing; a hold bite's next tick adds to its bite.
+        const kind = this.#biteOf(event, amount);
+        if (kind === 'repeat') break;
         if (event.attacker !== 'ai') {
           const a = this.#player(event.attacker, event.t, event.attackerName);
           a.damageDealt += amount;
-          a.hits += 1;
+          if (kind === 'bite') a.hits += 1;
           const life = this.#openLife(event.attacker);
           if (life !== null) life.damageDealt += amount;
         }
@@ -265,7 +271,10 @@ export class Store {
           const life = this.#openLife(event.victim);
           if (life !== null) life.damageTaken += amount;
         }
-        this.#push(event, [event.attacker, event.victim]);
+        if (kind === 'bite') {
+          const entry = this.#push({ ...event, ticks: 1 }, [event.attacker, event.victim]) as FeedEntry & DamageBite;
+          this.#lastBite.set(`${event.attacker}>${event.victim}`, { t: event.t, last: amount, entry });
+        }
         break;
       }
 
@@ -721,6 +730,33 @@ export class Store {
       pushBounded(timeline, entry, config.timelineSize);
     }
     return entry;
+  }
+
+  /** attacker>victim -> the last bite logged between them (for repeats and hold-bite ticks). */
+  readonly #lastBite = new Map<string, { t: number; last: number; entry: FeedEntry & DamageBite }>();
+
+  /**
+   * What a "damage" event is, bite by bite. The ApplyDamage hook fires several
+   * times for one bite, with the same number (a T-Rex's bite logged up to six
+   * times, 2026-09-28 — the victim lost it once): a repeat. A hold bite
+   * (mouse held) deals ticks a little lower each time, within the same
+   * second: a tick, added to its bite. Anything else is a new bite.
+   */
+  #biteOf(event: { t: number; attacker: string; victim: string }, amount: number): 'repeat' | 'tick' | 'bite' {
+    const prev = this.#lastBite.get(`${event.attacker}>${event.victim}`);
+    if (prev === undefined || event.t - prev.t > 1 || event.t < prev.t) return 'bite';
+    // The hook's repeats come within the same moment. The same number a second
+    // later is another bite: out of stamina, bites hit the same floor.
+    if (event.t === prev.t && Math.abs(amount - prev.last) < 0.01) return 'repeat';
+    const drop = prev.last - amount;
+    if (drop > 0 && drop < prev.last * 0.1) {
+      prev.entry.amount = Math.round(((prev.entry.amount ?? 0) + amount) * 1000) / 1000;
+      prev.entry.ticks += 1;
+      prev.last = amount;
+      prev.t = event.t;
+      return 'tick';
+    }
+    return 'bite';
   }
 
   #nowSeconds(): number {

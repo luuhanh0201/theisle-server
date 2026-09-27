@@ -2386,8 +2386,10 @@ const WEB_CMD_ERRORS = { offline: 'người chơi không online', expired: 'game
 function describe(e) {
   switch (e.type) {
     case 'damage': {
+      // One entry per bite; a hold bite (mouse held) is the sum of its ticks.
       const amt = e.amount === null || e.amount === undefined ? '' : ` <b>−${num(e.amount)}</b>`;
-      return [`${who(e.attacker, e.attackerName)} cắn ${who(e.victim, e.victimName)}${amt}`,
+      const hold = e.ticks > 1 ? ` <span class="chip tone-dmg">cắn giữ · ${e.ticks} nhịp</span>` : '';
+      return [`${who(e.attacker, e.attackerName)} cắn ${who(e.victim, e.victimName)}${amt}${hold}`,
         `${esc(dino(e.attackerSpecies))} → ${esc(dino(e.victimSpecies))}${locText(e.loc)}`];
     }
     case 'death': {

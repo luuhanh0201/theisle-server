@@ -37,6 +37,8 @@ export interface DamageEvent extends BaseEvent {
   victimSpecies?: string;
   /** Where the victim was. */
   loc?: Loc;
+  /** Set by the bridge (store.ts): the hold bite's ticks this bite is the sum of (1: a plain bite). */
+  ticks?: number;
 }
 
 export interface SnapshotEvent extends BaseEvent {

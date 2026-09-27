@@ -342,3 +342,23 @@ test('web garage commands: results kept, but no player invented for an unknown S
   s.apply({ type: 'portal_command', t, id: 8, steamId: A, action: 'store', ok: true, messages: ['x'] });
   assert.equal(s.player(A).timeline[0].type, 'portal_command', 'a known player gets it in their timeline');
 });
+
+test('damage, bite by bite: a repeat of the hook counts once; a hold bite is one bite, its ticks summed', () => {
+  const s = new Store();
+  const t = now();
+  const hit = (dt, amount) => ({ t: t + dt, type: 'damage', attacker: A, victim: B, amount, attackerSpecies: 'BP_Tyrannosaurus_C', victimSpecies: 'BP_Tyrannosaurus_C' });
+  feed(s, [
+    { t, type: 'session_start', steamId: A }, { t, type: 'session_start', steamId: B },
+    hit(0, 508.9), hit(0, 508.9), hit(0, 508.9), hit(0, 508.9), hit(0, 508.9),   // one bite, five hook calls
+    hit(4, 265.7), hit(4, 265.7), hit(5, 265.7), hit(5, 265.7),                    // two bites at the stamina floor
+    hit(9, 339.3), hit(9, 328.8), hit(9, 319.6), hit(9, 309.9), hit(9, 301.5), hit(9, 293.6),   // a hold bite
+    hit(12, 391.0), hit(12, 394.2),                                                // two bites (the second is higher)
+  ]);
+  const bites = s.feed(20, new Set(['damage'])).reverse();
+  assert.deepEqual(bites.map((b) => [Math.round(b.amount * 10) / 10, b.ticks]),
+    [[508.9, 1], [265.7, 1], [265.7, 1], [1892.7, 6], [391, 1], [394.2, 1]]);
+  const a = s.player(A).player;
+  assert.equal(a.hits, 6, 'six bites');
+  assert.equal(Math.round(a.damageDealt * 10) / 10, 3718.2);
+  assert.equal(Math.round(s.player(B).player.damageTaken * 10) / 10, 3718.2);
+});
