@@ -348,7 +348,11 @@
     if (typeof d.growth === 'number') setText(dinoEl.growth, `Growth ${(d.growth * 100).toFixed(1)}%`);
     const primeOn = show.prime && d.prime && (d.prime.isPrime || d.prime.eligible);
     dinoEl.prime.hidden = !primeOn;
-    if (primeOn) setText(dinoEl.prime, d.prime.isPrime ? '👑 Prime' : '👑 Đủ điều kiện');
+    // Icon only: 👑 prime; faded 👑 eligible (five tasks done, not prime yet).
+    if (primeOn) {
+      setText(dinoEl.prime, '👑');
+      dinoEl.prime.classList.toggle('dim', !d.prime.isPrime);
+    }
     for (const [k] of VITALS) {
       const r = dinoEl.rows[k];
       const v = d.vitals?.[k]; const m = d.max?.[k];
@@ -424,7 +428,7 @@
     if (!pb) { el.textContent = 'Dino này chưa có nhiệm vụ Prime'; return; }
     const h = document.createElement('h3');
     const t = document.createElement('span'); t.textContent = '🏆 Nhiệm vụ Prime';
-    const n = document.createElement('span'); n.className = pb.met >= 5 ? '' : 'gold'; n.textContent = pb.isPrime ? '👑 Prime' : `${pb.met}/5`;
+    const n = document.createElement('span'); n.className = pb.met >= 5 ? '' : 'gold'; n.textContent = pb.isPrime ? '👑' : `${pb.met}/5`;
     h.append(t, n);
     const ul = document.createElement('ul');
     for (const c of pb.conditions || []) {

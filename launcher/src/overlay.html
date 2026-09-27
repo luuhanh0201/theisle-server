@@ -64,7 +64,8 @@
   .dino { width: 100%; }
   .dino .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: calc(4px * var(--scale)); }
   .dino .sp-name { font-weight: 800; font-size: 1.1em; }
-  .dino .prime { color: var(--gold); font-size: .85em; font-weight: 800; }
+  .dino .prime { font-size: 1.05em; line-height: 1; }
+  .dino .prime.dim { opacity: .45; filter: grayscale(.4); }
   .dino { position: relative; }
   .bar { display: grid; grid-template-columns: calc(52px * var(--scale)) 1fr auto; align-items: center; gap: calc(6px * var(--scale)); margin: calc(3px * var(--scale)) 0; font-size: .88em; border-radius: 6px; }
   .bar .track { position: relative; height: calc(7px * var(--scale)); border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }

@@ -138,6 +138,18 @@ function snap(r, b, px = 16) {
   return [x, y];
 }
 
+/**
+ * How long a widget stays up after its content went away. The data comes
+ * from the portal once a second; a blip (the server restarting, a slow
+ * answer, a player briefly seen offline) used to hide the widgets and show
+ * them again a moment later — the overlay "turning on and off by itself"
+ * (2026-09-27). Only a longer absence hides them.
+ */
+const CONTENT_GRACE_MS = 15_000;
+/** Show content that is there, or was until less than `graceMs` ago. */
+const contentShown = (hasNow, lastSeenAt, now, graceMs = CONTENT_GRACE_MS) =>
+  hasNow || (lastSeenAt > 0 && now - lastSeenAt < graceMs);
+
 /** Which way the content hugs inside its window. */
 const anchorOf = (w) => (w.position === 'custom' ? 'top-left' : w.position);
 
@@ -160,6 +172,8 @@ class Overlay {
     this.voice = null;           // latest voice state
     this.game = null;            // latest { dino, ai } from the player page
     this.mapData = null;         // { json, image: ArrayBuffer } once fetched
+    this.contentAt = {};         // per widget: when it last had something to show
+    this.graceTimer = null;
   }
 
   /** Windows come and go with apply(): only widgets that are on (or all, while editing) have one. */
@@ -236,10 +250,17 @@ class Overlay {
     this.#sendSettings(id);
   }
 
-  /** Is there anything for this widget to show? */
+  /** Is there anything for this widget to show (now, or until a moment ago: CONTENT_GRACE_MS)? */
   #hasContent(id) {
-    if (id === 'voice') return Boolean(this.voice?.connected);
-    return Boolean(this.game?.dino);
+    const now = Date.now();
+    const has = id === 'voice' ? Boolean(this.voice?.connected) : Boolean(this.game?.dino);
+    if (has) { this.contentAt[id] = now; return true; }
+    const shown = contentShown(false, this.contentAt[id] ?? 0, now);
+    // Nothing more may come in (the page stopped sending): look again once the grace is over.
+    if (shown && this.graceTimer === null) {
+      this.graceTimer = setTimeout(() => { this.graceTimer = null; this.apply(); }, CONTENT_GRACE_MS + 100);
+    }
+    return shown;
   }
 
   /**
@@ -444,4 +465,4 @@ class Overlay {
   }
 }
 
-module.exports = { Overlay, normaliseKeep, GAME_MODE_KEEP, normaliseOverlay, normaliseWidget, widgetBounds, anchorOf, snap, resizedScale, DEFAULTS, WIDGETS, BASE, CHOICES };
+module.exports = { Overlay, contentShown, CONTENT_GRACE_MS, normaliseKeep, GAME_MODE_KEEP, normaliseOverlay, normaliseWidget, widgetBounds, anchorOf, snap, resizedScale, DEFAULTS, WIDGETS, BASE, CHOICES };

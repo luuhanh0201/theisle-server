@@ -138,6 +138,26 @@ function writeSettings(patch) {
   }
 }
 
+// "Sửa viền đen" (overlay card): on some PCs Chromium draws the overlay's
+// transparent windows with a black background (graphics driver, Windows HDR) —
+// a black frame around each widget. Without GPU acceleration it draws them in
+// software, transparent everywhere. Only before the app is ready: changing it
+// restarts the launcher.
+const overlayCompat = !needsX11 && readSettings().overlayCompat === true;
+if (overlayCompat) app.disableHardwareAcceleration();
+
+/** Start the launcher again (the same way as the Wayland relaunch above), then quit this one. */
+function relaunch() {
+  const args = [...process.argv.slice(1).filter((a) => !a.startsWith('--xomgay-relaunched=')), `--xomgay-relaunched=${process.pid}`];
+  quitting = true;
+  if (process.env.APPIMAGE) {
+    require('node:child_process').spawn(process.env.APPIMAGE, args, { detached: true, stdio: 'ignore' }).unref();
+  } else {
+    app.relaunch({ execPath: process.execPath, args });
+  }
+  app.exit(0);
+}
+
 // --- windows ----------------------------------------------------------------------------------
 
 let mainWin = null;
@@ -421,14 +441,18 @@ function startPtt() {
   ]);
   keys.ptt = new PushToTalk(hook, b.ptt, (held) => { toPage('ptt', held); updateTray(); });
   keys.range = new PushToTalk(hook, b.range, (down) => { if (down) toPage('range-key', true); }, DEFAULT_RANGE);
+  // Each press in the log: "F8 does nothing in game" can then be told apart
+  // from "the key never reached us" (a game run as administrator hides its keys).
   keys.overlay = new PushToTalk(hook, b.overlay, (down) => {
     if (!down || !overlay) return;
-    overlay.toggle();
+    const shown = overlay.toggle();
+    console.info(`[keys] overlay key: ${shown ? 'shown' : 'hidden'} (overlay ${overlay.settings.enabled ? 'on' : 'off'}, game mode ${overlay.gameMode ? 'on' : 'off'})`);
     updateTray();
   }, DEFAULT_OVERLAY_KEY);
   keys.edit = new PushToTalk(hook, b.edit, (down) => {
     if (!down || !overlay) return;
     overlay.edit(!overlay.editing);
+    console.info(`[keys] edit key: editing ${overlay.editing ? 'on' : 'off'}`);
     toPage('overlay:changed', overlay.settings);
   }, DEFAULT_EDIT_KEY);
   try {
@@ -487,6 +511,14 @@ function wireIpc() {
     if (on !== true) mainWin?.webContents.send('overlay:changed', overlay.settings);
   });
   ipcMain.on('overlay:preview', (e) => { if (fromUs(e) && overlay) overlay.preview(); });
+  // "Sửa viền đen": { on: now, saved: after a restart }; setting it restarts the launcher.
+  ipcMain.on('overlay:compat:get', (e) => { e.returnValue = fromUs(e) ? { on: overlayCompat, saved: readSettings().overlayCompat === true } : null; });
+  ipcMain.on('overlay:compat:set', (e, on) => {
+    if (!fromUs(e)) return;
+    writeSettings({ overlayCompat: on === true });
+    console.info(`[launcher] overlay compatibility (no GPU acceleration): ${on === true ? 'on' : 'off'} — restarting`);
+    if ((on === true) !== overlayCompat) relaunch();
+  });
   const fromOverlay = (e) => overlay !== null && Object.values(overlay.wins).some((w) => !w.isDestroyed() && w.webContents === e.sender);
   // Placing a widget: from the layout editor, or from dragging its edge on screen.
   let changedTimer = null;
@@ -535,6 +567,10 @@ function wireIpc() {
     overlay.edit(false);
     mainWin?.webContents.send('overlay:changed', overlay.settings);
   });
+  // Updates: the state, check now, install the downloaded one.
+  ipcMain.on('update:get', (e) => { e.returnValue = fromUs(e) ? updateState : null; });
+  ipcMain.on('update:check', (e) => { if (fromUs(e)) checkNow(); });
+  ipcMain.on('update:install', (e) => { if (fromUs(e)) installUpdate(); });
   // splash.html: retry the portal, or give up.
   const fromSplash = (e) => splashWin !== null && e.sender === splashWin.webContents;
   ipcMain.on('splash:retry', (e) => { if (fromSplash(e)) mainWin.loadURL(`${BASE}/`); });
@@ -619,6 +655,13 @@ function updateTray() {
     { label: `Phím bật/tắt overlay: ${keyLabel(keys.overlay)}`, enabled: false },
     { label: `Phím chỉnh overlay trên màn hình: ${keyLabel(keys.edit)}`, enabled: false },
     { label: `Phiên bản ${app.getVersion()}`, enabled: false },
+    updateState.phase === 'ready'
+      ? { label: `⬆ Cập nhật lên v${updateState.version} (khởi động lại)`, click: installUpdate }
+      : {
+        label: { checking: 'Đang kiểm tra cập nhật…', downloading: `Đang tải v${updateState.version}… ${updateState.percent ?? 0}%`, latest: 'Kiểm tra cập nhật (đang là bản mới nhất)' }[updateState.phase] || 'Kiểm tra cập nhật',
+        enabled: Boolean(updater) && !['checking', 'downloading'].includes(updateState.phase),
+        click: checkNow,
+      },
     { type: 'separator' },
     { label: 'Thoát', click: () => { quitting = true; app.quit(); } },
   ]));
@@ -633,13 +676,47 @@ function createTray() {
 
 // --- updates ----------------------------------------------------------------------------------------------
 
+// Checked at start and every 6 h, or now from the page / tray ("Kiểm tra cập
+// nhật"). A newer version downloads by itself; installing it restarts the
+// launcher — the player chooses when (or it installs when they quit).
+let updater = null;
+/** phase: dev (not packaged) | idle | checking | latest | downloading | ready | error */
+let updateState = { phase: app.isPackaged ? 'idle' : 'dev', current: app.getVersion(), version: null, percent: null, error: null };
+
+function setUpdateState(patch) {
+  updateState = { ...updateState, ...patch };
+  if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('update:state', updateState);
+  updateTray();
+}
+
+/** Look for a newer version now (unless a check or a download is already under way). */
+function checkNow() {
+  if (!updater || ['checking', 'downloading', 'ready'].includes(updateState.phase)) return;
+  updater.checkForUpdates().catch((err) => setUpdateState({ phase: 'error', error: err.message }));
+}
+
+/** The downloaded version: quit, install, start again. */
+function installUpdate() {
+  if (!updater || updateState.phase !== 'ready') return;
+  console.info(`[launcher] installing ${updateState.version}`);
+  quitting = true;
+  updater.quitAndInstall(false, true);
+}
+
 function checkUpdates() {
   if (!app.isPackaged) return;
-  let autoUpdater;
-  try { ({ autoUpdater } = require('electron-updater')); } catch { return; }
-  autoUpdater.on('error', (err) => console.error('[launcher] update check failed:', err.message));
-  autoUpdater.checkForUpdatesAndNotify().catch(() => {});
-  setInterval(() => autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600_000);
+  try { ({ autoUpdater: updater } = require('electron-updater')); } catch { return; }
+  updater.on('checking-for-update', () => setUpdateState({ phase: 'checking', error: null }));
+  updater.on('update-not-available', () => setUpdateState({ phase: 'latest', version: null, percent: null }));
+  updater.on('update-available', (info) => setUpdateState({ phase: 'downloading', version: info.version, percent: 0 }));
+  updater.on('download-progress', (p) => setUpdateState({ phase: 'downloading', percent: Math.round(p.percent) }));
+  updater.on('update-downloaded', (info) => setUpdateState({ phase: 'ready', version: info.version, percent: 100 }));
+  updater.on('error', (err) => {
+    console.error('[launcher] update check failed:', err.message);
+    setUpdateState({ phase: 'error', error: err.message });
+  });
+  updater.checkForUpdatesAndNotify().catch(() => {});
+  setInterval(checkNow, 6 * 3600_000);
 }
 
 // --- start ------------------------------------------------------------------------------------------------
@@ -651,6 +728,7 @@ function start() {
   // proxy in front of the portal answers such a request with 400. ASCII only.
   app.userAgentFallback = app.userAgentFallback.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
   console.info(`[launcher] user agent: ${app.userAgentFallback}`);
+  if (overlayCompat) console.info('[launcher] overlay compatibility: GPU acceleration off');
   // Why it stopped, in the log a player can send.
   process.on('uncaughtException', (err) => console.error('[launcher] uncaught:', err));
   app.on('before-quit', () => console.info(`[launcher] quitting${quitting ? '' : ' (not from the tray / gate)'}`, new Error('quit from').stack.split('\n').slice(1, 6).join(' | ')));

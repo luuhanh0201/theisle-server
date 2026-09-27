@@ -1,7 +1,7 @@
 // Overlay widgets: settings and placement (pure parts of src/overlay.js).
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { normaliseOverlay, normaliseWidget, widgetBounds, DEFAULTS, WIDGETS, BASE } = require('../src/overlay.js');
+const { normaliseOverlay, normaliseWidget, widgetBounds, contentShown, CONTENT_GRACE_MS, DEFAULTS, WIDGETS, BASE } = require('../src/overlay.js');
 
 const display = { bounds: { x: 0, y: 0, width: 1920, height: 1080 } };
 
@@ -69,4 +69,12 @@ test('resize by an edge / corner: proportions kept, 50–250 %', () => {
   assert.equal(resizedScale({ ...box, dir: 's' }, 0, 50), 150);
   assert.equal(resizedScale({ ...box, dir: 'se' }, 10, 60), 160, 'a corner follows the bigger move');
   assert.equal(resizedScale({ ...box, dir: 'e' }, 5000, 0), 250);
+});
+
+test('a blip in the data does not hide a widget; a longer absence does', () => {
+  const t = 100_000;
+  assert.equal(contentShown(true, 0, t), true);
+  assert.equal(contentShown(false, 0, t), false, 'never had anything: hidden');
+  assert.equal(contentShown(false, t - 3000, t), true, 'gone 3 s ago (server restarting): still shown');
+  assert.equal(contentShown(false, t - CONTENT_GRACE_MS - 1, t), false, 'gone longer: hidden');
 });

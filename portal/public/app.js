@@ -129,13 +129,41 @@ if (window.isleLauncher) {
       window.dispatchEvent(new CustomEvent('isle-gamemode', { detail: st }));
     });
   }
-  // Which launcher build this is, under the server name.
+  // Which launcher build this is, under the server name — and (1.0.7+) a
+  // button to look for a newer one now, then install it.
   const sub = document.querySelector('.brand-info p');
   if (sub && window.isleLauncher.version) {
     const v = document.createElement('span');
     v.className = 'launcher-version';
     v.textContent = `Launcher v${window.isleLauncher.version}`;
     sub.append(' · ', v);
+    if (window.isleLauncher.updateGet) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'launcher-update';
+      const show = (st) => {
+        if (!st) return;
+        const text = {
+          dev: '', idle: '⟳ Kiểm tra cập nhật', checking: 'Đang kiểm tra…', latest: '✓ Bản mới nhất · kiểm tra lại',
+          downloading: `Đang tải v${st.version}… ${st.percent ?? 0}%`, ready: `⬆ Cập nhật lên v${st.version}`,
+          error: '⚠ Không kiểm tra được · thử lại',
+        }[st.phase] ?? '⟳ Kiểm tra cập nhật';
+        b.hidden = text === '';
+        b.textContent = text;
+        b.disabled = st.phase === 'checking' || st.phase === 'downloading';
+        b.classList.toggle('ready', st.phase === 'ready');
+        b.title = st.phase === 'ready' ? 'Launcher sẽ tắt, cài bản mới rồi tự mở lại (voice ngắt vài giây)'
+          : st.phase === 'error' ? `Lỗi: ${st.error || 'không rõ'}` : `Đang dùng v${st.current}`;
+      };
+      b.addEventListener('click', () => {
+        const st = window.isleLauncher.updateGet();
+        if (st && st.phase === 'ready') window.isleLauncher.updateInstall();
+        else window.isleLauncher.updateCheck();
+      });
+      window.isleLauncher.onUpdate(show);
+      show(window.isleLauncher.updateGet());
+      sub.append(' ', b);
+    }
   }
 }
 

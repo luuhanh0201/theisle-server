@@ -106,6 +106,10 @@
     gap: 8px;
   }
   .launcher-version { color: var(--emerald-light); font-weight: 700; }
+  .launcher-update { font: inherit; font-weight: 700; color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; cursor: pointer; white-space: nowrap; }
+  .launcher-update:hover:not(:disabled) { color: var(--text); border-color: var(--border-hover); }
+  .launcher-update:disabled { cursor: default; opacity: .75; }
+  .launcher-update.ready { color: #041f14; background: var(--emerald); border-color: transparent; }
   .game-mode-btn[aria-pressed="true"] { background: var(--emerald-soft); border-color: rgba(52,211,153,.5); color: var(--emerald-light); }
   .brand-info p {
     margin: 2px 0 0;
@@ -1840,6 +1844,14 @@
         <p class="v-note">Trong game overlay <b>chỉ để nhìn</b>: chuột bấm xuyên qua xuống game, không lấy focus — không ảnh hưởng thao tác.
           <kbd>F8</kbd> bật / tắt overlay · <kbd>F9</kbd> vào chế độ chỉnh ngay trên màn hình (kéo thả, kéo mép đổi cỡ, ✕ tắt / ＋ bật từng khung), bấm <kbd>F9</kbd> lần nữa là xong.
           Overlay là cửa sổ riêng, không đụng vào game (không lo anti-cheat); để nó nằm trên game, chỉnh The Isle sang <b>Borderless</b> hoặc <b>Windowed</b> (Settings → Display → Window Mode).
+        </p>
+        <p class="v-note">⌨️ <b>F8 / F9 / phím nói không ăn khi đang ở trong game?</b> Thường là do game (hoặc Steam) đang chạy bằng quyền
+          <b>Administrator</b> — Windows chặn không cho chương trình thường thấy phím bấm trong cửa sổ đó. Chạy launcher cũng bằng quyền Administrator
+          (chuột phải → <i>Run as administrator</i>), hoặc tắt "chạy bằng quyền admin" của Steam / The Isle.</p>
+        <p class="v-note" id="ov-compat-wrap" hidden>
+          <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="ov-compat" style="width:16px;height:16px;accent-color:var(--emerald)"> 🛠 Sửa viền đen quanh overlay</label>
+          — bật nếu các khung overlay có <b>nền / viền đen</b> thay vì trong suốt (một số card đồ hoạ, Windows bật HDR).
+          Launcher sẽ <b>khởi động lại</b> (voice ngắt vài giây); xem 3D skin có thể chậm hơn.
         </p>
         <div class="ov-gm">
           <div><b>🎮 Chế độ chơi game</b> — thu launcher xuống khay, trang không vẽ gì; overlay chỉ giữ:</div>

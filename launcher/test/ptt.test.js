@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { UiohookKey } = require('uiohook-napi');
-const { PushToTalk, label, parseBinding, DEFAULT_PTT } = require('../src/ptt.js');
+const { PushToTalk, label, parseBinding, DEFAULT_PTT, REPRESS_AFTER_MS } = require('../src/ptt.js');
 
 const setup = (binding) => {
   const hook = new EventEmitter();
@@ -94,4 +94,22 @@ test('cancelCapture: a waiting capture ends unchanged', async () => {
   hook.emit('keydown', { keycode: UiohookKey.W });
   assert.deepEqual(ptt.binding, DEFAULT_PTT);
   ptt.cancelCapture();   // nothing waiting: no-op
+});
+
+test('a lost release does not eat the next press (the overlay key worked every other time)', () => {
+  const hook = new EventEmitter();
+  const seen = [];
+  let now = 1000;
+  new PushToTalk(hook, { kind: 'key', code: UiohookKey.F8 }, (h) => seen.push(h), undefined, () => now);
+  hook.emit('keydown', { keycode: UiohookKey.F8 });          // pressed; its keyup never arrives
+  now += 5000;
+  hook.emit('keydown', { keycode: UiohookKey.F8 });          // pressed again, seconds later
+  assert.deepEqual(seen, [true, false, true], 'a new press: released, then held again');
+  // Held down for real: the auto-repeat (first repeat within 1 s, then ~30/s) is not a new press.
+  now += REPRESS_AFTER_MS - 200;
+  hook.emit('keydown', { keycode: UiohookKey.F8 });
+  now += 33;
+  hook.emit('keydown', { keycode: UiohookKey.F8 });
+  hook.emit('keyup', { keycode: UiohookKey.F8 });
+  assert.deepEqual(seen, [true, false, true, false]);
 });

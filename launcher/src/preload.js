@@ -15,6 +15,11 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
   contextBridge.exposeInMainWorld('isleLauncher', {
     version: arg('xomgay-version'),
     platform: process.platform,
+    /** Updates: { phase, current, version, percent, error } (phase: dev | idle | checking | latest | downloading | ready | error). */
+    updateGet: () => ipcRenderer.sendSync('update:get'),
+    updateCheck: () => ipcRenderer.send('update:check'),
+    updateInstall: () => ipcRenderer.send('update:install'),
+    onUpdate: (cb) => { if (typeof cb === 'function') ipcRenderer.on('update:state', (_e, st) => cb(st)); },
     /** Start The Isle through Steam. */
     playGame: () => ipcRenderer.send('play'),
 
@@ -45,6 +50,9 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
     /** Put a widget at { x, y } (screen coordinates, any screen) at { scale } %. */
     overlayPlace: (widget, spot) => ipcRenderer.send('overlay:place', String(widget), spot),
     overlayPreview: () => ipcRenderer.send('overlay:preview'),
+    /** "Sửa viền đen": { on, saved } — set it and the launcher restarts without GPU acceleration. */
+    overlayCompatGet: () => ipcRenderer.sendSync('overlay:compat:get'),
+    overlayCompatSet: (on) => ipcRenderer.send('overlay:compat:set', on === true),
     overlayState: (state) => ipcRenderer.send('overlay:state', state),
     /** Your dino, its position and quests, and the AI near (app.js), for the map / dino / quest widgets. */
     overlayGame: (game) => ipcRenderer.send('overlay:game', game),

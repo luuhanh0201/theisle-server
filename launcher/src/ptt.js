@@ -38,16 +38,29 @@ function parseBinding(raw, fallback = DEFAULT_PTT) {
 }
 
 /**
+ * A key still "held" with no event for this long, pressed again: its release
+ * was never seen (it happened in a window the hook could not see, or was
+ * lost). Longer than the keyboard's auto-repeat delay (Windows: up to 1 s),
+ * so a key really held down is never taken for a new press.
+ */
+const REPRESS_AFTER_MS = 1200;
+
+/**
  * Tracks held / released for one binding and calls onChange only on a change
- * (keys auto-repeat while held). Used for the talk key and the range key.
+ * (keys auto-repeat while held). Used for the talk key, the range key and the
+ * overlay keys. A lost release used to eat the next press — the overlay key
+ * (F8) worked every other time (2026-09-27): now a press long after the last
+ * event of that key is a new press (released, then held again).
  */
 class PushToTalk {
-  constructor(hook, binding, onChange, fallback = DEFAULT_PTT) {
+  constructor(hook, binding, onChange, fallback = DEFAULT_PTT, clock = Date.now) {
     this.hook = hook;
     this.fallback = fallback;
     this.binding = parseBinding(binding, fallback);
     this.onChange = onChange;
+    this.clock = clock;
     this.held = false;
+    this.lastDownAt = 0;
     this.capture = null;
     const on = (kind, down) => (e) => this.#event(kind, kind === 'key' ? e.keycode : e.button, down);
     hook.on('keydown', on('key', true));
@@ -66,6 +79,12 @@ class PushToTalk {
       return;
     }
     if (kind !== this.binding.kind || code !== this.binding.code) return;
+    if (down) {
+      const now = this.clock();
+      const missedRelease = this.held && now - this.lastDownAt > REPRESS_AFTER_MS;
+      this.lastDownAt = now;
+      if (missedRelease) { this.held = false; this.onChange(false); }
+    }
     if (down !== this.held) {
       this.held = down;
       this.onChange(down);
@@ -128,4 +147,4 @@ function distinctBindings(wanted) {
   return out;
 }
 
-module.exports = { DEFAULT_PTT, DEFAULT_RANGE, clashOf, distinctBindings, label, parseBinding, PushToTalk, sameBinding };
+module.exports = { DEFAULT_PTT, DEFAULT_RANGE, REPRESS_AFTER_MS, clashOf, distinctBindings, label, parseBinding, PushToTalk, sameBinding };

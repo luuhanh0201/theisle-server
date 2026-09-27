@@ -257,6 +257,14 @@
     }
   });
   $('ov-enabled').addEventListener('change', async (e) => { all = await L.overlaySet({ enabled: e.target.checked }); render(); });
+
+  // "Sửa viền đen" (launcher 1.0.7+): the launcher restarts without GPU acceleration.
+  const compat = L.overlayCompatGet ? L.overlayCompatGet() : null;
+  if (compat && $('ov-compat')) {
+    $('ov-compat-wrap').hidden = false;
+    $('ov-compat').checked = compat.saved;
+    $('ov-compat').addEventListener('change', (e) => L.overlayCompatSet(e.target.checked));
+  }
   $('ov-preview').addEventListener('click', () => L.overlayPreview());
   $('ov-drag').addEventListener('click', () => {
     editing = !editing;
