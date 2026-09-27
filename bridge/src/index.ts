@@ -94,6 +94,7 @@ const metrics = new Metrics(config.dataDir, async () => {
     online: store.online().length,
     fps: fresh ? live.fps : null,
     ai: fresh && live.ai && !live.ai.stale ? live.ai.count : null,
+    fish: fresh && live.ai && !live.ai.stale ? live.ai.fish : null,
   };
 });
 metrics.start();

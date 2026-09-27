@@ -22,6 +22,8 @@ export interface MetricSample {
   online: number | null;
   fps: number | null;
   ai: number | null;
+  /** The game's ambient fish alive (the live AI scan). Absent from samples before 2026-09-27. */
+  fish?: number | null;
   /** Machine CPU, % of all cores. */
   cpu: number | null;
   /** Game process CPU, % of one core (can exceed 100). */
@@ -98,7 +100,7 @@ function percentile(xs: number[], p: number): number | null {
 
 export interface MetricPoint {
   t: number;
-  online: number | null; fps: number | null; fpsMin: number | null; ai: number | null;
+  online: number | null; fps: number | null; fpsMin: number | null; ai: number | null; fish: number | null;
   cpu: number | null; gameCpu: number | null; gameRss: number | null; memUsed: number | null; swapUsed: number | null;
 }
 
@@ -120,7 +122,7 @@ export function downsample(samples: MetricSample[], from: number, to: number, ma
       t: from + k * width + Math.floor(width / 2),
       online: online.length ? Math.max(...online) : null,
       fps: avg(fps), fpsMin: fps.length ? Math.min(...fps) : null,
-      ai: avg(nums(b, 'ai')), cpu: avg(nums(b, 'cpu')), gameCpu: avg(nums(b, 'gameCpu')),
+      ai: avg(nums(b, 'ai')), fish: avg(nums(b, 'fish')), cpu: avg(nums(b, 'cpu')), gameCpu: avg(nums(b, 'gameCpu')),
       gameRss: avg(nums(b, 'gameRss')), memUsed: avg(nums(b, 'memUsed')), swapUsed: avg(nums(b, 'swapUsed')),
     };
   });
@@ -173,7 +175,7 @@ async function findGamePid(): Promise<number | null> {
   return best?.pid ?? null;
 }
 
-export interface LiveNumbers { online: number | null; fps: number | null; ai: number | null }
+export interface LiveNumbers { online: number | null; fps: number | null; ai: number | null; fish?: number | null }
 
 export class Metrics {
   readonly #samples: MetricSample[] = [];
@@ -213,7 +215,7 @@ export class Metrics {
     const [stat, mem, liveNums] = await Promise.all([
       readFile('/proc/stat', 'utf8').catch(() => ''),
       readFile('/proc/meminfo', 'utf8').catch(() => ''),
-      this.live().catch(() => ({ online: null, fps: null, ai: null })),
+      this.live().catch((): LiveNumbers => ({ online: null, fps: null, ai: null, fish: null })),
     ]);
     const cur = parseCpuTotals(stat);
     const cpu = cur && this.#prevCpu ? cpuPercent(this.#prevCpu, cur) : null;
@@ -237,7 +239,7 @@ export class Metrics {
     }
 
     const s: MetricSample = {
-      t: now, online: liveNums.online, fps: liveNums.fps, ai: liveNums.ai, cpu,
+      t: now, online: liveNums.online, fps: liveNums.fps, ai: liveNums.ai, fish: liveNums.fish ?? null, cpu,
       gameCpu: gameCpu !== null && gameCpu >= 0 ? gameCpu : null, gameRss,
       memUsed: m ? m.totalMb - m.availableMb : null, memTotal: m?.totalMb ?? null, swapUsed: m?.swapUsedMb ?? null,
     };
