@@ -224,7 +224,8 @@ export class Store {
         p.yaw = event.yaw ?? null;
         p.ping = typeof event.ping === 'number' && Number.isFinite(event.ping) ? event.ping : null;
         if (event.max !== undefined) p.max = event.max;
-        this.speciesStats.snapshot(event.steamId, event.t, event.species, event.growth, event.max);
+        this.speciesStats.snapshot(event.steamId, event.t, event.species, event.growth, event.max,
+          typeof event.prime === 'boolean' ? event.prime : undefined);
         if (event.loc !== undefined) this.groundPoints.add(event.loc.x, event.loc.y, event.loc.z, event.species);
         const life = this.#openLife(event.steamId);
         if (life !== null && event.t >= life.spawnedAt) {

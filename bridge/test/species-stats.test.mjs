@@ -46,3 +46,18 @@ test('maximaAt: exact, between two readings, and outside them', () => {
   assert.equal(above.exact, false, 'beyond the readings: the nearest, not exact');
   assert.equal(maximaAt([], 0.5), null);
 });
+
+test("the snapshot's own prime flag wins over the events' times; a usual value above a higher growth's is dropped", () => {
+  const s = new SpeciesStats();
+  const CROC = 'BP_Deinosuchus_C';
+  // No prime event seen yet, but the snapshot says prime: kept apart.
+  s.snapshot(P, 10, CROC, 0.88, { health: 10931 }, true);
+  s.snapshot(P, 11, CROC, 1, { health: 9500 }, false);
+  // An old snapshot (no flag) whose prime event came late: passed for usual.
+  s.snapshot(P, 12, CROC, 0.9, { health: 10823 });
+  s.snapshot(P, 13, CROC, 0.75, { health: 7943 });
+  const v = s.view()[CROC];
+  assert.equal(v.prime.max.health, 10931);
+  assert.deepEqual(v.points.map((p) => [p.growth, p.max.health]), [[0.75, 7943], [1, 9500]],
+    'maxima only grow with growth: 10,823 at 90 % is a prime value');
+});

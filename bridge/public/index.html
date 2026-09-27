@@ -336,6 +336,9 @@
   .range-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   input[type=range] { flex: 1; min-width: 180px; accent-color: var(--accent-2); padding: 0; border: 0; background: none; box-shadow: none; }
   .growth-val { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; min-width: 64px; font-variant-numeric: tabular-nums; }
+  .growth-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 18px; }
+  .growth-stats b { color: var(--text); font-weight: 700; }
+  .growth-stats .pr { color: var(--gar); }
   .mut-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .mut-field label { font-size: 11.5px; }
   .mut-field .warn { font-size: 11px; color: var(--dmg); margin-top: 3px; min-height: 14px; }
@@ -1344,6 +1347,7 @@
                   <button type="button" data-g="75">75%</button>
                   <button type="button" data-g="100">Trưởng thành 100%</button>
                 </div>
+                <div class="growth-stats" id="f-growth-stats"></div>
                 <div class="step-hint">Giới tính không chọn được: người chơi chọn khi respawn, và restore không có cách đổi nó.</div>
                 <div class="row" style="margin-top:10px;align-items:center">
                   <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" class="switch" id="f-stomach" checked style="width:auto"> Dạ dày đầy khi lấy ra</label>
@@ -5132,8 +5136,11 @@ function renderMutationOptions() {
   refreshTip();
 }
 
+// The growth slider's maxima: this species' readings, fetched with the preview card.
+const growthStats = { species: null, data: null };
 function renderPreview() {
   $('f-growth-val').textContent = `${creator.growth}%`;
+  renderGrowthStats();
   renderPrimeControls();
   for (const b of document.querySelectorAll('#f-presets button')) {
     b.classList.toggle('on', Number(b.dataset.g) === creator.growth);
@@ -5256,8 +5263,53 @@ async function loadExpected(classPath) {
   try {
     data = await getJson(`/api/species-stats?species=${encodeURIComponent(species)}&growth=${g}`);
   } catch { return; }
+  // Kept for the line under the growth slider, redrawn at once while dragging.
+  growthStats.species = species;
+  growthStats.data = data;
+  renderGrowthStats();
   if (seq !== expectedSeq || !$('f-expected')) return;
   $('f-expected').innerHTML = expectedCard(data, g);
+}
+
+// --- the maxima under the growth slider: follow the slider, no request ---------
+/** The usual maxima at growth g (0–1) from the readings: straight between the two nearest (bridge maximaAt). */
+function maximaAtGrowth(points, g) {
+  if (!points || points.length === 0) return null;
+  const first = points[0], last = points[points.length - 1];
+  if (g <= first.growth) return first.max;
+  if (g >= last.growth) return last.max;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    if (g >= a.growth && g <= b.growth) {
+      const f = (g - a.growth) / (b.growth - a.growth || 1);
+      const out = {};
+      for (const k of Object.keys(a.max)) if (isNum(a.max[k]) && isNum(b.max[k])) out[k] = a.max[k] + (b.max[k] - a.max[k]) * f;
+      return out;
+    }
+  }
+  return null;
+}
+function renderGrowthStats() {
+  const el = $('f-growth-stats');
+  if (!el) return;
+  const classPath = selectedClassPath();
+  const species = classPath ? String(classPath).split('.').pop() : null;
+  const data = growthStats.species === species ? growthStats.data : null;
+  const max = data ? maximaAtGrowth(data.points, creator.growth / 100) : null;
+  if (!max) { el.innerHTML = species ? '<span>Chưa có số đo của loài này ở server.</span>' : ''; return; }
+  const fmt = (v) => Math.round(v).toLocaleString('vi-VN');
+  const cell = (label, v) => (isNum(v) ? `<span>${label} <b>${fmt(v)}</b></span>` : '');
+  // Prime: the usual maxima times what prime added on this species here (health and stomach).
+  let factor = null;
+  const pm = data.prime;
+  if (primeWanted() && pm && isNum(pm.max.health)) {
+    const base = maximaAtGrowth(data.points, pm.growth);
+    if (base && isNum(base.health) && base.health > 0) factor = pm.max.health / base.health;
+  }
+  el.innerHTML = [
+    cell('❤ Máu', max.health), cell('⚡ Thể lực', max.stamina), cell('🍖 Dạ dày', max.hunger), cell('💧 Nước', max.thirst),
+    factor ? `<span class="pr">👑 prime ~<b>${fmt(max.health * factor)}</b> máu · <b>${fmt((max.hunger ?? 0) * factor)}</b> dạ dày</span>` : '',
+  ].join('');
 }
 function expectedCard(data, g) {
   const fmt = (v) => (isNum(v) ? Math.round(v).toLocaleString('vi-VN') : '—');
@@ -5281,7 +5333,7 @@ function expectedCard(data, g) {
       factor = base && isNum(base.health) && base.health > 0 ? pm.max.health / base.health : null;
       primeNote = `👑 Prime trên server này: máu và dạ dày tối đa <b>tăng dần</b> khi dino giữ trạng thái prime —
         cao nhất đã thấy <b>${fmt(pm.max.health)} máu</b>${factor ? ` (×${factor.toFixed(2).replace('.', ',')})` : ''}
-        ở growth ${pct(pm.growth)} (${pm.readings} lần đọc). Lúc mới lên prime, chỉ số vẫn như thường.`;
+        ở growth ${pct(pm.growth)} (${pm.readings} lần đọc). Lấy ra từ gara là có ngay chỉ số prime.`;
     } else {
       primeNote = '👑 Chưa từng thấy dino prime của loài này trên server — chưa biết prime tăng bao nhiêu.';
     }

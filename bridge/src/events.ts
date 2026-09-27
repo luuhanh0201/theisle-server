@@ -57,6 +57,8 @@ export interface SnapshotEvent extends BaseEvent {
   max?: Partial<Record<VitalName, number>>;
   /** Round trip the server measured, ms (PlayerState.CompressedPing x 4). Absent: not readable. */
   ping?: number;
+  /** A prime elder now (IsPrimeElder). Absent from older mods. */
+  prime?: boolean | null;
 }
 
 export type VitalName = 'health' | 'stamina' | 'hunger' | 'thirst' | 'blood' | 'oxygen';

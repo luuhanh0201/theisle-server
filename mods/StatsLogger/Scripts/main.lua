@@ -458,6 +458,7 @@ local function checkLife(id, name, pawn, snap)
         })
         local skin = H.readSkin(pawn)
         local prime = primeState(pawn)
+        snap.prime = prime.prime
         life[id] = {
             species   = snap.species,
             health    = health,
@@ -552,6 +553,10 @@ local function checkLife(id, name, pawn, snap)
 
     -- Prime / elder: an event when it changes (and once per life).
     local prime = primeState(pawn)
+    -- On the snapshot too: the bridge keeps a prime dino's maxima apart from
+    -- the usual ones, and telling them apart by the "prime" events' times
+    -- let a prime Deinosuchus's 10,800 pass for the plain value at 88 %.
+    snap.prime = prime.prime
     local pk = primeKey(prime)
     if pk ~= prev.primeKey then
         prev.primeKey = pk

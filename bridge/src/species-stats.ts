@@ -65,12 +65,16 @@ export class SpeciesStats {
     return (this.#primeTimes.get(steamId) ?? []).some((i) => t >= i.from && (i.to === null || t < i.to));
   }
 
-  /** A snapshot of a live dino. */
-  snapshot(steamId: string, t: number, species: string | undefined, growth: number | null | undefined, rawMax: unknown): void {
+  /**
+   * A snapshot of a live dino. `prime`: what the snapshot itself says (newer
+   * StatsLogger); without it, the times of the "prime" events tell.
+   */
+  snapshot(steamId: string, t: number, species: string | undefined, growth: number | null | undefined, rawMax: unknown,
+    prime?: boolean): void {
     if (!species || typeof growth !== 'number' || !Number.isFinite(growth) || growth < 0 || growth > 1.5) return;
     const max = cleanMax(rawMax);
     if (max === null) return;
-    if (this.#wasPrime(steamId, t)) {
+    if (prime ?? this.#wasPrime(steamId, t)) {
       const best = this.#prime.get(species);
       if (best === undefined || (max.health ?? 0) > (best.max.health ?? 0)) {
         this.#prime.set(species, { growth: bucket(growth), max, readings: (best?.readings ?? 0) + 1, t });
@@ -107,6 +111,15 @@ export class SpeciesStats {
             max[k] = [...counts.entries()].sort((x, y) => y[1] - x[1] || y[0] - x[0])[0]?.[0] as number;
           }
           return { growth, max, t: seen.t };
+        })
+        // Maxima only grow with growth: a usual value above one read at a
+        // higher growth is a prime dino's that passed for usual (a
+        // Deinosuchus at 88 %: 10,823, at 100 %: 9,500 — 2026-09-28).
+        .filter((p, i, all) => {
+          const h = p.max.health;
+          if (h === undefined) return true;
+          const later = all.slice(i + 1).map((q) => q.max.health).filter((v): v is number => v !== undefined);
+          return later.length === 0 || h <= Math.min(...later) * 1.02;
         });
       out[species] = { points, prime: this.#prime.get(species) ?? null };
     }
