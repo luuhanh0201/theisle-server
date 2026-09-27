@@ -180,7 +180,7 @@ test('admin-made slots carry the fill the mod applies on redeem', async () => {
 });
 
 test('admin-made prime: isPrime + elderStacks stored for restore.lua; prime needs 75 % growth', async () => {
-  await createSlot(A, 'prime', { classPath: 'X.BP_Rex_C', growth: 1, isPrime: true, elderStacks: 2 });
+  await createSlot(A, 'prime', { classPath: 'X.BP_Rex_C', growth: 1, isPrime: true, elderStacks: 2, primeConditions: '1010111100' });
   const st = JSON.parse(readFileSync(join(root, 'stored', `${A}__prime.json`), 'utf8'));
   assert.equal(st.isPrime, true);
   assert.equal(st.elderStacks, 2);
@@ -188,7 +188,10 @@ test('admin-made prime: isPrime + elderStacks stored for restore.lua; prime need
   const plain = JSON.parse(readFileSync(join(root, 'stored', `${A}__plainprime.json`), 'utf8'));
   assert.equal(plain.isPrime, null, 'not asked = left as the game has it');
   assert.equal(plain.elderStacks, null);
-  await assert.rejects(() => createSlot(A, 'young', { classPath: 'X.BP_Rex_C', growth: 0.5, isPrime: true }), /at least 75/);
+  await assert.rejects(() => createSlot(A, 'young', { classPath: 'X.BP_Rex_C', growth: 0.5, isPrime: true, primeConditions: '1010111100' }), /at least 75/);
+  // The game turns a dino prime only with five tasks done: asked with fewer, it came out plain (2026-09-27).
+  await assert.rejects(() => createSlot(A, 'fewtasks', { classPath: 'X.BP_Rex_C', growth: 1, isPrime: true, primeConditions: '0000101100' }), /at least 5 of the 10/);
+  await assert.rejects(() => createSlot(A, 'notasks', { classPath: 'X.BP_Rex_C', growth: 1, isPrime: true }), /at least 5 of the 10/);
   await assert.rejects(() => createSlot(A, 'bad1', { classPath: 'X.BP_Rex_C', growth: 1, isPrime: 'yes' }), /isPrime/);
   await assert.rejects(() => createSlot(A, 'bad2', { classPath: 'X.BP_Rex_C', growth: 1, elderStacks: 1.5 }), /elderStacks/);
   await assert.rejects(() => createSlot(A, 'bad3', { classPath: 'X.BP_Rex_C', growth: 1, elderStacks: 99 }), /elderStacks/);

@@ -1361,7 +1361,7 @@
                   <div class="prime-tasks-head">
                     <b>Nhiệm vụ prime</b> <span class="chip" id="f-prime-count">0/10</span>
                     <span class="muted" id="f-prime-src"></span>
-                    <button type="button" class="btn" id="f-prime-reload" style="margin-left:auto">Lấy lại từ dino gần nhất</button>
+                    <button type="button" class="btn" id="f-prime-reload" style="margin-left:auto" title="Lần có nhiều nhiệm vụ nhất của người này với loài này">Lấy lại từ lịch sử</button>
                   </div>
                   <div class="prime-grid" id="f-prime-conds"></div>
                   <div class="step-hint">Dino lấy ra có đúng các nhiệm vụ được tick (đủ 5 là đủ điều kiện prime). Mặc định lấy từ dino
@@ -5180,8 +5180,26 @@ function renderPrimeCount() {
   $('f-prime-count').classList.toggle('tone-ok', n >= 5);
 }
 $('f-prime-conds').addEventListener('change', () => { $('f-prime-src').textContent = 'đã sửa tay'; renderPrimeCount(); });
+// The game makes a dino prime only with five tasks done: prime ticked on 2–4
+// tasks came out plain (2026-09-27). Ticking prime fills up to five, the most
+// usual ones first (eat all three, migration, sanctuary, patrol).
+const PRIME_FILL_ORDER = ['3', '5', '1', '6', '10', '2', '4', '9', '7', '8'];
+function ensurePrimeTasks() {
+  if (!$('f-prime').checked) return;
+  const boxes = [...$('f-prime-conds').querySelectorAll('input')];
+  let n = boxes.filter((c) => c.checked).length;
+  if (n >= 5) return;
+  for (const cond of PRIME_FILL_ORDER) {
+    if (n >= 5) break;
+    const box = boxes.find((c) => c.dataset.cond === cond);
+    if (box && !box.checked) { box.checked = true; n += 1; }
+  }
+  $('f-prime-src').textContent = 'đã tự thêm cho đủ 5 — prime cần ít nhất 5 nhiệm vụ';
+  renderPrimeCount();
+}
+$('f-prime').addEventListener('change', ensurePrimeTasks);
 let primeLastKey = null;
-/** Fill the ticks from the player's last dino of the chosen species (/api/prime-last). */
+/** Fill the ticks from the player's dino of the chosen species with the most tasks (/api/prime-last). */
 async function loadLastPrime(force = false) {
   const steamId = $('f-steam').value.trim();
   const classPath = selectedClassPath();
@@ -5197,12 +5215,13 @@ async function loadLastPrime(force = false) {
       [...$('f-prime-conds').querySelectorAll('input')].forEach((c) => { c.checked = c.dataset.cond === '7' || c.dataset.cond === '8'; });
     } else {
       [...$('f-prime-conds').querySelectorAll('input')].forEach((c) => { c.checked = last.conditions[c.dataset.cond] === true; });
-      $('f-prime-src').textContent = `theo dino gần nhất cùng loài (${new Date(last.t * 1000).toLocaleString('vi-VN')}${last.growth != null ? `, ${Math.round(last.growth * 100)}%` : ''})`;
+      $('f-prime-src').textContent = `theo lần nhiều nhiệm vụ nhất của loài này (${new Date(last.t * 1000).toLocaleString('vi-VN')}${last.growth != null ? `, ${Math.round(last.growth * 100)}%` : ''})`;
     }
   } catch {
     $('f-prime-src').textContent = 'không tra được';
   }
   renderPrimeCount();
+  ensurePrimeTasks();
 }
 $('f-prime-reload').addEventListener('click', () => { void loadLastPrime(true); });
 $('create').addEventListener('input', () => { void loadLastPrime(); });
@@ -5439,6 +5458,11 @@ $('create').addEventListener('submit', async (ev) => {
     out.className = 'result err';
     out.textContent = !classPath ? 'Chọn một loài dino trước.'
       : `Tên mutation ở ${SLOT_LABEL(bad[0])} không hợp lệ.`;
+    return;
+  }
+  if (primeWanted() && [...primeCode()].filter((c) => c === '1').length < 5) {
+    out.className = 'result err';
+    out.textContent = 'Prime cần ít nhất 5/10 nhiệm vụ — game không cho prime nếu thiếu. Tick thêm nhiệm vụ hoặc bỏ Prime.';
     return;
   }
   btn.disabled = true;

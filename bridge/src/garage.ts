@@ -248,6 +248,12 @@ export async function createSlot(
     [...spec.primeConditions].forEach((c, i) => { (primeData as Record<string, boolean>)[`cond${i + 1}`] = c === '1'; });
     primeData['eligible'] = [...spec.primeConditions].filter((c) => c === '1').length >= PRIME_NEEDED;
   }
+  // The game makes a dino prime only with PRIME_NEEDED tasks done: asked with
+  // fewer, it stays not prime — admin slots with 2–4 tasks and prime ticked
+  // came out plain (2026-09-27). Refused here instead of a silent failure.
+  if (spec.isPrime === true && (primeData === null || primeData['eligible'] !== true)) {
+    throw new ValidationError(`a prime elder needs at least ${PRIME_NEEDED} of the 10 prime tasks done (primeConditions)`);
+  }
   let skin: Record<string, unknown> | null = null;
   if (spec.skin !== undefined && spec.skin !== null) {
     const raw = spec.skin as Record<string, unknown>;
