@@ -17,13 +17,19 @@
 -- game thread, then read back into Saved/applied.json and UE4SS.log.
 --
 -- Keeping fish (Saved/keep.json, read every 5 s, kept across restarts):
---   { "enabled": true, "despawnDelay": 86400, "maxTotal": 150 }
+--   { "enabled": true, "despawnDelay": 3600, "maxTotal": 60,
+--     "perWindow": 10, "windowSec": 300,
+--     "nearClass": "BP_Deinosuchus_C", "nearM": 5000 }
 -- Each fish the game places gets DespawnDelaySeconds = despawnDelay (game:
 -- 25 s once no player is within its RelevanceDistance, 100 m), so fish stay
 -- in the waters players have left: spread over the map instead of only
 -- around players. RelevanceDistance is left alone (likely also who gets the
--- fish over the network). Past maxTotal kept fish, new ones are left to the
--- game. Flag first on the first write of a run, like the spawner writes.
+-- fish over the network). Past maxTotal kept fish, or past perWindow new ones
+-- in windowSec, new ones are left to the game. Fish within nearM metres of a
+-- player on nearClass (the crocodiles) are kept first. The mod cannot make
+-- fish (the game parks and removes any it did not place): only the game's
+-- spawner, around players near water, does. Flag first on the first write of
+-- a run, like the spawner writes.
 -- "debug" turns the game's own fish-spawn logging on (bDebugAmbientFishVerbose:
 -- why a spawn failed, in TheIsle.log). "census" counts every TIAmbientFish the
 -- game made — placed, or parked at (0, 0, 0) — by class.
@@ -159,16 +165,41 @@ local function addressOf(obj)
     local ok, a = pcall(function() return obj:GetAddress() end)
     return ok and type(a) == "number" and a ~= 0 and a or nil
 end
+local windowStart, windowCount = 0, 0
+
+--- Where the players on `cls` are (game thread): { {x, y}, … }.
+local function playersOn(cls)
+    local out = {}
+    if type(cls) ~= "string" or cls == "" then return out end
+    H.forEachPlayer(function(ctrl)
+        local pawn = H.livePawnFromCtrl(ctrl)
+        if not pawn then return end
+        local okC, n = pcall(function() return pawn:GetClass():GetFName():ToString() end)
+        if not (okC and tostring(n) == cls) then return end
+        local okL, v = pcall(function() return pawn:K2_GetActorLocation() end)
+        if okL and v then out[#out + 1] = { v.X, v.Y } end
+    end)
+    return out
+end
+
 local function keepFish()
     if blocked then return end
     local k = readJson(DIR .. "keep.json")
     if k == nil or k.enabled ~= true then return end
-    local delay = tonumber(k.despawnDelay) or 86400
-    local maxTotal = math.floor(tonumber(k.maxTotal) or 150)
-    if delay < 25 or delay > 604800 or maxTotal < 0 or maxTotal > 1000 then return end
+    local delay = tonumber(k.despawnDelay) or 3600
+    local maxTotal = math.floor(tonumber(k.maxTotal) or 60)
+    local perWindow = math.floor(tonumber(k.perWindow) or 1000)
+    local windowSec = tonumber(k.windowSec) or 300
+    local nearCm = (tonumber(k.nearM) or 0) * 100
+    if delay < 25 or delay > 604800 or maxTotal < 0 or maxTotal > 1000 or perWindow < 0 or windowSec < 10 then return end
+    local now = os.time()
+    if now - windowStart >= windowSec then windowStart, windowCount = now, 0 end
+
     local okF, all = pcall(function() return FindAllOf("TIAmbientFish") or {} end)
     if not okF then return end
+    local crocs = nearCm > 0 and playersOn(k.nearClass) or {}
     local seen, count, placed, fresh = {}, 0, 0, 0
+    local near, far = {}, {}
     for _, a in ipairs(all) do
         local addr = addressOf(a)
         if addr then
@@ -179,22 +210,33 @@ local function keepFish()
                 seen[addr] = true
                 if kept[addr] then
                     count = count + 1
-                elseif count < maxTotal then
-                    local first = clearFlagAt == nil and next(kept) == nil
-                    if first then writeFile(FLAG, tostring(os.time())); clearFlagAt = os.time() + 60 end
-                    if pcall(function() a.DespawnDelaySeconds = delay end) then
-                        kept[addr] = true
-                        count = count + 1
-                        fresh = fresh + 1
+                else
+                    local close = false
+                    for _, c in ipairs(crocs) do
+                        if (v.X - c[1]) ^ 2 + (v.Y - c[2]) ^ 2 <= nearCm ^ 2 then close = true; break end
                     end
+                    table.insert(close and near or far, { a = a, addr = addr })
                 end
             end
         end
     end
+    -- Near the crocodiles first, then the rest, within both limits.
+    for _, list in ipairs({ near, far }) do
+        for _, f in ipairs(list) do
+            if count >= maxTotal or windowCount >= perWindow then break end
+            local first = clearFlagAt == nil and next(kept) == nil
+            if first then writeFile(FLAG, tostring(now)); clearFlagAt = now + 60 end
+            if pcall(function() f.a.DespawnDelaySeconds = delay end) then
+                kept[f.addr] = true
+                count, fresh, windowCount = count + 1, fresh + 1, windowCount + 1
+            end
+        end
+    end
     for addr in pairs(kept) do if not seen[addr] then kept[addr] = nil end end
-    if (fresh > 0 and os.time() - keptLog >= 60) or os.time() - keptLog >= 300 then
-        keptLog = os.time()
-        H.log(string.format("%s: keep — %d fish kept (+%d), %d placed in all, max %d", MOD, count, fresh, placed, maxTotal))
+    if (fresh > 0 and now - keptLog >= 60) or now - keptLog >= 300 then
+        keptLog = now
+        H.log(string.format("%s: keep — %d fish kept (+%d), %d placed in all, %d near %d crocodile(s), max %d, %d/%d this window",
+            MOD, count, fresh, placed, #near, #crocs, maxTotal, windowCount, perWindow))
     end
 end
 

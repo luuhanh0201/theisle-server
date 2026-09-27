@@ -100,6 +100,29 @@ poll.fn()
 check("turned off: new fish left to the game", rawget(newcomer, "DespawnDelaySeconds") == 25)
 os.remove("Mods/FishTune/Saved/keep.json")
 
+say("\n-- 2c. keeping: at most perWindow new ones per window, near the crocodiles first --")
+local croc = H.makePawn({ class = "BP_Deinosuchus_C", loc = { X = 1000000, Y = 0, Z = 0 } })
+local crocCtrl = H.makeCtrl("76561190000000009", croc)
+local far1, far2, near1, near2 = swimmer(5000), swimmer(6000), swimmer(1000500), swimmer(1001000)
+lake = { far1, far2, near1, near2 }
+_G.FindAllOf = function(c)
+  if c == "TIAIWorldSpawner" then return { spawnerObj } end
+  if c == "TIAmbientFish" then return lake end
+  if c == "PlayerController" then return { crocCtrl } end
+  return {}
+end
+kf = assert(io.open("Mods/FishTune/Saved/keep.json", "w"))
+kf:write(json.encode({ enabled = true, despawnDelay = 3600, maxTotal = 60, perWindow = 2, windowSec = 300,
+  nearClass = "BP_Deinosuchus_C", nearM = 5000 })); kf:close()
+clock = clock + 301   -- a fresh window (the keeps above counted in the last one)
+poll.fn()
+check("the two by the crocodile kept first", rawget(near1, "DespawnDelaySeconds") == 3600 and rawget(near2, "DespawnDelaySeconds") == 3600)
+check("the window is full: the far ones wait", rawget(far1, "DespawnDelaySeconds") == 25 and rawget(far2, "DespawnDelaySeconds") == 25)
+clock = clock + 301
+poll.fn()
+check("next window: the far ones kept", rawget(far1, "DespawnDelaySeconds") == 3600 and rawget(far2, "DespawnDelaySeconds") == 3600)
+os.remove("Mods/FishTune/Saved/keep.json")
+
 say("\n-- 3. a run that stopped during a write: no more writes --")
 H.reset()
 local fl = assert(io.open("Mods/FishTune/Saved/writing.flag", "w")); fl:close()
