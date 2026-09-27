@@ -170,6 +170,32 @@ local function addressOf(obj)
 end
 local windowStart, windowCount = 0, 0
 
+-- Watching the kept kinds (onlyClasses): each fish's last place, so a fish
+-- that jumps (moved by the game) or goes away is logged with how far the
+-- nearest player was when last seen — eaten, removed by the game, or moved.
+local track = {}         -- address -> { cls, x, y, z, since, near, who }
+local JUMP_CM = 6000     -- more than 60 m in one 5 s look: moved, not swum
+
+--- Every player's place (game thread): { {id, x, y}, … }.
+local function allPlayers()
+    local out = {}
+    H.forEachPlayer(function(ctrl)
+        local pawn = H.livePawnFromCtrl(ctrl)
+        if not pawn then return end
+        local okL, v = pcall(function() return pawn:K2_GetActorLocation() end)
+        if okL and v then out[#out + 1] = { H.safeSteamId(ctrl) or "?", v.X, v.Y } end
+    end)
+    return out
+end
+local function nearestOf(players, x, y)
+    local best, who = nil, nil
+    for _, p in ipairs(players) do
+        local d = math.sqrt((x - p[2]) ^ 2 + (y - p[3]) ^ 2)
+        if best == nil or d < best then best, who = d, p[1] end
+    end
+    return best, who
+end
+
 --- Where the players on `cls` are (game thread): { {x, y}, … }.
 local function playersOn(cls)
     local out = {}
@@ -208,6 +234,7 @@ local function keepFish()
     end
     local seen, count, placed, fresh = {}, 0, 0, 0
     local near, far = {}, {}
+    local players = allPlayers()
     for _, a in ipairs(all) do
         local addr = addressOf(a)
         if addr then
@@ -217,9 +244,24 @@ local function keepFish()
                 placed = placed + 1
                 seen[addr] = true
                 local wanted = true
-                if only ~= nil and not kept[addr] then
+                local t = track[addr]
+                if only ~= nil and not kept[addr] and t == nil then
                     local okC, n = pcall(function() return a:GetClass():GetFName():ToString() end)
                     wanted = okC and only[tostring(n)] == true
+                    if wanted then
+                        t = { cls = tostring(n), x = v.X, y = v.Y, z = v.Z, since = now }
+                        track[addr] = t
+                    end
+                end
+                if t ~= nil then
+                    local jump = math.sqrt((v.X - t.x) ^ 2 + (v.Y - t.y) ^ 2 + (v.Z - t.z) ^ 2)
+                    if jump > JUMP_CM then
+                        local d, who = nearestOf(players, v.X, v.Y)
+                        H.log(string.format("%s: fish moved — %s jumped %.0f m in one look (nearest player %s m, %s)",
+                            MOD, t.cls, jump / 100, d and string.format("%.0f", d / 100) or "?", tostring(who)))
+                    end
+                    t.x, t.y, t.z = v.X, v.Y, v.Z
+                    t.near, t.who = nearestOf(players, v.X, v.Y)
                 end
                 if kept[addr] then
                     count = count + 1
@@ -246,6 +288,14 @@ local function keepFish()
         end
     end
     for addr in pairs(kept) do if not seen[addr] then kept[addr] = nil end end
+    for addr, t in pairs(track) do
+        if not seen[addr] then
+            H.log(string.format("%s: fish gone — %s after %d s; last seen %s m from the nearest player (%s)%s", MOD,
+                t.cls, now - t.since, t.near and string.format("%.0f", t.near / 100) or "?", tostring(t.who),
+                (t.near and t.near <= 800) and " — close by: eaten, or removed by the game" or " — nobody near: removed by the game"))
+            track[addr] = nil
+        end
+    end
     if (fresh > 0 and now - keptLog >= 60) or now - keptLog >= 300 then
         keptLog = now
         H.log(string.format("%s: keep — %d fish kept (+%d), %d placed in all, %d near %d crocodile(s), max %d, %d/%d this window",

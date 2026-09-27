@@ -142,6 +142,30 @@ clock = clock + 301
 poll.fn()
 check("a big one kept", rawget(cat, "DespawnDelaySeconds") == 3600)
 check("a small one left to the game", rawget(hop, "DespawnDelaySeconds") == 25)
+
+say("\n-- 2e. watching the kept kinds: a jump and a disappearance are logged --")
+local pos = { X = 1000000, Y = 0, Z = 0 }
+local coel = setmetatable({ DespawnDelaySeconds = 25 }, { __index = function(_, k)
+  if k == "GetAddress" then return function() return 9001 end end
+  if k == "IsValid" then return function() return true end end
+  if k == "K2_GetActorLocation" then return function() return { X = pos.X, Y = pos.Y, Z = pos.Z } end end
+  if k == "GetClass" then return function() return { GetFName = function() return FName("BP_Coalecanth_C") end } end end
+end })
+lake = { coel }
+H.log = {}
+clock = clock + 301
+poll.fn()
+check("the coelacanth kept", rawget(coel, "DespawnDelaySeconds") == 3600)
+pos.X = pos.X + 20000   -- 200 m in one look
+poll.fn()
+local function logged(t) for _, l in ipairs(H.log) do if l:find(t, 1, true) then return l end end end
+check("a jump is logged as moved by the game", logged("fish moved — BP_Coalecanth_C jumped 200 m") ~= nil, table.concat(H.log, " | "))
+pos.X = 1000300          -- back next to the crocodile (3 m)…
+poll.fn()
+lake = {}                -- …and gone
+poll.fn()
+local gone = logged("fish gone — BP_Coalecanth_C")
+check("gone, with the nearest player: close by", gone ~= nil and gone:find("close by", 1, true) ~= nil, gone)
 os.remove("Mods/FishTune/Saved/keep.json")
 
 say("\n-- 3. a run that stopped during a write: no more writes --")
