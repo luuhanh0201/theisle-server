@@ -49,6 +49,9 @@ FishTune : 1
 ; SkinLab: TEST SERVER ONLY (scripts/test-server.sh turns it on in the test copy):
 ; spawns a dino nobody plays and tries skin writes / effect setters on it.
 SkinLab : 0
+; LightLab: TEST SERVER ONLY (turned on by hand in the test copy): actor census
+; (fireflies, lights) and a replicated PointLight attached to a dino.
+LightLab : 0
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,
