@@ -69,6 +69,13 @@ export interface NewSlotSpec {
    * restore.lua paints it (step 8). Left out: the fresh dino's own.
    */
   skin?: unknown;
+  /**
+   * The quest mutations it had unlocked (drink saltwater, jump 50 times…):
+   * MutationsRequirementsData.UnlockRequiredMutations, as StatsLogger saw it.
+   * restore.lua adds them (and every slot's mutation) to the fresh dino's
+   * list — without it a quest mutation in its slot was hidden and did nothing.
+   */
+  unlockedMutations?: string[];
   /** Fill the stomach to the game's max for this dino on redeem (default true). */
   stomachFull?: boolean;
   /** Nutrient level to give (carb, protein, lipid), % of the dino's max —
@@ -254,6 +261,14 @@ export async function createSlot(
   if (spec.isPrime === true && (primeData === null || primeData['eligible'] !== true)) {
     throw new ValidationError(`a prime elder needs at least ${PRIME_NEEDED} of the 10 prime tasks done (primeConditions)`);
   }
+  let unlockedMutations: string[] | null = null;
+  if (spec.unlockedMutations !== undefined && spec.unlockedMutations !== null) {
+    const u = spec.unlockedMutations as unknown;
+    if (!Array.isArray(u) || u.length > 40 || !u.every((n) => typeof n === 'string' && /^[A-Za-z0-9 '-]{1,60}$/.test(n))) {
+      throw new ValidationError('unlockedMutations must be a list of mutation names');
+    }
+    unlockedMutations = [...new Set(u as string[])];
+  }
   let skin: Record<string, unknown> | null = null;
   if (spec.skin !== undefined && spec.skin !== null) {
     const raw = spec.skin as Record<string, unknown>;
@@ -316,9 +331,11 @@ export async function createSlot(
     // restore.lua: ServerSetPrimeEligible(true). Null = leave it as the game has it.
     isPrime: spec.isPrime === true ? true : null,
 
-    // Only what the admin chose. Empty slots are left out, and the restore
-    // skips a missing slot rather than clearing it.
+    // Only what the admin chose. Empty slots are left out: restore.lua empties
+    // them on the dino taken out (the fresh dino's own picks do not stay).
     mutations,
+    // Quest mutations unlocked (restore.lua applyUnlocks); null = only the slots'.
+    unlockedMutations,
     nutrients: {},
     elderStacks,
     // The prime tasks (restore.lua applyPrime); null = the fresh dino's own.

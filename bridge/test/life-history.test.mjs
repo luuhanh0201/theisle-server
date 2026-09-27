@@ -17,7 +17,9 @@ const P = '76561198000000041';
 const REX = 'BlueprintGeneratedClass /Game/TheIsle/Core/Characters/Dinosaurs/Tyrannosaurus/BP_Tyrannosaurus.BP_Tyrannosaurus_C';
 const conds = (on) => Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(i + 1), on.includes(i + 1)]));
 const events = [
-  { type: 'spawn', t: 100, steamId: P, species: 'BP_Tyrannosaurus_C', classPath: REX, growth: 0.25, mutations: { Slot1: 'Hydrodynamic' } },
+  { type: 'spawn', t: 100, steamId: P, species: 'BP_Tyrannosaurus_C', classPath: REX, growth: 0.25, mutations: { Slot1: 'Hydrodynamic' },
+    unlockedMutations: ['Traumatic Thrombosis', 'Multichambered Lungs'] },
+  { type: 'mutation_unlocks', t: 115, steamId: P, species: 'BP_Tyrannosaurus_C', unlocked: ['Traumatic Thrombosis', 'Multichambered Lungs', 'Reniculate Kidneys'] },
   { type: 'prime', t: 110, steamId: P, species: 'BP_Tyrannosaurus_C', growth: 0.3, conditions: conds([1, 3, 7, 8]), eligible: false, prime: false, elderStacks: 0 },
   { type: 'mutation', t: 120, steamId: P, species: 'BP_Tyrannosaurus_C', slot: 'Slot2', to: 'Gastronomic Regeneration' },
   { type: 'skin', t: 121, steamId: P, species: 'BP_Tyrannosaurus_C', skin: { colors: { Body: { r: 0.5, g: 0.2, b: 0.1 } }, patternIndex: 1, female: true } },
@@ -55,6 +57,8 @@ test('restore: into the garage as it was — then never twice; a living dino is 
   assert.equal(state.elderStacks, 2);
   assert.equal(state.isFemale, true);
   assert.deepEqual(state.skin, { colors: { Body: { r: 0.5, g: 0.2, b: 0.1 } }, patternIndex: 1, female: true });
+  assert.deepEqual(state.unlockedMutations, ['Traumatic Thrombosis', 'Multichambered Lungs', 'Reniculate Kidneys'],
+    'the quest mutations it had unlocked go with it (hidden and dead without them)');
   assert.equal((await lifeDetails(P))[1].restoredTo, 'khoiphuc-100');
   await assert.rejects(() => restoreLife(P, 100, 'again'), /already restored/);
   await assert.rejects(() => restoreLife(P, 400, 'alive'), /still alive/);

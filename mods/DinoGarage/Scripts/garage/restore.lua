@@ -86,9 +86,9 @@ do
 end
 
 --- What to give back as unlocked: the stored list, plus every mutation in the
---- active slots — a mutation in its slot but not unlocked is what the game
---- hid and switched off. Covers the dinos stored before the list was kept
---- (2026-09-28) and the admin-made ones, which carry no list.
+--- slots (active, Parent, Elder) — a mutation in its slot but not unlocked is
+--- what the game hid and switched off. Covers the dinos stored before the
+--- list was kept (2026-09-28) and the admin-made ones, which carry no list.
 function R.unlocksFor(state)
     local names, seen = {}, {}
     local function add(n)
@@ -97,6 +97,7 @@ function R.unlocksFor(state)
     if type(state.unlockedMutations) == "table" then for _, n in ipairs(state.unlockedMutations) do add(n) end end
     local m = type(state.mutations) == "table" and state.mutations or {}
     for _, slot in ipairs(ACTIVE_SLOTS) do add(m[slot.key]) end
+    for _, slot in ipairs(INHERITED_SLOTS) do add(m[slot.key]) end
     return names
 end
 
@@ -169,9 +170,12 @@ local function applyVitals(pawn, state)
     set(pawn, "SetWaterLevel", state.waterLevel)
 end
 
---- Write one FName slot. Strings crash; FName objects do not.
+--- Write one FName slot. Strings crash; FName objects do not. A slot the
+--- stored dino had empty is emptied: the fresh dino's own pick (a Hemomania
+--- chosen in the spawn screen, the Parent slots of a nest-born dino) stayed
+--- on the one taken out (3 of 61 redeems, 2026-09-28).
 local function setSlot(struct, field, name)
-    if name == nil or name == "" or name == "None" then return end
+    if name == nil or name == "" then name = "None" end
     H.try("restore: field-write " .. field, function()
         struct[field] = FName(name)
     end)
@@ -184,8 +188,10 @@ local function applyMutations(pawn, state, slots)
         return
     end
 
+    -- No captured mutations at all (an unreadable struct at store time): leave the dino's own.
+    if type(state.mutations) ~= "table" then return end
     for _, slot in ipairs(slots) do
-        setSlot(struct, slot.field, state.mutations and state.mutations[slot.key])
+        setSlot(struct, slot.field, state.mutations[slot.key])
     end
 
     -- Pushing with true bypasses the batching limit, the validation gate and

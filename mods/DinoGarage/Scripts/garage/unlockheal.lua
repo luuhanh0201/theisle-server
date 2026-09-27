@@ -1,7 +1,7 @@
 --[[
     DinoGarage/unlockheal.lua
 
-    A mutation in one of a dino's four slots but missing from its unlocked
+    A mutation in one of a dino's slots (active, Parent, Elder) but missing from its unlocked
     list (MutationsRequirementsData.UnlockRequiredMutations) is hidden and
     does nothing — "Reniculate Kidneys" (drink saltwater) on crocodiles taken
     out of the garage before the list was kept (2026-09-27/28). A slot can
@@ -17,7 +17,13 @@ local Restore = require("garage.restore")
 
 local U = {}
 
-local SLOT_FIELDS = { "MutationSlot1", "MutationSlot2", "MutationSlot3", "MutationSlot4" }
+-- The four active slots and the inherited ones (Parent: the parents', Elder: the lineage's).
+local SLOT_FIELDS = {
+    "MutationSlot1", "MutationSlot2", "MutationSlot3", "MutationSlot4",
+    "ParentMutationSlot1", "ParentMutationSlot2", "ParentMutationSlot3", "ParentMutationSlot4",
+    "ElderMutationSlot1A", "ElderMutationSlot1B", "ElderMutationSlot2A", "ElderMutationSlot2B",
+    "ElderMutationSlot3A", "ElderMutationSlot3B", "ElderMutationSlot4A", "ElderMutationSlot4B",
+}
 local tried = {}   -- "<pawn address>|<names>" -> true: each fix is tried once
 
 --- The slot mutations of this dino its unlocked list lacks.

@@ -28,9 +28,18 @@ export interface LifeDetail {
   /** Ten 0/1, condition 1 first, and what it adds up to. Null: never read. */
   prime: { code: string; done: number; eligible: boolean; prime: boolean; elderStacks: number | null } | null;
   skin: Record<string, unknown> | null;
+  /** Quest mutations unlocked (drink saltwater…), last seen: spawn / mutation_unlocks. Null: not seen. */
+  unlockedMutations: string[] | null;
   female: boolean | null;
   /** Put back already: the garage slot it went into. */
   restoredTo: string | null;
+}
+
+/** A list of mutation names from an event (Lua writes an empty list as {}), or null. */
+function names(v: unknown): string[] | null {
+  if (Array.isArray(v)) return v.filter((n): n is string => typeof n === 'string' && /^[A-Za-z0-9 '-]{1,60}$/.test(n));
+  if (typeof v === 'object' && v !== null && Object.keys(v).length === 0) return [];
+  return null;
 }
 
 const restoredPath = (): string => join(config.garageRoot, 'restored-lives.json');
@@ -62,6 +71,7 @@ export async function lifeDetails(steamId: string, limit = 40): Promise<LifeDeta
         growth: typeof e['growth'] === 'number' ? e['growth'] : null, endedAt: null, end: null,
         mutations: typeof m === 'object' && m !== null && !Array.isArray(m) ? { ...(m as Record<string, string>) } : {},
         prime: null, skin: null, female: null, restoredTo: restored[String(t)]?.slot ?? null,
+        unlockedMutations: names(e['unlockedMutations']),
       };
       lives.push(cur);
       continue;
@@ -69,7 +79,11 @@ export async function lifeDetails(steamId: string, limit = 40): Promise<LifeDeta
     if (!cur || cur.endedAt !== null || (species !== null && species !== cur.species)) continue;
     if (typeof e['growth'] === 'number' && type !== 'growth') cur.growth = e['growth'];
     if (type === 'growth_set' && typeof e['to'] === 'number') cur.growth = e['to'];
-    if (type === 'mutation' && typeof e['slot'] === 'string' && typeof e['to'] === 'string') cur.mutations[e['slot']] = e['to'];
+    if (type === 'mutation' && typeof e['slot'] === 'string') {
+      if (typeof e['to'] === 'string') cur.mutations[e['slot']] = e['to'];
+      else delete cur.mutations[e['slot']];
+    }
+    if (type === 'mutation_unlocks') cur.unlockedMutations = names(e['unlocked']) ?? cur.unlockedMutations;
     if (type === 'skin' && typeof e['skin'] === 'object' && e['skin'] !== null) {
       cur.skin = e['skin'] as Record<string, unknown>;
       const f = (cur.skin as { female?: unknown }).female;
@@ -91,7 +105,7 @@ export async function lifeDetails(steamId: string, limit = 40): Promise<LifeDeta
 
 /**
  * Put one life back in the player's garage (slot `slot`), as it was: species,
- * growth, mutations, prime tasks and prime, elder stacks, skin. Once per life.
+ * growth, mutations (and the quest ones unlocked), prime tasks and prime, elder stacks, skin. Once per life.
  */
 export async function restoreLife(steamId: string, spawnedAt: number, slot: string, overwrite = false): Promise<{ slot: string; life: LifeDetail }> {
   const life = (await lifeDetails(steamId, 1000)).find((l) => l.spawnedAt === spawnedAt);
@@ -110,6 +124,7 @@ export async function restoreLife(steamId: string, spawnedAt: number, slot: stri
     ...(life.prime?.elderStacks != null ? { elderStacks: Math.min(10, Math.max(0, life.prime.elderStacks)) } : {}),
     ...(life.female !== null ? { isFemale: life.female } : {}),
     ...(life.skin ? { skin: life.skin } : {}),
+    ...(life.unlockedMutations ? { unlockedMutations: life.unlockedMutations } : {}),
     stomachFull: true,
     overwrite,
   });

@@ -157,6 +157,8 @@ check("refused, with the reason", started(id4) and started(id4).ok == false
 print("\n-- 5. redeem on the right species restores, in cookbook order --")
 H.calls = {}
 local freshPawn = H.makePawn({ growth = 0.05, mutation = "None" })
+freshPawn.ReplicatedMutationsData.MutationSlot2 = FName("Hemomania")       -- picked in the spawn screen
+freshPawn.ReplicatedMutationsData.ParentMutationSlot2 = FName("Hydrodynamic") -- a nest-born dino's own
 freshPawn.__skin.BodyColor = { R = 0, G = 0, B = 0, A = 1 }       -- the new dino's own paint
 freshPawn.__skin.PatternIndex = 1
 local freshCtrl = H.makeCtrl(STEAM, freshPawn)
@@ -185,15 +187,21 @@ check("final vitals come after the growth wipe", lastIndex("__vitals_wiped_by_gr
 check("elder stacks after the last mutation push",
       lastIndex("SetReplicatedMutationsData") < firstIndex("SetElderReplicationStacks"))
 check("FName objects written to slots, not strings", H.countCalls("field:MutationSlot1") >= 1)
-check("the unlocked quest mutation given back (+ the slots' own), none duplicated",
-      table.concat(freshPawn.MutationsRequirementsData.UnlockRequiredMutations.__names, ",") == "Traumatic Thrombosis,Reniculate Kidneys,MUT_Life",
+check("a slot the stored dino had empty is emptied (not the fresh dino's pick)",
+      freshPawn.ReplicatedMutationsData.MutationSlot2:ToString() == "None"
+      and freshPawn.ReplicatedMutationsData.ParentMutationSlot2:ToString() == "None",
+      freshPawn.ReplicatedMutationsData.MutationSlot2:ToString() .. " / " .. freshPawn.ReplicatedMutationsData.ParentMutationSlot2:ToString())
+check("…and the stored ones are there", freshPawn.ReplicatedMutationsData.MutationSlot1:ToString() == "MUT_Life"
+      and freshPawn.ReplicatedMutationsData.ParentMutationSlot1:ToString() == "MUT_Parent")
+check("the unlocked quest mutation given back (+ the slots' own, inherited too), none duplicated",
+      table.concat(freshPawn.MutationsRequirementsData.UnlockRequiredMutations.__names, ",") == "Traumatic Thrombosis,Reniculate Kidneys,MUT_Life,MUT_Parent",
       table.concat(freshPawn.MutationsRequirementsData.UnlockRequiredMutations.__names, ","))
 do
   local Restore = require("garage.restore")
   -- Stored before the list was kept (or made by an admin): the slots' mutations count as unlocked.
-  check("an old slot: its slot mutations become the unlocked list",
+  check("an old slot: its slot mutations (active and inherited) become the unlocked list",
         table.concat(Restore.unlocksFor({ mutations = { Slot1 = "Hydrodynamic", Slot3 = "Reniculate Kidneys", ParentSlot1 = "X" } }), ",")
-        == "Hydrodynamic,Reniculate Kidneys")
+        == "Hydrodynamic,Reniculate Kidneys,X")
 end
 check("…pushed, before the active slots, then the mutation list redrawn",
       H.countCalls("SetMutationRequirementsData") == 1 and H.countCalls("ClientUpdateMutations") == 1
@@ -728,13 +736,13 @@ useCtrl(H.makeCtrl(HEALED, croc))
 H.calls = {}
 healLoop.fn()
 check("unlocked again, nothing else touched", table.concat(croc.MutationsRequirementsData.UnlockRequiredMutations.__names, ",")
-      == "Traumatic Thrombosis,Multichambered Lungs,Reniculate Kidneys"
+      == "Traumatic Thrombosis,Multichambered Lungs,Reniculate Kidneys,MUT_Parent"
       and H.countCalls("SetMutationRequirementsData") == 1 and H.countCalls("ClientUpdateMutations") == 1
       and H.countCalls("SetReplicatedMutationsData") == 0,
       table.concat(croc.MutationsRequirementsData.UnlockRequiredMutations.__names, ","))
 healLoop.fn(); healLoop.fn()
 check("then left alone: no write again", H.countCalls("SetMutationRequirementsData") == 1)
-local fine = H.makePawn({ mutation = "Hydrodynamic", unlocks = { "Traumatic Thrombosis", "Hydrodynamic" } })
+local fine = H.makePawn({ mutation = "Hydrodynamic", unlocks = { "Traumatic Thrombosis", "Hydrodynamic", "MUT_Parent" } })
 useCtrl(H.makeCtrl("76561198000000089", fine))
 H.calls = {}
 healLoop.fn()

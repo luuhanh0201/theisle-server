@@ -206,4 +206,7 @@ test('admin slot: the prime tasks it comes out with (primeConditions), eligible 
   await createSlot(A2, 'none', { classPath: 'X.BP_Rex_C', growth: 0.6 });
   assert.equal(JSON.parse(readFileSync(join(root, 'stored', `${A2}__none.json`), 'utf8')).primeData, null, 'left out: the fresh dino keeps its own');
   await assert.rejects(() => createSlot(A2, 'bad', { classPath: 'X.BP_Rex_C', growth: 0.6, primeConditions: '101' }), /ten 0\/1/);
+  await createSlot(A2, 'unlocks', { classPath: 'X.BP_Rex_C', growth: 0.6, unlockedMutations: ['Reniculate Kidneys', 'Reniculate Kidneys'] });
+  assert.deepEqual(JSON.parse(readFileSync(join(root, 'stored', `${A2}__unlocks.json`), 'utf8')).unlockedMutations, ['Reniculate Kidneys']);
+  await assert.rejects(() => createSlot(A2, 'badu', { classPath: 'X.BP_Rex_C', growth: 0.6, unlockedMutations: ['<script>'] }), /unlockedMutations/);
 });
