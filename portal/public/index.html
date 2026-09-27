@@ -909,6 +909,8 @@
   .dino-3d canvas, .slot-3d canvas { width: 100% !important; height: 100% !important; display: block; }
   .slot-3d { flex: none; width: 100%; height: 150px; border-radius: 10px; border: 1px solid var(--border); overflow: hidden;
     background: radial-gradient(ellipse at 50% 65%, rgba(34,197,94,.10), rgba(2,6,23,.55)); }
+  /* Not released to players yet: only with ?lab=1 (app.js LAB) */
+  html:not(.lab) .lab-only, html:not(.lab) .slot-3d-spot { display: none !important; }
   .skin-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
   @media (max-width: 900px) { .skin-layout { grid-template-columns: 1fr; } }
   .skin-preview { position: relative; height: 320px; border-radius: 12px; border: 1px solid var(--border);
@@ -1669,7 +1671,7 @@
             <label class="skin-variation"><span>Biến thể: <b id="skin-variation-val">0</b></span>
               <input type="range" id="skin-variation" min="0" max="20" step="1" value="0"></label>
           </div>
-          <div class="skin-fx">
+          <div class="skin-fx lab-only">
             <div class="skin-fx-head">
               <label class="skin-fx-toggle"><input type="checkbox" id="skin-fx-on"><span>Hiệu ứng da</span></label>
               <span class="muted">bùn, máu… tự khô và phai dần như trong game</span>
@@ -1681,9 +1683,9 @@
               <b id="skin-glow-val">1.0×</b>
             </div>
           </div>
-          <label class="skin-keep"><input type="checkbox" id="skin-keep" checked><span>Giữ màu này cho những lần chơi sau (cùng loài) — lấy từ gara vẫn giữ màu của ô gara</span></label>
+          <label class="skin-keep lab-only"><input type="checkbox" id="skin-keep" checked><span>Giữ màu này cho những lần chơi sau (cùng loài) — lấy từ gara vẫn giữ màu của ô gara</span></label>
           <button type="button" class="btn btn-emerald" id="btn-skin-apply" style="width:100%;margin-top:12px">Áp dụng lên dino đang chơi</button>
-          <div class="skin-kept" id="skin-kept" hidden></div>
+          <div class="skin-kept lab-only" id="skin-kept" hidden></div>
           <div class="garage-status" id="skin-status" hidden></div>
 
           <div class="skin-code">

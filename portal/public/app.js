@@ -23,6 +23,19 @@ if (params.get('login_error')) {
   history.replaceState(null, '', '/');
 }
 
+// Test mode ("lab"): features not released to players yet — skin effects,
+// glow, kept colours, the 3D on the Game / Gara tabs — show only in a browser
+// opened once with ?lab=1 (remembered; ?lab=0 turns it off).
+const LAB = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('lab');
+    if (q === '1') localStorage.setItem('xg.lab', '1');
+    if (q === '0') localStorage.removeItem('xg.lab');
+    return localStorage.getItem('xg.lab') === '1';
+  } catch { return false; }
+})();
+document.documentElement.classList.toggle('lab', LAB);
+
 async function getJson(url) {
   const r = await fetch(url, { credentials: 'same-origin' });
   return { status: r.status, body: await r.json().catch(() => null) };
@@ -411,8 +424,13 @@ async function sendSkin() {
   const body = { pattern: sk.pattern, theme: sk.theme, variation: sk.variation, colors: {} };
   const k = (v) => Math.min(GLOW_MAX, Math.round(v * sk.glow * 10000) / 10000);
   for (const [id] of REGIONS) { const c = linearOf(sk.colors[id]); body.colors[id] = { r: k(c.r), g: k(c.g), b: k(c.b) }; }
-  if (sk.effects) body.effects = sk.effects;
-  body.keep = $('skin-keep').checked;
+  if (LAB) {
+    if (sk.effects) body.effects = sk.effects;
+    body.keep = $('skin-keep').checked;
+  } else {
+    // Not released yet: plain colours only.
+    for (const [id] of REGIONS) body.colors[id] = linearOf(sk.colors[id]);
+  }
   skinStatus('', 'Đang gửi…');
   try {
     const r = await fetch('/api/skin', {
@@ -968,7 +986,7 @@ function renderGara(me) {
 const slotViewers = new Map();   // slot -> { box, viewer, key }
 function placeSlot3d(slots) {
   // Only while the Gara tab is shown (renderGara runs every second): a model is loaded when first seen.
-  if (!window.Dino3D || !$('gara-slots-list').offsetParent) return;
+  if (!LAB || !window.Dino3D || !$('gara-slots-list').offsetParent) return;
   const keep = new Set();
   for (const g of slots) {
     if (!g.species) continue;
@@ -993,7 +1011,7 @@ function placeSlot3d(slots) {
 let gameViewer = null, gameViewerKey = null;
 function renderGame3d(dino) {
   const box = $('game-3d');
-  if (!dino?.species || !window.Dino3D) { box.hidden = true; return; }
+  if (!LAB || !dino?.species || !window.Dino3D) { box.hidden = true; return; }
   box.hidden = false;
   if (!box.offsetParent) return;          // the Game tab is not shown: load nothing yet
   if (!gameViewer) gameViewer = window.Dino3D.create(box, { autoRotate: true, fit: 1.15 });
