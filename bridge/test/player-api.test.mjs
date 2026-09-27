@@ -226,7 +226,9 @@ test('skin from the web: checked, queued to the inbox for the mod, one every few
   assert.equal(r.status, 202);
   const inbox = JSON.parse(readFileSync(join(root, 'inbox.json'), 'utf8'));
   const cmd = inbox.commands.find((c) => c.id === r.body.id);
-  assert.deepEqual([cmd.type, cmd.steamId, cmd.skin], ['skin', PAINTER, skin]);
+  const sent = { ...skin, colors: { ...skin.colors, Eyes: { r: 0.0005, g: 0.0005, b: 0.0005 } } };
+  assert.deepEqual([cmd.type, cmd.steamId, cmd.skin], ['skin', PAINTER, sent],
+    'exactly black goes as a near black: (0, 0, 0) is how the game marks an unused region');
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: skin })).status, 429, 'one every few seconds');
   // The mod's answer reaches the web (a "skin" portal_command was once dropped as unknown).
   const answer = parseEvent({ type: 'portal_command', t: Math.floor(Date.now() / 1000), id: r.body.id, steamId: PAINTER,

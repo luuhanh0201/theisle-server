@@ -156,6 +156,9 @@ export async function queuePlayerCommand(
 }
 
 /** Check a skin from the web: every colour channel 0–SKIN_CHANNEL_MAX, known regions only; effects 0–1; pattern / theme whole numbers; variation 0–100. */
+/** What an exactly black colour is sent as (linear; hex 010101 is 0.0003). */
+export const NEAR_BLACK = 0.0005;
+
 export function validateSkin(raw: unknown): SkinRequest {
   if (typeof raw !== 'object' || raw === null) throw new ValidationError('skin must be an object');
   const r = raw as Record<string, unknown>;
@@ -167,7 +170,12 @@ export function validateSkin(raw: unknown): SkinRequest {
     if (!(SKIN_REGIONS as readonly string[]).includes(k)) throw new ValidationError(`unknown region "${k}"`);
     const c = v as Record<string, unknown> | null;
     if (typeof c !== 'object' || c === null || !unit(c['r']) || !unit(c['g']) || !unit(c['b'])) throw new ValidationError(`${k}: r, g, b must be 0–${SKIN_CHANNEL_MAX}`);
-    colors[k as (typeof SKIN_REGIONS)[number]] = { r: Math.round(c['r'] * 10000) / 10000, g: Math.round(c['g'] * 10000) / 10000, b: Math.round(c['b'] * 10000) / 10000 };
+    const col = { r: Math.round(c['r'] * 10000) / 10000, g: Math.round(c['g'] * 10000) / 10000, b: Math.round(c['b'] * 10000) / 10000 };
+    // Exactly black is how the game marks a region a species does not use: a
+    // region set to (0, 0, 0) was not painted black on players' screens
+    // (2026-09-27, "XG1" code with Body 000000). A near black looks the same.
+    if (col.r === 0 && col.g === 0 && col.b === 0) { col.r = NEAR_BLACK; col.g = NEAR_BLACK; col.b = NEAR_BLACK; }
+    colors[k as (typeof SKIN_REGIONS)[number]] = col;
   }
   if (Object.keys(colors).length === 0) throw new ValidationError('at least one colour');
   const out: SkinRequest = { colors };
