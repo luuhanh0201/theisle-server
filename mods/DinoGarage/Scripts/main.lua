@@ -40,6 +40,7 @@ local Settings = require("garage.settings")
 local PrimeFix = require("garage.primefix")
 local Skin    = require("garage.skin")
 local KeepSkin = require("garage.keepskin")
+local UnlockHeal = require("garage.unlockheal")
 local Light   = require("garage.light")
 
 local MOD = "DinoGarage"
@@ -528,6 +529,8 @@ H.every(GUARD_EVERY_MS, MOD .. ": store guard", guardStores)
 H.every(5000, MOD .. ": prime fixes", PrimeFix.poll)
 -- Colours a player keeps from the web, on every new dino of that species (garage/keepskin.lua).
 H.every(3000, MOD .. ": kept skins", KeepSkin.poll)
+-- A mutation in its slot but not unlocked (hidden, not working): unlocked again (garage/unlockheal.lua).
+H.every(15000, MOD .. ": unlock heal", UnlockHeal.poll)
 
 H.log(MOD .. ": loaded")
 Events.emit({ type = "mod_loaded", mod = MOD })

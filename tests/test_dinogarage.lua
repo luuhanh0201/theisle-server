@@ -717,6 +717,29 @@ seq = table.concat(events, ", ")
 check("off: dimmed, detached, destroyed", started(loff) and started(loff).ok == true and seq == "intensity 0, detach, destroy", seq)
 _G.StaticFindObject, _G.FindAllOf = savedSFO, savedFAO
 
+say("\n-- unlock heal: a mutation in its slot but not unlocked gets its unlock back, once --")
+local healLoop
+for _, l in ipairs(H.gameLoops) do if l.ms == 15000 then healLoop = l end end
+check("an unlock-heal loop (15 s, game thread)", healLoop ~= nil)
+local HEALED = "76561198000000088"
+-- Taken out of the garage before the list was kept: Reniculate Kidneys in slot 1, not unlocked.
+local croc = H.makePawn({ mutation = "Reniculate Kidneys", unlocks = { "Traumatic Thrombosis", "Multichambered Lungs" } })
+useCtrl(H.makeCtrl(HEALED, croc))
+H.calls = {}
+healLoop.fn()
+check("unlocked again, nothing else touched", table.concat(croc.MutationsRequirementsData.UnlockRequiredMutations.__names, ",")
+      == "Traumatic Thrombosis,Multichambered Lungs,Reniculate Kidneys"
+      and H.countCalls("SetMutationRequirementsData") == 1 and H.countCalls("ClientUpdateMutations") == 1
+      and H.countCalls("SetReplicatedMutationsData") == 0,
+      table.concat(croc.MutationsRequirementsData.UnlockRequiredMutations.__names, ","))
+healLoop.fn(); healLoop.fn()
+check("then left alone: no write again", H.countCalls("SetMutationRequirementsData") == 1)
+local fine = H.makePawn({ mutation = "Hydrodynamic", unlocks = { "Traumatic Thrombosis", "Hydrodynamic" } })
+useCtrl(H.makeCtrl("76561198000000089", fine))
+H.calls = {}
+healLoop.fn()
+check("a dino whose slots are all unlocked: not written", H.countCalls("SetMutationRequirementsData") == 0)
+
 say("")
 say("-- threads: nothing the mod ran from an async callback touched the engine --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
