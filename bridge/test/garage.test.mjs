@@ -193,3 +193,14 @@ test('admin-made prime: isPrime + elderStacks stored for restore.lua; prime need
   await assert.rejects(() => createSlot(A, 'bad2', { classPath: 'X.BP_Rex_C', growth: 1, elderStacks: 1.5 }), /elderStacks/);
   await assert.rejects(() => createSlot(A, 'bad3', { classPath: 'X.BP_Rex_C', growth: 1, elderStacks: 99 }), /elderStacks/);
 });
+
+test('admin slot: the prime tasks it comes out with (primeConditions), eligible with five', async () => {
+  const A2 = '76561198000000031';
+  await createSlot(A2, 'tasks', { classPath: 'X.BP_Rex_C', growth: 0.6, primeConditions: '1010101100' });
+  const state = JSON.parse(readFileSync(join(root, 'stored', `${A2}__tasks.json`), 'utf8'));
+  assert.deepEqual(state.primeData, { cond1: true, cond2: false, cond3: true, cond4: false, cond5: true, cond6: false,
+    cond7: true, cond8: true, cond9: false, cond10: false, eligible: true });
+  await createSlot(A2, 'none', { classPath: 'X.BP_Rex_C', growth: 0.6 });
+  assert.equal(JSON.parse(readFileSync(join(root, 'stored', `${A2}__none.json`), 'utf8')).primeData, null, 'left out: the fresh dino keeps its own');
+  await assert.rejects(() => createSlot(A2, 'bad', { classPath: 'X.BP_Rex_C', growth: 0.6, primeConditions: '101' }), /ten 0\/1/);
+});

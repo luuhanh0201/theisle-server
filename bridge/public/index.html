@@ -845,6 +845,11 @@
   .me-card .me-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .me-card .sub { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .me-card button { flex: none; padding: 5px 10px; font-size: 12px; }
+  .prime-tasks { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border, #2a3342); border-radius: 10px; }
+  .prime-tasks-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .prime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+  .prime-grid label { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 500; font-size: 13px; }
+  .prime-grid input { width: auto; margin: 0; }
 </style>
 </head>
 <body>
@@ -1352,6 +1357,16 @@
                   <input id="f-elder-stacks" type="number" min="0" max="10" step="1" value="0" style="width:90px">
                 </div>
                 <div class="step-hint" id="f-prime-hint"></div>
+                <div class="prime-tasks">
+                  <div class="prime-tasks-head">
+                    <b>Nhiệm vụ prime</b> <span class="chip" id="f-prime-count">0/10</span>
+                    <span class="muted" id="f-prime-src"></span>
+                    <button type="button" class="btn" id="f-prime-reload" style="margin-left:auto">Lấy lại từ dino gần nhất</button>
+                  </div>
+                  <div class="prime-grid" id="f-prime-conds"></div>
+                  <div class="step-hint">Dino lấy ra có đúng các nhiệm vụ được tick (đủ 5 là đủ điều kiện prime). Mặc định lấy từ dino
+                    gần nhất <b>cùng loài</b> của người này — tặng lại dino không làm mất nhiệm vụ.</div>
+                </div>
               </div>
 
               <div class="step">
@@ -5087,6 +5102,47 @@ function renderPreview() {
 // --- prime + what the dino will have (maxima read on this server) --------------------
 const PRIME_MIN = 75;
 const primeWanted = () => $('f-prime').checked && creator.growth >= PRIME_MIN;
+
+// --- the prime tasks the given dino comes out with (garage.ts primeConditions) ---
+const PRIME_TASKS = ['Sanctuary', 'Nở từ tổ (?)', 'Ăn đủ ba chất', 'Nhiệm vụ 4 (?)', 'Vùng di cư', 'Vùng tuần tra',
+  'Chưa từng vô sinh', 'Chưa từng co giật cơ', 'Nuôi con (?)', 'Loài được tặng sẵn'];
+$('f-prime-conds').innerHTML = PRIME_TASKS.map((t, i) =>
+  `<label><input type="checkbox" data-cond="${i + 1}"${i === 6 || i === 7 ? ' checked' : ''}> ${i + 1}. ${esc(t)}</label>`).join('');
+const primeCode = () => [...$('f-prime-conds').querySelectorAll('input')].map((c) => (c.checked ? '1' : '0')).join('');
+function renderPrimeCount() {
+  const n = [...primeCode()].filter((c) => c === '1').length;
+  $('f-prime-count').textContent = `${n}/10${n >= 5 ? ' · đủ điều kiện' : ''}`;
+  $('f-prime-count').classList.toggle('tone-ok', n >= 5);
+}
+$('f-prime-conds').addEventListener('change', () => { $('f-prime-src').textContent = 'đã sửa tay'; renderPrimeCount(); });
+let primeLastKey = null;
+/** Fill the ticks from the player's last dino of the chosen species (/api/prime-last). */
+async function loadLastPrime(force = false) {
+  const steamId = $('f-steam').value.trim();
+  const classPath = selectedClassPath();
+  const key = `${steamId}|${classPath}`;
+  if (!/^\d{17}$/.test(steamId) || !classPath || (!force && key === primeLastKey)) return;
+  primeLastKey = key;
+  $('f-prime-src').textContent = 'đang tìm…';
+  try {
+    const { last } = await getJson(`/api/prime-last?steamId=${steamId}&species=${encodeURIComponent(classPath.split('.').pop())}`);
+    if (primeLastKey !== key) return;
+    if (!last) {
+      $('f-prime-src').textContent = 'chưa thấy dino loài này của người này — mặc định của dino mới';
+      [...$('f-prime-conds').querySelectorAll('input')].forEach((c) => { c.checked = c.dataset.cond === '7' || c.dataset.cond === '8'; });
+    } else {
+      [...$('f-prime-conds').querySelectorAll('input')].forEach((c) => { c.checked = last.conditions[c.dataset.cond] === true; });
+      $('f-prime-src').textContent = `theo dino gần nhất cùng loài (${new Date(last.t * 1000).toLocaleString('vi-VN')}${last.growth != null ? `, ${Math.round(last.growth * 100)}%` : ''})`;
+    }
+  } catch {
+    $('f-prime-src').textContent = 'không tra được';
+  }
+  renderPrimeCount();
+}
+$('f-prime-reload').addEventListener('click', () => { void loadLastPrime(true); });
+$('create').addEventListener('input', () => { void loadLastPrime(); });
+$('create').addEventListener('change', () => { void loadLastPrime(); });
+renderPrimeCount();
 const elderStacksWanted = () => {
   const n = Math.round(Number($('f-elder-stacks').value));
   return Number.isFinite(n) && n > 0 ? Math.min(10, n) : null;
@@ -5333,6 +5389,7 @@ $('create').addEventListener('submit', async (ev) => {
         nutrientPct: Math.max(0, Math.min(100, Math.round(Number($('f-nutrient').value) || 0))),
         ...(primeWanted() ? { isPrime: true } : {}),
         ...(elderStacksWanted() !== null ? { elderStacks: elderStacksWanted() } : {}),
+        primeConditions: primeCode(),
         allowUnconfirmedMutations: $('f-allow-unconfirmed').checked,
         overwrite: existing.slots[slot] !== undefined && $('f-overwrite-ok').checked,
       }),

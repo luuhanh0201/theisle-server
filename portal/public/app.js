@@ -961,7 +961,7 @@ function renderGara(me) {
     return { g, why };
   });
   // Rebuild only when something shown changes.
-  const key = JSON.stringify([rows.map(({ g, why }) => [g.slot, g.species, g.growth, g.storedAt, g.gift, g.prime, g.vitals, g.max, g.skin, why]), garageBusy]);
+  const key = JSON.stringify([rows.map(({ g, why }) => [g.slot, g.species, g.growth, g.storedAt, g.gift, g.prime, g.primeTasks, g.vitals, g.max, g.skin, why]), garageBusy]);
   const list = $('gara-slots-list');
   if (list.dataset.key === key) { placeSlot3d(rows.map(({ g }) => g)); return; }
   list.dataset.key = key;
@@ -974,6 +974,7 @@ function renderGara(me) {
           <span class="tag" style="margin-left:6px">Growth ${pct(g.growth)}</span>
           ${skinStrip(g.skin)}
           ${g.prime ? '<span class="tag prime" style="margin-left:6px">👑 Prime</span>' : ''}
+          ${g.primeTasks ? `<span class="tag${g.primeTasks.eligible ? '' : ' warning'}" style="margin-left:6px" title="Nhiệm vụ prime đã hoàn thành">Nhiệm vụ ${g.primeTasks.done}/10${g.primeTasks.eligible ? ' · đủ điều kiện' : ''}</span>` : ''}
           ${g.gift ? '<span class="tag purple" style="margin-left:6px">Quà Admin</span>' : ''}
           <div class="muted" style="font-size:12px;margin-top:2px">Cất lúc: ${when(g.storedAt)}${why ? ` · ${esc(why)}` : ''}</div>
           ${slotVitals(g)}

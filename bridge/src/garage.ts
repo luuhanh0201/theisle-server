@@ -2,6 +2,7 @@ import { readFile, writeFile, rename, mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
 import { Catalog, groupOfSlot, MUTATION_NAME_RE } from './catalog.js';
+import { PRIME_NEEDED } from './prime.js';
 
 /**
  * Reads and writes the DinoGarage store on disk.
@@ -55,6 +56,13 @@ export interface NewSlotSpec {
   isPrime?: boolean;
   /** Elder replication stacks (the lineage counter), 0–10; restore.lua sets them. */
   elderStacks?: number;
+  /**
+   * The prime tasks the dino comes out with: ten 0/1, condition 1 first
+   * ("0010101101"). Written as they are by restore.lua (applyPrime); eligible
+   * with 5 or more. Left out: the dino keeps only what a fresh one has — the
+   * panel fills it from the player's last dino of that species (prime-history.ts).
+   */
+  primeConditions?: string;
   /** Fill the stomach to the game's max for this dino on redeem (default true). */
   stomachFull?: boolean;
   /** Nutrient level to give (carb, protein, lipid), % of the dino's max —
@@ -225,6 +233,15 @@ export async function createSlot(
   if (spec.isPrime === true && spec.growth < PRIME_MIN_GROWTH) {
     throw new ValidationError(`a prime elder needs growth of at least ${PRIME_MIN_GROWTH * 100} %`);
   }
+  let primeData: Record<string, boolean> | null = null;
+  if (spec.primeConditions !== undefined && spec.primeConditions !== null) {
+    if (typeof spec.primeConditions !== 'string' || !/^[01]{10}$/.test(spec.primeConditions)) {
+      throw new ValidationError('primeConditions must be ten 0/1, condition 1 first');
+    }
+    primeData = {};
+    [...spec.primeConditions].forEach((c, i) => { (primeData as Record<string, boolean>)[`cond${i + 1}`] = c === '1'; });
+    primeData['eligible'] = [...spec.primeConditions].filter((c) => c === '1').length >= PRIME_NEEDED;
+  }
   const elderStacks = spec.elderStacks ?? null;
   if (elderStacks !== null && (!Number.isInteger(elderStacks) || elderStacks < 0 || elderStacks > 10)) {
     throw new ValidationError('elderStacks must be a whole number 0–10');
@@ -274,6 +291,8 @@ export async function createSlot(
     mutations,
     nutrients: {},
     elderStacks,
+    // The prime tasks (restore.lua applyPrime); null = the fresh dino's own.
+    primeData,
     // Read by restore.lua: an admin gift comes out fed (see NewSlotSpec).
     fill: { stomachFull: spec.stomachFull ?? true, nutrientPct },
 

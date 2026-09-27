@@ -9,7 +9,7 @@ import type { Skin } from './events.js';
 import { readAiZones, readAiZonesStatus } from './ai-zones.js';
 import { AI_BY_KEY } from './ai-species.js';
 import { zoneOutline } from './zone-shape.js';
-import { primeBoard, type PrimeBoard } from './prime.js';
+import { PRIME_NEEDED, primeBoard, type PrimeBoard } from './prime.js';
 import { livePlayer, type Live } from './live.js';
 import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoom } from './voice.js';
 import { readVoiceSettings, shownName } from './voice-settings.js';
@@ -56,6 +56,15 @@ export function shortSpecies(raw: unknown): string | null {
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 /** Only numbers and known keys leave the bridge: slot files are written by the mod, not trusted blindly. */
+/** A slot's primeData ({ cond1..cond10, eligible }) → { done, eligible }, or null when it has none. */
+export function primeTasksOf(raw: unknown): { done: number; eligible: boolean } | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const d = raw as Record<string, unknown>;
+  let done = 0;
+  for (let i = 1; i <= 10; i++) if (d[`cond${i}`] === true) done++;
+  return { done, eligible: d['eligible'] === true || done >= PRIME_NEEDED };
+}
+
 export function cleanSkin(raw: unknown): Skin | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const r = raw as Record<string, unknown>;
@@ -157,7 +166,9 @@ export function playerView(
       storedAt: num(g.meta.capturedAt ?? g.state?.['capturedAt']),
       gift: g.state?.['createdBy'] === 'admin',
       skin: cleanSkin(g.state?.['skin']),
-      prime: g.state?.['prime'] === true,
+      prime: g.state?.['prime'] === true || g.state?.['isPrime'] === true,
+      // The prime tasks it had (capture.lua primeData / an admin's primeConditions): done of 10, eligible.
+      primeTasks: primeTasksOf(g.state?.['primeData']),
       vitals: { health: num(g.state?.['health']), stamina: num(g.state?.['stamina']), thirst: num(g.state?.['thirst']) },
       max: { health: num(g.state?.['maxHealth']), stamina: num(g.state?.['maxStamina']), thirst: num(g.state?.['maxThirst']) },
     })),

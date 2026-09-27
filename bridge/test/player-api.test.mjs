@@ -74,7 +74,7 @@ test('me: own stats, lives and garage — nothing that leaks others or positions
   assert.equal(body.lives[0].species, 'Carnotaurus');
   assert.equal(body.lives[0].killedBy, 'Other', 'the killer by name, as the game showed it');
   assert.deepEqual(body.garage, [{ slot: 'default', species: 'Carnotaurus', growth: 1, storedAt: 1000, gift: false,
-    skin: { colors: { Body: { r: 0.2, g: 0.3, b: 0.4 } }, patternIndex: 2 }, prime: false,
+    skin: { colors: { Body: { r: 0.2, g: 0.3, b: 0.4 } }, patternIndex: 2 }, prime: false, primeTasks: null,
     vitals: { health: 1300, stamina: null, thirst: null }, max: { health: null, stamina: null, thirst: null } }],
     'skin cleaned: bad keys, non-numbers and extras dropped; vitals as stored, missing = null');
   const text = JSON.stringify(body);

@@ -5,6 +5,7 @@ import { dirname, join, normalize } from 'node:path';
 import { config } from './config.js';
 import type { Store } from './store.js';
 import { queueKill, queueLightTest } from './commands.js';
+import { lastPrimeOf } from './prime-history.js';
 import { readNotes, setNote } from './notes.js';
 import { actingAs, audit, describeChanges, readAuditPage } from './audit.js';
 import { currentLogin, panelGate } from './panel-gate.js';
@@ -1106,6 +1107,15 @@ async function handlePanel(
     case '/api/prime-fixes':
       sendJson(res, 200, { fixes: await listPrimeFixes() });
       return;
+    case '/api/prime-last': {
+      // The player's last prime tasks for one species (prime-history.ts): the panel's
+      // "create a dino" starts from them, so a dino given back keeps its tasks.
+      const steamId = url.searchParams.get('steamId') ?? '';
+      const species = url.searchParams.get('species') ?? '';
+      if (!/^\d{17}$/.test(steamId) || !/^[\w/.]+$/.test(species)) { sendJson(res, 400, { error: 'steamId and species' }); return; }
+      sendJson(res, 200, { last: await lastPrimeOf(steamId, species) });
+      return;
+    }
     case '/api/garage':
       sendJson(res, 200, await listAll());
       return;
