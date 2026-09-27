@@ -594,7 +594,10 @@ function initSkinEditor() {
       skinStatus('bad', 'Chưa có dữ liệu skin của dino đang chơi. Hãy vào game và điều khiển dino.');
       return;
     }
-    applySkin(lastMeData.dino.skin);
+    // Through fromGame: a region the species does not use (0, 0, 0 in game) gets a stand-in, not black.
+    const g = lastMeData.dino.skin;
+    const view = window.Dino3D?.fromGame(g);
+    applySkin(view ? { ...view, pattern: g.patternIndex, theme: g.themeIndex, variation: g.variation } : g);
     skinStatus('', 'Đã lấy màu từ dino đang chơi.');
   });
 

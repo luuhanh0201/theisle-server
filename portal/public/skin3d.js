@@ -11,7 +11,14 @@
 // (black = unused UV space); edges blend between two of them. Every pixel is
 // classified ONCE per species (its two nearest regions and the blend between
 // them); a colour change only re-mixes those — fast enough to follow a picker.
-// Teeth, mouth and claws have no region there: the preview cannot show them.
+// Teeth, mouth and claws have no region there (the game masks them with a
+// texture these assets lack): they are found on the model instead, once per
+// species (parts()) — the mouth: skin on the tongue bones, or glossy skin
+// (the RAC map's red, roughness) on the head / jaw close to the tongue; the
+// teeth: the small separate UV pieces on the head / jaw; the claws: glossy
+// skin on the last segment of each toe / finger.
+// A colour the game holds as exactly black (0, 0, 0) is a region that species
+// does not use (Detail1, and Eyes on some): shown with a stand-in, not black.
 // A female has no display colour: its display areas take the body colour.
 // Shading: the RAC map's blue channel (crevices) and green (surface detail) are
 // baked into the colour; the normal map gives the relief.
@@ -95,7 +102,138 @@ function shading(rac) {
   return s;
 }
 
-const speciesCache = new Map();   // name -> Promise<{ gltf, classes, shade, normal }>
+// --- teeth, mouth, claws: from the model's bones and UV pieces ------------------
+const PART_TEETH = 1, PART_MOUTH = 2, PART_CLAWS = 3;
+const GLOSSY = 110;               // RAC red (roughness) below this: glossy (wet mouth, claws)
+const TEETH_MAX_AREA = 0.006;     // a UV piece this small (of the whole square) on the head / jaw: a tooth…
+const JAW_MARGIN = 0.2;           // …inside the lower jaw's box grown by this much (not a crest up on the head)…
+const JAW_NEAR = 0.06;            // …and this close (of the jaw's size) to the jaw itself
+
+/** Per texel: 0, or PART_TEETH / PART_MOUTH / PART_CLAWS. */
+function parts(gltf, rac) {
+  const out = new Uint8Array(SIZE * SIZE);
+  gltf.scene.traverse((o) => {
+    if (!o.isSkinnedMesh || /eye/i.test(o.material?.name ?? '')) return;
+    const g = o.geometry, uv = g.attributes.uv, j = g.attributes.skinIndex, w = g.attributes.skinWeight;
+    if (!uv || !j || !w) return;
+    const bones = o.skeleton.bones.map((b) => b.name);
+    // The last segment of each toe / finger ("DinoLeftToe2-03" when -01…-03): where the claw is.
+    const lastSeg = new Map();
+    for (const n of bones) {
+      const m = /^(.*(?:Toe|Finger)\d*)-(\d+)$/.exec(n);
+      if (m) lastSeg.set(m[1], Math.max(lastSeg.get(m[1]) ?? 0, Number(m[2])));
+    }
+    // …or one bone for all the digits ("DinoLeftToes", Deinosuchus): the glossy part of it is the claws.
+    const isTip = (n) => {
+      if (/Claw|Toes$|Fingers$/.test(n)) return true;
+      const m = /^(.*(?:Toe|Finger)\d*)-(\d+)$/.exec(n);
+      return m !== null && Number(m[2]) === lastSeg.get(m[1]);
+    };
+    // Each vertex: the group of its main bone.
+    const HEAD = 1, JAW = 2, TONGUE = 3, CLAW = 4, HYOID = 5;
+    const vcat = new Uint8Array(uv.count);
+    for (let v = 0; v < uv.count; v++) {
+      let best = 0, bw = -1;
+      for (let k = 0; k < 4; k++) { const ww = w.getComponent(v, k); if (ww > bw) { bw = ww; best = j.getComponent(v, k); } }
+      const n = bones[best] ?? '';
+      // The hyoid also moves the throat's outer skin: it counts as mouth only where glossy.
+      vcat[v] = /Tongue/.test(n) ? TONGUE : /Hyoid/.test(n) ? HYOID : /Jaw/.test(n) ? JAW : /Head/.test(n) ? HEAD : isTip(n) ? CLAW : 0;
+    }
+    // The mouth is around the tongue: its middle and reach (in the model), for the glossy skin nearby.
+    const pos = g.attributes.position;
+    let cx = 0, cy = 0, cz = 0, nt = 0;
+    // (No tongue bone — Deinosuchus: the hyoid's skin stands in for it.)
+    const core = uv.count > 0 && vcat.some((c) => c === TONGUE) ? TONGUE : HYOID;
+    for (let v = 0; v < uv.count; v++) if (vcat[v] === core) { cx += pos.getX(v); cy += pos.getY(v); cz += pos.getZ(v); nt++; }
+    let reach = 0;
+    if (nt > 0) {
+      cx /= nt; cy /= nt; cz /= nt;
+      for (let v = 0; v < uv.count; v++) if (vcat[v] === core) reach = Math.max(reach, Math.hypot(pos.getX(v) - cx, pos.getY(v) - cy, pos.getZ(v) - cz));
+    }
+    // The lower jaw's box (a little larger): the teeth, upper and lower, are in it; a crest up on the head is not.
+    const jb = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+    for (let v = 0; v < uv.count; v++) {
+      if (vcat[v] !== JAW) continue;
+      const q = [pos.getX(v), pos.getY(v), pos.getZ(v)];
+      for (let k = 0; k < 3; k++) { jb[k] = Math.min(jb[k], q[k]); jb[k + 3] = Math.max(jb[k + 3], q[k]); }
+    }
+    const inJaw = (vs) => {
+      if (!Number.isFinite(jb[0])) return false;
+      const c = [0, 1, 2].map((k) => (k === 0 ? [pos.getX(vs[0]), pos.getX(vs[1]), pos.getX(vs[2])]
+        : k === 1 ? [pos.getY(vs[0]), pos.getY(vs[1]), pos.getY(vs[2])] : [pos.getZ(vs[0]), pos.getZ(vs[1]), pos.getZ(vs[2])]).reduce((a, b) => a + b) / 3);
+      return c.every((x, k) => { const m = (jb[k + 3] - jb[k]) * JAW_MARGIN; return x >= jb[k] - m && x <= jb[k + 3] + m; });
+    };
+    // …and right by the jaw: a tooth sits on its edge (a cheek boss, a neck quill does not).
+    const jawPts = [];
+    for (let v = 0; v < uv.count; v += 1) if (vcat[v] === JAW) jawPts.push(pos.getX(v), pos.getY(v), pos.getZ(v));
+    const jawDiag = Number.isFinite(jb[0]) ? Math.hypot(jb[3] - jb[0], jb[4] - jb[1], jb[5] - jb[2]) : 0;
+    const byJaw = (vs) => {
+      const x = (pos.getX(vs[0]) + pos.getX(vs[1]) + pos.getX(vs[2])) / 3, y = (pos.getY(vs[0]) + pos.getY(vs[1]) + pos.getY(vs[2])) / 3,
+        z = (pos.getZ(vs[0]) + pos.getZ(vs[1]) + pos.getZ(vs[2])) / 3;
+      const lim = (jawDiag * JAW_NEAR) ** 2;
+      for (let i = 0; i < jawPts.length; i += 3) {
+        const dx = jawPts[i] - x, dy = jawPts[i + 1] - y, dz = jawPts[i + 2] - z;
+        if (dx * dx + dy * dy + dz * dz <= lim) return true;
+      }
+      return false;
+    };
+    /** A triangle within `k` × the tongue's reach of its middle. */
+    const nearTongue = (vs, k) => {
+      if (nt === 0) return false;
+      const x = (pos.getX(vs[0]) + pos.getX(vs[1]) + pos.getX(vs[2])) / 3, y = (pos.getY(vs[0]) + pos.getY(vs[1]) + pos.getY(vs[2])) / 3,
+        z = (pos.getZ(vs[0]) + pos.getZ(vs[1]) + pos.getZ(vs[2])) / 3;
+      return Math.hypot(x - cx, y - cy, z - cz) <= reach * k;
+    };
+    const idx = g.index ? g.index.array : Uint32Array.from({ length: uv.count }, (_, i) => i);
+    // UV pieces: vertices joined by triangles (a UV seam splits vertices, so a piece is an island).
+    const parent = Int32Array.from({ length: uv.count }, (_, i) => i);
+    const root = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+    for (let t = 0; t < idx.length; t += 3) {
+      const a = root(idx[t]), b = root(idx[t + 1]), c = root(idx[t + 2]);
+      parent[b] = a; parent[root(c)] = a;
+    }
+    const areaOf = new Map();
+    const triArea = (t) => {
+      const a = idx[t], b = idx[t + 1], c = idx[t + 2];
+      return Math.abs((uv.getX(b) - uv.getX(a)) * (uv.getY(c) - uv.getY(a)) - (uv.getY(b) - uv.getY(a)) * (uv.getX(c) - uv.getX(a))) / 2;
+    };
+    for (let t = 0; t < idx.length; t += 3) { const r = root(idx[t]); areaOf.set(r, (areaOf.get(r) ?? 0) + triArea(t)); }
+    // Paint each triangle's texels with its part.
+    for (let t = 0; t < idx.length; t += 3) {
+      const vs = [idx[t], idx[t + 1], idx[t + 2]];
+      const cats = vs.map((v) => vcat[v]).sort();
+      const cat = cats[1];                               // the triangle's main group
+      if (cat === 0) continue;
+      const small = (areaOf.get(root(vs[0])) ?? 1) < TEETH_MAX_AREA;
+      const mouthy = (cat === HEAD || cat === JAW || cat === HYOID) && !small && nearTongue(vs, 1.6);
+      // A tooth: a small piece along the jaws — not a small crest / horn up on the head.
+      const tooth = (cat === JAW || cat === HEAD) && small && inJaw(vs) && byJaw(vs);
+      const p = vs.map((v) => [uv.getX(v) * SIZE, uv.getY(v) * SIZE]);
+      const minX = Math.max(0, Math.floor(Math.min(p[0][0], p[1][0], p[2][0]))), maxX = Math.min(SIZE - 1, Math.ceil(Math.max(p[0][0], p[1][0], p[2][0])));
+      const minY = Math.max(0, Math.floor(Math.min(p[0][1], p[1][1], p[2][1]))), maxY = Math.min(SIZE - 1, Math.ceil(Math.max(p[0][1], p[1][1], p[2][1])));
+      const A = (p[1][0] - p[0][0]) * (p[2][1] - p[0][1]) - (p[1][1] - p[0][1]) * (p[2][0] - p[0][0]);
+      if (A === 0) continue;
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const qx = x + 0.5, qy = y + 0.5;
+          const w0 = ((p[2][0] - p[1][0]) * (qy - p[1][1]) - (p[2][1] - p[1][1]) * (qx - p[1][0])) / A;
+          const w1 = ((p[0][0] - p[2][0]) * (qy - p[2][1]) - (p[0][1] - p[2][1]) * (qx - p[2][0])) / A;
+          if (w0 < -0.02 || w1 < -0.02 || w0 + w1 > 1.02) continue;
+          const i = y * SIZE + x;
+          const glossy = rac ? rac[i * 4] < GLOSSY : false;
+          let part = 0;
+          if (cat === TONGUE) part = PART_MOUTH;
+          else if (cat === HEAD || cat === JAW || cat === HYOID) part = tooth ? PART_TEETH : (glossy && mouthy) ? PART_MOUTH : 0;
+          else if (cat === CLAW) part = glossy ? PART_CLAWS : 0;
+          if (part) out[i] = part;
+        }
+      }
+    }
+  });
+  return out;
+}
+
+const speciesCache = new Map();   // name -> Promise<{ gltf, classes, shade, normal, parts }>
 function loadSpecies(name) {
   if (!speciesCache.has(name)) {
     const sp = registry.species[name];
@@ -110,7 +248,8 @@ function loadSpecies(name) {
         sp.normalMap ? new THREE.TextureLoader().loadAsync(versioned(sp.normalMap)) : null,
       ]);
       if (normal) { normal.flipY = false; normal.colorSpace = THREE.NoColorSpace; }
-      return { gltf, classes: classify(pattern), shade: rac ? shading(rac) : new Uint8Array(SIZE * SIZE).fill(230), normal };
+      return { gltf, classes: classify(pattern), shade: rac ? shading(rac) : new Uint8Array(SIZE * SIZE).fill(230), normal,
+        parts: parts(gltf, rac) };
     })();
     p.catch(() => speciesCache.delete(name));
     speciesCache.set(name, p);
@@ -181,11 +320,19 @@ function create(host, opts = {}) {
     if (!current || !lastSkin) return;
     const cols = REGION_CODES.map(([id]) => srgb(lastSkin.colors?.[female && id === 'MaleDisplay' ? 'Body' : id] ?? '#808080'));
     const { a, b, t } = current.shared.classes;
-    const sh = current.shared.shade;
+    const sh = current.shared.shade, pt = current.shared.parts;
+    // Teeth, mouth, claws: their own colours (index = PART_*).
+    const partCols = [null, srgb(lastSkin.colors?.Teeth ?? '#e6dcc4'), srgb(lastSkin.colors?.Mouth ?? '#7a3b3b'), srgb(lastSkin.colors?.Claws ?? '#3a3a3a')];
     const img = current.ctx.createImageData(SIZE, SIZE);
     const d = img.data;
     for (let i = 0, n = SIZE * SIZE; i < n; i++) {
-      const c1 = cols[a[i]], c2 = cols[b[i]], w = t[i] / 255, s = sh[i] / 255;
+      const s = sh[i] / 255;
+      const pc = pt[i] ? partCols[pt[i]] : null;
+      if (pc) {
+        d[i * 4] = pc[0] * s; d[i * 4 + 1] = pc[1] * s; d[i * 4 + 2] = pc[2] * s; d[i * 4 + 3] = 255;
+        continue;
+      }
+      const c1 = cols[a[i]], c2 = cols[b[i]], w = t[i] / 255;
       d[i * 4] = (c1[0] + (c2[0] - c1[0]) * w) * s;
       d[i * 4 + 1] = (c1[1] + (c2[1] - c1[1]) * w) * s;
       d[i * 4 + 2] = (c1[2] + (c2[2] - c1[2]) * w) * s;
@@ -307,11 +454,21 @@ function fromGame(skin) {
     return Math.round(s * 255).toString(16).padStart(2, '0');
   };
   const colors = {};
-  for (const [k, c] of Object.entries(skin.colors)) colors[k] = `#${ch(c.r)}${ch(c.g)}${ch(c.b)}`;
+  for (const [k, c] of Object.entries(skin.colors)) {
+    // Exactly black: a region this species does not use (the game leaves it 0, 0, 0) — not painted black.
+    if (!c || (c.r === 0 && c.g === 0 && c.b === 0)) continue;
+    colors[k] = `#${ch(c.r)}${ch(c.g)}${ch(c.b)}`;
+  }
+  for (const [k, stand] of Object.entries(STAND_IN)) if (!colors[k]) colors[k] = typeof stand === 'function' ? stand(colors) : stand;
   return { colors, female: skin.female === true, glow: top };
 }
 
-window.Dino3D = { create, fromGame, speciesOf: (raw) => speciesOf(raw), ready: registryReady };
+/** What an unused (black) region is shown as. Detail1 follows the markings. */
+const STAND_IN = {
+  Detail1: (c) => c.Markings ?? '#3a3530', Eyes: '#b08a2a', Teeth: '#e6dcc4', Mouth: '#8a4a45', Claws: '#3a3632',
+};
+
+window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speciesOf(raw), ready: registryReady };
 
 // --- the skin editor (tab Skin) ---------------------------------------------------
 (() => {
