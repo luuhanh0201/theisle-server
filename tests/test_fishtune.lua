@@ -143,31 +143,72 @@ poll.fn()
 check("a big one kept", rawget(cat, "DespawnDelaySeconds") == 3600)
 check("a small one left to the game", rawget(hop, "DespawnDelaySeconds") == 25)
 
-say("\n-- 2e. watching the kept kinds: a jump and a disappearance are logged --")
+say("\n-- 2e. keeping hands a fish back when a player comes near --")
 local pos = { X = 1020000, Y = 0, Z = 0 }   -- 200 m from the crocodile
 local coel = setmetatable({ DespawnDelaySeconds = 25 }, { __index = function(_, k)
   if k == "GetAddress" then return function() return 9001 end end
   if k == "IsValid" then return function() return true end end
   if k == "K2_GetActorLocation" then return function() return { X = pos.X, Y = pos.Y, Z = pos.Z } end end
+  if k == "GetActorScale3D" then return function() return { X = 1.4, Y = 1.4, Z = 1.4 } end end
   if k == "GetClass" then return function() return { GetFName = function() return FName("BP_Coalecanth_C") end } end end
 end })
 lake = { coel }
-H.log = {}
 clock = clock + 301
 poll.fn()
 check("the coelacanth kept", rawget(coel, "DespawnDelaySeconds") == 3600)
-pos.X = pos.X + 20000   -- 200 m in one look
-poll.fn()
-local function logged(t) for _, l in ipairs(H.log) do if l:find(t, 1, true) then return l end end end
-check("a jump is logged as moved by the game", logged("fish moved — BP_Coalecanth_C jumped 200 m") ~= nil, table.concat(H.log, " | "))
-pos.X = 1000300          -- back next to the crocodile (3 m)…
+pos.X = 1000300          -- next to the crocodile (3 m)…
 poll.fn()
 check("a player close: handed back to the game's 25 s (so it can be caught)", rawget(coel, "DespawnDelaySeconds") == 25)
 check("…and not kept again while the player is near", (function() poll.fn(); return rawget(coel, "DespawnDelaySeconds") == 25 end)())
-lake = {}                -- …and gone
+os.remove("Mods/FishTune/Saved/keep.json")
+
+say("\n-- 2e'. watching (read only): size, the dino, what is left where the fish went --")
+H.log = {}
+pos.X = 1020000
+local wf = assert(io.open("Mods/FishTune/Saved/watch.json", "w"))
+wf:write(json.encode({ enabled = true, classes = { "BP_Coalecanth_C" }, nearM = 30 })); wf:close()
+croc.__props.Growth, croc.__props.Hunger, croc.__props.MaxHunger = 0.28, 1.8, 13.5
 poll.fn()
-local gone = logged("fish gone — BP_Coalecanth_C")
-check("gone, with the nearest player: close by", gone ~= nil and gone:find("close by", 1, true) ~= nil, gone)
+local function logged(t) for _, l in ipairs(H.log) do if l:find(t, 1, true) then return l end end end
+check("200 m away: not announced yet", logged("fish near") == nil, table.concat(H.log, " | "))
+pos.X = pos.X + 20000   -- 200 m in one look
+poll.fn()
+check("a jump is logged as moved by the game", logged("fish moved — BP_Coalecanth_C jumped 200 m") ~= nil, table.concat(H.log, " | "))
+pos.X = 1000500          -- 5 m from the crocodile
+poll.fn()
+local near = logged("fish near — BP_Coalecanth_C size 1.40/1.40/1.40, 5 m from 76561190000000009")
+check("near a player: size and the dino logged", near ~= nil and near:find("BP_Deinosuchus_C 0.28, stomach 1.8/13.5", 1, true) ~= nil,
+      table.concat(H.log, " | "))
+poll.fn()
+local nNear = 0
+for _, l in ipairs(H.log) do if l:find("fish near", 1, true) then nNear = nNear + 1 end end
+check("announced once", nNear == 1)
+check("watching writes nothing on the fish", rawget(coel, "DespawnDelaySeconds") == 25)
+local body = H.makePawn({ class = "BP_Coalecanth_C", loc = { X = 1000600, Y = 0, Z = 0 }, health = 0 })
+lake = {}                -- bitten: gone
+_G.FindAllOf = function(c)
+  if c == "TIAmbientFish" then return lake end
+  if c == "PlayerController" then return { crocCtrl } end
+  if c == "Pawn" then return { croc, body } end
+  return {}
+end
+poll.fn()
+local gone = logged("fish gone — BP_Coalecanth_C size 1.40/1.40/1.40")
+check("gone next to the player: logged with the dino", gone ~= nil and gone:find("5 m from 76561190000000009 (BP_Deinosuchus_C", 1, true) ~= nil, gone)
+croc.__props.Hunger = 11.2
+H.advance(2000)
+local look = logged("watch +2 s")
+check("2 s later: the stomach change and what is at the spot (not the player)", look ~= nil and look:find("stomach +9.4", 1, true) ~= nil
+      and look:find("pawn BP_Coalecanth_C hp 0 at 1 m", 1, true) ~= nil and look:find("Deinosuchus_C hp", 1, true) == nil, look)
+H.advance(10000)
+check("looks at 6 and 12 s too", logged("watch +6 s") ~= nil and logged("watch +12 s") ~= nil)
+os.remove("Mods/FishTune/Saved/watch.json")
+_G.FindAllOf = function(c)
+  if c == "TIAIWorldSpawner" then return { spawnerObj } end
+  if c == "TIAmbientFish" then return lake end
+  if c == "PlayerController" then return { crocCtrl } end
+  return {}
+end
 
 say("\n-- 2f. a fresh fish next to a player is not kept; turning keep off hands every kept fish back --")
 local byMe, away = swimmer(1001000), swimmer(1100000)   -- 10 m and 1 km from the crocodile

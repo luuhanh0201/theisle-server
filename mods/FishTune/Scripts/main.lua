@@ -42,6 +42,17 @@
 -- game made — placed, or parked at (0, 0, 0) — by class.
 -- Flag first: Saved/writing.flag is written before a write and removed a
 -- minute later; found at load, no write is made again (a crash stays one crash).
+--
+-- Watching (Saved/watch.json, read only — writes nothing on the game):
+--   { "enabled": true, "classes": ["BP_Coalecanth_C", "BP_Catfish_C"], "nearM": 30 }
+-- Why a big fish bitten by a crocodile can go without feeding it (2026-09-27:
+-- a 44 % Deinosuchus ate one, a 27 % one bit one and it was gone). Each fish
+-- of those kinds that comes within nearM of a player is logged once with its
+-- size (GetActorScale3D, an AActor function like K2_GetActorLocation) and that
+-- player's dino (class, growth, stomach). When it goes while a player was that
+-- close, the same, then 2, 6 and 12 s later: the player's stomach again, and
+-- what is at that spot — Pawns (a fish the game turned into a creature, a
+-- carcass) and fish of that kind. A jump (> 60 m in one look) is logged too.
 
 if not package.path:find("Mods/?.lua", 1, true) then
     package.path = "Mods/?.lua;" .. package.path
@@ -174,11 +185,6 @@ local function addressOf(obj)
 end
 local windowStart, windowCount = 0, 0
 
--- Watching the kept kinds (onlyClasses): each fish's last place, so a fish
--- that jumps (moved by the game) or goes away is logged with how far the
--- nearest player was when last seen — eaten, removed by the game, or moved.
-local track = {}         -- address -> { cls, x, y, z, since, near, who }
-local JUMP_CM = 6000     -- more than 60 m in one 2 s look: moved, not swum
 local GAME_DELAY = 25    -- the game's own DespawnDelaySeconds
 
 --- Every player's place (game thread): { {id, x, y}, … }.
@@ -264,14 +270,9 @@ local function keepFish()
                 placed = placed + 1
                 seen[addr] = true
                 local wanted = true
-                local t = track[addr]
-                if only ~= nil and not kept[addr] and t == nil then
+                if only ~= nil and not kept[addr] then
                     local okC, n = pcall(function() return a:GetClass():GetFName():ToString() end)
                     wanted = okC and only[tostring(n)] == true
-                    if wanted then
-                        t = { cls = tostring(n), x = v.X, y = v.Y, z = v.Z, since = now }
-                        track[addr] = t
-                    end
                 end
                 local nd = nearestOf(players, v.X, v.Y)
                 if kept[addr] and nd ~= nil and nd < releaseCm then
@@ -281,16 +282,6 @@ local function keepFish()
                     released = released + 1
                 end
                 if not kept[addr] and nd ~= nil and nd < keepFromCm then wanted = false end
-                if t ~= nil then
-                    local jump = math.sqrt((v.X - t.x) ^ 2 + (v.Y - t.y) ^ 2 + (v.Z - t.z) ^ 2)
-                    if jump > JUMP_CM then
-                        local d, who = nearestOf(players, v.X, v.Y)
-                        H.log(string.format("%s: fish moved — %s jumped %.0f m in one look (nearest player %s m, %s)",
-                            MOD, t.cls, jump / 100, d and string.format("%.0f", d / 100) or "?", tostring(who)))
-                    end
-                    t.x, t.y, t.z = v.X, v.Y, v.Z
-                    t.near, t.who = nearestOf(players, v.X, v.Y)
-                end
                 if kept[addr] then
                     count = count + 1
                 elseif wanted then
@@ -316,14 +307,6 @@ local function keepFish()
         end
     end
     for addr in pairs(kept) do if not seen[addr] then kept[addr] = nil end end
-    for addr, t in pairs(track) do
-        if not seen[addr] then
-            H.log(string.format("%s: fish gone — %s after %d s; last seen %s m from the nearest player (%s)%s", MOD,
-                t.cls, now - t.since, t.near and string.format("%.0f", t.near / 100) or "?", tostring(t.who),
-                (t.near and t.near <= 800) and " — close by: eaten, or removed by the game" or " — nobody near: removed by the game"))
-            track[addr] = nil
-        end
-    end
     if ((fresh > 0 or released > 0) and now - keptLog >= 60) or now - keptLog >= 300 then
         keptLog = now
         H.log(string.format("%s: keep — %d fish kept (+%d, %d handed back: a player near), %d placed in all, %d near %d crocodile(s), max %d, %d/%d this window",
@@ -331,8 +314,149 @@ local function keepFish()
     end
 end
 
+-- Watching (see the top): read only.
+local watch = {}         -- address -> { cls, x, y, z, since, near, who, scale }
+local kinds = {}         -- address -> class name, read once per fish
+local JUMP_CM = 6000     -- more than 60 m in one 2 s look: moved, not swum
+local LOOK_CM = 2500     -- after a fish went: what is within 25 m of its spot
+local LOOKS_MS = { 2000, 6000, 12000 }
+
+local function metres(cm) return cm and string.format("%.0f", cm / 100) or "?" end
+
+--- The dino of player `id` now (game thread): "BP_Deinosuchus_C 0.28, stomach 1.8/13.5".
+local function dinoOf(id)
+    local out = nil
+    H.forEachPlayer(function(ctrl)
+        if out ~= nil or H.safeSteamId(ctrl) ~= id then return end
+        local pawn = H.livePawnFromCtrl(ctrl)
+        if not pawn then return end
+        local function num(fn)
+            local ok, v = pcall(function() return pawn[fn](pawn) end)
+            return ok and type(v) == "number" and v or nil
+        end
+        local okC, n = pcall(function() return pawn:GetClass():GetFName():ToString() end)
+        out = { cls = okC and tostring(n) or "?", growth = num("GetGrowth"), hunger = num("GetHunger"), maxHunger = num("GetMaxHunger") }
+    end)
+    return out
+end
+local function dinoText(d)
+    if d == nil then return "dino ?" end
+    return string.format("%s %.2f, stomach %.1f/%.1f", d.cls, d.growth or -1, d.hunger or -1, d.maxHunger or -1)
+end
+
+local function scaleOf(a)
+    local ok, s = pcall(function()
+        local v = a:GetActorScale3D()
+        return string.format("%.2f/%.2f/%.2f", v.X, v.Y, v.Z)
+    end)
+    return ok and s or "?"
+end
+
+--- What is at a spot a fish left (game thread): non-player Pawns and fish of that kind.
+local function lookAt(t, id, before, ms)
+    local found = {}
+    local players = {}
+    H.forEachPlayer(function(ctrl)
+        local p = H.livePawnFromCtrl(ctrl)
+        local addr = p and addressOf(p)
+        if addr then players[addr] = true end
+    end)
+    local function near(obj)
+        local okL, v = pcall(function() return obj:K2_GetActorLocation() end)
+        if not (okL and v) then return nil end
+        local d = math.sqrt((v.X - t.x) ^ 2 + (v.Y - t.y) ^ 2 + (v.Z - t.z) ^ 2)
+        return d <= LOOK_CM and d or nil
+    end
+    local okP, pawns = pcall(function() return FindAllOf("Pawn") or {} end)
+    for _, p in ipairs(okP and pawns or {}) do
+        local addr = addressOf(p)
+        if addr and not players[addr] then
+            local d = near(p)
+            if d then
+                local okC, n = pcall(function() return p:GetClass():GetFName():ToString() end)
+                local okH, hp = pcall(function() return p:GetHealth() end)
+                found[#found + 1] = string.format("pawn %s hp %s at %s m", okC and tostring(n) or "?",
+                    (okH and type(hp) == "number") and string.format("%.0f", hp) or "?", metres(d))
+            end
+        end
+    end
+    local okF, same = pcall(function() return FindAllOf(t.cls) or {} end)
+    for _, f in ipairs(okF and same or {}) do
+        local d = near(f)
+        if d then found[#found + 1] = string.format("%s at %s m", t.cls, metres(d)) end
+    end
+    local now = dinoOf(id)
+    local fed = (now and now.hunger and before and before.hunger) and string.format("%+.1f", now.hunger - before.hunger) or "?"
+    H.log(string.format("%s: watch +%d s — %s stomach %s since (%s); at the spot: %s", MOD, ms / 1000, tostring(id), fed,
+        dinoText(now), #found > 0 and table.concat(found, ", ") or "nothing"))
+end
+
+local function watchFish()
+    local w = readJson(DIR .. "watch.json")
+    if w == nil or w.enabled ~= true then watch, kinds = {}, {}; return end
+    local classes = {}
+    for _, c in ipairs(type(w.classes) == "table" and w.classes or {}) do
+        if type(c) == "string" then classes[c] = true end
+    end
+    local nearCm = (tonumber(w.nearM) or 30) * 100
+    local okF, all = pcall(function() return FindAllOf("TIAmbientFish") or {} end)
+    if not okF then return end
+    local now = os.time()
+    local players = allPlayers()
+    local seen = {}
+    for _, a in ipairs(all) do
+        local addr = addressOf(a)
+        local okL, v = pcall(function() return a:K2_GetActorLocation() end)
+        local placed = addr and okL and v and (math.abs(v.X) + math.abs(v.Y) + math.abs(v.Z)) >= 1
+        if placed then
+            seen[addr] = true
+            if kinds[addr] == nil then
+                local okC, n = pcall(function() return a:GetClass():GetFName():ToString() end)
+                kinds[addr] = okC and tostring(n) or "?"
+            end
+            local cls = kinds[addr]
+            if classes[cls] then
+                local t = watch[addr]
+                if t == nil then
+                    t = { cls = cls, x = v.X, y = v.Y, z = v.Z, since = now }
+                    watch[addr] = t
+                end
+                local jump = math.sqrt((v.X - t.x) ^ 2 + (v.Y - t.y) ^ 2 + (v.Z - t.z) ^ 2)
+                local d, who = nearestOf(players, v.X, v.Y)
+                if jump > JUMP_CM then
+                    H.log(string.format("%s: fish moved — %s jumped %s m in one look (nearest player %s m, %s)",
+                        MOD, cls, metres(jump), metres(d), tostring(who)))
+                end
+                t.x, t.y, t.z, t.near, t.who = v.X, v.Y, v.Z, d, who
+                if d ~= nil and d <= nearCm and t.scale == nil then
+                    t.scale = scaleOf(a)
+                    H.log(string.format("%s: fish near — %s size %s, %s m from %s (%s)", MOD, cls, t.scale, metres(d),
+                        tostring(who), dinoText(dinoOf(who))))
+                end
+            end
+        end
+    end
+    for addr in pairs(kinds) do if not seen[addr] then kinds[addr] = nil end end
+    for addr, t in pairs(watch) do
+        if not seen[addr] then
+            watch[addr] = nil
+            if t.scale ~= nil then
+                local close = t.near ~= nil and t.near <= nearCm
+                local before = close and dinoOf(t.who) or nil
+                H.log(string.format("%s: fish gone — %s size %s after %d s, last seen %s m from %s%s", MOD, t.cls, t.scale,
+                    now - t.since, metres(t.near), tostring(t.who), close and (" (" .. dinoText(before) .. ")") or " — nobody near"))
+                if close then
+                    for _, ms in ipairs(LOOKS_MS) do
+                        H.defer(ms, function() lookAt(t, t.who, before, ms) end)
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- Every 2 s: a crocodile swims ~5 m/s, so a kept fish is handed back well
 -- before one closing in from 40 m can bite it.
-H.every(2000, MOD .. ": poll", function() poll(); keepFish() end)
+H.every(2000, MOD .. ": poll", function() poll(); keepFish(); watchFish() end)
 local ws = spawner()
 H.log(MOD .. ": loaded — spawner now " .. (ws and json.encode(readBack(ws)) or "not found yet"))

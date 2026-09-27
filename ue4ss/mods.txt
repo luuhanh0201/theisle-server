@@ -41,11 +41,11 @@ ZoneGuard : 1
 FishFind : 0
 ; Done 2026-09-26: a fish a mod spawns is removed by the game within 10 s (fishspawn7.txt).
 FishSpawnTest : 0
-; FishTune: OFF while the server is put back as it was at 08:50 (big fish eatable) —
-; keeps Catfish / Coelacanth in the waters players left (Saved/keep.json), only
-; where Mods/FishTune/Saved/ENABLED exists. (Turned off once on 2026-09-27 over "bitten
-; big fish vanish" — that is the game: elite fish flee, need 2–3 bites and G to eat.)
-FishTune : 0
+; FishTune: ON only to WATCH (Saved/watch.json, read only) why a bitten big fish
+; (Coelacanth) vanishes for a small crocodile: its size, the dino, what is left.
+; keep.json is off and there is no apply.json, so it writes nothing on the game —
+; the server stays as at 08:50. Only where Mods/FishTune/Saved/ENABLED exists.
+FishTune : 1
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,
