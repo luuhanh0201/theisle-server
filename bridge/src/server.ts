@@ -6,6 +6,7 @@ import { config } from './config.js';
 import type { Store } from './store.js';
 import { queueKill, queueLightTest } from './commands.js';
 import { lastPrimeOf } from './prime-history.js';
+import { lifeDetails, restoreLife } from './life-history.js';
 import { readNotes, setNote } from './notes.js';
 import { actingAs, audit, describeChanges, readAuditPage } from './audit.js';
 import { currentLogin, panelGate } from './panel-gate.js';
@@ -376,6 +377,7 @@ async function handlePanel(
       (path === '/api/garage-settings' && req.method === 'PUT') ||
       (path === '/api/prime-fixes' && req.method === 'POST') ||
       (path === '/api/light-test' && req.method === 'POST') ||
+      (path === '/api/restore-life' && req.method === 'POST') ||
       (path === '/api/commands-settings' && req.method === 'PUT') ||
       (path === '/api/voice-settings' && req.method === 'PUT') ||
       (path === '/api/panel-access' && req.method === 'PUT') ||
@@ -751,6 +753,21 @@ async function handlePanel(
       return;
     }
 
+    if (path === '/api/restore-life') {
+      // A dino the player played, back in their garage as it was before it died (life-history.ts).
+      const body = (await readJsonBody(req)) as { steamId?: unknown; spawnedAt?: unknown; slot?: unknown; overwrite?: unknown } | null;
+      const steamId = String(body?.steamId ?? '');
+      const spawnedAt = Number(body?.spawnedAt);
+      if (!/^\d{17}$/.test(steamId) || !Number.isInteger(spawnedAt)) { sendJson(res, 400, { error: 'steamId and spawnedAt' }); return; }
+      const slot = typeof body?.slot === 'string' && body.slot !== '' ? body.slot : `khoiphuc-${spawnedAt}`;
+      const { life } = await restoreLife(steamId, spawnedAt, slot, body?.overwrite === true);
+      await audit({ action: 'life restored to garage',
+        detail: `${steamId}/${slot} · ${life.species} ${Math.round((life.growth ?? 0) * 100)}% · nhiệm vụ ${life.prime?.done ?? '?'}/10${life.prime?.prime ? ' · prime' : ''} · đời từ ${new Date(spawnedAt * 1000).toISOString()}`,
+        ok: true });
+      sendJson(res, 201, { slot, life });
+      return;
+    }
+
     if (path === '/api/light-test') {
       // Admin test: a light on one player's dino (garage/light.lua), or off it.
       const body = (await readJsonBody(req)) as { steamId?: unknown; on?: unknown } | null;
@@ -859,6 +876,13 @@ async function handlePanel(
       return;
     }
     sendJson(res, 200, { steamId, slot, state });
+    return;
+  }
+
+  // Every dino a player played, with its mutations, prime tasks and skin (life-history.ts).
+  const livesMatch = /^\/api\/lives\/(\d{17})$/.exec(path);
+  if (livesMatch !== null) {
+    sendJson(res, 200, { lives: await lifeDetails(livesMatch[1] as string) });
     return;
   }
 

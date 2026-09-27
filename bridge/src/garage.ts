@@ -63,6 +63,12 @@ export interface NewSlotSpec {
    * panel fills it from the player's last dino of that species (prime-history.ts).
    */
   primeConditions?: string;
+  /**
+   * The skin it comes out with, as the game holds one (H.readSkin: colors
+   * { Body: {r,g,b} … } linear, patternIndex, themeIndex, variation, female) —
+   * restore.lua paints it (step 8). Left out: the fresh dino's own.
+   */
+  skin?: unknown;
   /** Fill the stomach to the game's max for this dino on redeem (default true). */
   stomachFull?: boolean;
   /** Nutrient level to give (carb, protein, lipid), % of the dino's max —
@@ -242,6 +248,24 @@ export async function createSlot(
     [...spec.primeConditions].forEach((c, i) => { (primeData as Record<string, boolean>)[`cond${i + 1}`] = c === '1'; });
     primeData['eligible'] = [...spec.primeConditions].filter((c) => c === '1').length >= PRIME_NEEDED;
   }
+  let skin: Record<string, unknown> | null = null;
+  if (spec.skin !== undefined && spec.skin !== null) {
+    const raw = spec.skin as Record<string, unknown>;
+    const colorsRaw = typeof raw === 'object' ? raw['colors'] : null;
+    if (typeof colorsRaw !== 'object' || colorsRaw === null) throw new ValidationError('skin.colors is required');
+    const colors: Record<string, { r: number; g: number; b: number }> = {};
+    const ch = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 10;
+    for (const [k, c] of Object.entries(colorsRaw as Record<string, unknown>)) {
+      const cc = c as Record<string, unknown> | null;
+      if (!/^[A-Za-z0-9]{1,20}$/.test(k) || typeof cc !== 'object' || cc === null || !ch(cc['r']) || !ch(cc['g']) || !ch(cc['b'])) {
+        throw new ValidationError(`skin.colors.${k}: r, g, b must be numbers`);
+      }
+      colors[k] = { r: cc['r'], g: cc['g'], b: cc['b'] };
+    }
+    skin = { colors };
+    for (const k of ['patternIndex', 'themeIndex', 'variation'] as const) if (typeof raw[k] === 'number' && Number.isFinite(raw[k])) skin[k] = raw[k];
+    if (typeof raw['female'] === 'boolean') skin['female'] = raw['female'];
+  }
   const elderStacks = spec.elderStacks ?? null;
   if (elderStacks !== null && (!Number.isInteger(elderStacks) || elderStacks < 0 || elderStacks > 10)) {
     throw new ValidationError('elderStacks must be a whole number 0–10');
@@ -293,6 +317,8 @@ export async function createSlot(
     elderStacks,
     // The prime tasks (restore.lua applyPrime); null = the fresh dino's own.
     primeData,
+    // Painted on it when taken out (restore.lua step 8); null = the fresh dino's own.
+    skin,
     // Read by restore.lua: an admin gift comes out fed (see NewSlotSpec).
     fill: { stomachFull: spec.stomachFull ?? true, nutrientPct },
 

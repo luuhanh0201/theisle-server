@@ -944,7 +944,7 @@
         <h2>Các đời dino</h2><span class="sub">mọi dino người này đã chơi, mới nhất trước</span></div>
       <section class="card"><div class="card-body table-wrap">
         <table>
-          <thead><tr><th>Dino</th><th>Growth</th><th>Sống</th><th>Kill</th><th class="hide-sm">Gây / chịu dmg</th><th>Kết thúc</th><th class="hide-sm">Spawn lúc</th><th></th></tr></thead>
+          <thead><tr><th>Dino</th><th>Growth</th><th>Sống</th><th>Kill</th><th class="hide-sm">Gây / chịu dmg</th><th>Kết thúc</th><th>Nhiệm vụ</th><th class="hide-sm">Spawn lúc</th><th></th></tr></thead>
           <tbody id="player-lives"></tbody>
         </table>
       </div></section>
@@ -2778,10 +2778,11 @@ function renderLives(lives, online, steamId) {
   $('lives-ico').innerHTML = icon('growth');
   const tbody = $('player-lives');
   if (lives.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty">Chưa thấy người này spawn dino nào</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Chưa thấy người này spawn dino nào</td></tr>';
     return;
   }
-  tbody.innerHTML = lives.map((l, i) => {
+  const draw = (details) => { tbody.innerHTML = lives.map((l, i) => {
+    const d = details.get(l.spawnedAt);
     const alive = l.endedAt === null;
     const length = (alive ? l.lastAt : l.endedAt) - l.spawnedAt;
     return `<tr>
@@ -2793,11 +2794,57 @@ function renderLives(lives, online, steamId) {
       <td><b>${l.kills}</b></td>
       <td class="hide-sm">${num(l.damageDealt)} <span class="muted">/ ${num(l.damageTaken)}</span></td>
       <td>${lifeEnd(l, online, i === 0)}</td>
+      <td>${lifeTasks(d)}</td>
       <td class="hide-sm muted">${esc(dateTime(l.spawnedAt))}</td>
-      <td>${i < PATH_LIVES ? `<a class="btn-soft sm" style="white-space:nowrap" href="#map/path/${esc(encodeURIComponent(steamId))}/${l.spawnedAt}">Đường đi</a>` : ''}</td>
+      <td><div style="display:flex;gap:6px;justify-content:flex-end">${lifeRestore(d, steamId)}${i < PATH_LIVES ? `<a class="btn-soft sm" style="white-space:nowrap" href="#map/path/${esc(encodeURIComponent(steamId))}/${l.spawnedAt}">Đường đi</a>` : ''}</div></td>
     </tr>`;
-  }).join('');
+  }).join(''); };
+  draw(new Map());
+  // Prime tasks, and what can be put back in the garage: from the events (life-history.ts).
+  getJson(`/api/lives/${encodeURIComponent(steamId)}`)
+    .then((r) => { if ($('player-lives') === tbody) draw(new Map(r.lives.map((x) => [x.spawnedAt, x]))); })
+    .catch(() => {});
 }
+
+/** "6/10 · 👑" — the prime tasks a life had done when last read. */
+function lifeTasks(d) {
+  if (!d?.prime) return '<span class="muted">–</span>';
+  const p = d.prime;
+  return `<span class="mono" title="Nhiệm vụ ${esc(p.code)}${p.elderStacks ? ` · elder ${p.elderStacks}` : ''}">${p.done}/10</span>`
+    + (p.prime ? ' <span class="chip tone-grow" title="Prime">👑 prime</span>' : p.eligible ? ' <span class="chip tone-neutral">đủ ĐK</span>' : '');
+}
+
+/** A dead (or admin-removed) dino: a button that puts it back in the garage as it was. */
+function lifeRestore(d, steamId) {
+  if (!d) return '';
+  if (d.restoredTo) return `<span class="muted" style="white-space:nowrap" title="Đã khôi phục">↩ ${esc(d.restoredTo)}</span>`;
+  if (d.end !== 'death' && d.end !== 'admin') return '';
+  if (!d.classPath || d.growth === null) return '';
+  return `<button class="btn-soft sm" style="white-space:nowrap" data-restore="${d.spawnedAt}" data-steam="${esc(steamId)}"
+    data-label="${esc(dino(d.species))} ${esc(pct(d.growth))}">Khôi phục vào gara</button>`;
+}
+
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest?.('button[data-restore]');
+  if (!b) return;
+  const steamId = b.dataset.steam, spawnedAt = Number(b.dataset.restore), label = b.dataset.label;
+  confirmAction({
+    title: 'Khôi phục dino vào gara?',
+    body: `Đưa <b>${esc(label)}</b> (spawn ${esc(dateTime(spawnedAt))}) vào gara của
+      <span class="mono">${esc(steamId)}</span> như lúc trước khi chết: growth, đột biến, nhiệm vụ prime,
+      prime, elder, giới tính, màu. Máu / dạ dày / dinh dưỡng không được ghi lại nên dino ra sẽ khoẻ và no.
+      Mỗi đời chỉ khôi phục được một lần.`,
+    okLabel: 'Khôi phục',
+    withReason: false,
+    danger: false,
+    text: { label: 'Slot gara', value: `khoiphuc-${spawnedAt}` },
+    run: async (token, _reason, slot) => {
+      const r = await adminFetch('/api/restore-life', 'POST', token, { steamId, spawnedAt, slot: slot.trim() });
+      toast(`Đã khôi phục ${label} vào gara (slot ${r.slot ?? slot}).`);
+      refresh();
+    },
+  });
+});
 
 // --- leaderboard --------------------------------------------------------------
 
