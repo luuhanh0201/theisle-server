@@ -37,10 +37,15 @@ do
     end
 end
 
---- A linear colour channel 0–1, or nil (out of range is refused, not clamped).
+-- Channels above 1 (HDR) are accepted here so "brighter than white" can be
+-- tried without a restart: the bridge decides what players may send (0–1 for
+-- now). Past MAX_CHANNEL is refused, not clamped.
+S.MAX_CHANNEL = 10
+
+--- A linear colour channel 0–MAX_CHANNEL, or nil.
 local function unit(v)
     v = tonumber(v)
-    if v == nil or v ~= v or v < 0 or v > 1 then return nil end
+    if v == nil or v ~= v or v < 0 or v > S.MAX_CHANNEL then return nil end
     return v
 end
 
