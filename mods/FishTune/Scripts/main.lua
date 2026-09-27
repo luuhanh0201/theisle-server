@@ -9,9 +9,14 @@
 -- could not be joined — its listing pointed at the live port).
 --
 -- It writes nothing by itself. An admin drops Mods/FishTune/Saved/apply.json:
---   { "id": "a1", "perPlayer": 24, "perWater": 60, "attempts": 3, "cooldown": 0.25 }
+--   { "id": "a1", "perPlayer": 24, "perWater": 60, "attempts": 3, "cooldown": 0.25,
+--     "minDist": 1000, "radius": 5000, "forwardDot": -1, "searchRadius": 2500,
+--     "separation": 120, "debug": true, "census": true }
 -- (any field left out is not written); each new id is applied once, on the
 -- game thread, then read back into Saved/applied.json and UE4SS.log.
+-- "debug" turns the game's own fish-spawn logging on (bDebugAmbientFishVerbose:
+-- why a spawn failed, in TheIsle.log). "census" counts every TIAmbientFish the
+-- game made — placed, or parked at (0, 0, 0) — by class.
 -- Flag first: Saved/writing.flag is written before a write and removed a
 -- minute later; found at load, no write is made again (a crash stays one crash).
 
@@ -47,7 +52,15 @@ local FIELDS = {
     { key = "perWater",  prop = "AmbientFishSoftLimitPerWater", lo = 1, hi = 300 },
     { key = "attempts",  prop = "AmbientFishSpawnAttemptsPerPlayer", lo = 1, hi = 10 },
     { key = "cooldown",  prop = "AmbientFishSpawnCooldown", lo = 0.05, hi = 10 },
+    -- Where a fish may appear: 30–70 m from the player, out of its sight
+    -- (forward dot <= 0), searched 12.5 m around the chosen point (game's).
+    { key = "minDist",      prop = "AmbientFishMinSpawnDistance", lo = 0, hi = 20000 },
+    { key = "radius",       prop = "AmbientFishSpawnRadius", lo = 500, hi = 30000 },
+    { key = "forwardDot",   prop = "AmbientFishHiddenSpawnForwardDot", lo = -1, hi = 1 },
+    { key = "searchRadius", prop = "AmbientFishHiddenSpawnSearchRadius", lo = 100, hi = 10000 },
+    { key = "separation",   prop = "AmbientFishMinSeparationDistance", lo = 0, hi = 2000 },
 }
+local INTS = { perPlayer = true, perWater = true, attempts = true }
 
 local function readJson(path)
     local f = io.open(path, "r")
@@ -98,15 +111,35 @@ local function poll()
     for _, f in ipairs(FIELDS) do
         local v = tonumber(req[f.key])
         if v ~= nil and v >= f.lo and v <= f.hi then
-            if f.key ~= "cooldown" then v = math.floor(v) end
+            if INTS[f.key] then v = math.floor(v) end
             if pcall(function() ws[f.prop] = v end) then wrote[#wrote + 1] = f.prop .. "=" .. tostring(v) end
+        end
+    end
+    if type(req.debug) == "boolean" then
+        if pcall(function() ws.bDebugAmbientFishVerbose = req.debug end) then
+            wrote[#wrote + 1] = "bDebugAmbientFishVerbose=" .. tostring(req.debug)
         end
     end
     clearFlagAt = os.time() + 60
     local after = readBack(ws)
+    local census = nil
+    if req.census == true then
+        census = { placed = 0, parked = 0, byClass = {} }
+        local okF, all = pcall(function() return FindAllOf("TIAmbientFish") or {} end)
+        for _, a in ipairs(okF and all or {}) do
+            local okL, v = pcall(function() return a:K2_GetActorLocation() end)
+            local okC, n = pcall(function() return a:GetClass():GetFName():ToString() end)
+            local cls = okC and tostring(n) or "?"
+            if okL and v and (math.abs(v.X) + math.abs(v.Y) + math.abs(v.Z)) < 1 then census.parked = census.parked + 1
+            else census.placed = census.placed + 1 end
+            census.byClass[cls] = (census.byClass[cls] or 0) + 1
+        end
+        H.log(string.format("%s: %s — census: %d placed, %d parked, %s", MOD, req.id, census.placed, census.parked,
+            json.encode(census.byClass)))
+    end
     H.log(string.format("%s: %s — wrote %s | before %s | after %s", MOD, req.id, table.concat(wrote, ", "),
         json.encode(before), json.encode(after)))
-    writeFile(DIR .. "applied.json", json.encode({ id = req.id, t = os.time(), before = before, after = after }))
+    writeFile(DIR .. "applied.json", json.encode({ id = req.id, t = os.time(), before = before, after = after, census = census }))
 end
 
 H.every(5000, MOD .. ": poll", poll)

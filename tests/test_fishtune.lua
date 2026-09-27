@@ -43,6 +43,24 @@ check("read back into applied.json", applied.id == "a1" and applied.before.perPl
 spawnerObj.MaxAmbientFishPerPlayer = 12
 poll.fn()
 check("the same id is not written twice", spawnerObj.MaxAmbientFishPerPlayer == 12)
+local function fishAt(x, cls) return { IsValid = function() return true end,
+  K2_GetActorLocation = function() return { X = x, Y = 0, Z = 0 } end,
+  GetClass = function() return { GetFName = function() return FName(cls) end } end } end
+local fish = { fishAt(0, "BP_Hoplo_C"), fishAt(0, "BP_Hoplo_C"), fishAt(5000, "BP_Catfish_C") }
+_G.FindAllOf = function(c)
+  if c == "TIAIWorldSpawner" then return { spawnerObj } end
+  if c == "TIAmbientFish" then return fish end
+  return {}
+end
+f = assert(io.open("Mods/FishTune/Saved/apply.json", "w"))
+f:write(json.encode({ id = "a1b", minDist = 1000, forwardDot = -1, debug = true, census = true })); f:close()
+spawnerObj.AmbientFishMinSpawnDistance, spawnerObj.AmbientFishHiddenSpawnForwardDot = 3000, 0
+poll.fn()
+check("where fish may appear: closer, not only behind", spawnerObj.AmbientFishMinSpawnDistance == 1000 and spawnerObj.AmbientFishHiddenSpawnForwardDot == -1)
+check("the game's fish-spawn logging on", spawnerObj.bDebugAmbientFishVerbose == true)
+local ap = json.decode(assert(io.open("Mods/FishTune/Saved/applied.json")):read("*a"))
+check("census: placed and parked, by class", ap.census and ap.census.placed == 1 and ap.census.parked == 2
+      and ap.census.byClass.BP_Hoplo_C == 2, json.encode(ap.census))
 clock = clock + 61
 poll.fn()
 check("the flag comes down after a minute", io.open("Mods/FishTune/Saved/writing.flag", "r") == nil)
