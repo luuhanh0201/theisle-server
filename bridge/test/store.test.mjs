@@ -377,3 +377,52 @@ test('damage from a StatsLogger that names its bites: grouped by the id', () => 
   assert.deepEqual(bites.map((b) => [b.amount, b.ticks]), [[500, 1], [988, 3], [320, 1]]);
   assert.equal(s.player(A).player.hits, 3);
 });
+
+test('longest life: one dino across relogs, the garage and a rebirth; the one alive counts; online time only', () => {
+  const s = new Store();
+  const t = now() - 100_000;
+  const REX = 'BP_Tyrannosaurus_C';
+  feed(s, [
+    // Stretch 1: 1,000 s, then the player leaves (offline 5,000 s, not counted), comes back on it.
+    { t, type: 'session_start', steamId: A },
+    { t, type: 'spawn', steamId: A, species: REX, growth: 0.5 },
+    { t: t + 1000, type: 'session_end', steamId: A, duration: 1000 },
+    { t: t + 6000, type: 'session_start', steamId: A },
+    { t: t + 6000, type: 'spawn', steamId: A, species: REX, growth: 0.5 },          // stretch 2: 2,000 s
+    { t: t + 8000, type: 'garage_store', steamId: A, slot: '1', growth: 0.6 },
+    { t: t + 8002, type: 'death', steamId: A, species: REX, growth: 0.25 },       // the store's shrink-and-kill
+    { t: t + 8010, type: 'spawn', steamId: A, species: REX, growth: 0.25 },
+    { t: t + 8015, type: 'garage_redeem', steamId: A, slot: '1', ok: true, growth: 0.6 },   // stretch 3: until 11,015
+    { t: t + 11015, type: 'death', steamId: A, species: REX, growth: 1 },
+    // A rebirth at 100 %: young again, one more elder stack from its first reading.
+    { t: t + 11030, type: 'spawn', steamId: A, species: REX, growth: 0.1 },
+    { t: t + 11030, type: 'prime', steamId: A, species: REX, growth: 0.1, elderStacks: 1 },
+    { t: t + 12030, type: 'death', steamId: A, species: REX, growth: 0.2 },       // stretch 4: 1,000 s
+    // Another dino, alive now for a while: 500 s.
+    { t: t + 12040, type: 'spawn', steamId: A, species: 'BP_Stegosaurus_C', growth: 0.25 },
+    { t: t + 12040, type: 'prime', steamId: A, species: 'BP_Stegosaurus_C', growth: 0.25, elderStacks: 0 },
+  ]);
+  const p = s.player(A).player;
+  // 1,000 + 2,000 + (8,010→8,015 then to 11,015 = 3,005 incl. the fresh one's 5 s) + 1,000 = 7,005 (+ the store's 2 s).
+  assert.ok(p.longestLife >= 7000 && p.longestLife <= 7010, String(p.longestLife));
+  assert.equal(p.longestLifeSpecies, REX);
+  assert.equal(p.longestLifeAlive, false);
+});
+
+test('longest life: an admin gift with elder stacks is not a rebirth; the dino alive now counts', () => {
+  const s = new Store();
+  const t = now() - 3000;
+  feed(s, [
+    { t, type: 'session_start', steamId: B },
+    { t, type: 'spawn', steamId: B, species: 'X', growth: 1 },
+    { t: t + 100, type: 'death', steamId: B, species: 'X', growth: 1 },
+    { t: t + 110, type: 'spawn', steamId: B, species: 'X', growth: 0.25 },
+    { t: t + 110, type: 'prime', steamId: B, species: 'X', growth: 0.25, elderStacks: 0 },   // the fresh one first
+    { t: t + 115, type: 'garage_redeem', steamId: B, slot: 'admin', ok: true, growth: 1 },
+    { t: t + 116, type: 'prime', steamId: B, species: 'X', growth: 1, elderStacks: 1 },      // the gift's stacks, later
+    { t: now(), type: 'snapshot', steamId: B, species: 'X', health: 1, stamina: 1, hunger: 1, thirst: 1, growth: 1 },
+  ]);
+  const p = s.player(B).player;
+  assert.ok(p.longestLife >= 2880 && p.longestLife <= 2900, `the gift alive ~2,890 s, not +100: ${p.longestLife}`);
+  assert.equal(p.longestLifeAlive, true);
+});

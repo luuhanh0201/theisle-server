@@ -34,6 +34,20 @@ export interface LifeRecord {
   killerSpecies: string | null;
   /** Slot this life was restored from with !redeem. */
   redeemedFrom: string | null;
+  /**
+   * The dino this life is a stretch of: a relog on it, its store and its
+   * redeem, an admin's restore of it all carry it on (#chainOf). Its survival
+   * time is the sum of its stretches, online only.
+   */
+  chain: number;
+  /** When the player left while it lived (the stretch ends there, not at the next spawn). */
+  pausedAt: number | null;
+  /** The garage slot it went into (a later redeem of that slot carries it on). */
+  storedTo: string | null;
+  /** Elder stacks (lineage counter) as the "prime" events read them; null before the first. */
+  elderStacks: number | null;
+  /** The highest growth the events showed (a rebirth follows a dino at 100 %). */
+  maxGrowth: number | null;
 }
 
 export interface PlayerStats {
@@ -68,8 +82,15 @@ export interface PlayerStats {
   sessions: number;
   /** Seconds online, closed sessions plus the open one up to lastSeen. */
   playtime: number;
-  /** Longest single life that ended in a death we saw. */
+  /**
+   * The player's longest-surviving dino, in seconds online: all its stretches
+   * — relogs, its time in and out of the garage, its rebirths (chuyển sinh at
+   * 100 %), an admin's restore of it — the one alive now included.
+   */
   longestLife: number;
+  /** That dino's species, and whether it is still alive. */
+  longestLifeSpecies: string | null;
+  longestLifeAlive: boolean;
   /** Largest dino (by growth) this player has killed. */
   biggestKill: KillRecord | null;
   online: boolean;
@@ -183,7 +204,7 @@ export class Store {
   /** Places players and AI stood: where AI zones may spawn (ground-points.ts). */
   readonly groundPoints = new GroundPoints();
   /** steamId -> when and why their dino was just removed on purpose. */
-  readonly #recentRemoval = new Map<string, { t: number; cause: 'garage' | 'admin' }>();
+  readonly #recentRemoval = new Map<string, { t: number; cause: 'garage' | 'admin'; slot?: string }>();
   #nextId = 1;
   #lastEventAt: number | null = null;
   /** Told of every feed entry as it is added (the Discord log: discord.ts). Replays included — the listener filters. */
@@ -211,6 +232,24 @@ export class Store {
           eligible: event.eligible ?? null, elderStacks: event.elderStacks ?? null,
           conditions: event.conditions ?? null,
         };
+        // A rebirth (chuyển sinh): a dino at 100 % starts again young with one more
+        // elder stack — the same dino going on, so the same chain. Told apart
+        // from an admin's gift with stacks: there the first reading of the new
+        // life still has the old count (they come with the redeem, later).
+        {
+          const lives = this.#lives.get(event.steamId) ?? [];
+          const life = this.#openLife(event.steamId);
+          if (life !== null) {
+            const stacks = typeof event.elderStacks === 'number' ? event.elderStacks : null;
+            const before = lives[lives.length - 2];
+            if (life.elderStacks === null && stacks !== null && before !== undefined
+              && stacks > (before.elderStacks ?? 0) && (before.maxGrowth ?? 0) >= 0.99) {
+              life.chain = before.chain;
+            }
+            if (stacks !== null) life.elderStacks = stacks;
+            if (typeof event.growth === 'number') life.maxGrowth = Math.max(life.maxGrowth ?? 0, event.growth);
+          }
+        }
         break;
       case 'snapshot': {
         const p = this.#player(event.steamId, event.t, event.name);
@@ -317,6 +356,8 @@ export class Store {
       }
 
       case 'session_end': {
+        const leaving = this.#openLife(event.steamId);
+        if (leaving !== null) leaving.pausedAt = event.t;
         const p = this.#player(event.steamId, event.t, event.name);
         this.#closeSession(p, event.t);
         this.#trails.delete(event.steamId);
@@ -347,7 +388,7 @@ export class Store {
       case 'garage_store': {
         const p = this.#player(event.steamId, event.t);
         p.stored += 1;
-        this.#recentRemoval.set(event.steamId, { t: event.t, cause: 'garage' });
+        this.#recentRemoval.set(event.steamId, { t: event.t, cause: 'garage', slot: event.slot });
         this.#push(p.name === null ? event : { ...event, name: p.name }, [event.steamId]);
         break;
       }
@@ -360,6 +401,13 @@ export class Store {
           if (life !== null) {
             life.redeemedFrom = event.slot;
             life.growth = event.growth ?? life.growth;
+            // The dino taken out goes on living: the one stored in that slot,
+            // or the dead one an admin restored ("khoiphuc-<its spawn time>").
+            const lives = this.#lives.get(event.steamId) ?? [];
+            const restored = /^khoiphuc-(\d+)$/.exec(event.slot);
+            const from = [...lives].reverse().find((l) => l !== life && (l.storedTo === event.slot
+              || (restored !== null && l.spawnedAt === Number(restored[1]))));
+            if (from !== undefined) life.chain = from.chain;
           }
         }
         this.#push(p.name === null ? event : { ...event, name: p.name }, [event.steamId]);
@@ -517,10 +565,12 @@ export class Store {
 
     const life = this.#openLife(event.steamId);
     if (life !== null) {
-      life.endedAt = event.t;
       life.lastAt = event.t;
       life.growth = event.growth ?? life.growth;
+      if (typeof event.growth === 'number') life.maxGrowth = Math.max(life.maxGrowth ?? 0, event.growth);
       life.end = deliberate ?? 'death';
+      if (deliberate === 'garage' && removal?.slot !== undefined) life.storedTo = removal.slot;
+      this.#closeLife(event.steamId, life, event.t);
     }
 
     if (deliberate !== null) {
@@ -613,6 +663,36 @@ export class Store {
     return r !== undefined && r.steamId === steamId ? { ...r } : null;
   }
 
+  /** Chain id -> survival seconds of its closed stretches, and whose / which dino. */
+  readonly #chains = new Map<number, { steamId: string; species: string; closed: number }>();
+  #chainSeq = 0;
+
+  /** A stretch of a dino ends at `at`: its time goes to the dino's chain. */
+  #closeLife(steamId: string, life: LifeRecord, at: number): void {
+    life.endedAt = at;
+    const c = this.#chains.get(life.chain) ?? { steamId, species: life.species, closed: 0 };
+    c.closed += Math.max(0, at - life.spawnedAt);
+    c.species = life.species;
+    this.#chains.set(life.chain, c);
+  }
+
+  /** The player's longest-surviving dino: its chain's time, the stretch alive now included. */
+  #longestChain(steamId: string, online: boolean, now: number): { seconds: number; species: string; alive: boolean } | null {
+    const open = this.#openLife(steamId);
+    let best: { seconds: number; species: string; alive: boolean } | null = null;
+    for (const [id, c] of this.#chains) {
+      if (c.steamId !== steamId) continue;
+      const alive = open !== null && open.chain === id;
+      const seconds = c.closed + (alive ? Math.max(0, (online ? Math.max(now, open.lastAt) : open.pausedAt ?? open.lastAt) - open.spawnedAt) : 0);
+      if (best === null || seconds > best.seconds) best = { seconds, species: c.species, alive };
+    }
+    if (open !== null && !this.#chains.has(open.chain)) {
+      const seconds = Math.max(0, (online ? Math.max(now, open.lastAt) : open.pausedAt ?? open.lastAt) - open.spawnedAt);
+      if (best === null || seconds > best.seconds) best = { seconds, species: open.species, alive: true };
+    }
+    return best;
+  }
+
   /** The life still in progress, or null if the last one ended. */
   #openLife(steamId: string): LifeRecord | null {
     const lives = this.#lives.get(steamId);
@@ -627,9 +707,16 @@ export class Store {
       this.#lives.set(steamId, lives);
     }
     // A spawn with the previous life still open: it ended in a way we could
-    // not see (species swap, a death between two polls). Close it unresolved.
+    // not see (species swap, a death between two polls, a relog). Close it
+    // unresolved, where the player left if they did.
     const open = this.#openLife(steamId);
-    if (open !== null) open.endedAt = open.lastAt;
+    if (open !== null) this.#closeLife(steamId, open, open.pausedAt ?? open.lastAt);
+    // The same dino again (a relog: same species, growth going on, no death
+    // or store seen): the same chain.
+    const prev = lives[lives.length - 1];
+    const same = prev !== undefined && prev.end === null && prev.species === species
+      && growth !== null && (prev.maxGrowth ?? prev.growth) !== null && growth >= (prev.maxGrowth ?? prev.growth ?? 0) - 0.02;
+    const chain = same ? (prev as LifeRecord).chain : ++this.#chainSeq;
 
     pushBounded(lives, {
       species,
@@ -646,6 +733,11 @@ export class Store {
       killerName: null,
       killerSpecies: null,
       redeemedFrom: null,
+      chain,
+      pausedAt: null,
+      storedTo: null,
+      elderStacks: null,
+      maxGrowth: growth,
     }, LIVES_KEPT);
   }
 
@@ -661,8 +753,12 @@ export class Store {
     // An open session with nothing heard for a while means the server went
     // down (or the bridge is replaying old files) — not a connected player.
     const online = open && now - p.lastSeen <= config.offlineAfterSeconds;
+    const longest = this.#longestChain(p.steamId, online, now);
     return {
       ...p,
+      ...(longest !== null && longest.seconds >= p.longestLife
+        ? { longestLife: longest.seconds, longestLifeSpecies: longest.species, longestLifeAlive: longest.alive }
+        : {}),
       playtime: p.playtime + (open ? Math.max(0, p.lastSeen - (p.sessionStart ?? 0)) : 0),
       online,
       ping: online ? p.ping : null,
@@ -699,6 +795,8 @@ export class Store {
         sessions: 0,
         playtime: 0,
         longestLife: 0,
+        longestLifeSpecies: null,
+        longestLifeAlive: false,
         biggestKill: null,
         skin: null,
         ping: null,

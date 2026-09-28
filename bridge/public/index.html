@@ -2668,7 +2668,7 @@ function renderPlayer(d) {
       tile('Kill', p.kills), tile('Chết', p.deaths), tile('K/D', (p.kills / Math.max(1, p.deaths)).toFixed(2)),
       tile('Gây damage', num(p.damageDealt)), tile('Chịu damage', num(p.damageTaken)), tile('Số đòn', p.hits),
       tile('Giờ chơi', dur(p.playtime)), tile('Số phiên', p.sessions), tile('Spawn', p.spawns),
-      tile('Sống lâu nhất', dur(p.longestLife)),
+      tile('Sống lâu nhất', `${dur(p.longestLife)}${p.longestLifeSpecies ? ` <span class="muted" style="font-size:13px">${esc(dino(p.longestLifeSpecies))}${p.longestLifeAlive ? ' · còn sống' : ''}</span>` : ''}`),
       tile('Mồi lớn nhất', p.biggestKill ? `${esc(dino(p.biggestKill.species))} <span class="muted" style="font-size:13px">${pct(p.biggestKill.growth)}</span>` : '–'),
       tile('Cất / lấy', `${p.stored} / ${p.redeemed}`), tile('Tin chat', p.chats),
     ].join('');
@@ -2935,7 +2935,8 @@ function renderLeaderboard(b) {
     board('K/D (≥ 3 kill)', 'killfeed', 'tone-accent', b.kd, (p) => `${p.kd.toFixed(2)}<small>${p.kills} / ${p.deaths}</small>`),
     board('Gây damage', 'damage', 'tone-dmg', b.damage, (p) => num(p.damageDealt)),
     board('Giờ chơi', 'in', 'tone-chat', b.playtime, (p) => dur(p.playtime)),
-    board('Sống lâu nhất', 'growth', 'tone-grow', b.longestLife, (p) => dur(p.longestLife)),
+    board('Sống lâu nhất', 'growth', 'tone-grow', b.longestLife,
+      (p) => `${dur(p.longestLife)}<small>${esc(dino(p.longestLifeSpecies) || '')}${p.longestLifeAlive ? ' · còn sống' : ''}</small>`),
   ].join('');
   $('prey').innerHTML = b.biggestPrey.length === 0
     ? '<tr><td colspan="6" class="empty">Chưa có kill nào được quy cho người chơi</td></tr>'
