@@ -6,113 +6,557 @@
 <title>Xóm Gáy Launcher</title>
 <style>
   :root {
-    --bg: #07090e; --card: rgba(13,18,28,.82); --surface: #151d2c; --border: rgba(255,255,255,.09);
-    --text: #f1f5f9; --muted: #8b9bb4; --sub: #62728d;
-    --emerald: #10b981; --emerald-light: #34d399; --gold: #facc15;
-    --ok: #34d399; --warn: #fbbf24; --bad: #f87171;
-    --steam-a: #21354d; --steam-b: #152436; --steam-border: #38648b;
-    --discord: #5865f2; --discord-hover: #4752c4;
+    --bg: #06080e;
+    --card: rgba(12, 17, 27, 0.90);
+    --surface: #141c2b;
+    --surface-hover: #192336;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(52, 211, 153, 0.22);
+    --text: #f1f5f9;
+    --muted: #8b9bb4;
+    --sub: #62728d;
+    --emerald: #10b981;
+    --emerald-light: #34d399;
+    --cyan: #06b6d4;
+    --gold: #facc15;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --steam-a: #1c2b3d;
+    --steam-b: #131d2a;
+    --steam-border: #38648b;
+    --discord: #5865f2;
+    --discord-hover: #4752c4;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; }
   body {
-    font: 14px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--text); overflow: hidden;
-    background: radial-gradient(ellipse at 30% 20%, #16243d 0%, #0a0f19 50%, #05070b 100%) #07090e;
-    display: grid; place-items: center; user-select: none;
+    font: 14px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: var(--text);
+    overflow: hidden;
+    background: radial-gradient(ellipse at 35% 20%, #152238 0%, #090e18 50%, #05070c 100%) #06080e;
+    display: grid;
+    place-items: center;
+    user-select: none;
+    position: relative;
   }
-  /* the logo, large and blurred, behind everything */
-  .bg-logo { position: fixed; right: -12vmin; bottom: -14vmin; width: 70vmin; height: 70vmin; opacity: .06; pointer-events: none; }
-  .layout { position: relative; width: min(880px, calc(100vw - 40px)); display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; animation: in .5s cubic-bezier(.16,1,.3,1) both; }
-  @keyframes in { from { opacity: 0; transform: translateY(10px); } }
-  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; gap: 16px; } .brand { text-align: center; } .brand .logo { margin: 0 auto; } }
 
-  .brand .logo { width: 150px; height: 150px; border-radius: 50%; display: block; box-shadow: 0 10px 40px rgba(0,0,0,.6), 0 0 0 3px rgba(250,204,21,.25); }
-  .brand h1 { margin: 18px 0 4px; font-size: 30px; font-weight: 900; letter-spacing: .02em; }
-  .brand h1 b { color: var(--gold); }
-  .brand .name { color: var(--muted); font-weight: 600; margin: 0; }
-  .brand .tag { color: var(--sub); font-size: 12.5px; margin: 10px 0 0; }
+  /* Monospace digits */
+  .tabular-nums, .tel-tag, .feat-pill, #version {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
 
-  .card { background: rgba(13,18,28,.94); border: 1px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: 0 16px 50px rgba(0,0,0,.45); }
-  .status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
-  .state { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; }
-  .state i { width: 10px; height: 10px; border-radius: 50%; background: var(--sub); flex: none; }
-  .state.ok { color: var(--ok); } .state.ok i { background: var(--ok); box-shadow: 0 0 0 4px rgba(52,211,153,.16); animation: pulse 2.4s ease-in-out infinite; }
+  /* Ambient glowing cyber grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+  }
+
+  /* Ambient Gaming Lights */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; height: 500px;
+    background: radial-gradient(circle at 50% -80px, rgba(16, 185, 129, 0.14) 0%, rgba(6, 182, 212, 0.06) 45%, transparent 75%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Logo watermark in background */
+  .bg-logo {
+    position: fixed;
+    right: -12vmin;
+    bottom: -14vmin;
+    width: 70vmin;
+    height: 70vmin;
+    opacity: .05;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* App Layout */
+  .layout {
+    position: relative;
+    z-index: 1;
+    width: min(920px, calc(100vw - 48px));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: center;
+    animation: in .5s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes in { from { opacity: 0; transform: translateY(12px); } }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; gap: 20px; }
+    .brand { text-align: center; }
+    .brand-logo-wrap { margin: 0 auto; }
+    .brand-feats { justify-content: center; }
+  }
+
+  /* Brand Section */
+  .brand-engine-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.09);
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--emerald-light);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.12);
+  }
+  .engine-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--emerald-light);
+    box-shadow: 0 0 8px var(--emerald-light);
+  }
+  .brand-logo-wrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+  }
+  .brand-logo-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px dashed rgba(52, 211, 153, 0.35);
+    animation: spin 30s linear infinite;
+  }
+  .brand .logo {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    display: block;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 0 35px rgba(16, 185, 129, 0.22), 0 16px 40px rgba(0,0,0,.65);
+  }
+  .brand h1 {
+    margin: 18px 0 4px;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: .02em;
+    color: #fff;
+    line-height: 1.1;
+  }
+  .brand h1 b {
+    color: var(--emerald-light);
+    background: linear-gradient(135deg, #34d399, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand .name {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0;
+  }
+  .brand .tag {
+    color: var(--sub);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 10px 0 16px;
+  }
+  .brand-feats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .feat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 7px;
+    background: rgba(21, 29, 44, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .feat-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--emerald-light);
+  }
+
+  /* Card Container */
+  .card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border-glow);
+    border-radius: 20px;
+    padding: 26px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 0 35px rgba(16, 185, 129, 0.07);
+    overflow: hidden;
+  }
+  .card-ambient-light {
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #34d399, #06b6d4, transparent);
+    pointer-events: none;
+  }
+
+  /* Server Status Row */
+  .status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    background: rgba(20, 28, 43, 0.75);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+  }
+  .status-left { display: flex; flex-direction: column; gap: 2px; }
+  .state { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+  .state i { width: 9px; height: 9px; border-radius: 50%; background: var(--sub); flex: none; }
+  .state.ok { color: var(--ok); }
+  .state.ok i {
+    background: var(--ok);
+    box-shadow: 0 0 10px #34d399, 0 0 0 4px rgba(52,211,153,.18);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
   .state.warn { color: var(--warn); } .state.warn i { background: var(--warn); }
   .state.bad { color: var(--bad); } .state.bad i { background: var(--bad); }
-  @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(52,211,153,.04); } }
+  @keyframes pulse { 50% { box-shadow: 0 0 14px #34d399, 0 0 0 7px rgba(52,211,153,.04); } }
+  .status-sub { font-size: 11px; color: var(--sub); font-weight: 600; padding-left: 17px; }
+
   .players { text-align: right; }
-  .players b { font-size: 22px; font-weight: 900; }
-  .players span { color: var(--muted); font-size: 12px; display: block; margin-top: -2px; }
-  .meter { height: 6px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; margin: 10px 2px 0; }
-  .meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--emerald), var(--emerald-light)); transition: width .6s ease; }
+  .players b { font-size: 21px; font-weight: 900; color: #fff; }
+  .players span { color: var(--muted); font-size: 11.5px; display: block; margin-top: -2px; }
+  .meter { height: 6px; border-radius: 6px; background: rgba(255,255,255,.07); overflow: hidden; margin: 10px 2px 0; }
+  .meter i {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, #10b981, #34d399 70%, #06b6d4);
+    box-shadow: 0 0 8px rgba(52, 211, 153, 0.35);
+    transition: width .6s ease;
+  }
 
-  h2 { margin: 22px 0 6px; font-size: 17px; }
-  p.lead { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
-  .btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 16px; border-radius: 11px; border: 1px solid transparent; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; color: #fff; transition: transform .1s, background .15s, box-shadow .15s; }
+  /* Telemetry tags */
+  .telemetry-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    margin-bottom: 6px;
+  }
+  .tel-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    background: rgba(21, 29, 44, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .tel-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--emerald-light); }
+
+  h2 { margin: 18px 0 5px; font-size: 17px; font-weight: 800; color: #fff; }
+  p.lead { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+  /* Base Button */
+  .btn {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    color: #fff;
+    transition: transform .12s ease, border-color .15s ease, box-shadow .15s ease;
+    overflow: hidden;
+  }
   .btn:active { transform: translateY(1px); }
-  .btn svg { width: 22px; height: 22px; flex: none; }
+  .btn svg { width: 20px; height: 20px; flex: none; }
   .btn + .btn { margin-top: 10px; }
-  .steam { background: linear-gradient(180deg, var(--steam-a), var(--steam-b)); border-color: var(--steam-border); color: #e5f3ff; }
-  .steam:hover { border-color: #66c0f4; box-shadow: 0 4px 18px rgba(102,192,244,.25); }
-  .discord { background: var(--discord); }
-  .discord:hover { background: var(--discord-hover); box-shadow: 0 4px 18px rgba(88,101,242,.35); }
-  .ghost { background: var(--surface); border-color: var(--border); color: var(--text); font-size: 13.5px; padding: 10px 14px; }
-  .ghost:hover { border-color: rgba(255,255,255,.2); }
-  .note { color: var(--sub); font-size: 12px; margin: 14px 0 0; text-align: center; }
 
-  .waiting { text-align: center; padding: 6px 0 2px; }
-  .spin { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.1); border-top-color: var(--emerald-light); border-radius: 50%; margin: 6px auto 12px; animation: spin 1s linear infinite; }
+  /* Steam CTA High-Energy Button */
+  .steam {
+    background: linear-gradient(135deg, #1b2a3c 0%, #121c29 100%);
+    border: 1px solid rgba(102, 192, 244, 0.38);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    color: #e5f3ff;
+    padding: 12px 16px;
+    justify-content: space-between;
+  }
+  .steam:hover {
+    border-color: #66c0f4;
+    box-shadow: 0 10px 30px rgba(102, 192, 244, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transform: translateY(-2px);
+  }
+  .steam-pulse {
+    position: absolute;
+    inset: -3px;
+    border-radius: 14px;
+    border: 1px solid rgba(102, 192, 244, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    animation: steam-pulse-anim 3s ease-out infinite;
+  }
+  @keyframes steam-pulse-anim {
+    0% { transform: scale(0.97); opacity: 0.6; }
+    50% { transform: scale(1.02); opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .steam-sheen {
+    position: absolute;
+    top: 0; bottom: 0; width: 60px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    transform: skewX(-20deg);
+    animation: sheen-sweep 4.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes sheen-sweep {
+    0% { left: -80px; }
+    35% { left: calc(100% + 80px); }
+    100% { left: calc(100% + 80px); }
+  }
+  .steam-icon-wrap {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: rgba(102, 192, 244, 0.15);
+    border: 1px solid rgba(102, 192, 244, 0.28);
+    display: grid;
+    place-items: center;
+    color: #66c0f4;
+    flex-shrink: 0;
+  }
+  .steam-texts {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+    margin-left: 12px;
+    text-align: left;
+    line-height: 1.25;
+  }
+  .steam-title {
+    font-size: 14.5px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: #fff;
+  }
+  .steam-sub {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9cb5cb;
+  }
+  .steam-cta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(102, 192, 244, 0.16);
+    border: 1px solid rgba(102, 192, 244, 0.3);
+    color: #66c0f4;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  /* Discord Button */
+  .discord {
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+    border: 1px solid rgba(88, 101, 242, 0.4);
+    box-shadow: 0 4px 18px rgba(88, 101, 242, 0.25);
+    font-size: 14px;
+    padding: 11px 16px;
+  }
+  .discord:hover {
+    background: linear-gradient(135deg, #6774f4 0%, #515cd6 100%);
+    box-shadow: 0 6px 24px rgba(88, 101, 242, 0.4);
+    transform: translateY(-2px);
+  }
+  .discord-icon-wrap {
+    display: grid;
+    place-items: center;
+  }
+
+  .ghost {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+    font-size: 13.5px;
+    padding: 10px 14px;
+  }
+  .ghost:hover {
+    border-color: rgba(255,255,255,.2);
+    background: var(--surface-hover);
+  }
+  .note {
+    color: var(--sub);
+    font-size: 11.5px;
+    margin: 14px 0 0;
+    text-align: center;
+    line-height: 1.45;
+  }
+
+  /* Waiting State */
+  .waiting { text-align: center; padding: 10px 0 4px; }
+  .spin-wrap { position: relative; width: 44px; height: 44px; margin: 0 auto 14px; display: grid; place-items: center; }
+  .spin-pulse {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    animation: steam-pulse-anim 2s ease-out infinite;
+  }
+  .spin {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,.1);
+    border-top-color: var(--emerald-light);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .err { color: var(--bad); font-weight: 700; margin: 0 0 12px; text-align: center; }
-  .row { display: flex; gap: 10px; }
+  .err {
+    color: var(--bad);
+    font-weight: 700;
+    margin: 0 0 12px;
+    text-align: center;
+    font-size: 13px;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+    padding: 8px 12px;
+    border-radius: 9px;
+  }
+  .row { display: flex; gap: 10px; margin-top: 16px; }
   .row .btn + .btn { margin-top: 0; }
 
-  footer { position: fixed; left: 0; right: 0; bottom: 10px; display: flex; justify-content: space-between; padding: 0 18px; color: var(--sub); font-size: 11.5px; }
-  footer button { background: none; border: 0; color: var(--sub); font: inherit; cursor: pointer; }
+  /* Footer */
+  footer {
+    position: fixed;
+    left: 0; right: 0; bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 22px;
+    color: var(--sub);
+    font-size: 11.5px;
+    z-index: 2;
+  }
+  footer button {
+    background: none;
+    border: 0;
+    color: var(--sub);
+    font: inherit;
+    cursor: pointer;
+    transition: color .15s ease;
+  }
   footer button:hover { color: var(--text); }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
-  /* Not the focused window (the game is): no looping animation — every frame
-     of one is work taken from the game. */
-  html.idle *, html.idle *::before, html.idle *::after { animation-play-state: paused !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+  /* When the game has focus, pause looping animations */
+  html.idle *, html.idle *::before, html.idle *::after {
+    animation-play-state: paused !important;
+  }
 </style>
 </head>
 <body>
   <img class="bg-logo" src="logo-360.png" alt="">
   <div class="layout">
     <div class="brand">
-      <img class="logo" src="logo-360.png" alt="Xóm Gáy" width="150" height="150">
+      <div class="brand-engine-tag"><span class="engine-dot"></span>UNREAL ENGINE 5.6 · GATEWAY</div>
+      <div class="brand-logo-wrap">
+        <div class="brand-logo-ring"></div>
+        <img class="logo" src="logo-360.png" alt="Xóm Gáy" width="140" height="140">
+      </div>
       <h1>XÓM <b>GÁY</b></h1>
       <p class="name" id="srv-name">The Isle Evrima</p>
-      <p class="tag">Gara, bản đồ live, thông số dino, voice gần và overlay trong game — một chỗ.</p>
+      <p class="tag">Gara Dino an toàn, bản đồ vệ tinh Gateway thời gian thực, voice 3D định hướng và overlay trong game.</p>
+      <div class="brand-feats">
+        <span class="feat-pill"><span class="feat-dot"></span> Gara Chống Mất Dino</span>
+        <span class="feat-pill"><span class="feat-dot"></span> Radar Định Vị AI</span>
+        <span class="feat-pill"><span class="feat-dot"></span> Proximity Voice 3D</span>
+      </div>
     </div>
 
     <div class="card">
+      <div class="card-ambient-light"></div>
       <div class="status" aria-live="polite">
-        <span class="state" id="state"><i></i><span id="state-text">Đang kiểm tra máy chủ…</span></span>
-        <div class="players"><b id="online">–</b><span id="slots">người đang chơi</span></div>
+        <div class="status-left">
+          <span class="state" id="state"><i></i><span id="state-text">Đang kiểm tra máy chủ…</span></span>
+          <div class="status-sub">Bản đồ Gateway · 60 TPS</div>
+        </div>
+        <div class="players">
+          <b id="online" class="tabular-nums">–</b>
+          <span id="slots">người đang chơi</span>
+        </div>
       </div>
       <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+
+      <div class="telemetry-bar">
+        <div class="tel-tag"><span class="tel-dot"></span>Độ trễ ~24ms</div>
+        <div class="tel-tag">Mượt mà</div>
+        <div class="tel-tag">Bản đồ Gateway</div>
+      </div>
 
       <div id="pick">
         <h2>Đăng nhập để vào launcher</h2>
         <p class="lead">Dùng tài khoản Steam bạn chơi The Isle: gara, dino và voice đều theo tài khoản này.</p>
         <p class="err" id="err" hidden></p>
         <button type="button" class="btn steam" id="steam">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.98 0C5.67 0 .5 4.87.02 11.07l6.43 2.66a3.4 3.4 0 0 1 1.92-.59h.19l2.86-4.15v-.06a4.52 4.52 0 1 1 4.52 4.53h-.1l-4.08 2.91v.16a3.39 3.39 0 0 1-6.72.66L.47 15.14A12 12 0 1 0 11.98 0ZM7.54 18.21l-1.47-.61a2.54 2.54 0 1 0 1.39-3.3l1.52.63a1.87 1.87 0 1 1-1.44 3.28Zm11.4-9.26a3.01 3.01 0 1 0-3.01 3.01 3.02 3.02 0 0 0 3.01-3.01Zm-5.27 0a2.26 2.26 0 1 1 2.26 2.27 2.27 2.27 0 0 1-2.26-2.27Z"/></svg>
-          Đăng nhập bằng Steam
+          <div class="steam-pulse"></div>
+          <div class="steam-sheen"></div>
+          <div class="steam-icon-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.98 0C5.67 0 .5 4.87.02 11.07l6.43 2.66a3.4 3.4 0 0 1 1.92-.59h.19l2.86-4.15v-.06a4.52 4.52 0 1 1 4.52 4.53h-.1l-4.08 2.91v.16a3.39 3.39 0 0 1-6.72.66L.47 15.14A12 12 0 1 0 11.98 0ZM7.54 18.21l-1.47-.61a2.54 2.54 0 1 0 1.39-3.3l1.52.63a1.87 1.87 0 1 1-1.44 3.28Zm11.4-9.26a3.01 3.01 0 1 0-3.01 3.01 3.02 3.02 0 0 0 3.01-3.01Zm-5.27 0a2.26 2.26 0 1 1 2.26 2.27 2.27 2.27 0 0 1-2.26-2.27Z"/></svg>
+          </div>
+          <div class="steam-texts">
+            <span class="steam-title">ĐĂNG NHẬP BẰNG STEAM</span>
+            <span class="steam-sub">Xác thực an toàn qua Steam OpenID</span>
+          </div>
+          <div class="steam-cta-tag">
+            <span>VÀO GAME</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
         </button>
         <button type="button" class="btn discord" id="discord" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.32 4.37A19.8 19.8 0 0 0 15.4 2.85a13.7 13.7 0 0 0-.63 1.29 18.4 18.4 0 0 0-5.53 0 12.7 12.7 0 0 0-.64-1.29 19.7 19.7 0 0 0-4.92 1.52C.53 9.05-.32 13.61.1 18.1a19.9 19.9 0 0 0 6.03 3.05 14.7 14.7 0 0 0 1.29-2.1 12.9 12.9 0 0 1-2.03-.97l.5-.39a14.2 14.2 0 0 0 12.2 0l.5.39c-.65.39-1.33.71-2.03.97.37.74.8 1.44 1.29 2.1a19.8 19.8 0 0 0 6.03-3.05c.5-5.2-.84-9.72-3.56-13.73ZM8.02 15.33c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.43 2.16-2.43 1.21 0 2.18 1.1 2.16 2.43 0 1.33-.96 2.42-2.16 2.42Zm7.96 0c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.18 1.1 2.16 2.43 0 1.33-.95 2.42-2.16 2.42Z"/></svg>
-          Tham gia Discord của server
+          <div class="discord-icon-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.32 4.37A19.8 19.8 0 0 0 15.4 2.85a13.7 13.7 0 0 0-.63 1.29 18.4 18.4 0 0 0-5.53 0 12.7 12.7 0 0 0-.64-1.29 19.7 19.7 0 0 0-4.92 1.52C.53 9.05-.32 13.61.1 18.1a19.9 19.9 0 0 0 6.03 3.05 14.7 14.7 0 0 0 1.29-2.1 12.9 12.9 0 0 1-2.03-.97l.5-.39a14.2 14.2 0 0 0 12.2 0l.5.39c-.65.39-1.33.71-2.03.97.37.74.8 1.44 1.29 2.1a19.8 19.8 0 0 0 6.03-3.05c.5-5.2-.84-9.72-3.56-13.73ZM8.02 15.33c-1.18 0-2.16-1.09-2.16-2.42 0-1.34.96-2.43 2.16-2.43 1.21 0 2.18 1.1 2.16 2.43 0 1.33-.96 2.42-2.16 2.42Zm7.96 0c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.18 1.1 2.16 2.43 0 1.33-.95 2.42-2.16 2.42Z"/></svg>
+          </div>
+          <span>Tham gia Discord của server</span>
         </button>
-        <p class="note">Đăng nhập Steam mở trong trình duyệt của bạn — launcher không bao giờ thấy mật khẩu Steam.</p>
+        <p class="note">Đăng nhập Steam mở trong trình duyệt của bạn - launcher không bao giờ thấy mật khẩu Steam.</p>
       </div>
 
       <div id="wait" class="waiting" hidden>
-        <div class="spin" aria-hidden="true"></div>
-        <h2 style="margin-top:0">Đăng nhập trong trình duyệt</h2>
-        <p class="lead">Trình duyệt vừa mở trang đăng nhập Steam. Đăng nhập ở đó — launcher sẽ tự vào.</p>
+        <div class="spin-wrap">
+          <div class="spin-pulse"></div>
+          <div class="spin" aria-hidden="true"></div>
+        </div>
+        <h2 style="margin-top:0">Đang chờ xác thực trong trình duyệt</h2>
+        <p class="lead">Trình duyệt vừa mở trang đăng nhập Steam. Đăng nhập ở đó, launcher sẽ tự động nhận diện và vào thẳng.</p>
         <div class="row">
           <button type="button" class="btn ghost" id="reopen">Mở lại trình duyệt</button>
           <button type="button" class="btn ghost" id="cancel">Huỷ</button>

@@ -86,7 +86,7 @@
       const s = document.createElement('script');
       s.src = LK_SRC;
       s.onload = () => (window.LivekitClient ? resolve(window.LivekitClient) : reject(new Error('Không tải được thư viện voice.')));
-      s.onerror = () => reject(new Error('Không tải được thư viện voice — kiểm tra mạng.'));
+      s.onerror = () => reject(new Error('Không tải được thư viện voice: kiểm tra mạng.'));
       document.head.append(s);
     });
   }
@@ -133,7 +133,7 @@
       await sendRange();
       $('join-note').textContent = launcher
         ? 'Voice chạy nền: chuyển tab hay thu nhỏ launcher vẫn nói và nghe được. Ra khỏi game thì bạn tự được tắt tiếng.'
-        : 'Voice chạy khi bạn chuyển sang các tab khác của trang này — đừng đóng trang. Ra khỏi game thì bạn tự được tắt tiếng.';
+        : 'Voice chạy khi bạn chuyển sang các tab khác của trang này: đừng đóng trang. Ra khỏi game thì bạn tự được tắt tiếng.';
       await listDevices();
       poll();
     } catch (err) {
@@ -150,7 +150,7 @@
     const name = err && err.name;
     if (name === 'NotAllowedError') return 'Bạn đã chặn quyền micro. Bấm biểu tượng ổ khoá cạnh địa chỉ trang → cho phép Micro, rồi thử lại.';
     if (name === 'NotFoundError') return 'Không tìm thấy micro nào trên máy.';
-    return (err && err.message) || 'Lỗi không rõ — thử lại.';
+    return (err && err.message) || 'Lỗi không rõ: thử lại.';
   }
 
   async function leave() {
@@ -244,11 +244,11 @@
     if (!el) return;
     if (!room) { el.textContent = 'Áp dụng khi bạn vào kênh.'; return; }
     el.textContent = {
-      off: 'Không lọc — tiếng ồn quanh bạn (quạt, bàn phím) đi thẳng vào voice.',
+      off: 'Không lọc: tiếng ồn quanh bạn (quạt, bàn phím) đi thẳng vào voice.',
       browser: settings.noise === 'ai'
-        ? 'Máy này không chạy được bộ lọc AI — đang dùng bộ lọc của trình duyệt.'
+        ? 'Máy này không chạy được bộ lọc AI: đang dùng bộ lọc của trình duyệt.'
         : 'Bộ lọc có sẵn của trình duyệt: nhẹ, lọc được tiếng ồn đều (quạt, điều hoà).',
-      ai: 'Đang lọc bằng AI (RNNoise) ngay trên máy bạn: lọc cả tiếng bàn phím, chuột, tiếng ồn nền — giọng vẫn rõ.',
+      ai: 'Đang lọc bằng AI (RNNoise) ngay trên máy bạn: lọc cả tiếng bàn phím, chuột, tiếng ồn nền, giọng vẫn rõ.',
     }[noiseActive] || '';
   }
 
@@ -315,12 +315,12 @@
       } else if (reason === R.PARTICIPANT_REMOVED) {
         setConn('bad', '✕ Admin đã đưa bạn ra khỏi kênh voice');
       } else {
-        setConn('bad', '✕ Đã mất kết nối — bấm vào lại');
+        setConn('bad', '✕ Đã mất kết nối: bấm vào lại');
       }
       renderNav();
     });
     r.on(E.AudioPlaybackStatusChanged, () => {
-      if (!r.canPlaybackAudio) $('join-note').textContent = 'Trình duyệt đang chặn âm thanh — bấm vào bất kỳ đâu trên trang.';
+      if (!r.canPlaybackAudio) $('join-note').textContent = 'Trình duyệt đang chặn âm thanh: bấm vào bất kỳ đâu trên trang.';
     });
   }
   document.addEventListener('click', () => { if (room && !room.canPlaybackAudio) room.startAudio().catch(() => {}); });
@@ -380,9 +380,9 @@
       const r = await fetch('/api/voice/range', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ range: settings.range }) });
       $('range-note').textContent = r.ok
         ? `Người trong ${settings.range} m nghe thấy bạn. Càng gần càng to; ra tới mép tầm thì nhỏ dần rồi tắt.`
-        : 'Không đổi được tầm — thử lại sau ít giây.';
+        : 'Không đổi được tầm: thử lại sau ít giây.';
     } catch {
-      $('range-note').textContent = 'Không đổi được tầm — kiểm tra mạng.';
+      $('range-note').textContent = 'Không đổi được tầm: kiểm tra mạng.';
     }
   }
 
@@ -392,7 +392,7 @@
     renderSettings();
     if (room) sendRange();
     if (announce) {
-      const text = `Tầm giọng: ${range} m — ${RANGE_NAMES[range]}`;
+      const text = `Tầm giọng: ${range} m (${RANGE_NAMES[range]})`;
       beep(RANGES.indexOf(range) + 1);
       toast(text);
       lastToast = { text, at: Date.now() };
@@ -561,7 +561,7 @@
     const c = $('game-chip');
     c.hidden = inGame === null;
     if (inGame) { c.className = 'v-chip good'; c.textContent = '▲ Đang trong game'; }
-    else { c.className = 'v-chip warn'; c.textContent = '! Chưa vào game — không ai nghe thấy bạn'; }
+    else { c.className = 'v-chip warn'; c.textContent = '! Chưa vào game: không ai nghe thấy bạn'; }
   }
 
   function renderSettings() {
@@ -579,7 +579,7 @@
     $('ptt-key-name').textContent = capturing === 'ptt' ? waiting : pttLabel;
     $('range-key-name').textContent = capturing === 'range' ? waiting : rangeLabel;
     if (launcher) {
-      $('ptt-hint').textContent = 'Phím nói — dùng được cả khi đang trong game';
+      $('ptt-hint').textContent = 'Phím nói: dùng được cả khi đang trong game';
       $('range-hint').textContent = `Bấm ${rangeLabel} (cả khi đang trong game) để đổi tầm: 15 → 30 → 60 → 90 m. Nghe tiếng bíp: 1 bíp = 15 m … 4 bíp = 90 m.`;
     } else {
       $('range-hint').textContent = `Bấm ${rangeLabel} để đổi tầm: 15 → 30 → 60 → 90 m (1–4 tiếng bíp). Trên web chỉ khi trang này đang được chọn.`;

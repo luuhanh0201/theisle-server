@@ -1,4 +1,4 @@
-// The Isle Evrima — Cổng Thông Tin Người Chơi (Portal UI)
+// The Isle Evrima · Cổng Thông Tin Người Chơi (Portal UI)
 // Quản lý 6 trang: Home, Game, Gara, Bản đồ, Bảng xếp hạng, Skin.
 
 import { createMap, loadWaypoints } from './map.js';
@@ -8,7 +8,7 @@ const $ = (id) => document.getElementById(id);
 let gameMode = window.isleLauncher?.gameModeGet?.() ?? { on: false, keep: {} };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pct = (g) => (typeof g === 'number' ? `${Math.round(g * 100)}%` : '0%');
-const when = (t) => (t ? new Date(t * 1000).toLocaleString('vi-VN', { hour12: false }) : '—');
+const when = (t) => (t ? new Date(t * 1000).toLocaleString('vi-VN', { hour12: false }) : '');
 function dur(sec) {
   sec = Math.max(0, Math.round(sec ?? 0));
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
@@ -23,8 +23,8 @@ if (params.get('login_error')) {
   history.replaceState(null, '', '/');
 }
 
-// Test mode ("lab"): features not released to players yet — skin effects,
-// glow, kept colours, the 3D on the Game / Gara tabs — show only in a browser
+// Test mode ("lab"): features not released to players yet: skin effects,
+// glow, kept colours, the 3D on the Game / Gara tabs, show only in a browser
 // opened once with ?lab=1 (remembered; ?lab=0 turns it off).
 const LAB = (() => {
   try {
@@ -113,8 +113,10 @@ if (window.isleLauncher) {
   // The overlay is the launcher's: its tab only shows there.
   document.getElementById('nav-overlay').hidden = false;
   const play = document.getElementById('play-game');
-  play.hidden = false;
-  play.addEventListener('click', () => window.isleLauncher.playGame());
+  if (play) {
+    play.hidden = false;
+    play.addEventListener('click', () => window.isleLauncher.playGame());
+  }
   // Game mode: one click puts the launcher out of the way (main.js).
   const gm = document.getElementById('game-mode');
   if (window.isleLauncher.gameModeGet) {
@@ -129,7 +131,7 @@ if (window.isleLauncher) {
       window.dispatchEvent(new CustomEvent('isle-gamemode', { detail: st }));
     });
   }
-  // Which launcher build this is, under the server name — and (1.0.7+) a
+  // Which launcher build this is, under the server name, and (1.0.7+) a
   // button to look for a newer one now, then install it.
   const sub = document.querySelector('.brand-info p');
   if (sub && window.isleLauncher.version) {
@@ -181,6 +183,29 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Quick Toast feedback helper
+function showToast(msg) {
+  const t = $('global-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.hidden = false;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => { t.hidden = true; }, 200);
+  }, 2200);
+}
+
+async function copyAndToast(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(`Đã sao chép: ${text}`);
+  } catch {
+    prompt('Nhấn Ctrl+C để sao chép lệnh:', text);
+  }
+}
+
 // 1-Click Copy Command buttons
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-copy]');
@@ -191,6 +216,7 @@ document.addEventListener('click', async (e) => {
       const original = b.textContent;
       b.textContent = 'Đã chép!';
       b.style.color = '#34d399';
+      showToast(`Đã sao chép: ${text}`);
       setTimeout(() => {
         b.textContent = original;
         b.style.color = '';
@@ -200,6 +226,315 @@ document.addEventListener('click', async (e) => {
     }
   }
 });
+
+// Open Rules Action button
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-action="open-rules"]');
+  if (t) {
+    e.preventDefault();
+    switchTab('home');
+    const sec = $('server-rules-section');
+    if (sec) {
+      sec.scrollIntoView({ behavior: 'smooth' });
+      sec.classList.add('highlight-section');
+      setTimeout(() => sec.classList.remove('highlight-section'), 2000);
+    }
+  }
+});
+
+// Vertical Sidebar Navigation Controller
+function initSidebar() {
+  const sidebar = $('portal-sidebar');
+  const toggle = $('sidebar-toggle');
+  const desktopExpand = $('desktop-sidebar-expand');
+  const backdrop = $('drawer-backdrop');
+  const mobileMenu = $('mobile-menu-toggle');
+  const bottomMenu = $('bottom-menu-toggle');
+
+  if (!sidebar) return;
+
+  const updateToggleTitle = () => {
+    const isCol = document.body.classList.contains('sidebar-collapsed');
+    if (toggle) {
+      toggle.title = isCol ? 'Mở rộng menu bên trái' : 'Thu gọn menu bên trái';
+      toggle.setAttribute('aria-label', toggle.title);
+    }
+  };
+
+  try {
+    const isCollapsed = localStorage.getItem('xg.sidebar_collapsed') === '1';
+    if (isCollapsed) {
+      document.body.classList.add('sidebar-collapsed');
+    }
+  } catch {}
+  updateToggleTitle();
+
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      const next = !document.body.classList.contains('sidebar-collapsed');
+      document.body.classList.toggle('sidebar-collapsed', next);
+      try {
+        if (next) localStorage.setItem('xg.sidebar_collapsed', '1');
+        else localStorage.removeItem('xg.sidebar_collapsed');
+      } catch {}
+      updateToggleTitle();
+    });
+  }
+
+  if (desktopExpand) {
+    desktopExpand.addEventListener('click', () => {
+      document.body.classList.remove('sidebar-collapsed');
+      try {
+        localStorage.removeItem('xg.sidebar_collapsed');
+      } catch {}
+      updateToggleTitle();
+    });
+  }
+
+  const openDrawer = () => {
+    sidebar.classList.add('drawer-open');
+    if (backdrop) backdrop.classList.add('open');
+  };
+  const closeDrawer = () => {
+    sidebar.classList.remove('drawer-open');
+    if (backdrop) backdrop.classList.remove('open');
+  };
+
+  if (mobileMenu) mobileMenu.addEventListener('click', openDrawer);
+  if (bottomMenu) bottomMenu.addEventListener('click', openDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+  for (const btn of sidebar.querySelectorAll('.nav-btn')) {
+    btn.addEventListener('click', closeDrawer);
+  }
+}
+
+// Command Palette (Ctrl + K)
+const PALETTE_DATA = [
+  // 1. Chuyển trang & Hành động nhanh
+  { id: 'action-join-direct', cat: 'pages', catName: 'Hành động nhanh', title: 'Bắt Đầu Chuyến Sinh Tồn (Steam Direct)', desc: 'Tự động mở The Isle Evrima và kết nối thẳng vào máy chủ Xóm Gáy', badge: 'Chơi ngay', action: () => { window.location.href = 'steam://connect/play.xomgay.online:7777'; showToast('Đang kết nối vào game qua Steam...'); } },
+  { id: 'page-home', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Trang chủ', desc: 'Bảng tin máy chủ Xóm Gáy, thông số và hướng dẫn', badge: 'Trang', action: () => switchTab('home') },
+  { id: 'page-game', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Dino Live Monitor (Game HUD)', desc: 'Theo dõi sinh tồn GAS realtime: Máu, đói, khát, Prime Elder', badge: 'Trang', action: () => switchTab('game') },
+  { id: 'page-map', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Bản đồ Gateway Live', desc: 'Bản đồ vệ tinh thời gian thực, waypoint và radar định vị', badge: 'Trang', action: () => switchTab('map') },
+  { id: 'page-gara', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Gara Khủng Long', desc: 'Kho lưu trữ an toàn, cất và lấy dino chơi', badge: 'Trang', action: () => switchTab('gara') },
+  { id: 'page-ranking', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Bảng Xếp Hạng & Chiến Tích', desc: 'Top hạ gục, kỷ lục sống lâu, lịch sử sinh tồn', badge: 'Trang', action: () => switchTab('ranking') },
+  { id: 'page-skin', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Skin Studio', desc: 'Phối màu 10 phân vùng khủng long, xuất mã màu ingame', badge: 'Trang', action: () => switchTab('skin') },
+  { id: 'page-voice', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Voice 3D', desc: 'Đàm thoại định hướng 3D theo khoảng cách trong game', badge: 'Trang', action: () => switchTab('voice') },
+  { id: 'page-overlay', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Game Overlay HUD', desc: 'Cấu hình khung đè mini map, vitals lên màn hình', badge: 'Trang', action: () => switchTab('overlay') },
+
+  // 2. Tra cứu loài khủng long
+  { id: 'dino-carno', cat: 'species', catName: 'Loài Khủng Long', title: 'Carnotaurus (Carno)', desc: 'Ăn thịt · Tốc độ phi nước đại cực nhanh, cú húc sừng tàn khốc', badge: 'Ăn thịt', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Carnotaurus'); showToast('Đã chọn loài Carnotaurus trong Skin Studio'); } },
+  { id: 'dino-cera', cat: 'species', catName: 'Loài Khủng Long', title: 'Ceratosaurus (Cera)', desc: 'Ăn thịt · Ăn xác thối kháng bệnh, cú cắn khóa xương', badge: 'Ăn thịt', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Ceratosaurus'); showToast('Đã chọn loài Ceratosaurus trong Skin Studio'); } },
+  { id: 'dino-trex', cat: 'species', catName: 'Loài Khủng Long', title: 'Tyrannosaurus Rex (T-Rex)', desc: 'Ăn thịt · Đỉnh chuỗi thức ăn kỷ Jura, lực cắn nghiền nát con mồi', badge: 'Ăn thịt', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Tyrannosaurus'); showToast('Đã chọn loài T-Rex trong Skin Studio'); } },
+  { id: 'dino-deino', cat: 'species', catName: 'Loài Khủng Long', title: 'Deinosuchus (Cá sấu Deino)', desc: 'Ăn thịt · Thủy quái đầm lầy phục kích, cú đớp tử thần lôi xuống nước', badge: 'Thủy quái', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Deinosuchus'); showToast('Đã chọn loài Deinosuchus trong Skin Studio'); } },
+  { id: 'dino-stego', cat: 'species', catName: 'Loài Khủng Long', title: 'Stegosaurus (Stego)', desc: 'Ăn cỏ · Giáp gai kiên cố, đuôi chùy gai quất chết kẻ săn mồi', badge: 'Ăn cỏ', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Stegosaurus'); showToast('Đã chọn loài Stegosaurus trong Skin Studio'); } },
+  { id: 'dino-galli', cat: 'species', catName: 'Loài Khủng Long', title: 'Gallimimus (Galli)', desc: 'Ăn tạp · Nhanh nhất trên thảo nguyên, trốn thoát kẻ thù siêu hạng', badge: 'Ăn tạp', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Gallimimus'); showToast('Đã chọn loài Gallimimus trong Skin Studio'); } },
+  { id: 'dino-dilo', cat: 'species', catName: 'Loài Khủng Long', title: 'Dilophosaurus (Dilo)', desc: 'Ăn thịt · Sát thủ bóng đêm, tiêm chất độc gây ảo giác con mồi', badge: 'Ăn thịt', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Dilophosaurus'); showToast('Đã chọn loài Dilophosaurus trong Skin Studio'); } },
+  { id: 'dino-pachy', cat: 'species', catName: 'Loài Khủng Long', title: 'Pachycephalosaurus (Pachy)', desc: 'Ăn cỏ · Hộp sọ vòm thép, cú húc đầu gây gãy xương choáng váng', badge: 'Ăn cỏ', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Pachycephalosaurus'); showToast('Đã chọn loài Pachy trong Skin Studio'); } },
+  { id: 'dino-troodon', cat: 'species', catName: 'Loài Khủng Long', title: 'Troodon', desc: 'Ăn thịt · Thợ săn bầy đàn ban đêm, độc tố tích tụ gây tê liệt', badge: 'Ăn thịt', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Troodon'); showToast('Đã chọn loài Troodon trong Skin Studio'); } },
+  { id: 'dino-herrera', cat: 'species', catName: 'Loài Khủng Long', title: 'Herrerasaurus (Herrera)', desc: 'Ăn thịt · Leo trèo thân cây, phục kích bổ nhào từ ngọn cao', badge: 'Ăn thịt', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Herrerasaurus'); showToast('Đã chọn loài Herrerasaurus trong Skin Studio'); } },
+  { id: 'dino-beipi', cat: 'species', catName: 'Loài Khủng Long', title: 'Beipiaosaurus (Beipi)', desc: 'Ăn tạp · Bơi lội siêu đẳng dưới sông suối, săn cá và trốn thoát', badge: 'Ăn tạp', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Beipiaosaurus'); showToast('Đã chọn loài Beipiaosaurus trong Skin Studio'); } },
+  { id: 'dino-tenonto', cat: 'species', catName: 'Loài Khủng Long', title: 'Tenontosaurus (Tenonto)', desc: 'Ăn cỏ · Cú đá hậu bẻ gãy hàm kẻ săn mồi và quật ngã bằng đuôi', badge: 'Ăn cỏ', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Tenontosaurus'); showToast('Đã chọn loài Tenontosaurus trong Skin Studio'); } },
+  { id: 'dino-hypsi', cat: 'species', catName: 'Loài Khủng Long', title: 'Hypsilophodon (Hypsi)', desc: 'Ăn cỏ · Kích thước nhỏ, nhảy cao và phun dịch axit làm mù', badge: 'Ăn cỏ', action: () => { switchTab('skin'); window.skin3d?.selectSpecies?.('Hypsilophodon'); showToast('Đã chọn loài Hypsilophodon trong Skin Studio'); } },
+
+  // 3. Tra cứu & Sao chép lệnh chat ingame
+  { id: 'cmd-unstuck', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!unstuck', desc: 'Cứu hộ kẹt địa hình - Dịch chuyển về mặt đất an toàn khi dính khe đá', badge: 'Lệnh chat', action: () => copyAndToast('!unstuck') },
+  { id: 'cmd-slay', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!slay', desc: 'Tự giải thoát - Tự sát an toàn để quay lại sảnh chọn loài mới', badge: 'Lệnh chat', action: () => copyAndToast('!slay') },
+  { id: 'cmd-status', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!status', desc: 'Kiểm tra chỉ số - In thông số máu, đói, khát và tọa độ GPS vào chat', badge: 'Lệnh chat', action: () => copyAndToast('!status') },
+  { id: 'cmd-prime', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!prime', desc: 'Nhiệm vụ Prime - Xem số điều kiện Prime Elder đã đạt trong đời sống', badge: 'Lệnh chat', action: () => copyAndToast('!prime') },
+  { id: 'cmd-gara', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!gara', desc: 'Gara Khủng Long - Mở lệnh cất hoặc khôi phục dino trong game', badge: 'Lệnh chat', action: () => copyAndToast('!gara') },
+  { id: 'cmd-grow', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!grow', desc: 'Tăng trưởng - Kiểm tra tỷ lệ tăng trưởng và phần trăm dinh dưỡng', badge: 'Lệnh chat', action: () => copyAndToast('!grow') },
+  { id: 'cmd-coords', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!coords', desc: 'Tọa độ GPS - Hiển thị vị trí X, Y, Z hiện tại của dino', badge: 'Lệnh chat', action: () => copyAndToast('!coords') },
+  { id: 'cmd-pack', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!pack', desc: 'Quản lý bầy đàn - Xem danh sách thành viên hoặc tạo lời mời vào đàn', badge: 'Lệnh chat', action: () => copyAndToast('!pack') },
+  { id: 'cmd-skin', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!skin', desc: 'Áp dụng skin - Nhập chuỗi mã màu đã phối từ Skin Studio vào nhân vật', badge: 'Lệnh chat', action: () => copyAndToast('!skin') },
+  { id: 'cmd-rules', cat: 'commands', catName: 'Lệnh Chat In-Game (1-Click Copy)', title: '!rules', desc: 'Luật máy chủ - Xem tóm tắt quy định chống mix-pack, combat-log ingame', badge: 'Lệnh chat', action: () => copyAndToast('!rules') },
+
+  // 4. Địa danh bản đồ Gateway
+  { id: 'loc-highlands', cat: 'locations', catName: 'Địa Danh Bản Đồ Gateway', title: 'Hồ Highlands (Highlands Lake)', desc: 'Điểm nóng săn mồi và nguồn nước ngọt trung tâm hòn đảo Gateway', badge: 'Địa danh', action: () => { switchTab('map'); showToast('Đang xem bản đồ Gateway: Khu vực Hồ Highlands'); } },
+  { id: 'loc-sanctuary', cat: 'locations', catName: 'Địa Danh Bản Đồ Gateway', title: 'Vòm Sanctuary (Vùng An Toàn)', desc: 'Vùng bảo hộ ong bướm, an toàn cho khủng long non (Juvi) lớn lên', badge: 'Địa danh', action: () => { switchTab('map'); showToast('Đang xem bản đồ Gateway: Vòm Bảo Hộ Sanctuary'); } },
+  { id: 'loc-swamp', cat: 'locations', catName: 'Địa Danh Bản Đồ Gateway', title: 'Đầm Lầy North Swamp', desc: 'Vùng đầm lầy nước đục hiểm trở, lãnh địa rình mồi của Deinosuchus', badge: 'Địa danh', action: () => { switchTab('map'); showToast('Đang xem bản đồ Gateway: Đầm Lầy North Swamp'); } },
+  { id: 'loc-salt', cat: 'locations', catName: 'Địa Danh Bản Đồ Gateway', title: 'Bãi Muối Liếm (Salt Lick)', desc: 'Khoáng chất thiết yếu cho khủng long ăn cỏ hồi phục thể lực', badge: 'Địa danh', action: () => { switchTab('map'); showToast('Đang xem bản đồ Gateway: Bãi Muối Liếm'); } },
+  { id: 'loc-salmon', cat: 'locations', catName: 'Địa Danh Bản Đồ Gateway', title: 'Suối Cá Hồi (Salmon Stream)', desc: 'Nguồn thức ăn dồi dào cho các loài bơi lội Beipi và bay Ptera', badge: 'Địa danh', action: () => { switchTab('map'); showToast('Đang xem bản đồ Gateway: Suối Cá Hồi'); } },
+  { id: 'loc-dam', cat: 'locations', catName: 'Địa Danh Bản Đồ Gateway', title: 'Đập Nước Lớn (Water Dam)', desc: 'Công trình thủy điện trung tâm nối các bờ vực sâu', badge: 'Địa danh', action: () => { switchTab('map'); showToast('Đang xem bản đồ Gateway: Đập Nước Lớn'); } },
+  { id: 'loc-plains', cat: 'locations', catName: 'Địa Danh Bản Đồ Gateway', title: 'Đồng Cỏ South Plains', desc: 'Thảo nguyên mênh mông, bầy đàn ăn cỏ tụ tập kiếm ăn', badge: 'Địa danh', action: () => { switchTab('map'); showToast('Đang xem bản đồ Gateway: Đồng Cỏ South Plains'); } },
+];
+
+function initCommandPalette() {
+  const modal = $('cmd-palette-modal');
+  const input = $('cmd-search-input');
+  const list = $('cmd-results-list');
+  const openBtn = $('cmd-open-btn');
+  const closeBtn = $('cmd-close-btn');
+
+  if (!modal || !input || !list) return;
+
+  const openPalette = () => {
+    modal.hidden = false;
+    input.value = '';
+    renderPalette('');
+    setTimeout(() => input.focus(), 40);
+  };
+
+  const closePalette = () => {
+    modal.hidden = true;
+  };
+
+  if (openBtn) openBtn.addEventListener('click', openPalette);
+  if (closeBtn) closeBtn.addEventListener('click', closePalette);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closePalette();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (modal.hidden) openPalette();
+      else closePalette();
+    } else if (e.key === 'Escape' && !modal.hidden) {
+      e.preventDefault();
+      closePalette();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    renderPalette(input.value.trim().toLowerCase());
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const items = list.querySelectorAll('.cmd-item');
+    if (items.length === 0) return;
+    let activeIdx = Array.from(items).findIndex((el) => el.classList.contains('active'));
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = activeIdx < items.length - 1 ? activeIdx + 1 : 0;
+      items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = activeIdx > 0 ? activeIdx - 1 : items.length - 1;
+      items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIdx >= 0 && items[activeIdx]) {
+        items[activeIdx].click();
+      }
+    }
+  });
+
+  function renderPalette(query) {
+    const filtered = PALETTE_DATA.filter((item) => {
+      if (!query) return true;
+      return (
+        item.title.toLowerCase().includes(query) ||
+        item.desc.toLowerCase().includes(query) ||
+        item.catName.toLowerCase().includes(query)
+      );
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = `
+        <div style="padding:28px 16px;text-align:center;color:var(--text-muted)">
+          <div style="font-size:24px;margin-bottom:8px">🔍</div>
+          <div>Không tìm thấy kết quả phù hợp với "<b>${esc(query)}</b>"</div>
+        </div>`;
+      return;
+    }
+
+    const cats = ['pages', 'species', 'commands', 'locations'];
+    let html = '';
+    let globalIdx = 0;
+
+    for (const c of cats) {
+      const groupItems = filtered.filter((i) => i.cat === c);
+      if (groupItems.length === 0) continue;
+
+      html += `<div class="cmd-group-label">${esc(groupItems[0].catName)}</div>`;
+      for (const item of groupItems) {
+        const isFirst = globalIdx === 0;
+        const iconSvg = c === 'pages' ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'
+          : c === 'species' ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'
+          : c === 'commands' ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/></svg>';
+
+        html += `
+          <div class="cmd-item${isFirst ? ' active' : ''}" data-cmd-id="${esc(item.id)}">
+            <div class="cmd-item-left">
+              <div class="cmd-item-icon">${iconSvg}</div>
+              <div style="min-width:0">
+                <div class="cmd-item-title">${esc(item.title)}</div>
+                <div class="cmd-item-desc">${esc(item.desc)}</div>
+              </div>
+            </div>
+            <span class="cmd-item-badge">${esc(item.badge)}</span>
+          </div>`;
+        globalIdx++;
+      }
+    }
+
+    list.innerHTML = html;
+
+    list.querySelectorAll('.cmd-item').forEach((el) => {
+      el.addEventListener('click', () => {
+        const item = PALETTE_DATA.find((i) => i.id === el.dataset.cmdId);
+        if (item) {
+          closePalette();
+          item.action();
+        }
+      });
+      el.addEventListener('mouseenter', () => {
+        list.querySelectorAll('.cmd-item').forEach((i) => i.classList.remove('active'));
+        el.classList.add('active');
+      });
+    });
+  }
+}
+
+function initGarageFilter() {
+  const searchInput = $('gara-search-input');
+  const filterBtns = document.querySelectorAll('.gara-filter-btn');
+
+  let currentDiet = 'all';
+  let currentSearch = '';
+
+  const CARNIVORES = ['carnotaurus', 'ceratosaurus', 'tyrannosaurus', 't-rex', 'deinosuchus', 'dilophosaurus', 'troodon', 'herrerasaurus', 'pteranodon'];
+  const HERBIVORES = ['stegosaurus', 'tenontosaurus', 'pachycephalosaurus', 'gallimimus', 'beipiaosaurus', 'hypsilophodon', 'diabloceratops', 'maiasaura', 'ankylosaurus'];
+
+  const applyFilter = () => {
+    const cards = document.querySelectorAll('#gara-slots-list .garage-slot-card');
+    cards.forEach((card) => {
+      const text = card.textContent.toLowerCase();
+      const matchSearch = !currentSearch || text.includes(currentSearch);
+      let matchDiet = true;
+      if (currentDiet === 'carnivore') {
+        matchDiet = CARNIVORES.some((c) => text.includes(c));
+      } else if (currentDiet === 'herbivore') {
+        matchDiet = HERBIVORES.some((h) => text.includes(h));
+      }
+      card.style.display = matchSearch && matchDiet ? '' : 'none';
+    });
+  };
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentSearch = e.target.value.trim().toLowerCase();
+      applyFilter();
+    });
+  }
+
+  filterBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentDiet = btn.dataset.diet || 'all';
+      applyFilter();
+    });
+  });
+
+  window._reapplyGarageFilter = applyFilter;
+}
 
 // ============================================================================
 // 2. Vitals & Prime & Skin Utilities
@@ -255,13 +590,13 @@ function renderPrimeBoard(pb) {
 
   const g = typeof pb.growth === 'number' ? pb.growth : null;
   const deadline = g === null ? '' : `
-    <div class="prime-deadline-track" title="Growth ${pct(g)} — Mốc ${pct(pb.deadline)}">
+    <div class="prime-deadline-track" title="Growth ${pct(g)} / Mốc ${pct(pb.deadline)}">
       <div class="prime-deadline-fill" style="width:${Math.min(100, g * 100).toFixed(1)}%"></div>
       <i class="prime-marker" style="left:${pb.deadline * 100}%"></i>
     </div>
     <div class="muted" style="font-size:12px;margin-bottom:14px">
-      ${pb.locked ? `Growth ${pct(g)} — Đã qua mốc ${pct(pb.deadline)}: Kết quả Prime đã chốt.`
-        : `Growth ${pct(g)} — Còn tới mốc ${pct(pb.deadline)} để hoàn thành tối thiểu 5 nhiệm vụ.`}
+      ${pb.locked ? `Growth ${pct(g)}: Đã qua mốc ${pct(pb.deadline)}: Kết quả Prime đã chốt.`
+        : `Growth ${pct(g)}: Còn tới mốc ${pct(pb.deadline)} để hoàn thành tối thiểu 5 nhiệm vụ.`}
     </div>`;
 
   const rows = pb.conditions.map((c, i) => `
@@ -269,14 +604,14 @@ function renderPrimeBoard(pb) {
       <span class="quest-check">${c.met === null ? '?' : c.met ? '✓' : (i + 1)}</span>
       <div>
         <b>${esc(c.label)}</b>
-        ${c.passive ? ' <span class="muted" style="font-size:11.5px">(thụ động — mặc định đạt nếu không vi phạm)</span>' : ''}
+        ${c.passive ? ' <span class="muted" style="font-size:11.5px">(thụ động: mặc định đạt nếu không vi phạm)</span>' : ''}
       </div>
     </li>
   `).join('');
 
   return `
     <div class="prime-summary">
-      <div><b>${pb.met} / 10 điều kiện đạt</b> <span class="muted">(cần ${pb.needed ?? 5} — vài loài được tặng sẵn điều kiện 10)</span></div>
+      <div><b>${pb.met} / 10 điều kiện đạt</b> <span class="muted">(cần ${pb.needed ?? 5}, vài loài được tặng sẵn điều kiện 10)</span></div>
       <div>${verdict}</div>
     </div>
     ${deadline}
@@ -472,7 +807,7 @@ async function sendSkin() {
       skinStatus('bad', `Không gửi được${res?.error ? `: ${esc(res.error)}` : ''}.`);
       return;
     }
-    skinStatus('', 'Đã gửi — chờ game đổi màu…');
+    skinStatus('', 'Đã gửi, chờ game đổi màu…');
     const done = await waitCommand(res.id, 20, (b) => b?.status === 'done');
     if (done === null) { skinStatus('bad', 'Chưa thấy game trả lời. Thử lại sau ít phút.'); return; }
     const msgs = (done.messages ?? []).map((m) => esc(m)).join(' ');
@@ -490,7 +825,7 @@ async function sendSkin() {
   }
 }
 
-// A skin code: "XG1." + base64url of { p, t, v, c: { Body: "rrggbb", … } } — short enough to paste in chat.
+// A skin code: "XG1." + base64url of { p, t, v, c: { Body: "rrggbb", … } }, short enough to paste in chat.
 function skinCode(sk) {
   const c = {};
   for (const [id] of REGIONS) c[id] = sk.colors[id].replace('#', '');
@@ -517,7 +852,7 @@ function parseSkinCode(text) {
   }
 }
 
-// Saved skins: this browser only (localStorage may be off — then nothing is kept).
+// Saved skins: this browser only (localStorage may be off: then nothing is kept).
 const SKINS_KEY = 'xg.skins.v1';
 function loadSaved() {
   try { const v = JSON.parse(localStorage.getItem(SKINS_KEY) ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
@@ -527,11 +862,37 @@ function storeSaved(list) {
 }
 function renderSaved() {
   const list = loadSaved();
-  $('skin-saved-list').innerHTML = list.length === 0 ? '<li class="muted" style="font-size:12.5px">Chưa có skin nào được lưu.</li>'
-    : list.map((it, i) => `<li><i style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${esc(parseSkinCode(it.code)?.colors.Body ?? '#888')}"></i>
-        <span title="${esc(it.name)}">${esc(it.name)}</span>
-        <button type="button" class="btn btn-ghost" data-load="${i}" style="font-size:11.5px;padding:3px 10px">Nạp</button>
-        <button type="button" class="btn btn-ghost" data-del="${i}" style="font-size:11.5px;padding:3px 10px">Xoá</button></li>`).join('');
+  const listEl = $('skin-saved-list');
+  if (!listEl) return;
+  if (list.length === 0) {
+    listEl.innerHTML = '<li class="muted" style="font-size:12.5px;padding:12px 0;text-align:center">Chưa có skin nào được lưu trên trình duyệt này.</li>';
+    return;
+  }
+  listEl.innerHTML = list.map((it, i) => {
+    const parsed = parseSkinCode(it.code);
+    const colors = parsed?.colors ?? {};
+    const stripes = REGIONS.map(([id]) => {
+      const c = colors[id] ?? '#333';
+      return `<i style="background:${esc(c)}" title="${id}: ${esc(c)}"></i>`;
+    }).join('');
+    return `
+      <li class="saved-skin-card">
+        <div class="saved-skin-header">
+          <div class="preset-stripe saved-stripe">${stripes}</div>
+          <span class="saved-skin-name" title="${esc(it.name)}">${esc(it.name)}</span>
+        </div>
+        <div class="saved-skin-actions">
+          <button type="button" class="btn btn-ghost btn-saved-load" data-load="${i}" title="Nạp skin này">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            <span>Nạp</span>
+          </button>
+          <button type="button" class="btn btn-ghost btn-saved-del" data-del="${i}" title="Xoá skin này">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <span>Xoá</span>
+          </button>
+        </div>
+      </li>`;
+  }).join('');
 }
 
 /** The colours kept for the next times (/api/me keptSkins), with a way to stop keeping them. */
@@ -543,9 +904,16 @@ function renderKept(kept) {
   box.dataset.key = key;
   box.hidden = names.length === 0;
   box.innerHTML = names.length === 0 ? '' : `<span class="muted">Đang giữ màu cho:</span> ${names.map((sp) => {
-    const c = kept[sp]?.colors?.Body;
-    return `<span class="kept-chip"><i style="background:${c ? hex(c) : '#888'}"></i>${esc(sp.replace(/^BP_/, '').replace(/_C$/, ''))}
-      <button type="button" data-forget="${esc(sp)}" title="Bỏ giữ màu">✕</button></span>`;
+    const kColors = kept[sp]?.colors ?? {};
+    const stripes = REGIONS.map(([id]) => {
+      const c = kColors[id] ? hex(kColors[id]) : '#555';
+      return `<i style="background:${c}"></i>`;
+    }).join('');
+    return `<span class="kept-chip">
+      <div class="preset-stripe" style="width:48px;height:12px;display:inline-flex;border-radius:3px;overflow:hidden;vertical-align:middle;margin-right:6px">${stripes}</div>
+      ${esc(sp.replace(/^BP_/, '').replace(/_C$/, ''))}
+      <button type="button" data-forget="${esc(sp)}" title="Bỏ giữ màu">✕</button>
+    </span>`;
   }).join('')}`;
 }
 
@@ -600,7 +968,7 @@ function initSkinEditor() {
     skinChanged();
   });
 
-  // Presets: a whole palette per theme — a tile with its first five colours.
+  // Presets: a whole palette per theme, a tile with its first five colours.
   const presetsBar = $('skin-presets-bar');
   presetsBar.innerHTML = PRESETS.map((p, i) => `
     <button type="button" class="preset-tile" data-preset="${i}" title="${esc(p.name)}">
@@ -648,7 +1016,7 @@ function initSkinEditor() {
     const sk = parseSkinCode($('skin-code').value);
     if (!sk) { skinStatus('bad', 'Mã skin không hợp lệ.'); return; }
     applySkin(sk);
-    skinStatus('ok', 'Đã nạp mã skin — bấm "Áp dụng" để đổi màu trong game.');
+    skinStatus('ok', 'Đã nạp mã skin. Bấm "Áp dụng" để đổi màu trong game.');
   });
 
   $('btn-skin-save').addEventListener('click', () => {
@@ -694,29 +1062,35 @@ function renderAuth(me) {
       location.reload();
     });
 
-    heroAuth.innerHTML = `
-      <button type="button" class="btn btn-emerald" data-switch-tab="game">
-        🦖 Vào Bảng Điều Khiển Dino
-      </button>`;
+    if (heroAuth) {
+      heroAuth.innerHTML = `
+        <button type="button" class="btn btn-emerald" data-switch-tab="game">
+          🦖 Vào Bảng Điều Khiển Dino
+        </button>`;
+    }
   } else {
     authContainer.innerHTML = `
       <a class="btn btn-steam" href="/auth/steam" style="padding:7px 14px;font-size:12px">
         Đăng nhập Steam
       </a>`;
-    heroAuth.innerHTML = `
-      <a class="btn btn-steam" href="/auth/steam">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 1 10 10c0 4.88-3.5 8.94-8.1 9.8l-2.45-3.5c.34-.1.65-.27.9-.5l.05-.05c1.4-1.37 1.4-3.6 0-4.97a3.53 3.53 0 0 0-4.96 0c-.26.25-.43.55-.53.88L3.2 12.3A10 10 0 0 1 12 2zm-4.3 13.9a2.12 2.12 0 1 1 3-3 2.12 2.12 0 0 1-3 3zm10.7-3.9a1.41 1.41 0 1 1 0-2.82 1.41 1.41 0 0 1 0 2.82z"/></svg>
-        Đăng nhập bằng Steam
-      </a>`;
+    if (heroAuth) {
+      heroAuth.innerHTML = `
+        <a class="btn btn-steam" href="/auth/steam">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 1 10 10c0 4.88-3.5 8.94-8.1 9.8l-2.45-3.5c.34-.1.65-.27.9-.5l.05-.05c1.4-1.37 1.4-3.6 0-4.97a3.53 3.53 0 0 0-4.96 0c-.26.25-.43.55-.53.88L3.2 12.3A10 10 0 0 1 12 2zm-4.3 13.9a2.12 2.12 0 1 1 3-3 2.12 2.12 0 0 1-3 3zm10.7-3.9a1.41 1.41 0 1 1 0-2.82 1.41 1.41 0 0 1 0 2.82z"/></svg>
+          Đăng nhập bằng Steam
+        </a>`;
+    }
   }
 }
 
 function renderServer(srv) {
+  const sidebarSlots = $('sidebar-slots');
   if (!srv || srv.status !== 200) {
     $('srv-dot').className = 'dot';
     $('srv-status-text').textContent = 'Server đang tắt hoặc mất kết nối';
     $('srv-slots-text').textContent = '0 / 100';
     $('srv-meter-fill').style.width = '0%';
+    if (sidebarSlots) sidebarSlots.textContent = '0 / 100 slot';
     return;
   }
   const isUp = srv.body.phase === 'running';
@@ -726,11 +1100,13 @@ function renderServer(srv) {
   // Name and Discord from the server's Game.ini (bridge: publicServerInfo).
   if (srv.body.name) { $('srv-name').textContent = srv.body.name; document.title = srv.body.name; }
   const discord = $('srv-discord');
-  if (typeof srv.body.discord === 'string' && /^https:\/\/discord(app)?\.(gg|com)\//.test(srv.body.discord)) {
-    discord.href = srv.body.discord;
-    discord.hidden = false;
-  } else {
-    discord.hidden = true;
+  if (discord) {
+    if (typeof srv.body.discord === 'string' && /^https:\/\/discord(app)?\.(gg|com)\//.test(srv.body.discord)) {
+      discord.href = srv.body.discord;
+      discord.hidden = false;
+    } else {
+      discord.hidden = true;
+    }
   }
   const pctSlots = Math.min(100, Math.round((online / max) * 100));
 
@@ -738,6 +1114,7 @@ function renderServer(srv) {
   $('srv-status-text').textContent = isUp ? 'Máy chủ đang hoạt động' : 'Máy chủ đang khởi động lại…';
   $('srv-slots-text').textContent = `${online} / ${max}`;
   $('srv-meter-fill').style.width = `${pctSlots}%`;
+  if (sidebarSlots) sidebarSlots.textContent = `${online} / ${max} slot`;
 }
 
 function renderGame(me) {
@@ -823,10 +1200,10 @@ const REPLY_VI = [
   [/^Your garage is empty\.$/, () => 'Gara của bạn đang trống.'],
   [/^Slot '.+' is empty or unreadable\.$/, () => 'Con dino này không còn trong gara.'],
   [/^Respawn first, then type !redeem\.$/, () => 'Hãy respawn trước rồi mới lấy ra.'],
-  [/^Wrong species.*$/, () => 'Sai loài — respawn đúng loài đã cất rồi thử lại.'],
-  [/^Restoring '.+' at the spot you stored it\..*$/, () => 'Đang khôi phục tại chỗ đã cất — đứng yên vài giây.'],
-  [/^Restoring '.+'\..*$/, () => 'Đang khôi phục — đứng yên vài giây.'],
-  [/^Slot '.+' has no stored position.*$/, () => 'Con này không có vị trí đã cất — khôi phục tại chỗ.'],
+  [/^Wrong species.*$/, () => 'Sai loài. Respawn đúng loài đã cất rồi thử lại.'],
+  [/^Restoring '.+' at the spot you stored it\..*$/, () => 'Đang khôi phục tại chỗ đã cất, đứng yên vài giây.'],
+  [/^Restoring '.+'\..*$/, () => 'Đang khôi phục, đứng yên vài giây.'],
+  [/^Slot '.+' has no stored position.*$/, () => 'Con này không có vị trí đã cất: khôi phục tại chỗ.'],
   [/^Slot '.+' could not be taken out.*$/, () => 'Không lấy được con dino này ra. Thử lại.'],
 ];
 const reply = (m) => {
@@ -887,7 +1264,7 @@ async function sendGarage(action, slot, where) {
       garageStatus('bad', `Không gửi được lệnh${body?.error ? `: ${esc(body.error)}` : ''}.`);
       return;
     }
-    garageStatus('', 'Đã gửi — chờ game xử lý…');
+    garageStatus('', 'Đã gửi, chờ game xử lý…');
     // 1) Did the game take it? (the mod polls its inbox every 2 s)
     const start = await waitCommand(body.id, 20, (b) => b?.status === 'done');
     if (start === null) { garageStatus('bad', 'Chưa thấy game trả lời. Thử lại sau ít phút.'); return; }
@@ -904,7 +1281,7 @@ async function sendGarage(action, slot, where) {
     // 2) A store: the countdown runs in game; wait for how it ends.
     const secs = lastMeData?.garageRules?.storeCountdown ?? 30;
     storing = { until: Date.now() + secs * 1000 };
-    garageStatus('', `⏳ Game đã nhận lệnh — đang đếm ngược.${msgs ? `<ul>${msgs}</ul>` : ''}`);
+    garageStatus('', `⏳ Game đã nhận lệnh, đang đếm ngược.${msgs ? `<ul>${msgs}</ul>` : ''}`);
     garageBusy = false;
     renderGara(lastMeData);
     const end = await waitCommand(body.id, secs + 20, (b) => b?.final != null);
@@ -968,10 +1345,10 @@ function renderGara(me) {
   const young = rules.minGrowthPct > 0 && growPct !== null && growPct < rules.minGrowthPct - 1e-6;
   $('gara-store-btn').disabled = garageBusy || Boolean(storing) || !playing || full || lowHp || young;
   $('gara-store-hint').textContent = storing
-    ? `Đang cất: còn ${Math.max(0, Math.ceil((storing.until - Date.now()) / 1000))} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.`
+    ? `Đang cất: còn ${Math.max(0, Math.ceil((storing.until - Date.now()) / 1000))} giây: đứng yên trong bán kính 5 m, không đánh và không bị đánh.`
     : !me.online ? 'Vào game để cất / lấy dino.'
     : !me.dino ? 'Chọn loài và spawn dino trước.'
-    : full ? `Gara đã đầy (${rules.maxSlots}) — lấy bớt một con ra trước.`
+    : full ? `Gara đã đầy (${rules.maxSlots}), lấy bớt một con ra trước.`
     : lowHp ? `Máu phải từ ${rules.minHealthPct}% trở lên mới cất được (đang ${Math.floor(hpPct)}%).`
     : young ? `Dino phải lớn từ ${rules.minGrowthPct}% trở lên mới cất được (đang ${Math.floor(growPct)}%).`
     : `Cất ${me.dino.species ?? 'dino'} đang chơi: đếm ngược ${rules.storeCountdown} giây, trong lúc đó đứng yên (trong 5 m), không đánh và không bị đánh.`;
@@ -1019,6 +1396,7 @@ function renderGara(me) {
       </div>
     </li>`).join('');
   placeSlot3d(rows.map(({ g }) => g));
+  window._reapplyGarageFilter?.();
 }
 
 // Each garage slot in 3D, in the colours it was stored with. A slot keeps its
@@ -1158,7 +1536,7 @@ let lastSlow = 0;
 let busy = false;
 // In the launcher, while its window is behind the game (not focused) or in the
 // tray: the data still comes every second (the overlay and voice need it), but
-// the page itself is redrawn only every 5 s — nobody is looking at it. Coming
+// the page itself is redrawn only every 5 s, nobody is looking at it. Coming
 // back to the launcher redraws at once.
 let lastDrawn = 0;
 const BACKGROUND_DRAW_MS = 5000;
@@ -1267,6 +1645,9 @@ async function loadAiZones() {
 setInterval(() => { if (currentTab === 'map' && !document.hidden) loadAiZones(); }, 60_000);
 
 // Initial setup
+initSidebar();
+initCommandPalette();
+initGarageFilter();
 initSkinEditor();
 
 // Route initial tab from URL hash

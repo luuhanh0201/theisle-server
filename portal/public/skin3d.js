@@ -4,16 +4,16 @@
 //
 // Assets: /dino3d/registry.json + per species a .glb (EXT_meshopt_compression,
 // materials MI_<Species>_Body / _Eye), a region map (…Pattern…png), a normal
-// map and a RAC map — from sv1.datviet.app's IsleHub (the game's own art).
+// map and a RAC map: from sv1.datviet.app's IsleHub (the game's own art).
 //
 // The region map paints each skin region in a code colour: cyan body, blue
 // flank, green underbelly, magenta markings, red male display, yellow detail
 // (black = unused UV space); edges blend between two of them. Every pixel is
 // classified ONCE per species (its two nearest regions and the blend between
-// them); a colour change only re-mixes those — fast enough to follow a picker.
+// them); a colour change only re-mixes those, fast enough to follow a picker.
 // Teeth, mouth and claws have no region there (the game masks them with a
 // texture these assets lack): they are found on the model instead, once per
-// species (parts()) — the mouth: skin on the tongue bones, or glossy skin
+// species (parts()): the mouth: skin on the tongue bones, or glossy skin
 // (the RAC map's red, roughness) on the head / jaw close to the tongue; the
 // teeth: the small separate UV pieces on the head / jaw; the claws: glossy
 // skin on the last segment of each toe / finger.
@@ -56,7 +56,9 @@ const FX_TINTS = [
 const srgb = (hex) => { const n = parseInt(String(hex).replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 
 // --- shared: the registry, the models, each species' pixel work -----------------
-const registryReady = fetch('/dino3d/registry.json', { cache: 'no-cache' }).then((r) => r.json()).catch(() => null);
+THREE.Cache.enabled = true;
+
+const registryReady = fetch('/dino3d/registry.json').then((r) => r.json()).catch(() => null);
 let registry = null;
 registryReady.then((r) => { registry = r; });
 const versioned = (path) => { const f = registry?.files?.[path]; return f?.sha256 ? `${path}?v=${f.sha256.slice(0, 12)}` : path; };
@@ -144,7 +146,7 @@ function parts(gltf, rac) {
     // The mouth is around the tongue: its middle and reach (in the model), for the glossy skin nearby.
     const pos = g.attributes.position;
     let cx = 0, cy = 0, cz = 0, nt = 0;
-    // (No tongue bone — Deinosuchus: the hyoid's skin stands in for it.)
+    // (No tongue bone, Deinosuchus: the hyoid's skin stands in for it.)
     const core = uv.count > 0 && vcat.some((c) => c === TONGUE) ? TONGUE : HYOID;
     for (let v = 0; v < uv.count; v++) if (vcat[v] === core) { cx += pos.getX(v); cy += pos.getY(v); cz += pos.getZ(v); nt++; }
     let reach = 0;
@@ -521,7 +523,7 @@ function fromGame(skin) {
   };
   const colors = {};
   for (const [k, c] of Object.entries(skin.colors)) {
-    // Exactly black: a region this species does not use (the game leaves it 0, 0, 0) — not painted black.
+    // Exactly black: a region this species does not use (the game leaves it 0, 0, 0), not painted black.
     if (!c || (c.r === 0 && c.g === 0 && c.b === 0)) continue;
     colors[k] = `#${ch(c.r)}${ch(c.g)}${ch(c.b)}`;
   }
@@ -552,7 +554,7 @@ window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speci
     const names = Object.keys(registry?.species ?? {}).sort();
     menu.innerHTML = names.map((n, i) => `<li role="option" data-name="${n}" id="xsel-opt-${i}" aria-selected="${n === chosen}">
       <span>${n}</span>${n === liveName ? '<span class="xsel-live">đang chơi</span>' : ''}</li>`).join('');
-    pickerVal.textContent = chosen ?? '—';
+    pickerVal.textContent = chosen ?? '';
   }
   function openMenu(open) {
     picker.classList.toggle('open', open);
@@ -629,7 +631,7 @@ window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speci
   const start = () => {
     if (!preview.offsetParent) { setTimeout(start, 400); return; }
     registryReady.then(() => {
-      if (!registry) { pickerVal.textContent = '—'; $('skin-preview-note').textContent = 'Chưa có mô hình 3D trên server — xem màu theo từng ô.'; return; }
+      if (!registry) { pickerVal.textContent = ''; $('skin-preview-note').textContent = 'Chưa có mô hình 3D trên server, xem màu theo từng ô.'; return; }
       lastSkin = lastSkin ?? window.skin3dLastSkin ?? null;
       started = true;
       const live = window.skin3dLive;
@@ -639,3 +641,445 @@ window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speci
   };
   start();
 })();
+
+// --- 3D DINO HUNT STAGE: T-Rex Huyết Long hunting Gallimimus on Home ---
+function initHuntStage() {
+  const container = document.getElementById('dino-hunt-card');
+  const host = document.getElementById('hunt-viewport');
+  const btnAction = document.getElementById('btn-hunt-action');
+  const loadingEl = document.getElementById('hunt-loading');
+  const vignetteEl = document.getElementById('hunt-impact-vignette');
+  const btnTitle = document.getElementById('hunt-btn-title');
+  const btnSub = document.getElementById('hunt-btn-sub');
+  const ctaText = document.getElementById('hunt-cta-text');
+
+  if (!container || !host || !btnAction) return;
+
+  let renderer = null, scene = null, camera = null, controls = null;
+  let mixerTrex = null, mixerGalli = null, clock = null;
+  let trexRoot = null, galliRoot = null;
+  let trexJaw = null, trexHead = null;
+  let particlesMesh = null;
+  let sparkVels = [];
+  let sparksExploded = false;
+  let huntPhase = 'idle'; // 'idle' | 'hunting' | 'caught'
+  let huntStartTime = 0;
+  let sizeW = 0, sizeH = 0;
+
+  // Safe fallback if click happens before 3D is ready
+  let isSteamConnecting = false;
+  const doConnectSteam = () => {
+    if (isSteamConnecting) return;
+    isSteamConnecting = true;
+    window.location.href = 'steam://connect/play.xomgay.online:7777';
+  };
+
+  btnAction.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (huntPhase === 'hunting' || huntPhase === 'caught') return;
+    if (!trexRoot || !galliRoot) {
+      doConnectSteam();
+      return;
+    }
+    triggerCatch();
+  });
+
+  async function setup3D() {
+    await registryReady;
+    if (!registry?.species?.Tyrannosaurus || !registry?.species?.Gallimimus) {
+      if (loadingEl) loadingEl.textContent = 'Chưa có mô hình 3D trên máy chủ.';
+      return;
+    }
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    host.appendChild(renderer.domElement);
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x060b16, 0.038);
+
+    camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+    camera.position.set(0, 1.2, 13.5);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = false;
+    controls.enableZoom = false;
+    controls.maxPolarAngle = Math.PI / 2.05;
+    controls.minPolarAngle = Math.PI / 3.2;
+    controls.target.set(0, 0.45, 0);
+
+    // Cinematic Lighting
+    const hemiLight = new THREE.HemisphereLight(0xa5f3fc, 0x050912, 1.3);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 2.3);
+    sunLight.position.set(5, 8, 4);
+    scene.add(sunLight);
+
+    const rimLight = new THREE.DirectionalLight(0x10b981, 2.8);
+    rimLight.position.set(-6, 3, -4);
+    scene.add(rimLight);
+
+    const fillLight = new THREE.DirectionalLight(0x06b6d4, 1.0);
+    fillLight.position.set(0, -1, 5);
+    scene.add(fillLight);
+
+    // Ground Disc & Grid Accent
+    const groundGeo = new THREE.CircleGeometry(16, 48);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x070c18,
+      roughness: 0.9,
+      metalness: 0.08
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.92;
+    scene.add(ground);
+
+    const grid = new THREE.GridHelper(26, 26, 0x10b981, 0x0c1e30);
+    grid.position.y = -0.91;
+    grid.material.opacity = 0.22;
+    grid.material.transparent = true;
+    scene.add(grid);
+
+    // Floating Prehistoric Spores
+    const pCount = 50;
+    const pGeo = new THREE.BufferGeometry();
+    const pPos = new Float32Array(pCount * 3);
+    for (let i = 0; i < pCount; i++) {
+      pPos[i * 3] = (Math.random() - 0.5) * 16;
+      pPos[i * 3 + 1] = -0.9 + Math.random() * 3.5;
+      pPos[i * 3 + 2] = (Math.random() - 0.5) * 10;
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0x34d399,
+      size: 0.06,
+      transparent: true,
+      opacity: 0.55
+    });
+    const spores = new THREE.Points(pGeo, pMat);
+    scene.add(spores);
+
+    // Load Tyrannosaurus and Gallimimus
+    const [trexShared, galliShared] = await Promise.all([
+      loadSpecies('Tyrannosaurus'),
+      loadSpecies('Gallimimus')
+    ]);
+
+    // Build Tyrannosaurus với bộ Skin Huyết Long
+    const trexSkinCols = {
+      Body: '#6e1414',
+      Flank: '#4d0e0e',
+      Underbelly: '#b85c5c',
+      Markings: '#1f0505',
+      MaleDisplay: '#ff1a1a',
+      Detail1: '#3a0a0a',
+      Eyes: '#ffdd00',
+      Teeth: '#e8d7c9',
+      Mouth: '#9e2b2b',
+      Claws: '#140606'
+    };
+    const trexInst = buildDinoMesh(trexShared, 'Tyrannosaurus', trexSkinCols);
+    trexRoot = trexInst.root;
+    mixerTrex = trexInst.mixer;
+    trexRoot.position.set(-2.5, -0.80, -0.2);
+    trexRoot.rotation.set(0, Math.PI * 0.44, 0);
+    scene.add(trexRoot);
+
+    trexJaw = trexRoot.getObjectByName('DinoJaw');
+    trexHead = trexRoot.getObjectByName('DinoHead') || trexRoot.getObjectByName('PreviewHead');
+
+    // Build Galli
+    const galliSkinCols = {
+      Body: '#3d5a80', Flank: '#98c1d9', Underbelly: '#e0fbfc',
+      Markings: '#ee6c4d', MaleDisplay: '#ee6c4d', Detail1: '#293241',
+      Eyes: '#22d3ee', Teeth: '#e6dcc4', Mouth: '#7a3b3b', Claws: '#293241'
+    };
+    const galliInst = buildDinoMesh(galliShared, 'Gallimimus', galliSkinCols);
+    galliRoot = galliInst.root;
+    mixerGalli = galliInst.mixer;
+    galliRoot.position.set(1.8, -0.90, 0.3);
+    galliRoot.rotation.set(0, Math.PI * 0.38, 0);
+    scene.add(galliRoot);
+
+    // Dynamic Impact Sparks
+    const sparkCount = 40;
+    const sparkGeo = new THREE.BufferGeometry();
+    const sparkPos = new Float32Array(sparkCount * 3);
+    for (let i = 0; i < sparkCount; i++) {
+      sparkPos[i * 3] = 0; sparkPos[i * 3 + 1] = -100; sparkPos[i * 3 + 2] = 0;
+      sparkVels.push({ x: 0, y: 0, z: 0, life: 0 });
+    }
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+    const sparkMat = new THREE.PointsMaterial({
+      color: 0xef4444,
+      size: 0.14,
+      transparent: true,
+      opacity: 0.95
+    });
+    particlesMesh = new THREE.Points(sparkGeo, sparkMat);
+    scene.add(particlesMesh);
+
+    clock = new THREE.Clock();
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    // Animation Loop
+    const loop = () => {
+      requestAnimationFrame(loop);
+      if (!host.isConnected || host.hidden || document.hidden || !host.offsetParent) return;
+
+      const w = host.clientWidth, h = host.clientHeight;
+      if (w > 0 && h > 0 && (w !== sizeW || h !== sizeH)) {
+        sizeW = w; sizeH = h;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+
+      const delta = clock.getDelta();
+      mixerTrex?.update(delta);
+      mixerGalli?.update(delta);
+
+      const t = clock.getElapsedTime();
+
+      // Idle Mode: Stalking & Tense Pacing
+      if (huntPhase === 'idle') {
+        trexRoot.position.x = -2.5 + Math.sin(t * 1.2) * 0.16;
+        trexRoot.position.y = -0.80 + Math.abs(Math.sin(t * 2.4)) * 0.035;
+        trexRoot.rotation.z = Math.sin(t * 1.2) * 0.018;
+
+        galliRoot.position.x = 1.8 + Math.sin(t * 1.3 + 0.8) * 0.14;
+        galliRoot.position.y = -0.90 + Math.abs(Math.sin(t * 3.0)) * 0.03;
+        galliRoot.rotation.y = Math.PI * 0.38 + Math.sin(t * 0.9) * 0.10;
+
+        if (trexJaw) trexJaw.rotation.x = Math.max(0, Math.sin(t * 1.6) * 0.12);
+        camera.position.x = Math.sin(t * 0.35) * 0.25;
+      }
+      // Savage Catch Sequence!
+      else if (huntPhase === 'hunting') {
+        const elapsed = performance.now() - huntStartTime;
+
+        // Phase 1: 0ms to 420ms (Lunge Strike)
+        if (elapsed < 420) {
+          const p = elapsed / 420;
+          const ease = p * p;
+          trexRoot.position.x = -2.5 + (1.1 - (-2.5)) * ease;
+          trexRoot.position.z = -0.2 + (0.15 - (-0.2)) * p;
+          trexRoot.position.y = -0.80 + Math.sin(p * Math.PI) * 0.28;
+          trexRoot.rotation.z = -0.20 * p;
+          if (trexJaw) trexJaw.rotation.x = 0.65 * p;
+
+          galliRoot.position.x = 1.8 + 0.25 * p;
+          galliRoot.rotation.z = 0.18 * p;
+        }
+        // Phase 2: 420ms to 780ms (Tackle & Catch)
+        else if (elapsed < 780) {
+          const p = (elapsed - 420) / 360;
+          trexRoot.position.x = 1.1 + 0.08 * p;
+          trexRoot.position.y = -0.80;
+          trexRoot.rotation.z = -0.20 + 0.14 * p;
+          if (trexJaw) trexJaw.rotation.x = Math.max(-0.05, 0.65 * (1 - p * 3));
+
+          // Gallimimus gets tackled down!
+          galliRoot.position.y = -0.90 - 0.2 * p;
+          galliRoot.rotation.z = 0.18 - 1.35 * p;
+          galliRoot.rotation.x = -0.32 * p;
+
+          // Camera impact shake
+          const shake = (1 - p) * 0.14;
+          camera.position.x += (Math.random() - 0.5) * shake;
+          camera.position.y = 1.2 + (Math.random() - 0.5) * shake;
+
+          // Explode sparks on impact
+          if (!sparksExploded) {
+            sparksExploded = true;
+            for (let i = 0; i < sparkCount; i++) {
+              sparkPos[i * 3] = 1.1 + (Math.random() - 0.5) * 0.3;
+              sparkPos[i * 3 + 1] = -0.7 + (Math.random() - 0.5) * 0.3;
+              sparkPos[i * 3 + 2] = 0.2 + (Math.random() - 0.5) * 0.3;
+              const spd = 2.5 + Math.random() * 4.5;
+              const ang = Math.random() * Math.PI * 2;
+              sparkVels[i] = {
+                x: Math.cos(ang) * spd * 0.8,
+                y: 1.5 + Math.random() * 3.5,
+                z: Math.sin(ang) * spd * 0.8,
+                life: 1.0
+              };
+            }
+          }
+
+          // Spark particles update
+          for (let i = 0; i < sparkCount; i++) {
+            if (sparkVels[i].life > 0) {
+              sparkPos[i * 3] += sparkVels[i].x * delta;
+              sparkPos[i * 3 + 1] += sparkVels[i].y * delta;
+              sparkPos[i * 3 + 2] += sparkVels[i].z * delta;
+              sparkVels[i].y -= 9.8 * delta;
+              sparkVels[i].life -= delta * 1.5;
+              if (sparkVels[i].life <= 0) sparkPos[i * 3 + 1] = -100;
+            }
+          }
+          sparkGeo.attributes.position.needsUpdate = true;
+        }
+        // Phase 3: 780ms+ (Victory Stance & Connect)
+        else {
+          trexRoot.position.x = 1.18;
+          trexRoot.position.y = -0.80;
+          trexRoot.rotation.z = 0.08;
+          if (trexHead) trexHead.rotation.x = -0.30;
+          if (trexJaw) trexJaw.rotation.x = 0.24;
+
+          galliRoot.position.y = -1.05;
+          galliRoot.rotation.z = -1.15;
+
+          if (elapsed >= 1100 && huntPhase === 'hunting') {
+            huntPhase = 'caught';
+            btnAction.classList.remove('hunting-charging');
+            btnAction.classList.add('hunting-caught');
+            doConnectSteam();
+          }
+        }
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    loop();
+  }
+
+  function triggerCatch() {
+    huntPhase = 'hunting';
+    huntStartTime = performance.now();
+    sparksExploded = false;
+
+    btnAction.classList.add('hunting-charging');
+    if (btnTitle) btnTitle.textContent = '🎯 ĐÃ TÓM ĐƯỢC CON MỒI!';
+    if (btnSub) btnSub.textContent = 'T-Rex Huyết Long hạ gục Gallimimus! Đang kết nối vào máy chủ Xóm Gáy...';
+    if (ctaText) ctaText.textContent = 'KẾT NỐI...';
+
+    // Show impact flash
+    if (vignetteEl) {
+      setTimeout(() => {
+        vignetteEl.classList.add('active');
+        setTimeout(() => vignetteEl.classList.remove('active'), 380);
+      }, 400);
+    }
+
+    // Auto-reset after 4.5s in case player returns to tab
+    setTimeout(() => {
+      if (huntPhase === 'caught') {
+        huntPhase = 'idle';
+        sparksExploded = false;
+        btnAction.classList.remove('hunting-charging', 'hunting-caught');
+        if (btnTitle) btnTitle.textContent = 'BẮT ĐẦU CHUYẾN SINH TỒN';
+        if (btnSub) btnSub.textContent = 'Bấm để tóm gọn con mồi & vào thẳng máy chủ Xóm Gáy';
+        if (ctaText) ctaText.textContent = 'CHƠI NGAY';
+        if (galliRoot) {
+          galliRoot.position.set(1.8, -0.90, 0.3);
+          galliRoot.rotation.set(0, Math.PI * 0.38, 0);
+        }
+        if (trexRoot) {
+          trexRoot.position.set(-2.5, -0.80, -0.2);
+          trexRoot.rotation.set(0, Math.PI * 0.44, 0);
+        }
+        camera.position.set(0, 1.2, 13.5);
+        if (trexJaw) trexJaw.rotation.x = 0;
+        if (trexHead) trexHead.rotation.x = 0;
+      }
+    }, 4500);
+  }
+
+  function buildDinoMesh(shared, speciesName, skinColors) {
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE; canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.flipY = false;
+
+    const root = cloneSkinned(shared.gltf.scene);
+    const bodyMats = [], eyeMats = [], teethMats = [];
+
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      o.frustumCulled = false;
+      const eye = /eye/i.test(o.material?.name ?? '');
+      const m = new THREE.MeshStandardMaterial({ roughness: eye ? 0.15 : 0.82, metalness: 0.04 });
+      if (eye) { eyeMats.push(m); o.material = m; return; }
+      m.map = texture;
+      if (shared.normal) m.normalMap = shared.normal;
+      bodyMats.push(m);
+      if (o.geometry.groups.length === 2) {
+        const tm = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0 });
+        if (shared.normal) tm.normalMap = shared.normal;
+        teethMats.push(tm);
+        o.material = [m, tm];
+      } else {
+        o.material = m;
+      }
+    });
+
+    const sp = registry.species[speciesName];
+    const baseScale = sp?.glbScale ?? 0.025;
+    const scaleRatio = speciesName === 'Tyrannosaurus' ? 0.28 : (speciesName === 'Gallimimus' ? 0.225 : 0.30);
+    root.scale.setScalar(baseScale * scaleRatio);
+
+    // Paint texture
+    const cols = REGION_CODES.map(([id]) => srgb(skinColors[id] ?? '#808080'));
+    const { a, b, t } = shared.classes;
+    const sh = shared.shade, pt = shared.parts;
+    const partCols = [
+      null,
+      srgb(skinColors.Teeth ?? '#e6dcc4'),
+      srgb(skinColors.Mouth ?? '#7a3b3b'),
+      srgb(skinColors.Claws ?? '#3a3a3a')
+    ];
+    const img = ctx.createImageData(SIZE, SIZE);
+    const d = img.data;
+    for (let i = 0, n = SIZE * SIZE; i < n; i++) {
+      const s = sh[i] / 255;
+      const pc = pt[i] ? partCols[pt[i]] : null;
+      if (pc) {
+        d[i * 4] = pc[0] * s; d[i * 4 + 1] = pc[1] * s; d[i * 4 + 2] = pc[2] * s; d[i * 4 + 3] = 255;
+        continue;
+      }
+      const c1 = cols[a[i]], c2 = cols[b[i]], w = t[i] / 255;
+      d[i * 4] = (c1[0] + (c2[0] - c1[0]) * w) * s;
+      d[i * 4 + 1] = (c1[1] + (c2[1] - c1[1]) * w) * s;
+      d[i * 4 + 2] = (c1[2] + (c2[2] - c1[2]) * w) * s;
+      d[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    texture.needsUpdate = true;
+
+    const eye = srgb(skinColors.Eyes ?? '#10b981');
+    for (const m of eyeMats) m.color.setRGB(eye[0] / 255, eye[1] / 255, eye[2] / 255, THREE.SRGBColorSpace);
+
+    let mixer = null;
+    if (shared.gltf.animations?.[0]) {
+      mixer = new THREE.AnimationMixer(root);
+      mixer.clipAction(shared.gltf.animations[0]).play();
+    }
+
+    return { root, mixer, texture };
+  }
+
+  setup3D().catch((err) => {
+    console.error('[huntStage3d]', err);
+    if (loadingEl) {
+      loadingEl.style.display = 'none';
+    }
+  });
+}
+
+// Start the 3D Dino Hunt Stage on Home
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initHuntStage);
+} else {
+  initHuntStage();
+}
+

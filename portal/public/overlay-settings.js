@@ -1,8 +1,8 @@
 'use strict';
 /*
  * "Overlay trong game" card in the voice tab. The overlay is Xóm Gáy
- * Launcher's (launcher/src/overlay.js): four widgets — voice, mini map, dino
- * numbers, prime quests — each its own small window. This page only edits
+ * Launcher's (launcher/src/overlay.js): four widgets: voice, mini map, dino
+ * numbers, prime quests, each its own small window. This page only edits
  * their settings through window.isleLauncher. In a browser the card just
  * says to get the launcher.
  */

@@ -536,7 +536,7 @@ export function createMap(root) {
     update(dino) {
       if (!dino || !dino.position) {
         st.me = null; st.to = null; st.from = null;
-        if (st.data) { msg.hidden = false; msg.textContent = 'Chưa có vị trí — vào game và điều khiển dino.'; }
+        if (st.data) { msg.hidden = false; msg.textContent = 'Chưa có vị trí: vào game và điều khiển dino.'; }
         draw();
         return;
       }
