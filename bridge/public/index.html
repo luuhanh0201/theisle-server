@@ -325,14 +325,180 @@
   .grow-arrow { color: var(--muted); font-size: 12px; }
 
   /* ---- dino creator --------------------------------------------------- */
-  .creator { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+  .creator { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 1150px) { .creator { grid-template-columns: minmax(0, 1fr) 380px; } }
-  .creator .preview { position: sticky; top: 20px; align-self: start; display: flex; flex-direction: column; gap: 10px; }
-  .step { display: flex; flex-direction: column; gap: 10px; padding: 18px 0; border-top: 1px solid var(--border); }
+  .creator .preview { position: sticky; top: 20px; align-self: start; display: flex; flex-direction: column; gap: 12px; }
+  .preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  .preview-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .step { display: flex; flex-direction: column; gap: 12px; padding: 20px 0; border-top: 1px solid var(--border); }
   .step:first-child { border-top: 0; padding-top: 0; }
-  .step-title { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 14px; }
-  .step-num { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 11.5px; font-weight: 800; background: var(--accent-soft); color: var(--accent); }
-  .step-hint { font-size: 12px; color: var(--muted); }
+  .step-title { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 14.5px; }
+  .step-num { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+  .step-badge { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: var(--surface); color: var(--muted); border: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.04em; margin-left: auto; }
+  .step-hint { font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .step-fields-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .field-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .input-with-icon { position: relative; width: 100%; }
+  .input-with-icon .field-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+  .input-with-icon input { padding-left: 34px; }
+  .overwrite {
+    display: flex; gap: 12px; padding: 14px 16px; border-radius: 12px;
+    background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25);
+    margin-top: 10px;
+  }
+  .alert-icon-wrap { width: 28px; height: 28px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: var(--kill); display: grid; place-items: center; flex-shrink: 0; }
+  .alert-content { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+  .growth-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .growth-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .field-label { font-size: 12px; color: var(--text-2); font-weight: 600; }
+  .preset-chips {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+    margin-top: 10px;
+  }
+  .preset-chips button {
+    padding: 6px 2px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all .15s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+  }
+  .preset-chips button:hover { border-color: var(--accent); color: var(--text); }
+  .preset-chips button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .chip-stage { font-size: 10px; font-weight: 600; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .chip-pct { font-size: 11.5px; font-weight: 800; white-space: nowrap; }
+  .vitals-prime-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 10px;
+    align-items: stretch;
+  }
+  @media (min-width: 820px) {
+    .vitals-prime-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+  .growth-vitals-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+  }
+  .growth-panel { flex-shrink: 0; }
+  .vitals-config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+  .vitals-config-card .step-hint { margin-top: auto; }
+  .vitals-config-title { font-size: 13px; font-weight: 750; color: var(--text); }
+  .vitals-items-list { display: flex; flex-direction: column; gap: 8px; }
+  .vitals-item-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 9px 12px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--border);
+    cursor: default; transition: border-color .15s ease;
+  }
+  label.vitals-item-box { cursor: pointer; justify-content: flex-start; }
+  .vitals-item-box:hover { border-color: var(--border-strong); }
+  .vitals-item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .vitals-item-title { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .vitals-item-desc { font-size: 11px; color: var(--muted); line-height: 1.35; }
+  .switch-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+  .nutrient-input-box { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .nutrient-input-box input { width: 64px; text-align: center; font-weight: 700; }
+  .prime-config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .prime-config-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .prime-title-text { font-size: 13.5px; font-weight: 750; color: #f59e0b; }
+  .elder-stacks-wrap { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+  .elder-stacks-wrap input { width: 65px; text-align: center; }
+  .prime-tasks {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .prime-tasks-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .prime-tasks-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+  .prime-tasks-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .prime-tasks-label {
+    font-size: 12px;
+    font-weight: 750;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  #f-prime-reload {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+  #f-prime-src {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .prime-grid { display: grid; gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 6px; }
+  @media (max-width: 480px) { .prime-grid { grid-template-columns: 1fr; } }
+  .prime-grid label {
+    display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600;
+    padding: 6px 8px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border);
+    cursor: pointer; transition: border-color .15s ease;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .prime-grid label:hover { border-color: var(--border-strong); }
+  .mut-section-block { margin-top: 10px; }
+  .mut-section-block .group-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .mut-extra-details { margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .mut-extra-details summary { font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; }
+  .confirm-bar { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .redeem-spot-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
   .species-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .species-opt {
     display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 11px; cursor: pointer; text-align: left;
@@ -831,11 +997,27 @@
   .bubble.cmd .txt { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; color: var(--gar); }
 
   /* ---- garage + forms ------------------------------------------------- */
-  .slot-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-  .slot { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface-2); }
-  .slot .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .slot .species { font-size: 16px; font-weight: 750; letter-spacing: -0.02em; }
-  .slot .owner { margin-top: 10px; font-size: 12px; }
+  .slot-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .slot {
+    border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--surface-2);
+    display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .slot:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+  .slot .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .slot-body { display: flex; flex-direction: column; }
+  .slot .species { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+  .slot .owner { margin-top: 2px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; }
+  .slot .owner .meta { min-width: 0; }
+  .garage-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .garage-search-wrap { position: relative; flex: 1; min-width: 240px; }
+  .garage-search-wrap .i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
+  .garage-search-wrap input { padding-left: 34px; font-size: 13px; }
+  .garage-stats-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
   form.grid-form { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: end; }
   /* classPath is long: give it a full row at every width. */
   .wide { grid-column: 1 / -1; }
@@ -862,11 +1044,6 @@
   .me-card .me-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .me-card .sub { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .me-card button { flex: none; padding: 5px 10px; font-size: 12px; }
-  .prime-tasks { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border, #2a3342); border-radius: 10px; }
-  .prime-tasks-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-  .prime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
-  .prime-grid label { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 500; font-size: 13px; }
-  .prime-grid input { width: auto; margin: 0; }
 </style>
 </head>
 <body>
@@ -1301,167 +1478,322 @@
 
     <!-- Gara -->
     <div data-view="garage" hidden>
-      <div class="page-head"><div><h1>Gara</h1><p>Dino người chơi đã cất, tạo dino thẳng vào gara của ai đó, và cài đặt gara.</p></div></div>
+      <div class="page-head">
+        <div>
+          <h1>Gara</h1>
+          <p>Quản lý dino người chơi đang cất, tạo dino vào gara theo yêu cầu và cấu hình quy tắc hệ thống Gara.</p>
+        </div>
+      </div>
       <nav class="subtabs" data-subnav="garage" aria-label="Mục của Gara"></nav>
 
       <div data-sub="garage:stored">
-
-      <section class="card" style="margin-bottom:18px">
-        <div class="card-head"><h2>Dino đang cất</h2><span class="sub" id="garage-sub"></span></div>
-        <div class="card-body"><div class="slot-grid" id="garage"></div></div>
-      </section>
-      <section class="card" id="creator-card">
-        <div class="card-head"><h2>Tạo dino vào gara</h2><span class="sub">Người chơi nhận trên web (mục Gara → Lấy ra)</span></div>
-        <div class="card-body">
-          <form class="creator" id="create" autocomplete="off">
+        <!-- Section 1: Danh sách Dino đang cất -->
+        <section class="card" style="margin-bottom:20px">
+          <div class="card-head">
             <div>
-              <div class="step">
-                <div class="step-title"><span class="step-num">1</span>Người chơi</div>
-                <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
-                  <div><label for="f-steam">SteamID64</label>
-                    <input id="f-steam" required pattern="\d{17}" placeholder="Gõ tên hoặc SteamID…" list="dl-players"></div>
-                  <div><label for="f-slot">Tên slot</label>
-                    <input id="f-slot" required pattern="[A-Za-z0-9_\-]{1,32}" value="admin"></div>
-                </div>
-                <datalist id="dl-players"></datalist>
-                <div class="step-hint" id="f-steam-hint"></div>
-                <div class="slot-chips" id="f-existing"></div>
-                <div class="overwrite" id="f-overwrite" hidden>
-                  <div id="f-overwrite-text"></div>
-                  <label class="check"><input type="checkbox" id="f-overwrite-ok">
-                    Tôi hiểu — ghi đè slot này (con cũ được sao lưu vào <span class="mono">deleted/</span>)</label>
-                  <div><button type="button" class="link-btn" id="f-free-slot"></button></div>
-                </div>
-              </div>
-
-              <div class="step">
-                <div class="step-title"><span class="step-num">2</span>Chọn dino</div>
-                <div class="step-hint">Chỉ những loài đã từng có người chơi trên server này — việc lấy ra so khớp
-                  chính xác classPath, nên loài đoán sai sẽ không ai nhận được.</div>
-                <div class="species-grid" id="f-species"></div>
-                <div><button class="link-btn" type="button" id="f-manual-toggle">Nhập classPath thủ công…</button></div>
-                <div id="f-manual" hidden>
-                  <label for="f-class">classPath</label>
-                  <input id="f-class" placeholder="BlueprintGeneratedClass /Game/…/BP_X.BP_X_C">
-                  <div class="banner tone-dmg" style="margin-top:8px"><svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>classPath chưa thấy trên server. Sai một ký tự là
-                    người chơi sẽ nhận lỗi "Wrong species" khi redeem.</span></div>
-                </div>
-              </div>
-
-              <div class="step">
-                <div class="step-title"><span class="step-num">3</span>Tăng trưởng</div>
-                <div class="range-row">
-                  <span class="growth-val" id="f-growth-val">100%</span>
-                  <input id="f-growth" type="range" min="0" max="100" step="1" value="100" aria-label="Growth">
-                </div>
-                <div class="chips" id="f-presets">
-                  <button type="button" data-g="10">Sơ sinh 10%</button>
-                  <button type="button" data-g="25">Juvenile 25%</button>
-                  <button type="button" data-g="50">Sub-adult 50%</button>
-                  <button type="button" data-g="75">75%</button>
-                  <button type="button" data-g="100">Trưởng thành 100%</button>
-                </div>
-                <div class="growth-stats" id="f-growth-stats"></div>
-                <div class="step-hint">Giới tính không chọn được: người chơi chọn khi respawn, và restore không có cách đổi nó.</div>
-                <div class="row" style="margin-top:10px;align-items:center">
-                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" class="switch" id="f-stomach" checked style="width:auto"> Dạ dày đầy khi lấy ra</label>
-                  <label for="f-nutrient" style="margin:0 0 0 12px;flex:none">Dinh dưỡng</label>
-                  <input id="f-nutrient" type="number" min="0" max="100" step="5" value="50" style="width:90px"> <span class="muted">%</span>
-                </div>
-                <div class="step-hint">Dạ dày được lấp đầy đúng mức tối đa game báo cho dino đó. Mức dinh dưỡng % áp dụng khi đã đo được giá trị tối đa của từng chất trên server (đang kiểm tra).</div>
-                <div class="row" style="margin-top:10px;align-items:center">
-                  <label style="display:flex;align-items:center;gap:8px;margin:0;flex:none"><input type="checkbox" class="switch" id="f-prime"> 👑 Prime Elder</label>
-                  <label for="f-elder-stacks" style="margin:0 0 0 12px;flex:none">Elder stacks</label>
-                  <input id="f-elder-stacks" type="number" min="0" max="10" step="1" value="0" style="width:90px">
-                </div>
-                <div class="step-hint" id="f-prime-hint"></div>
-                <div class="prime-tasks">
-                  <div class="prime-tasks-head">
-                    <b>Nhiệm vụ prime</b> <span class="chip" id="f-prime-count">0/10</span>
-                    <span class="muted" id="f-prime-src"></span>
-                    <button type="button" class="btn" id="f-prime-reload" style="margin-left:auto" title="Lần có nhiều nhiệm vụ nhất của người này với loài này">Lấy lại từ lịch sử</button>
-                  </div>
-                  <div class="prime-grid" id="f-prime-conds"></div>
-                  <div class="step-hint">Dino lấy ra có đúng các nhiệm vụ được tick (đủ 5 là đủ điều kiện prime). Mặc định lấy từ dino
-                    gần nhất <b>cùng loài</b> của người này — tặng lại dino không làm mất nhiệm vụ.</div>
-                </div>
-              </div>
-
-              <div class="step">
-                <div class="step-title"><span class="step-num">4</span>Mutation</div>
-                <div class="step-hint">Mỗi mutation phải <b>đã được game ghi nhận trên chính loài này</b> (từ người chơi thật
-                  hoặc dino họ đã cất). Rê chuột vào <span class="info-btn" style="cursor:default">!</span> để xem mô tả và bằng chứng.
-                  Để "trống" thì slot đó giữ nguyên khi redeem.</div>
-                <label class="toggle"><input type="checkbox" class="switch" id="f-allow-unconfirmed">
-                  Cho phép cả mutation chưa xác nhận trên loài này (chỉ thấy trên loài khác)</label>
-                <div class="step-hint" id="f-mut-gen"></div>
-                <div class="group-label">Đang dùng</div>
-                <div class="mut-grid" id="f-mut-active"></div>
-                <details class="more">
-                  <summary>Mutation từ cha mẹ và elder</summary>
-                  <div class="inner">
-                    <div><div class="group-label">Từ cha mẹ</div><div class="mut-grid" id="f-mut-parent"></div></div>
-                    <div><div class="group-label">Elder</div><div class="mut-grid" id="f-mut-elder"></div></div>
-                  </div>
-                </details>
-              </div>
-
-              <div class="step">
-                <div class="step-title"><span class="step-num">5</span>Xác nhận</div>
-                <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
-                  <div style="flex:1;min-width:200px" id="f-token-wrap"><label for="f-token">Admin token</label>
-                    <input id="f-token" type="password" placeholder="x-admin-token"></div>
-                  <button class="btn" type="submit" id="f-submit">
-                    <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tạo dino</button>
-                </div>
-                <div class="result" id="create-result"></div>
-              </div>
+              <h2>Dino đang cất trong gara</h2>
+              <span class="sub" id="garage-sub"></span>
             </div>
-
-            <div class="preview">
-              <div class="group-label">Xem trước</div>
-              <div id="f-preview"></div>
+            <a href="#creator-card" class="btn btn-sm" style="margin-left:auto;text-decoration:none">
+              <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Tạo dino vào gara
+            </a>
+          </div>
+          <div class="card-body">
+            <div class="garage-toolbar" id="garage-toolbar">
+              <div class="garage-search-wrap">
+                <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" id="garage-search" placeholder="Tìm theo tên người chơi, SteamID hoặc loài dino…" autocomplete="off">
+              </div>
+              <span class="garage-stats-pill" id="garage-stats-pill">0 slot</span>
             </div>
-          </form>
-        </div>
-      </section>
+            <div class="slot-grid" id="garage"></div>
+          </div>
+        </section>
+
+        <!-- Section 2: Trình tạo Dino vào Gara -->
+        <section class="card" id="creator-card">
+          <div class="card-head">
+            <div>
+              <h2>Tạo dino vào gara</h2>
+              <span class="sub">Tạo sẵn dino vào gara của người chơi để họ nhận trên web (Gara → Lấy ra)</span>
+            </div>
+            <a href="#garage" class="link-btn" style="font-size:12px;margin-left:auto">↑ Xem danh sách cất</a>
+          </div>
+          <div class="card-body">
+            <form class="creator" id="create" autocomplete="off">
+              <div>
+                <!-- Bước 1 -->
+                <div class="step">
+                  <div class="step-title">
+                    <span class="step-num">1</span>
+                    <span>Người chơi &amp; Tên slot</span>
+                    <span class="step-badge">Bắt buộc</span>
+                  </div>
+                  <div class="step-fields-grid">
+                    <div class="field-wrap">
+                      <label for="f-steam">SteamID64 người nhận</label>
+                      <div class="input-with-icon">
+                        <svg class="field-icon i" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <input id="f-steam" required pattern="\d{17}" placeholder="Gõ tên hoặc dán SteamID64 (17 số)…" list="dl-players">
+                      </div>
+                      <div class="step-hint" id="f-steam-hint"></div>
+                    </div>
+                    <div class="field-wrap">
+                      <label for="f-slot">Tên slot trong gara</label>
+                      <input id="f-slot" required pattern="[A-Za-z0-9_\-]{1,32}" value="admin" placeholder="Ví dụ: admin, slot1…">
+                      <div class="step-hint">Định danh cho slot này trong gara của người chơi.</div>
+                    </div>
+                  </div>
+                  <datalist id="dl-players"></datalist>
+                  <div class="slot-chips" id="f-existing"></div>
+                  <div class="overwrite" id="f-overwrite" hidden>
+                    <div class="alert-icon-wrap"><svg class="i" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                    <div class="alert-content">
+                      <div id="f-overwrite-text"></div>
+                      <label class="check">
+                        <input type="checkbox" id="f-overwrite-ok">
+                        <span>Tôi hiểu và đồng ý ghi đè slot này (con cũ được sao lưu vào <span class="mono">deleted/</span>)</span>
+                      </label>
+                      <div><button type="button" class="link-btn" id="f-free-slot"></button></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bước 2 -->
+                <div class="step">
+                  <div class="step-title">
+                    <span class="step-num">2</span>
+                    <span>Chọn loài dino</span>
+                    <span class="step-badge">Bắt buộc</span>
+                  </div>
+                  <div class="step-hint">Chỉ hiển thị các loài đã được xác nhận hoạt động trên server để đảm bảo người chơi nhận thành công.</div>
+                  <div class="species-grid" id="f-species"></div>
+                  <div style="margin-top:6px">
+                    <button class="link-btn" type="button" id="f-manual-toggle">Nhập classPath thủ công…</button>
+                  </div>
+                  <div id="f-manual" hidden>
+                    <label for="f-class">classPath</label>
+                    <input id="f-class" placeholder="BlueprintGeneratedClass /Game/…/BP_X.BP_X_C">
+                    <div class="banner tone-dmg" style="margin-top:8px">
+                      <svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                      <span>classPath chưa từng thấy trên server. Sai một ký tự là người chơi sẽ nhận lỗi "Wrong species" khi nhận dino.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bước 3 -->
+                <div class="step">
+                  <div class="step-title">
+                    <span class="step-num">3</span>
+                    <span>Tăng trưởng, Dạ dày &amp; Prime</span>
+                  </div>
+                  <div class="vitals-prime-grid">
+                    <!-- Cột trái: Trên là Tăng trưởng, Dưới là Dinh dưỡng & Dạ dày -->
+                    <div class="growth-vitals-col">
+                      <!-- Trên: Mức tăng trưởng -->
+                      <div class="growth-panel">
+                        <div class="growth-header-row">
+                          <span class="field-label">Mức tăng trưởng (Growth)</span>
+                          <span class="growth-val" id="f-growth-val">100%</span>
+                        </div>
+                        <div class="range-row">
+                          <input id="f-growth" type="range" min="0" max="100" step="1" value="100" aria-label="Growth">
+                        </div>
+                        <div class="chips preset-chips" id="f-presets">
+                          <button type="button" data-g="10" title="Sơ sinh 10%"><span class="chip-stage">Sơ sinh</span><span class="chip-pct">10%</span></button>
+                          <button type="button" data-g="25" title="Juvenile 25%"><span class="chip-stage">Juvenile</span><span class="chip-pct">25%</span></button>
+                          <button type="button" data-g="50" title="Sub-adult 50%"><span class="chip-stage">Sub-adult</span><span class="chip-pct">50%</span></button>
+                          <button type="button" data-g="75" title="Sub-adult 75%"><span class="chip-stage">Sub-adult</span><span class="chip-pct">75%</span></button>
+                          <button type="button" data-g="100" class="on" title="Trưởng thành 100%"><span class="chip-stage">Trưởng thành</span><span class="chip-pct">100%</span></button>
+                        </div>
+                        <div class="growth-stats" id="f-growth-stats"></div>
+                      </div>
+
+                      <!-- Dưới: Dinh dưỡng & Dạ dày -->
+                      <div class="vitals-config-card">
+                        <div class="vitals-config-title">Dinh dưỡng &amp; Dạ dày</div>
+                        <div class="vitals-items-list">
+                          <label class="vitals-item-box" for="f-stomach">
+                            <input type="checkbox" class="switch" id="f-stomach" checked>
+                            <div class="vitals-item-text">
+                              <div class="vitals-item-title">Dạ dày đầy (100% thức ăn)</div>
+                              <div class="vitals-item-desc">Lấp đầy thức ăn tối đa của dino khi lấy ra</div>
+                            </div>
+                          </label>
+                          <div class="vitals-item-box">
+                            <div class="vitals-item-text">
+                              <label for="f-nutrient" class="vitals-item-title">Mức dinh dưỡng</label>
+                              <div class="vitals-item-desc">Áp dụng theo mức server đã ghi nhận</div>
+                            </div>
+                            <div class="nutrient-input-box">
+                              <input id="f-nutrient" type="number" min="0" max="100" step="5" value="50">
+                              <span class="muted">%</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="step-hint">Dạ dày được lấp đầy đúng mức tối đa của dino. Mức dinh dưỡng áp dụng khi đã đo được giá trị trên server.</div>
+                      </div>
+                    </div>
+
+                    <!-- Cột phải: Prime Elder (giữ nguyên) -->
+                    <div class="prime-config-card">
+                      <div class="prime-config-head">
+                        <label class="switch-wrap">
+                          <input type="checkbox" class="switch" id="f-prime">
+                          <span class="prime-title-text">👑 Kích hoạt Prime Elder</span>
+                        </label>
+                        <div class="elder-stacks-wrap">
+                          <label for="f-elder-stacks">Elder stacks:</label>
+                          <input id="f-elder-stacks" type="number" min="0" max="10" step="1" value="0">
+                        </div>
+                      </div>
+                      <div class="step-hint" id="f-prime-hint"></div>
+                      <div class="prime-tasks">
+                        <div class="prime-tasks-head">
+                          <div class="prime-tasks-bar">
+                            <div class="prime-tasks-title-wrap">
+                              <span class="prime-tasks-label">Nhiệm vụ prime:</span>
+                              <span class="chip" id="f-prime-count">0/10</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-ghost" id="f-prime-reload" title="Lần có nhiều nhiệm vụ nhất của người này với loài này">Lấy lại từ lịch sử</button>
+                          </div>
+                          <div class="muted" id="f-prime-src"></div>
+                        </div>
+                        <div class="prime-grid" id="f-prime-conds"></div>
+                        <div class="step-hint">Dino lấy ra sẽ có đúng các nhiệm vụ được tick (đủ 5 là đủ điều kiện prime). Mặc định lấy từ dino gần nhất cùng loài của người chơi.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bước 4 -->
+                <div class="step">
+                  <div class="step-title">
+                    <span class="step-num">4</span>
+                    <span>Đột biến gen (Mutation)</span>
+                  </div>
+                  <div class="step-hint">Mỗi mutation phải đã được game ghi nhận trên chính loài này từ người chơi thật. Rê chuột vào <span class="info-btn" style="cursor:default">!</span> để xem mô tả. Để "trống" thì slot đó giữ nguyên.</div>
+                  <label class="toggle" style="margin-top:6px">
+                    <input type="checkbox" class="switch" id="f-allow-unconfirmed">
+                    <span>Cho phép cả mutation chưa xác nhận trên loài này (chỉ mới thấy trên loài khác)</span>
+                  </label>
+                  <div class="step-hint" id="f-mut-gen"></div>
+
+                  <div class="mut-section-block">
+                    <div class="group-label">Đột biến đang dùng (Active Slots)</div>
+                    <div class="mut-grid" id="f-mut-active"></div>
+                  </div>
+
+                  <details class="more mut-extra-details">
+                    <summary>Đột biến từ cha mẹ (Parent) &amp; Elder</summary>
+                    <div class="inner">
+                      <div class="mut-section-block">
+                        <div class="group-label">Từ cha mẹ (Parent Slots)</div>
+                        <div class="mut-grid" id="f-mut-parent"></div>
+                      </div>
+                      <div class="mut-section-block">
+                        <div class="group-label">Elder Slots</div>
+                        <div class="mut-grid" id="f-mut-elder"></div>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+
+                <!-- Bước 5 -->
+                <div class="step">
+                  <div class="step-title">
+                    <span class="step-num">5</span>
+                    <span>Xác nhận &amp; Cấp dino</span>
+                  </div>
+                  <div class="confirm-bar">
+                    <div class="field-wrap" id="f-token-wrap">
+                      <label for="f-token">Admin token xác thực</label>
+                      <input id="f-token" type="password" placeholder="Nhập x-admin-token…" autocomplete="current-password">
+                    </div>
+                    <button class="btn btn-primary" type="submit" id="f-submit">
+                      <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                      <span>Tạo dino vào gara</span>
+                    </button>
+                  </div>
+                  <div class="result" id="create-result"></div>
+                </div>
+              </div>
+
+              <!-- Cột Preview bên phải -->
+              <div class="preview">
+                <div class="preview-head">
+                  <span class="group-label">Xem trước Dino sẽ tạo</span>
+                  <span class="preview-live-dot"></span>
+                </div>
+                <div id="f-preview"></div>
+              </div>
+            </form>
+          </div>
+        </section>
       </div>
 
+      <!-- Tab Cài đặt Gara -->
       <div data-sub="garage:settings" hidden>
-      <div class="section-title" style="margin-top:0"><span class="ev-ico tone-gar" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🦖</span>
-        <h2>Cấu hình · Gara</h2><span class="sub">lưu riêng, không nằm trong Game.ini</span></div>
-      <section class="card">
-        <div class="card-head"><h2>Cài đặt gara</h2><span class="sub">người chơi cất / lấy dino trên trang web (mục Gara) — có hiệu lực ngay, không cần khởi động lại</span></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-          <div class="row" style="align-items:end">
-            <div style="flex:1;min-width:260px"><label for="gs-redeem-at">Khi lấy dino ra, dino xuất hiện ở</label>
-              <select id="gs-redeem-at">
-                <option value="current">Chỗ người chơi đang đứng</option>
-                <option value="stored">Điểm đã cất (vị trí lúc bắt đầu cất)</option>
-                <option value="choice">Người chơi tự chọn trên web</option>
-              </select></div>
+        <div class="section-title" style="margin-top:0">
+          <span class="ev-ico tone-gar" style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:18px">🦖</span>
+          <div>
+            <h2>Cấu hình · Gara</h2>
+            <span class="sub">Lưu riêng độc lập, áp dụng ngay tức thì không cần khởi động lại server</span>
           </div>
-          <div class="cfg-grid">
-            <div class="cfg-field"><label for="gs-max-slots">Số slot mỗi người chơi<span class="mono">maxSlots</span></label>
-              <input id="gs-max-slots" type="number" min="1" max="20" step="1">
-              <div class="step-hint">Tối đa bao nhiêu dino một người được cất (slot admin tạo cũng tính). Slot tự đánh số 1, 2, 3… Mặc định 2.</div></div>
-            <div class="cfg-field"><label for="gs-countdown">Đếm ngược khi cất (giây)<span class="mono">storeCountdown</span></label>
-              <input id="gs-countdown" type="number" min="0" max="300" step="1">
-              <div class="step-hint">Từ lúc bấm Cất tới khi dino vào gara. Trong lúc đếm người chơi phải đứng trong 5 m, không gây / chịu sát thương, nếu không thì cất thất bại (không tính thời gian hồi). Mặc định 30.</div></div>
-            <div class="cfg-field"><label for="gs-cooldown">Chờ giữa hai lần dùng gara (giây)<span class="mono">cooldown</span></label>
-              <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
-              <div class="step-hint">Sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người (cất thất bại không tính). Mặc định 60.</div></div>
-            <div class="cfg-field"><label for="gs-min-health">Máu tối thiểu để cất (%)<span class="mono">minHealthPct</span></label>
-              <input id="gs-min-health" type="number" min="0" max="100" step="1">
-              <div class="step-hint">Máu hiện tại so với máu tối đa của dino. Thấp hơn thì không cất được (người chơi được báo đang bao nhiêu %). 0 = không giới hạn.</div></div>
-            <div class="cfg-field"><label for="gs-min-growth">Tăng trưởng tối thiểu để cất (%)<span class="mono">minGrowthPct</span></label>
-              <input id="gs-min-growth" type="number" min="0" max="100" step="1">
-              <div class="step-hint">Dino nhỏ hơn mức này thì không cất được. 0 = không giới hạn.</div></div>
-          </div>
-          <div class="row"><button type="button" class="btn" id="gs-save">Lưu cài đặt</button></div>
-          <div class="step-hint" id="gs-help"></div>
         </div>
-      </section>
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Cài đặt gara</h2>
+              <span class="sub">Áp dụng cho mọi người chơi khi cất / lấy dino trên web (Gara)</span>
+            </div>
+            <button type="button" class="btn btn-sm" id="gs-save">
+              <svg class="i" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Lưu cài đặt
+            </button>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:16px">
+            <div class="redeem-spot-card">
+              <div class="field-wrap">
+                <label for="gs-redeem-at">Vị trí xuất hiện khi lấy dino ra khỏi gara</label>
+                <select id="gs-redeem-at">
+                  <option value="current">Chỗ người chơi đang đứng</option>
+                  <option value="stored">Điểm đã cất (vị trí lúc bắt đầu cất)</option>
+                  <option value="choice">Người chơi tự chọn trên web</option>
+                </select>
+                <div class="step-hint" id="gs-help"></div>
+              </div>
+            </div>
+
+            <div class="cfg-grid">
+              <div class="cfg-field">
+                <label for="gs-max-slots">Số slot tối đa mỗi người chơi <span class="mono">maxSlots</span></label>
+                <input id="gs-max-slots" type="number" min="1" max="20" step="1">
+                <div class="step-hint">Tối đa bao nhiêu dino một người được cất (kể cả slot admin tặng). Mặc định 2.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-countdown">Thời gian đếm ngược khi cất (giây) <span class="mono">storeCountdown</span></label>
+                <input id="gs-countdown" type="number" min="0" max="300" step="1">
+                <div class="step-hint">Từ lúc bấm Cất tới khi dino vào gara. Người chơi phải đứng yên trong 5m, không nhận sát thương. Mặc định 30s.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-cooldown">Hồi chiêu giữa 2 lần dùng gara (giây) <span class="mono">cooldown</span></label>
+                <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
+                <div class="step-hint">Thời gian chờ sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người. Mặc định 60s.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-min-health">Máu tối thiểu để được cất (%) <span class="mono">minHealthPct</span></label>
+                <input id="gs-min-health" type="number" min="0" max="100" step="1">
+                <div class="step-hint">Máu hiện tại so với máu tối đa. Thấp hơn sẽ bị từ chối cất. Đặt 0 = không giới hạn.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-min-growth">Tăng trưởng tối thiểu để cất (%) <span class="mono">minGrowthPct</span></label>
+                <input id="gs-min-growth" type="number" min="0" max="100" step="1">
+                <div class="step-hint">Dino bé hơn mức này sẽ không được cất. Đặt 0 = không giới hạn.</div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
     </div>
@@ -4798,27 +5130,80 @@ function renderChat(events) {
 
 // --- garage -------------------------------------------------------------------
 
-function renderGarage(index) {
+let garageSearchQuery = '';
+let lastGarageSlots = [];
+
+function drawGarageSlots() {
   const el = $('garage');
-  const slots = [];
-  for (const [steamId, byName] of Object.entries(index.players ?? {})) {
-    for (const [name, m] of Object.entries(byName ?? {})) slots.push({ steamId, name, m });
-  }
-  $('garage-sub').textContent = `${slots.length} slot`;
-  if (slots.length === 0) {
-    el.innerHTML = '<div class="empty">Chưa có ai cất dino</div>';
+  if (!el) return;
+  const q = garageSearchQuery.trim().toLowerCase();
+  const filtered = q
+    ? lastGarageSlots.filter(({ steamId, name, m }) => {
+        const dName = dino(m.classPath).toLowerCase();
+        const pName = (who(steamId, null) || '').toLowerCase();
+        return steamId.includes(q) || name.toLowerCase().includes(q) || dName.includes(q) || pName.includes(q);
+      })
+    : lastGarageSlots;
+
+  if (lastGarageSlots.length === 0) {
+    el.innerHTML = '<div class="empty">Gara đang trống - chưa có người chơi nào cất dino</div>';
     return;
   }
-  el.innerHTML = slots.map(({ steamId, name, m }) => `<div class="slot">
-      <div class="top"><span class="chip tone-gar">${esc(name)}</span>
-        <span style="display:flex;align-items:center;gap:4px"><span class="muted" style="font-size:11.5px">${m.capturedAt ? esc(ago(m.capturedAt)) : ''}</span>
-        <button type="button" class="icon-btn" title="Xoá khỏi gara" data-del-steam="${esc(steamId)}"
-          data-del-slot="${esc(name)}" data-del-label="${esc(dino(m.classPath))}">${icon('trash')}</button></span></div>
-      <div class="species">${esc(dino(m.classPath))}</div>
-      <div style="margin-top:8px">${meter(m.growth ?? null, 1, 'grow')}</div>
+  if (filtered.length === 0) {
+    el.innerHTML = `<div class="empty">Không tìm thấy dino nào phù hợp với từ khoá "${esc(garageSearchQuery)}"</div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(({ steamId, name, m }) => `<div class="slot">
+      <div class="top">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="chip tone-gar" style="font-weight:700">Slot: ${esc(name)}</span>
+          ${m.isPrime ? '<span class="chip tone-ok" title="Prime Elder">👑 Prime</span>' : ''}
+        </div>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span class="muted" style="font-size:11.5px" title="${m.capturedAt ? esc(dateTime(m.capturedAt)) : ''}">${m.capturedAt ? esc(ago(m.capturedAt)) : ''}</span>
+          <button type="button" class="icon-btn" title="Xoá khỏi gara" data-del-steam="${esc(steamId)}"
+            data-del-slot="${esc(name)}" data-del-label="${esc(dino(m.classPath))}">${icon('trash')}</button>
+        </span>
+      </div>
+      <div class="slot-body">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div class="species" style="font-size:16px;font-weight:750">${esc(dino(m.classPath))}</div>
+          <span class="muted" style="font-size:12px;font-variant-numeric:tabular-nums;font-weight:600">${esc(pct(m.growth ?? 1))}</span>
+        </div>
+        <div style="margin:8px 0 10px">${meter(m.growth ?? null, 1, 'grow')}</div>
+      </div>
       <div class="owner who">${avatar(steamId, null, 'sm')}
-        <div class="meta">${who(steamId, null)}</div></div>
+        <div class="meta">
+          <div style="font-weight:600">${who(steamId, null)}</div>
+          <div class="mono muted" style="font-size:11px;margin-top:1px">${esc(steamId)}</div>
+        </div>
+      </div>
     </div>`).join('');
+}
+
+function renderGarage(index) {
+  lastGarageSlots = [];
+  const uniquePlayers = new Set();
+  for (const [steamId, byName] of Object.entries(index.players ?? {})) {
+    for (const [name, m] of Object.entries(byName ?? {})) {
+      lastGarageSlots.push({ steamId, name, m });
+      uniquePlayers.add(steamId);
+    }
+  }
+  const summary = `${lastGarageSlots.length} slot · ${uniquePlayers.size} người chơi`;
+  $('garage-sub').textContent = summary;
+  const statEl = $('garage-stats-pill');
+  if (statEl) statEl.textContent = summary;
+  const sInput = $('garage-search');
+  if (sInput && !sInput.dataset.bound) {
+    sInput.dataset.bound = '1';
+    sInput.addEventListener('input', (e) => {
+      garageSearchQuery = e.target.value;
+      drawGarageSlots();
+    });
+  }
+  drawGarageSlots();
 }
 
 // --- dino creator --------------------------------------------------------------
@@ -5249,7 +5634,7 @@ function ensurePrimeTasks() {
     const box = boxes.find((c) => c.dataset.cond === cond);
     if (box && !box.checked) { box.checked = true; n += 1; }
   }
-  $('f-prime-src').textContent = 'đã tự thêm cho đủ 5 — prime cần ít nhất 5 nhiệm vụ';
+  $('f-prime-src').textContent = 'đã tự thêm cho đủ 5 · prime cần ít nhất 5 nhiệm vụ';
   renderPrimeCount();
 }
 $('f-prime').addEventListener('change', ensurePrimeTasks);
@@ -5266,7 +5651,7 @@ async function loadLastPrime(force = false) {
     const { last } = await getJson(`/api/prime-last?steamId=${steamId}&species=${encodeURIComponent(classPath.split('.').pop())}`);
     if (primeLastKey !== key) return;
     if (!last) {
-      $('f-prime-src').textContent = 'chưa thấy dino loài này của người này — mặc định của dino mới';
+      $('f-prime-src').textContent = 'chưa thấy dino loài này của người này · mặc định của dino mới';
       [...$('f-prime-conds').querySelectorAll('input')].forEach((c) => { c.checked = c.dataset.cond === '7' || c.dataset.cond === '8'; });
     } else {
       [...$('f-prime-conds').querySelectorAll('input')].forEach((c) => { c.checked = last.conditions[c.dataset.cond] === true; });
@@ -5291,7 +5676,7 @@ function renderPrimeControls() {
   $('f-prime').disabled = young;
   if (young) $('f-prime').checked = false;
   $('f-prime-hint').innerHTML = young
-    ? `Prime cần growth ≥ ${PRIME_MIN}% — game chỉ gắn prime cho dino đủ điều kiện từ mốc này.`
+    ? `Prime cần growth ≥ ${PRIME_MIN}% · game chỉ gắn prime cho dino đủ điều kiện từ mốc này.`
     : 'Prime: khi lấy ra, dino được đặt <b>đủ điều kiện Prime Elder</b> (ServerSetPrimeEligible). Elder stacks: bộ đếm dòng dõi (0 = giữ nguyên). Kết quả thật ghi trong UE4SS.log: <span class="mono">prime asked -> eligible=… prime=…</span>.';
 }
 

@@ -7,6 +7,15 @@
 <link rel="icon" type="image/png" href="/img/favicon-64.png">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <meta name="description" content="Cổng thông tin người chơi The Isle Evrima Xóm Gáy: HUD Theo dõi Dino, Gara an toàn, Bản đồ Gateway Live, Bảng xếp hạng và Skin Studio.">
+<script>
+  if (window.isleLauncher) {
+    document.documentElement.classList.add('in-launcher');
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('sidebar-launcher-link')?.remove();
+      document.getElementById('get-launcher')?.remove();
+    });
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
@@ -916,26 +925,119 @@
     width: 100% !important;
     height: 100% !important;
     outline: none;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.8s ease;
   }
-  .hunt-loading {
+
+  /* Fallback Stage Poster: Hien thi ngay tu dau, khong bao gio de trong card */
+  .hunt-fallback {
     position: absolute;
     inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    background: #070b14;
-    color: var(--text-muted);
-    font-size: 13.5px;
-    font-weight: 600;
-    z-index: 5;
-    transition: opacity 0.4s ease;
+    z-index: 1;
+    transition: opacity 0.8s ease;
+    overflow: hidden;
+    pointer-events: none;
   }
-  .hunt-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(16, 185, 129, 0.2);
+  .hunt-grid-floor {
+    position: absolute;
+    bottom: 0;
+    left: -20%;
+    right: -20%;
+    height: 70%;
+    background-image:
+      linear-gradient(rgba(16, 185, 129, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16, 185, 129, 0.12) 1px, transparent 1px);
+    background-size: 40px 40px;
+    transform: perspective(300px) rotateX(60deg);
+    transform-origin: bottom center;
+    mask-image: radial-gradient(ellipse at 50% 100%, black 40%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 100%, black 40%, transparent 80%);
+  }
+  .hunt-fallback-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 20px;
+    margin-bottom: 50px;
+  }
+  .hunt-duo-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .dino-avatar {
+    font-size: 38px;
+    filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.4));
+    animation: avatar-float 3s ease-in-out infinite;
+  }
+  .dino-avatar.galli-avatar {
+    animation-delay: -1.5s;
+  }
+  @keyframes avatar-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .hunt-vs-pill {
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--emerald-light);
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 3px 8px;
+    border-radius: 99px;
+    letter-spacing: 0.1em;
+  }
+  .hunt-fallback-title {
+    font-size: 17px;
+    font-weight: 900;
+    color: #f1f5f9;
+    letter-spacing: 0.05em;
+    margin: 0 0 6px 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+  }
+  .hunt-fallback-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+    max-width: 480px;
+    line-height: 1.5;
+  }
+
+  /* Compact Loading Badge (thay the cho man hinh den che toan bo card) */
+  .hunt-loading-badge {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: rgba(7, 12, 22, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    z-index: 4;
+    transition: opacity 0.4s ease, border-color 0.3s ease, color 0.3s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+  .hunt-loading-badge .hunt-spinner {
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(16, 185, 129, 0.2);
     border-top-color: var(--emerald-light);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -1315,6 +1417,562 @@
       padding: 6px 12px;
       font-size: 11.5px;
     }
+  }
+
+  /* ==========================================================================
+     XOM GAY LAUNCHER: Dedicated Game Hub Styling
+     ========================================================================== */
+  #launcher-hub {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  html.in-launcher #launcher-hub,
+  body.in-launcher #launcher-hub {
+    display: flex;
+  }
+
+  /* When inside Launcher, hide redundant web blocks */
+  html.in-launcher .launcher-promo,
+  body.in-launcher .launcher-promo,
+  html.in-launcher #sidebar-launcher-link,
+  body.in-launcher #sidebar-launcher-link,
+  html.in-launcher #get-launcher,
+  body.in-launcher #get-launcher,
+  html.in-launcher #server-rules-section,
+  body.in-launcher #server-rules-section,
+  html.in-launcher .grid-4,
+  body.in-launcher .grid-4,
+  html.in-launcher .status-bar-card,
+  body.in-launcher .status-bar-card {
+    display: none !important;
+  }
+
+  /* Quick Access 4-Button Dock */
+  .hub-dock-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .hub-dock-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    text-align: left;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+  }
+  .hub-dock-item:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px var(--emerald-glow);
+  }
+  .hub-dock-item:active {
+    transform: translateY(0);
+  }
+  .hub-dock-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+  .hub-dock-item:hover .hub-dock-icon {
+    transform: scale(1.08);
+  }
+  .hub-dock-icon.icon-map {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--emerald-light);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .hub-dock-icon.icon-gara {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--cyan-light);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+  }
+  .hub-dock-icon.icon-ranking {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--amber-light);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  .hub-dock-icon.icon-skin {
+    background: rgba(139, 92, 246, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+  }
+  .hub-dock-texts {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .hub-dock-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #f1f5f9;
+  }
+  .hub-dock-sub {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hub-dock-arrow {
+    color: var(--text-sub);
+    font-size: 15px;
+    font-weight: 700;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+  .hub-dock-item:hover .hub-dock-arrow {
+    color: var(--emerald-light);
+    transform: translateX(3px);
+  }
+
+  /* 2-Column Tactical Dashboard */
+  .hub-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .hub-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Cot 1: The Dino Dang Song */
+  .hub-dino-card {
+    border-color: rgba(16, 185, 129, 0.25);
+  }
+  .hub-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .hub-dino-headline {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .hub-chip-live {
+    align-self: flex-start;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 99px;
+  }
+  .hub-chip-live.online {
+    background: rgba(16, 185, 129, 0.16);
+    color: var(--emerald-light);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+  .hub-chip-live.offline {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .hub-dino-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: #f8fafc;
+    margin: 2px 0 0;
+  }
+  .hub-dino-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .hub-growth-badge {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--emerald-light);
+    background: var(--emerald-soft);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 5px 12px;
+    border-radius: 99px;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+  .hub-growth-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hub-growth-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .hub-meter-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .hub-meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  .hub-vitals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .hub-vital-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .hub-vital-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+  }
+  .hub-vital-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .hub-vital-name .vital-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .hub-vital-val {
+    font-weight: 700;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .hub-vital-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .hub-vital-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  .hub-dino-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .hub-prime-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--amber-light);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+  .hub-link-btn {
+    background: none;
+    border: none;
+    color: var(--emerald-light);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.2s ease;
+  }
+  .hub-link-btn:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  /* Cot 2: System Status (Voice, Overlay, Telemetry) */
+  .hub-system-card {
+    border-color: rgba(6, 182, 212, 0.22);
+    justify-content: space-between;
+  }
+  .hub-sys-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .hub-sys-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hub-sys-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .hub-sys-icon.icon-voice {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--emerald-light);
+  }
+  .hub-sys-icon.icon-overlay {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--cyan-light);
+  }
+  .hub-sys-title-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+  .hub-sys-title-wrap h4 {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #f1f5f9;
+  }
+  .hub-sys-status-badge {
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .hub-sys-status-badge.ok {
+    color: var(--emerald-light);
+  }
+  .hub-sys-status-badge.off {
+    color: var(--text-muted);
+  }
+  .hub-mini-btn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .hub-mini-btn:hover {
+    color: #fff;
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+  }
+  .hub-keybind-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .hub-keybind-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .hub-keybind-label {
+    color: var(--text-muted);
+    font-size: 11.5px;
+  }
+  .hub-kbd {
+    display: inline-block;
+    padding: 2px 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    background: #1a2538;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  .hub-sys-tip {
+    font-size: 11.5px;
+    color: var(--text-sub);
+    line-height: 1.4;
+  }
+  .hub-sys-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+  .hub-sys-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-top: 8px;
+  }
+  .hub-tel-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .hub-tel-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--emerald-light);
+    box-shadow: 0 0 8px var(--emerald-glow);
+  }
+  .hub-gamemode-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .hub-gamemode-toggle:hover {
+    border-color: var(--border-hover);
+    color: #fff;
+  }
+  .hub-gamemode-toggle.active {
+    background: var(--emerald-soft);
+    border-color: rgba(16, 185, 129, 0.5);
+    color: var(--emerald-light);
+  }
+
+  @media (max-width: 900px) {
+    .hub-dock-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .hub-dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 520px) {
+    .hub-dock-grid {
+      grid-template-columns: 1fr;
+    }
+    .hub-vitals-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Header Launcher Update Widget */
+  .launcher-update-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 3px 4px 3px 10px;
+    font-size: 12px;
+  }
+  .luh-ver {
+    font-weight: 800;
+    color: var(--emerald-light);
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+  }
+  .luh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .luh-btn:hover {
+    border-color: var(--border-hover);
+    color: #fff;
+    background: var(--bg-card-hover);
+  }
+  .luh-btn.ready {
+    background: var(--emerald-soft);
+    border-color: var(--emerald-light);
+    color: var(--emerald-light);
+    box-shadow: 0 0 12px var(--emerald-glow);
+    animation: pulse-update 2s infinite;
+  }
+  @keyframes pulse-update {
+    0%, 100% { box-shadow: 0 0 8px var(--emerald-glow); }
+    50% { box-shadow: 0 0 18px var(--emerald); }
+  }
+
+  /* Hub System Bottom Update Button */
+  .hub-update-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .hub-update-btn:hover {
+    border-color: var(--border-hover);
+    color: #fff;
+  }
+  .hub-update-btn.ready {
+    background: var(--emerald-soft);
+    border-color: var(--emerald-light);
+    color: var(--emerald-light);
+    box-shadow: 0 0 12px var(--emerald-glow);
+    animation: pulse-update 2s infinite;
   }
 
   /* Hero join button in hero-cta */
@@ -2510,6 +3168,14 @@
       </button>
 
       <div class="header-actions">
+        <!-- Nút Cập Nhật Launcher trên Top Header -->
+        <div class="launcher-update-header" id="launcher-update-header" hidden>
+          <span class="luh-ver" id="luh-ver"></span>
+          <button type="button" class="luh-btn" id="luh-btn" title="Kiểm tra hoặc cập nhật launcher">
+            <span class="luh-icon" id="luh-icon">⟳</span>
+            <span class="luh-text" id="luh-text">Kiểm tra cập nhật</span>
+          </button>
+        </div>
         <button type="button" class="btn btn-ghost game-mode-btn" id="game-mode" aria-pressed="false" hidden title="Thu launcher xuống khay, chỉ giữ các khung overlay bạn chọn">🎮 Chế độ chơi game</button>
         <a class="btn btn-discord" id="srv-discord" href="#" target="_blank" rel="noopener" hidden>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
@@ -2536,15 +3202,24 @@
         <div class="dino-hunt-card" id="dino-hunt-card">
           <!-- 3D WebGL Viewport -->
           <div class="hunt-viewport" id="hunt-viewport">
-            <div class="hunt-loading" id="hunt-loading">
-              <div class="hunt-spinner"></div>
-              <span>Đang tải mô hình 3D T-Rex Huyết Long &amp; Gallimimus…</span>
+            <!-- Fallback Stage Poster: Hien thi ngay lap tuc, khong bao gio de trong card -->
+            <div class="hunt-fallback" id="hunt-fallback">
+              <div class="hunt-grid-floor"></div>
+              <div class="hunt-fallback-content">
+                <div class="hunt-duo-icons">
+                  <span class="dino-avatar trex-avatar" title="T-Rex Huyết Long">🦖</span>
+                  <span class="hunt-vs-pill">VS</span>
+                  <span class="dino-avatar galli-avatar" title="Gallimimus">🦕</span>
+                </div>
+                <h3 class="hunt-fallback-title">ĐẤU TRƯỜNG SINH TỒN THE ISLE EVRIMA</h3>
+                <p class="hunt-fallback-desc">T-Rex Huyết Long săn mồi Gateway</p>
+              </div>
             </div>
           </div>
 
           <!-- Top HUD Tag -->
           <div class="hunt-overlay-top">
-            <div class="hunt-engine-tag">UNREAL ENGINE 5.6 · 3D REALTIME</div>
+            <div class="hunt-engine-tag">UNREAL ENGINE 5.6</div>
           </div>
 
           <!-- Impact Vignette Flash when prey is caught -->
@@ -2580,6 +3255,213 @@
                 </svg>
               </div>
             </button>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+             GAME HUB CHUYEN BIET CHO LAUNCHER (Chi hien thi khi o trong Launcher)
+             ==================================================================== -->
+        <div class="launcher-hub" id="launcher-hub">
+          <!-- Hang 4 nut Quick Access: map + gara + bang xep hang + skin -->
+          <div class="hub-dock-grid">
+            <button type="button" class="hub-dock-item" data-switch-tab="map" title="Mo Ban Do Gateway Live">
+              <div class="hub-dock-icon icon-map">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/></svg>
+              </div>
+              <div class="hub-dock-texts">
+                <span class="hub-dock-title">BẢN ĐỒ LIVE</span>
+                <span class="hub-dock-sub">Tọa độ &amp; Vùng di cư</span>
+              </div>
+              <div class="hub-dock-arrow">→</div>
+            </button>
+
+            <button type="button" class="hub-dock-item" data-switch-tab="gara" title="Mo Gara Khung Long">
+              <div class="hub-dock-icon icon-gara">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8.35-10-5.35-10 5.35v10.65l10 5.35 10-5.35z"/><path d="M12 22V12"/></svg>
+              </div>
+              <div class="hub-dock-texts">
+                <span class="hub-dock-title">GARA DINO</span>
+                <span class="hub-dock-sub" id="hub-gara-sub">Cất &amp; Khôi phục</span>
+              </div>
+              <div class="hub-dock-arrow">→</div>
+            </button>
+
+            <button type="button" class="hub-dock-item" data-switch-tab="ranking" title="Mo Bang Xep Hang">
+              <div class="hub-dock-icon icon-ranking">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+              </div>
+              <div class="hub-dock-texts">
+                <span class="hub-dock-title">BẢNG XẾP HẠNG</span>
+                <span class="hub-dock-sub">Top Kills &amp; Dòng dõi</span>
+              </div>
+              <div class="hub-dock-arrow">→</div>
+            </button>
+
+            <button type="button" class="hub-dock-item" data-switch-tab="skin" title="Mo Skin Studio">
+              <div class="hub-dock-icon icon-skin">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+              </div>
+              <div class="hub-dock-texts">
+                <span class="hub-dock-title">SKIN STUDIO</span>
+                <span class="hub-dock-sub">Tuỳ biến 10 vùng màu</span>
+              </div>
+              <div class="hub-dock-arrow">→</div>
+            </button>
+          </div>
+
+          <!-- Bang 2 Cot Chien Thuat: The Dino Dang Song (Trai) & Trang Thai Mic Voice / Overlay (Phai) -->
+          <div class="hub-dashboard-grid">
+            <!-- Cot 1: The Dino Dang Song -->
+            <div class="hub-card hub-dino-card" id="hub-dino-card">
+              <div class="hub-card-header">
+                <div class="hub-dino-headline">
+                  <span class="hub-chip-live offline" id="hub-dino-badge">○ CHƯA VÀO</span>
+                  <h3 class="hub-dino-title" id="hub-dino-species">Chưa vào game</h3>
+                  <span class="hub-dino-sub" id="hub-dino-status">Bấm Chơi Ngay ở trên để kết nối vào máy chủ.</span>
+                </div>
+                <div class="hub-growth-badge" id="hub-dino-growth">Growth: 0%</div>
+              </div>
+
+              <!-- Growth Bar -->
+              <div class="hub-growth-wrap">
+                <div class="hub-growth-meta">
+                  <span>Tiến trình tăng trưởng</span>
+                  <span id="hub-growth-pct" class="tabular-nums">0%</span>
+                </div>
+                <div class="hub-meter-track">
+                  <div class="hub-meter-fill" id="hub-growth-fill" style="width:0%"></div>
+                </div>
+              </div>
+
+              <!-- 4 Vitals chinh: Mau, The luc, Da day, Nuoc -->
+              <div class="hub-vitals-grid">
+                <div class="hub-vital-box" data-v="health">
+                  <div class="hub-vital-top">
+                    <span class="hub-vital-name"><span class="vital-dot" style="background:#ef4444"></span>Máu</span>
+                    <span class="hub-vital-val" id="hub-val-health">--</span>
+                  </div>
+                  <div class="hub-vital-track">
+                    <div class="hub-vital-fill" id="hub-fill-health" style="background:#ef4444;width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="hub-vital-box" data-v="stamina">
+                  <div class="hub-vital-top">
+                    <span class="hub-vital-name"><span class="vital-dot" style="background:#f59e0b"></span>Thể lực</span>
+                    <span class="hub-vital-val" id="hub-val-stamina">--</span>
+                  </div>
+                  <div class="hub-vital-track">
+                    <div class="hub-vital-fill" id="hub-fill-stamina" style="background:#f59e0b;width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="hub-vital-box" data-v="hunger">
+                  <div class="hub-vital-top">
+                    <span class="hub-vital-name"><span class="vital-dot" style="background:#84cc16"></span>Dạ dày</span>
+                    <span class="hub-vital-val" id="hub-val-hunger">--</span>
+                  </div>
+                  <div class="hub-vital-track">
+                    <div class="hub-vital-fill" id="hub-fill-hunger" style="background:#84cc16;width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="hub-vital-box" data-v="thirst">
+                  <div class="hub-vital-top">
+                    <span class="hub-vital-name"><span class="vital-dot" style="background:#3b82f6"></span>Nước uống</span>
+                    <span class="hub-vital-val" id="hub-val-thirst">--</span>
+                  </div>
+                  <div class="hub-vital-track">
+                    <div class="hub-vital-fill" id="hub-fill-thirst" style="background:#3b82f6;width:0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Prime Status Strip & Link chi tiet -->
+              <div class="hub-dino-footer">
+                <div class="hub-prime-pill" id="hub-prime-pill">
+                  <span class="hub-prime-icon">👑</span>
+                  <span id="hub-prime-text">Vào game để kích hoạt nhiệm vụ</span>
+                </div>
+                <button type="button" class="hub-link-btn" data-switch-tab="game">
+                  Xem đầy đủ chỉ số GAS &amp; Prime →
+                </button>
+              </div>
+            </div>
+
+            <!-- Cot 2: Trang Thai Mic Voice & In-game Overlay -->
+            <div class="hub-card hub-system-card" id="hub-system-card">
+              <!-- Khoi 1: Voice 3D -->
+              <div class="hub-sys-section">
+                <div class="hub-sys-header">
+                  <div class="hub-sys-icon icon-voice">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  </div>
+                  <div class="hub-sys-title-wrap">
+                    <h4>ĐÀM THOẠI VOICE 3D (PROXIMITY)</h4>
+                    <span class="hub-sys-status-badge ok" id="hub-voice-badge">● Sẵn sàng đàm thoại</span>
+                  </div>
+                  <button type="button" class="hub-mini-btn" data-switch-tab="voice">Cài đặt</button>
+                </div>
+                <div class="hub-keybind-row">
+                  <div class="hub-keybind-item">
+                    <span class="hub-keybind-label">Phím nói (PTT):</span>
+                    <kbd class="hub-kbd" id="hub-key-ptt">V</kbd>
+                  </div>
+                  <div class="hub-keybind-item">
+                    <span class="hub-keybind-label">Phím cự ly:</span>
+                    <kbd class="hub-kbd" id="hub-key-range">`</kbd>
+                  </div>
+                </div>
+                <div class="hub-sys-tip">Âm thanh 3D sống động theo cự ly vị trí khủng long trong game The Isle.</div>
+              </div>
+
+              <div class="hub-sys-divider"></div>
+
+              <!-- Khoi 2: In-Game Overlay -->
+              <div class="hub-sys-section">
+                <div class="hub-sys-header">
+                  <div class="hub-sys-icon icon-overlay">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="15" x="2" y="3" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>
+                  </div>
+                  <div class="hub-sys-title-wrap">
+                    <h4>GAME OVERLAY HUD</h4>
+                    <span class="hub-sys-status-badge ok" id="hub-overlay-badge">● Kích hoạt</span>
+                  </div>
+                  <button type="button" class="hub-mini-btn" data-switch-tab="overlay">Tuỳ chỉnh</button>
+                </div>
+                <div class="hub-keybind-row">
+                  <div class="hub-keybind-item">
+                    <span class="hub-keybind-label">Bật / Tắt Overlay:</span>
+                    <kbd class="hub-kbd">F8</kbd>
+                  </div>
+                  <div class="hub-keybind-item">
+                    <span class="hub-keybind-label">Chế độ chỉnh HUD:</span>
+                    <kbd class="hub-kbd">F9</kbd>
+                  </div>
+                </div>
+                <div class="hub-sys-tip">Mini map, máu dino &amp; nhiệm vụ hiển thị đè lên màn hình game không làm tụt FPS.</div>
+              </div>
+
+              <div class="hub-sys-divider"></div>
+
+              <!-- Khoi 3: Telemetry, Update & Game Mode -->
+              <div class="hub-sys-bottom">
+                <div class="hub-tel-pill">
+                  <span class="hub-tel-dot"></span>
+                  <span id="hub-tel-srv">Server Gateway · <b id="hub-tel-online">--/--</b> online</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <button type="button" class="hub-update-btn" id="hub-update-btn" title="Kiểm tra hoặc cập nhật launcher">
+                    <span id="hub-update-icon">⟳</span>
+                    <span id="hub-update-text">Kiểm tra cập nhật</span>
+                  </button>
+                  <button type="button" class="hub-gamemode-toggle" id="hub-gamemode-btn" title="Chế độ tiết kiệm tài nguyên khi vào trận">
+                    <span class="gm-icon">⚡</span>
+                    <span id="hub-gamemode-text">Game Mode: Tắt</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
