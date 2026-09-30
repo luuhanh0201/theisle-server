@@ -167,6 +167,20 @@ if (window.isleLauncher) {
       sub.append(' ', b);
     }
   }
+
+  // Bind Launcher Hub quick buttons if present
+  const hubGm = document.getElementById('hub-gamemode-btn');
+  if (hubGm && window.isleLauncher.gameModeGet) {
+    hubGm.addEventListener('click', () => window.isleLauncher.gameModeSet(!gameMode.on));
+  }
+  const hubUpd = document.getElementById('hub-update-btn');
+  if (hubUpd && window.isleLauncher.updateGet) {
+    hubUpd.addEventListener('click', () => {
+      const st = window.isleLauncher.updateGet();
+      if (st && st.phase === 'ready') window.isleLauncher.updateInstall();
+      else window.isleLauncher.updateCheck();
+    });
+  }
 }
 
 // Setup click handlers for nav
@@ -1153,6 +1167,30 @@ function renderGame(me) {
       `).join('');
       $('skin-active-swatches').innerHTML = chips;
     }
+    // Sync Launcher Hub card if present
+    const hubSp = $('hub-dino-species');
+    if (hubSp) {
+      hubSp.textContent = me.dino.species ?? 'Dino Đang Chơi';
+      if ($('hub-dino-badge')) { $('hub-dino-badge').textContent = '● ĐANG CHƠI'; $('hub-dino-badge').className = 'hub-chip-live online'; }
+      if ($('hub-dino-status')) $('hub-dino-status').textContent = 'Đang trực tuyến trên server Gateway';
+      if ($('hub-dino-growth')) $('hub-dino-growth').textContent = `Growth: ${pct(me.dino.growth)}`;
+      if ($('hub-growth-pct')) $('hub-growth-pct').textContent = pct(me.dino.growth);
+      if ($('hub-growth-fill')) $('hub-growth-fill').style.width = `${Math.min(100, Math.max(0, (me.dino.growth ?? 0) * 100))}%`;
+      const vit = me.dino.vitals ?? {};
+      const mx = me.dino.max ?? {};
+      for (const [k, idVal, idFill] of [
+        ['health', 'hub-val-health', 'hub-fill-health'],
+        ['stamina', 'hub-val-stamina', 'hub-fill-stamina'],
+        ['hunger', 'hub-val-hunger', 'hub-fill-hunger'],
+        ['thirst', 'hub-val-thirst', 'hub-fill-thirst'],
+      ]) {
+        const cur = vit[k], m = mx[k];
+        const valEl = $(idVal), fillEl = $(idFill);
+        if (valEl) valEl.textContent = typeof cur === 'number' ? Math.round(cur) : '--';
+        if (fillEl) fillEl.style.width = typeof cur === 'number' && m > 0 ? `${Math.min(100, Math.max(0, Math.round(cur / m * 100)))}%` : '0%';
+      }
+      if ($('hub-prime-text')) $('hub-prime-text').textContent = me.dino.prime ? '👑 Đã đạt danh hiệu Prime' : 'Nhiệm vụ Prime đang theo dõi';
+    }
   } else {
     navBadge.hidden = true;
     $('game-dino-species').textContent = me.online ? 'Đang chọn loài' : 'Chưa vào server';
@@ -1164,6 +1202,23 @@ function renderGame(me) {
     $('game-prime-content').innerHTML = '<p class="muted" style="font-size:13px">Dino chưa spawn trên bản đồ.</p>';
     $('skin-active-swatches-box').hidden = true;
     renderGame3d(null);
+
+    const hubSp = $('hub-dino-species');
+    if (hubSp) {
+      hubSp.textContent = me.online ? 'Đang chọn loài' : 'Chưa vào server';
+      if ($('hub-dino-badge')) { $('hub-dino-badge').textContent = me.online ? '○ SẢNH CHỜ' : '○ CHƯA VÀO'; $('hub-dino-badge').className = 'hub-chip-live offline'; }
+      if ($('hub-dino-status')) $('hub-dino-status').textContent = me.online ? 'Bạn đang ở sảnh chọn dino ingame.' : 'Bấm Chơi Ngay ở trên để kết nối vào máy chủ.';
+      if ($('hub-dino-growth')) $('hub-dino-growth').textContent = 'Growth: 0%';
+      if ($('hub-growth-pct')) $('hub-growth-pct').textContent = '0%';
+      if ($('hub-growth-fill')) $('hub-growth-fill').style.width = '0%';
+      for (const idVal of ['hub-val-health', 'hub-val-stamina', 'hub-val-hunger', 'hub-val-thirst']) {
+        if ($(idVal)) $(idVal).textContent = '--';
+      }
+      for (const idFill of ['hub-fill-health', 'hub-fill-stamina', 'hub-fill-hunger', 'hub-fill-thirst']) {
+        if ($(idFill)) $(idFill).style.width = '0%';
+      }
+      if ($('hub-prime-text')) $('hub-prime-text').textContent = 'Vào game để kích hoạt nhiệm vụ';
+    }
   }
   renderKept(me.keptSkins);
 
@@ -1333,6 +1388,10 @@ function renderGara(me) {
   $('nav-gara-badge').textContent = me.garage.length;
   $('gara-count-tag').textContent = `${me.garage.length} / ${rules.maxSlots}`;
   $('gara-where-box').hidden = rules.redeemAt !== 'choice';
+  const hubGaraSub = $('hub-gara-sub');
+  if (hubGaraSub) {
+    hubGaraSub.textContent = me.garage.length > 0 ? `${me.garage.length}/${rules.maxSlots} dino` : 'Cất & Khôi phục';
+  }
 
   // Store: needs a dino in game, a free place, nothing in flight.
   const playing = Boolean(me.online && me.dino);
