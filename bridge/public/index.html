@@ -7731,7 +7731,8 @@ async function loadPrison() {
     ? '⚠ Chưa có vùng nhà tù: vào <a href="#map">Bản đồ</a>, chọn (hoặc tạo) một vùng, tick <b>🔒 Nhà tù</b> rồi lưu các vùng.'
     : !z.enabled ? `⚠ Vùng nhà tù “${esc(z.name)}” đang tắt (bật lại ở <a href="#map">Bản đồ</a>).`
     : z.drops === 0 ? `⚠ Vùng “${esc(z.name)}” chưa có điểm thả: cần một người chơi hoặc AI đi qua vùng này (điểm mặt đất cập nhật 10 phút/lần).`
-    : `Nhà tù: <b>${esc(z.name)}</b> · ${z.drops} điểm thả · ${d.settings.enabled ? 'đang <b>bật</b>' : '<b style="color:var(--dmg)">đang tắt</b> (bật ở Cài đặt nhà tù)'}`
+    : !d.settings.enabled ? `<b style="color:var(--dmg)">⚠ Nhà tù đang TẮT — không ai bị đưa vào tù.</b> Tick "Bật nhà tù" ở Cài đặt nhà tù bên phải rồi bấm Lưu. (Vùng: ${esc(z.name)}, ${z.drops} điểm thả.)`
+    : `Nhà tù: <b>${esc(z.name)}</b> · ${z.drops} điểm thả · đang <b>bật</b>`
       + ` · mod ${d.modState.t ? `báo ${esc(ago(d.modState.t))}` : 'chưa báo (mod nạp ở lần khởi động lại server kế tiếp)'}.`;
 
   const online = players.players.filter((p) => p.online);
@@ -7815,6 +7816,8 @@ $('pr-minutes').addEventListener('input', () => { pr.minutesEdited = true; rende
 for (const id of ['pr-reason', 'pr-steam', 'pr-name']) $(id).addEventListener('input', renderPrisonCalc);
 $('pr-go').addEventListener('click', () => {
   const f = prForm();
+  if (!pr.data?.settings.enabled) { toast('Nhà tù đang tắt: tick "Bật nhà tù" ở Cài đặt nhà tù và bấm Lưu trước.', 'err'); $('prs-enabled').focus(); return; }
+  if (!pr.data?.zone?.enabled) { toast('Chưa có vùng nhà tù: tick "🔒 Nhà tù" cho một vùng trên Bản đồ và lưu.', 'err'); return; }
   if (!/^7656119\d{10}$/.test(f.steamId)) { toast('Chọn người chơi hoặc nhập SteamID64 đúng.', 'err'); return; }
   if (!(f.minutes >= 1)) { toast('Số phút phải từ 1 trở lên.', 'err'); $('pr-minutes').focus(); return; }
   if (!f.off && !f.reason) { toast('Lỗi "Khác" cần ghi lý do.', 'err'); $('pr-reason').focus(); return; }

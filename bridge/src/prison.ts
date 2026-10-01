@@ -291,6 +291,10 @@ export class Prison {
     const steamId = r['steamId'];
     if (typeof steamId !== 'string' || !STEAM_RE.test(steamId)) throw new ValidationError('steamId must be a SteamID64');
     if (this.activeOf(steamId)) throw new ValidationError('this player is already in prison (extend the sentence instead)');
+    // A sentence nobody carries out would be a silent no-op: the prison must be on, with its zone.
+    if (!this.#data.settings.enabled) throw new ValidationError('Nhà tù đang tắt: bật "Bật nhà tù" ở Cài đặt nhà tù rồi lưu, sau đó mới bỏ tù.');
+    const zone = (await readAiZones()).zones.find((z) => z.prison && z.enabled);
+    if (zone === undefined) throw new ValidationError('Chưa có vùng nhà tù đang bật: tick "🔒 Nhà tù" cho một vùng trên Bản đồ rồi lưu.');
     const offense = this.#data.settings.offenses.find((o) => o.id === r['offenseId']) ?? null;
     if (r['offenseId'] !== undefined && r['offenseId'] !== null && r['offenseId'] !== '' && offense === null) throw new ValidationError('unknown offense');
     const noMinutes = r['minutes'] === undefined || r['minutes'] === null;

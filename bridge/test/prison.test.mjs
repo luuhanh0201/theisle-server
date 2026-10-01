@@ -179,3 +179,13 @@ test('a disabled prison or no prison zone: the mod is off', async () => {
   assert.equal(modFileJson().enabled, false, 'no zone ticked "Nhà tù"');
   assert.equal(modFileJson().zone, null);
 });
+
+test('no sentence while the prison is off or has no zone: refused, not a silent no-op', async () => {
+  await saveAiZones({ enabled: true, globalMax: 10, zones: [PRISON_ZONE] }, new GroundPoints());
+  const { prison } = setup();
+  await prison.saveSettings({ ...PRISON_DEFAULTS, enabled: false });
+  await assert.rejects(prison.jail({ steamId: HUNTER, offenseId: 'kos' }, 'Admin', NOW), /Nhà tù đang tắt/);
+  await prison.saveSettings({ ...PRISON_DEFAULTS, enabled: true });
+  await saveAiZones({ enabled: true, globalMax: 10, zones: [{ ...PRISON_ZONE, enabled: false }] }, new GroundPoints());
+  await assert.rejects(prison.jail({ steamId: HUNTER, offenseId: 'kos' }, 'Admin', NOW), /Chưa có vùng nhà tù/);
+});
