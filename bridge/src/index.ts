@@ -36,6 +36,7 @@ import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
 import { auditListeners } from './audit.js';
 import { Prison } from './prison.js';
+import { shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
 
 const store = new Store();
@@ -95,7 +96,8 @@ const prison = new Prison({
   discord: (text) => prisonDiscord.post?.(text),
   render: (key, vars) => renderMessage(key, vars),
   nameOf: (steamId) => store.player(steamId)?.player.name ?? null,
-  speciesOf: (steamId) => store.player(steamId)?.player.species ?? null,
+  // "BP_Triceratops_C" → "Triceratops": what players read in the announcements and on the map.
+  speciesOf: (steamId) => shortSpecies(store.player(steamId)?.player.species ?? null),
   isOnline: (steamId) => store.online().some((p) => p.steamId === steamId),
   adminIds: () => adminIds(),
   groundPoints: store.groundPoints,

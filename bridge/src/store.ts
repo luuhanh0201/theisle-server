@@ -1,4 +1,4 @@
-import type { GameEvent, DeathEvent, GarageStoreResultEvent, Loc, PortalCommandEvent, SnapshotEvent, Skin, VitalName } from './events.js';
+import type { GameEvent, DeathEvent, GarageStoreResultEvent, Loc, PortalCommandEvent, PrisonEvent, SnapshotEvent, Skin, VitalName } from './events.js';
 import { config } from './config.js';
 import { Catalog } from './catalog.js';
 import { SpeciesStats } from './species-stats.js';
@@ -109,7 +109,8 @@ export interface PlayerStats {
 
 /** What goes into the feeds, before we stamp an id on it. */
 export type FeedInput =
-  | Exclude<GameEvent, SnapshotEvent | DeathEvent | { type: 'mod_loaded' }>
+  // The Prison mod's events are prison.ts's business, not the feed's.
+  | Exclude<GameEvent, SnapshotEvent | DeathEvent | PrisonEvent | { type: 'mod_loaded' }>
   | (DeathEvent & { cause?: 'garage' | 'admin' });
 
 export type FeedEntry = FeedInput & { id: number };

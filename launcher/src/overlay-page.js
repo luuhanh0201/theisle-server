@@ -224,8 +224,10 @@
       const dx = (x0 - ix) * s; const dy = (y0 - iy) * s;
       let x = cw / 2 + dx * Math.cos(turn) - dy * Math.sin(turn);
       let y = ch / 2 + dx * Math.sin(turn) + dy * Math.cos(turn) - 13;
-      x = Math.max(30, Math.min(cw - 30, x)); y = Math.max(8, Math.min(ch - 8, y));
-      const label = `🚨 ${String(a.name ?? '?').slice(0, 18)}`;
+      const label = `Kẻ vượt ngục - ${String(a.name ?? '?').slice(0, 18)}`;
+      // The label is long: keep its middle far enough from the edges for all of it to show.
+      const half = Math.min(cw / 2, ctx.measureText(label).width / 2 + 4);
+      x = Math.max(half, Math.min(cw - half, x)); y = Math.max(8, Math.min(ch - 8, y));
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.strokeText(label, x, y);
       ctx.fillStyle = '#fecdd3'; ctx.fillText(label, x, y);
     }

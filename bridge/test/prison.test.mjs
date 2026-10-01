@@ -189,3 +189,11 @@ test('no sentence while the prison is off or has no zone: refused, not a silent 
   await saveAiZones({ enabled: true, globalMax: 10, zones: [{ ...PRISON_ZONE, enabled: false }] }, new GroundPoints());
   await assert.rejects(prison.jail({ steamId: HUNTER, offenseId: 'kos' }, 'Admin', NOW), /Chưa có vùng nhà tù/);
 });
+
+test('the Prison mod\'s events get through the events parser (they were dropped as unrecognised, 2026-10-01)', async () => {
+  const { parseEvent } = await import('../dist/events.js');
+  for (const type of ['prison_jailed', 'prison_escape', 'prison_returned', 'prison_released']) {
+    assert.ok(parseEvent({ type, t: NOW, steamId: A, id: 'abc123' }) !== null, `${type} is recognised`);
+  }
+  assert.equal(parseEvent({ type: 'prison_escape', t: NOW, steamId: A }), null, 'without the sentence id: dropped');
+});

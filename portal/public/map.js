@@ -310,7 +310,7 @@ export function createMap(root) {
         ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2);
         ctx.fillStyle = LAYER.escape.color; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-        text(ctx, `🚨 ${a.name ?? '?'}${a.s ? ` · ${a.s}` : ''}`, x, y - 18, '800 12px Inter, system-ui, sans-serif', '#fecdd3');
+        text(ctx, `Kẻ vượt ngục - ${a.name ?? '?'}`, x, y - 18, '800 12px Inter, system-ui, sans-serif', '#fecdd3');
       }
     }
 

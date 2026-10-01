@@ -4791,7 +4791,7 @@ function drawMap() {
     ctx.beginPath(); ctx.arc(x, y, 7.5, 0, Math.PI * 2);
     ctx.fillStyle = c; ctx.fill();
     ctx.lineWidth = 2.5; ctx.strokeStyle = hp !== null && hp < 0.3 ? '#ef4444' : '#fff'; ctx.stroke();
-    drawText(ctx, `${p.prison ? (p.prison.escaped ? '🚨 ' : '🔒 ') : ''}${p.name ?? shortId(p.steamId)}`, x + 13, y - 6, { font: '700 12px Inter, system-ui, sans-serif', color: p.prison?.escaped ? '#fca5a5' : '#fff', align: 'left' });
+    drawText(ctx, `${p.prison ? (p.prison.escaped ? 'Kẻ vượt ngục - ' : '🔒 ') : ''}${p.name ?? shortId(p.steamId)}`, x + 13, y - 6, { font: '700 12px Inter, system-ui, sans-serif', color: p.prison?.escaped ? '#fca5a5' : '#fff', align: 'left' });
     drawText(ctx, `${dino(p.species)} · ${pct(p.growth)}`, x + 13, y + 8, { font: '600 10.5px Inter, system-ui, sans-serif', color: '#cbd5e1', align: 'left' });
   }
 
