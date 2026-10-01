@@ -26,6 +26,14 @@
 --   * offline, dead or in the species screen: nothing runs
 --   * when the time is served (or the bridge says release) the dino is put
 --     back where it was arrested, if it is still in the prison
+-- An escaped inmate brought down (the admin's choice, cfg.caught.mode):
+--   * "teleport": once its health falls to `pct`% of its max it does not die:
+--     it is put back in the prison with the health it escaped with ("caught")
+--   * "respawn": it dies; the next dino the player spawns as the SAME species is
+--     made into the dino they had (the garage's own capture / restore: growth,
+--     mutations, prime, skin…) and put back in the prison. A one-shot kill in
+--     "teleport" mode ends the same way.
+--   The bridge credits whoever brought it down (prison_caught / death events).
 -- A player who is not an inmate (nor an admin) in the zone is warned, then
 -- stung like ZoneGuard's bees.
 --
@@ -35,6 +43,10 @@
 
 if not package.path:find("Mods/?.lua", 1, true) then
     package.path = "Mods/?.lua;" .. package.path
+end
+-- The garage's capture / restore (an escaped inmate's dino made again: "respawn").
+if not package.path:find("Mods/DinoGarage/Scripts/?.lua", 1, true) then
+    package.path = package.path .. ";Mods/DinoGarage/Scripts/?.lua"
 end
 
 local H      = require("shared.isle.helpers")
@@ -61,7 +73,8 @@ local REENTER_S = 60        -- an outsider back in the zone within this keeps it
 -- Config (written by the bridge; decoded only when it changed)
 --------------------------------------------------------------------------
 
-local OFF = { enabled = false, zone = nil, drops = {}, exempt = {}, sentences = {}, sting = { grace = 10, every = 3, pct = 10 } }
+local OFF = { enabled = false, zone = nil, drops = {}, exempt = {}, sentences = {}, sting = { grace = 10, every = 3, pct = 10 },
+    caught = { mode = "teleport", pct = 20 } }
 local cfg, cfgRaw, cfgAt = OFF, nil, nil
 
 local function num(v, lo, hi, default)
@@ -103,10 +116,12 @@ local function readConfig()
         end
     end
     local st = type(d.sting) == "table" and d.sting or {}
+    local ca = type(d.caught) == "table" and d.caught or {}
     cfg = {
         enabled = d.enabled == true and zone ~= nil,
         zone = zone, drops = drops, exempt = exempt, sentences = sentences,
         sting = { grace = num(st.grace, 0, 600, 10), every = num(st.every, 1, 60, 3), pct = num(st.pct, 1, 100, 10) },
+        caught = { mode = ca.mode == "respawn" and "respawn" or "teleport", pct = num(ca.pct, 1, 90, 20) },
     }
     return cfg
 end
@@ -183,6 +198,27 @@ local function speciesOf(pawn)
     if not ok or n == nil then return nil end
     local cls = tostring(n):match("([%w_]+)$") or tostring(n)
     return (cls:gsub("^BP_", ""):gsub("_C$", ""))
+end
+
+local function classPathOf(pawn)
+    local ok, n = pcall(function() return pawn:GetClass():GetFullName() end)
+    return ok and n ~= nil and tostring(n) or nil
+end
+
+--- The garage's capture / restore modules (DinoGarage), loaded once; nil when unavailable.
+local garageMods = nil
+local function garage()
+    if garageMods == nil then
+        local okC, C = pcall(require, "garage.capture")
+        local okR, R = pcall(require, "garage.restore")
+        if okC and okR and type(C) == "table" and type(R) == "table" then
+            garageMods = { capture = C, restore = R }
+        else
+            garageMods = false
+            H.logError(MOD .. ": the garage's capture / restore did not load — a dead escaper will not be made again")
+        end
+    end
+    return garageMods or nil
 end
 
 local function teleport(pawn, p)
@@ -299,6 +335,12 @@ local function jail(id, pawn, sen, st, run, addr, hp, now, c)
     end
     local x, y, z = locOf(pawn)
     if st.arrest == nil and x then st.arrest = { x = x, y = y, z = z } end
+    -- The dino as it is when first jailed: made again if it dies on the run.
+    if st.dino == nil then
+        local G = garage()
+        local okS, snap = pcall(function() return G and G.capture.capture(pawn) or nil end)
+        if okS and type(snap) == "table" then snap.location, snap.rotation = nil, nil; st.dino = snap end
+    end
     dropTurn = dropTurn % #c.drops + 1
     if not teleport(pawn, c.drops[dropTurn]) then
         H.logError(MOD .. ": could not move " .. id .. " to the prison")
@@ -324,6 +366,40 @@ local function release(id, pawn, sen, st, c)
     H.log(string.format("%s: %s released (%s)", MOD, id, sen.id))
 end
 
+--- A dead escaper's next dino (same species): made into the one they had, in the prison.
+local function recreate(id, pawn, sen, st, run, addr, now, c)
+    local G = garage()
+    dropTurn = dropTurn % #c.drops + 1
+    if not teleport(pawn, c.drops[dropTurn]) then return false end
+    run.addr, run.jailedAt, run.lastTick, run.restoring = addr, now, now, true
+    st.recreate, st.escaped, st.inside = false, false, true
+    st.jailed = (st.jailed or 0) + 1
+    dirty = true
+    G.restore.apply(pawn, st.dino, function(ok)
+        run.restoring = nil
+        if H.isValid(pawn) then
+            run.frozen = capture(pawn)
+            run.lockHp = call(pawn, "GetHealth")
+        end
+        Events.emit({ type = "prison_recreated", steamId = id, id = sen.id, ok = ok == true, species = speciesOf(pawn) })
+        H.log(string.format("%s: %s's dino made again in the prison (%s)", MOD, id, tostring(ok)))
+    end)
+    return true
+end
+
+--- An escaper brought low ("teleport" mode): back in the prison, not dead.
+local function catchEscaper(id, pawn, sen, st, run, now, c, mx)
+    dropTurn = dropTurn % #c.drops + 1
+    if not teleport(pawn, c.drops[dropTurn]) then return end
+    local hp = math.max(st.escapeHp or 0, mx * c.caught.pct / 100)
+    set(pawn, "SetHealth", hp)
+    run.lockHp, run.jailedAt, run.lastTick = hp, now, now
+    st.escaped, st.inside = false, true
+    dirty = true
+    Events.emit({ type = "prison_caught", steamId = id, id = sen.id, species = speciesOf(pawn) })
+    H.log(string.format("%s: %s caught and put back in the prison", MOD, id))
+end
+
 local function handleInmate(id, pawn, sen, now, c)
     local st = stateOf(sen.id)
     if st.done then return end
@@ -332,6 +408,13 @@ local function handleInmate(id, pawn, sen, now, c)
     local run = live[id]
     if run == nil then run = {}; live[id] = run end
     if hp ~= nil and hp <= 0 then
+        -- Died on the run: the next dino of that species is made into this one.
+        if st.escaped and run.addr ~= nil and st.dino ~= nil and not st.recreate then
+            st.recreate = true
+            dirty = true
+            Events.emit({ type = "prison_died", steamId = id, id = sen.id, species = st.dino.classPath and tostring(st.dino.classPath):match("([%w_]+)$") or nil })
+            H.log(string.format("%s: %s died on the run — the next %s is made again", MOD, id, tostring(st.dino.classPath)))
+        end
         -- A corpse: the next dino goes in again.
         run.addr, run.pending = nil, nil
         if st.inside then st.inside = false; dirty = true end
@@ -342,9 +425,14 @@ local function handleInmate(id, pawn, sen, now, c)
         if run.pending ~= addr then run.pending, run.firstSeen = addr, now; return end
         if now - run.firstSeen < SETTLE_S then return end
         if sen.release or remaining(sen, st) <= 0 then release(id, pawn, sen, st, c); return end
+        if st.recreate and st.dino ~= nil and #c.drops > 0 and garage() ~= nil and classPathOf(pawn) == st.dino.classPath then
+            if recreate(id, pawn, sen, st, run, addr, now, c) then return end
+        end
+        if st.recreate then st.recreate = false; dirty = true end   -- another species: that one goes in as it is
         jail(id, pawn, sen, st, run, addr, hp, now, c)
         return
     end
+    if run.restoring then return end
     if sen.release or remaining(sen, st) <= 0 then release(id, pawn, sen, st, c); return end
 
     local x, y = locOf(pawn)
@@ -363,8 +451,16 @@ local function handleInmate(id, pawn, sen, now, c)
         elseif hp ~= nil then run.lockHp = hp end
         st.served = (st.served or 0) + dt
     else
+        if st.escaped and c.caught.mode == "teleport" and hp ~= nil then
+            local mx = call(pawn, "GetMaxHealth")
+            if mx and mx > 0 and hp > 0 and hp <= mx * c.caught.pct / 100 then
+                catchEscaper(id, pawn, sen, st, run, now, c, mx)
+                return
+            end
+        end
         if not st.escaped then
             st.escaped = true
+            st.escapeHp = hp
             st.escapes = (st.escapes or 0) + 1
             Events.emit({ type = "prison_escape", steamId = id, id = sen.id, x = st.loc and st.loc.x, y = st.loc and st.loc.y,
                 species = speciesOf(pawn), escapes = st.escapes })

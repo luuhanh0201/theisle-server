@@ -46,12 +46,21 @@ export interface PrisonSettings {
   stingGraceSec: number;
   stingEverySec: number;
   stingPct: number;
+  /**
+   * An escaped inmate brought down: "teleport" = at `catchPct`% health it does
+   * not die but goes back to the prison; "respawn" = it dies, and the next dino
+   * of that species the player spawns is made into it, in the prison. A
+   * one-shot kill ends as "respawn" in either mode.
+   */
+  caughtMode: 'teleport' | 'respawn';
+  catchPct: number;
   offenses: Offense[];
 }
 
 export const PRISON_DEFAULTS: PrisonSettings = {
   enabled: false, killPenaltyMin: 10, remindMin: 5, repeatStep: 0.5,
   stingGraceSec: 10, stingEverySec: 3, stingPct: 10,
+  caughtMode: 'teleport', catchPct: 20,
   offenses: [
     { id: 'babykill', name: 'Giết baby', minutes: 30 },
     { id: 'kos', name: 'Giết không lý do (KOS)', minutes: 30 },
@@ -173,6 +182,13 @@ export function validatePrisonSettings(raw: unknown): PrisonSettings {
     stingGraceSec: int(r['stingGraceSec'], 0, 600, 'stingGraceSec'),
     stingEverySec: int(r['stingEverySec'], 1, 60, 'stingEverySec'),
     stingPct: int(r['stingPct'], 1, 100, 'stingPct'),
+    // Saved before these existed: the defaults.
+    caughtMode: (() => {
+      const m = r['caughtMode'] ?? PRISON_DEFAULTS.caughtMode;
+      if (m !== 'teleport' && m !== 'respawn') throw new ValidationError('caughtMode must be teleport or respawn');
+      return m;
+    })(),
+    catchPct: int(r['catchPct'] ?? PRISON_DEFAULTS.catchPct, 1, 90, 'catchPct'),
     offenses,
   };
 }
@@ -227,6 +243,8 @@ export class Prison {
   /** Escaped sentences (from the mod's events, ahead of its next state file): id → since. */
   #escaped = new Map<string, number>();
   #remindedAt = new Map<string, number>();
+  /** The last player who hurt each inmate (StatsLogger damage events): who caught an escaper. */
+  #lastHit = new Map<string, { by: string; name: string | null; t: number }>();
   #modText = '';
   #inmatesText = '';
   #writing: Promise<void> = Promise.resolve();
@@ -415,6 +433,7 @@ export class Prison {
       },
       drops: zone === undefined ? [] : this.dropsOf(zone),
       sting: { grace: s.stingGraceSec, every: s.stingEverySec, pct: s.stingPct },
+      caught: { mode: s.caughtMode, pct: s.catchPct },
       exempt: [...await this.#deps.adminIds()].sort(),
       sentences: Object.fromEntries(this.#data.active.map((x) => [x.steamId, { id: x.id, total: x.totalSec, release: x.release === true }])),
     };
@@ -448,6 +467,44 @@ export class Prison {
     const e = event as GameEvent & Record<string, unknown>;
     const live = e.t >= this.#deps.startedAt - 10;
     const type = e.type as string;
+    if (type === 'damage') {
+      const victim = typeof e['victim'] === 'string' ? e['victim'] : null;
+      const by = typeof e['attacker'] === 'string' ? e['attacker'] : null;
+      if (victim !== null && by !== null && by !== 'ai' && by !== victim && this.activeOf(victim) !== null) {
+        this.#lastHit.set(victim, { by, name: typeof e['attackerName'] === 'string' ? e['attackerName'] : null, t: e.t });
+      }
+      return;
+    }
+    if (type === 'prison_caught' || type === 'prison_died' || type === 'prison_recreated') {
+      const s = this.#data.active.find((x) => x.id === e['id']);
+      if (!s || !live) return;
+      if (type === 'prison_caught') {
+        this.#escaped.delete(s.id);
+        this.#remindedAt.delete(s.id);
+        const hit = this.#lastHit.get(s.steamId);
+        const left = fmtDuration(this.remainingOf(s));
+        if (hit && e.t - hit.t <= 30) {
+          await this.#credit(s, hit.by, hit.name, e.t);
+        } else {
+          const ann = this.#deps.render('prison.caught.announce', { name: s.name, left });
+          if (ann !== null) await this.#deps.announce(ann).catch(() => undefined);
+          this.#deps.discord(`🔒 Kẻ vượt ngục **${s.name}** \`${s.steamId}\` bị bắt lại (không ai được ghi công)`);
+        }
+        const dm = this.#deps.render('prison.caught.player', { left });
+        if (dm !== null) await this.#deps.directMessage(s.steamId, dm).catch(() => undefined);
+        return;
+      }
+      if (type === 'prison_died') {
+        const species = typeof e['species'] === 'string' ? e['species'].replace(/^BP_/, '').replace(/_C$/, '') : '?';
+        const dm = this.#deps.render('prison.died.player', { species, left: fmtDuration(this.remainingOf(s)) });
+        if (dm !== null) await this.#deps.directMessage(s.steamId, dm).catch(() => undefined);
+        return;
+      }
+      const dm = this.#deps.render('prison.recreated.player', { left: fmtDuration(this.remainingOf(s)) });
+      if (dm !== null && e['ok'] !== false) await this.#deps.directMessage(s.steamId, dm).catch(() => undefined);
+      this.#deps.discord(`🔒 Dino của **${s.name}** \`${s.steamId}\` được tạo lại trong nhà tù${e['ok'] === false ? ' (khôi phục lỗi)' : ''}`);
+      return;
+    }
     if (type === 'prison_escape' || type === 'prison_returned' || type === 'prison_jailed' || type === 'prison_released') {
       const s = this.#data.active.find((x) => x.id === e['id']);
       if (!s) return;
@@ -493,15 +550,8 @@ export class Prison {
     const killerId = typeof e['killer'] === 'string' ? e['killer'] : null;
     if (victim === null || killerId === null || killerId === victimId) return;
     if (this.#isEscaped(victim)) {
-      // A hunter brought an escaped inmate down.
-      const name = (typeof e['killerName'] === 'string' ? e['killerName'] : null) ?? this.#deps.nameOf(killerId) ?? killerId;
-      const h = this.#data.hunters[killerId] ?? { name, count: 0, last: 0 };
-      this.#data.hunters[killerId] = { name, count: h.count + 1, last: e.t };
-      this.#escaped.delete(victim.id);
-      await this.#save();
-      const ann = this.#deps.render('prison.bounty.announce', { hunter: name, name: victim.name, count: h.count + 1 });
-      if (ann !== null) await this.#deps.announce(ann).catch(() => undefined);
-      this.#deps.discord(`🏹 **${name}** \`${killerId}\` đã hạ kẻ vượt ngục **${victim.name}** (thợ săn: ${h.count + 1} lần)`);
+      // A hunter brought an escaped inmate down (it died: a one-shot, or "respawn" mode).
+      await this.#credit(victim, killerId, typeof e['killerName'] === 'string' ? e['killerName'] : null, e.t);
       return;
     }
     const killer = this.activeOf(killerId);
@@ -514,6 +564,18 @@ export class Prison {
     const dm = this.#deps.render('prison.killPenalty.player', { minutes: penalty, name: victim.name, left: fmtDuration(this.remainingOf(killer)) });
     if (dm !== null) await this.#deps.directMessage(killerId, dm).catch(() => undefined);
     this.#deps.discord(`⚖️ **${killer.name}** \`${killerId}\` giết bạn tù **${victim.name}** trong tù: án +${penalty} phút`);
+  }
+
+  /** Credit a hunter for bringing `victim` down; announces it. */
+  async #credit(victim: Sentence, hunterId: string, hunterName: string | null, t: number): Promise<void> {
+    const name = hunterName ?? this.#deps.nameOf(hunterId) ?? hunterId;
+    const h = this.#data.hunters[hunterId] ?? { name, count: 0, last: 0 };
+    this.#data.hunters[hunterId] = { name, count: h.count + 1, last: t };
+    this.#escaped.delete(victim.id);
+    await this.#save();
+    const ann = this.#deps.render('prison.bounty.announce', { hunter: name, name: victim.name, count: h.count + 1 });
+    if (ann !== null) await this.#deps.announce(ann).catch(() => undefined);
+    this.#deps.discord(`🏹 **${name}** \`${hunterId}\` đã bắt được kẻ vượt ngục **${victim.name}** (thợ săn: ${h.count + 1} lần) — trao thưởng tay`);
   }
 
   /** Escaped inmates where the mod last saw them (for every player's map). */

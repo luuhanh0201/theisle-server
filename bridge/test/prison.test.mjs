@@ -211,3 +211,28 @@ test('clear messages: served vs released early (to them and to everyone), the es
   assert.ok(said.announce.some((t) => t.startsWith('prison.releasedEarly.announce') && t.includes('"by":"Dã Tượng"')), 'everyone is told, with who let them out');
   assert.ok(!said.announce.some((t) => t.startsWith('prison.released.announce')), 'not the "served" text');
 });
+
+test('caught: the last player who hurt the escaper (30 s) is the hunter; none = "caught" announcement; died / recreated told in person', async () => {
+  await saveAiZones({ enabled: true, globalMax: 10, zones: [PRISON_ZONE] }, new GroundPoints());
+  const { prison, said } = setup();
+  await prison.saveSettings({ ...PRISON_DEFAULTS, enabled: true, caughtMode: 'teleport', catchPct: 25 });
+  assert.deepEqual(modFileJson().caught, { mode: 'teleport', pct: 25 }, 'the mode reaches the mod');
+  const s = prison.activeOf(A) ?? await prison.jail({ steamId: A, minutes: 60, reason: 'x' }, 'Admin', NOW);
+  await prison.handle({ type: 'prison_escape', t: NOW + 1, steamId: A, id: s.id, species: 'Carnotaurus', escapes: 1 });
+  await prison.handle({ type: 'damage', t: NOW + 10, attacker: B, attackerName: 'Bravo', victim: A, amount: 300 });
+  const before = prison.hunters().find((h) => h.steamId === B)?.count ?? 0;
+  await prison.handle({ type: 'prison_caught', t: NOW + 12, steamId: A, id: s.id });
+  assert.ok(said.announce.at(-1).startsWith('prison.bounty.announce') && said.announce.at(-1).includes('"hunter":"Bravo"'), said.announce.at(-1));
+  assert.equal(prison.hunters().find((h) => h.steamId === B).count, before + 1, 'credited');
+  assert.ok(said.dm.some(([id, t]) => id === A && t.startsWith('prison.caught.player')));
+  // Again, the last hit long ago: nobody credited.
+  await prison.handle({ type: 'prison_escape', t: NOW + 100, steamId: A, id: s.id, escapes: 2 });
+  await prison.handle({ type: 'prison_caught', t: NOW + 200, steamId: A, id: s.id });
+  assert.ok(said.announce.at(-1).startsWith('prison.caught.announce'), said.announce.at(-1));
+  await prison.handle({ type: 'prison_died', t: NOW + 300, steamId: A, id: s.id, species: 'BP_Carnotaurus_C' });
+  assert.ok(said.dm.some(([, t]) => t.startsWith('prison.died.player') && t.includes('"species":"Carnotaurus"')));
+  await prison.handle({ type: 'prison_recreated', t: NOW + 310, steamId: A, id: s.id, ok: true });
+  assert.ok(said.dm.some(([, t]) => t.startsWith('prison.recreated.player')));
+  assert.throws(() => validatePrisonSettings({ ...PRISON_DEFAULTS, caughtMode: 'fly' }), /caughtMode/);
+  assert.equal(validatePrisonSettings({ ...PRISON_DEFAULTS, caughtMode: undefined, catchPct: undefined }).caughtMode, 'teleport', 'saved before: the default');
+});

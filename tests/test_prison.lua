@@ -166,6 +166,70 @@ step(2)
 check("then stung", other.__props.Health == 90, tostring(other.__props.Health))
 check("an admin in the prison is left alone", admin.__props.Health == 100 and #ac._messages == 0)
 
+say("\n-- 9. caught (\"teleport\"): an escaper brought to 20% does not die — back in the prison --")
+local function sentence(id, mode)
+  config({ enabled = true, zone = ZONE, drops = BASE.drops, sting = BASE.sting, exempt = { ADMIN },
+    caught = { mode = mode, pct = 20 }, sentences = { [INMATE] = { id = id, total = 3600, release = false } } })
+end
+local function newDino(class, growth)
+  local p = dino({ class = class, growth = growth, loc = { X = 90000, Y = 90000, Z = 100 } })
+  cc = H.makeCtrl(INMATE, p)
+  online = { cc, oc, ac }
+  return p
+end
+sentence("s3", "teleport")
+local p3 = newDino("BlueprintGeneratedClass /Game/BP_Carno.BP_Carno_C", 0.7)
+step(5)
+check("in the prison", L(p3).X == 4000)
+p3.__props.Loc = { X = 30000, Y = 30000, Z = 0 }
+step(7)
+check("escaped", #events("prison_escape") >= 2)
+p3.__props.Health = 15
+step(1)
+check("at 15% (of 100): put back at the drop spot", L(p3).X == 4000, json.encode(L(p3)))
+check("…with the health it escaped with, not dead", p3.__props.Health == 100, tostring(p3.__props.Health))
+check("a 'caught' event (the bridge credits the hunter)", #events("prison_caught") == 1 and events("prison_caught")[1].id == "s3")
+step(6)                                       -- the state file is written every 5 s
+check("back inside: no longer escaped", state().sentences.s3.escaped == false)
+
+say("\n-- 10. died on the run (\"respawn\"): the next dino of that species is made into it, in the prison --")
+sentence("s4", "respawn")
+local p4 = newDino("BlueprintGeneratedClass /Game/BP_Carno.BP_Carno_C", 0.7)
+step(5)
+check("in the prison", L(p4).X == 4000)
+p4.__props.Loc = { X = 30000, Y = 30000, Z = 0 }
+step(7)
+p4.__props.Health = 15
+step(1)
+check("respawn mode: not caught at 15%", L(p4).X == 30000)
+p4.__props.Health = 0
+step(2)
+check("a 'died' event naming the species to spawn", #events("prison_died") == 1 and events("prison_died")[1].species == "BP_Carno_C",
+  json.encode(events("prison_died")))
+H.calls = {}
+local p5 = newDino("BlueprintGeneratedClass /Game/BP_Carno.BP_Carno_C", 0.05)
+step(5)
+check("same species: moved to the prison", L(p5).X == 4000, json.encode(L(p5)))
+local grew = false
+for _, cl in ipairs(H.calls) do if cl.what == "SetGrowth" and math.abs((cl.args[1] or 0) - 0.7) < 1e-6 then grew = true end end
+check("…and made into the dino it had (growth 70% back, the garage's restore)", grew)
+H.advance(700)
+check("a 'recreated' event once the restore is done", #events("prison_recreated") == 1 and events("prison_recreated")[1].ok == true)
+
+say("\n-- 11. died on the run, then another species: that one goes in as it is --")
+sentence("s5", "respawn")
+local p6 = newDino("BlueprintGeneratedClass /Game/BP_Carno.BP_Carno_C", 0.6)
+step(5)
+p6.__props.Loc = { X = 30000, Y = 30000, Z = 0 }
+step(7)
+p6.__props.Health = 0
+step(2)
+H.calls = {}
+local p7 = newDino("BlueprintGeneratedClass /Game/BP_Troodon.BP_Troodon_C", 0.2)
+step(5)
+check("another species: moved in", L(p7).X == 4000)
+check("…not made into the Carnotaurus", H.countCalls("SetGrowth") == 0 and #events("prison_recreated") == 1)
+
 say("\n-- 8. off --")
 config({ enabled = false })
 other.__props.Health = 100

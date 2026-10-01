@@ -300,7 +300,7 @@ export interface GarageStoreResultEvent extends BaseEvent {
 
 /** The Prison mod (mods/Prison): an inmate moved in, out of the zone, back, let out (prison.ts acts on them). */
 export interface PrisonEvent extends BaseEvent {
-  type: 'prison_jailed' | 'prison_escape' | 'prison_returned' | 'prison_released';
+  type: 'prison_jailed' | 'prison_escape' | 'prison_returned' | 'prison_released' | 'prison_caught' | 'prison_died' | 'prison_recreated';
   steamId: string;
   /** The sentence's id (prison.ts). */
   id: string;
@@ -311,6 +311,7 @@ export interface PrisonEvent extends BaseEvent {
   again?: boolean;
   early?: boolean;
   served?: number;
+  ok?: boolean;
 }
 
 export type GameEvent =
@@ -373,6 +374,9 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   prison_escape: (e) => isString(e['steamId']) && isString(e['id']),
   prison_returned: (e) => isString(e['steamId']) && isString(e['id']),
   prison_released: (e) => isString(e['steamId']) && isString(e['id']),
+  prison_caught: (e) => isString(e['steamId']) && isString(e['id']),
+  prison_died: (e) => isString(e['steamId']) && isString(e['id']),
+  prison_recreated: (e) => isString(e['steamId']) && isString(e['id']),
 };
 
 /**

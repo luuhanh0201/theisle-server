@@ -1602,6 +1602,12 @@
                 <div class="cfg-field"><label for="prs-every">Ong đốt mỗi (giây)</label><input id="prs-every" type="number" min="1" max="60"></div>
                 <div class="cfg-field"><label for="prs-pct">% máu mỗi lần</label><input id="prs-pct" type="number" min="1" max="100"></div>
               </div>
+              <div class="cfg-field"><label for="prs-caught">Kẻ vượt ngục bị hạ</label><select id="prs-caught">
+                <option value="teleport">Không chết — tụt tới ngưỡng máu thì bay về nhà tù</option>
+                <option value="respawn">Chết — spawn lại đúng loài thì tạo lại chính con đó trong tù</option></select>
+                <div class="step-hint">Bị một đòn chết ngay (cả ở chế độ đầu): coi như đã chết — con spawn lại đúng loài được tạo lại y nguyên trong tù,
+                  loài khác thì con mới vào tù tiếp tục án. Ai đánh hạ / bắt được đều được ghi công Thợ săn.</div></div>
+              <div class="cfg-field" id="prs-catch-wrap"><label for="prs-catch">Ngưỡng máu để bắt (%)</label><input id="prs-catch" type="number" min="1" max="90"></div>
               <div class="cfg-field"><label>Danh mục lỗi (tên · phút)</label><div id="prs-offenses" style="display:flex;flex-direction:column;gap:6px"></div>
                 <div class="row"><button type="button" class="btn-soft sm" id="prs-add">+ Thêm lỗi</button></div></div>
               <div class="row"><button type="button" class="btn-soft" id="prs-save">Lưu cài đặt nhà tù</button></div>
@@ -7872,6 +7878,8 @@ function renderPrisonSettings(st) {
   $('prs-enabled').checked = st.enabled;
   $('prs-kill').value = st.killPenaltyMin; $('prs-remind').value = st.remindMin; $('prs-step').value = st.repeatStep;
   $('prs-grace').value = st.stingGraceSec; $('prs-every').value = st.stingEverySec; $('prs-pct').value = st.stingPct;
+  $('prs-caught').value = st.caughtMode ?? 'teleport'; $('prs-catch').value = st.catchPct ?? 20;
+  $('prs-catch-wrap').hidden = $('prs-caught').value !== 'teleport';
   $('prs-offenses').innerHTML = st.offenses.map((o) => prOffenseRow(o)).join('');
 }
 const prOffenseRow = (o) => `<div class="row" data-off="${esc(o.id ?? '')}"><input data-off-name maxlength="60" value="${esc(o.name)}" placeholder="Tên lỗi" style="flex:1">
@@ -7885,7 +7893,8 @@ $('prs-offenses').addEventListener('click', (e) => {
   const del = e.target.closest('[data-off-del]');
   if (del) { del.closest('[data-off]').remove(); pr.settingsDirty = true; }
 });
-for (const id of ['prs-enabled', 'prs-kill', 'prs-remind', 'prs-step', 'prs-grace', 'prs-every', 'prs-pct', 'prs-offenses']) {
+$('prs-caught').addEventListener('change', () => { $('prs-catch-wrap').hidden = $('prs-caught').value !== 'teleport'; });
+for (const id of ['prs-enabled', 'prs-kill', 'prs-remind', 'prs-step', 'prs-grace', 'prs-every', 'prs-pct', 'prs-caught', 'prs-catch', 'prs-offenses']) {
   $(id).addEventListener('input', () => { pr.settingsDirty = true; });
 }
 $('prs-save').addEventListener('click', () => withToken('lưu cài đặt nhà tù', async (token) => {
@@ -7898,7 +7907,7 @@ $('prs-save').addEventListener('click', () => withToken('lưu cài đặt nhà t
   await adminFetch('/api/prison/settings', 'PUT', token, {
     enabled: $('prs-enabled').checked, killPenaltyMin: Math.round(n('prs-kill')), remindMin: Math.round(n('prs-remind')),
     repeatStep: n('prs-step'), stingGraceSec: Math.round(n('prs-grace')), stingEverySec: Math.round(n('prs-every')),
-    stingPct: Math.round(n('prs-pct')), offenses,
+    stingPct: Math.round(n('prs-pct')), caughtMode: $('prs-caught').value, catchPct: Math.round(n('prs-catch')), offenses,
   });
   pr.settingsDirty = false;
   pr.offKey = '';
