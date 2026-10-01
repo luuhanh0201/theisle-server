@@ -359,10 +359,12 @@ export class Prison {
     this.#escaped.delete(s.id);
     this.#remindedAt.delete(s.id);
     await this.#save();
-    const vars = { name: s.name };
-    const dm = this.#deps.render('prison.released.player', vars);
+    // Served, or let out early by an admin: said apart (to them and to everyone).
+    const early = s.release === true;
+    const vars = { name: s.name, served: fmtDuration(st.served), by: s.releasedBy ?? 'admin' };
+    const dm = this.#deps.render(early ? 'prison.releasedEarly.player' : 'prison.released.player', vars);
     if (dm !== null) await this.#deps.directMessage(s.steamId, dm).catch(() => undefined);
-    const ann = this.#deps.render('prison.released.announce', vars);
+    const ann = this.#deps.render(early ? 'prison.releasedEarly.announce' : 'prison.released.announce', vars);
     if (ann !== null) await this.#deps.announce(ann).catch(() => undefined);
     this.#deps.discord(`🔓 **${s.name}** \`${s.steamId}\` đã ra tù (${s.release ? 'thả sớm' : 'mãn hạn'}, ngồi ${fmtDuration(st.served)}, trốn ${st.escapes} lần)`);
     this.#log(`[prison] ${s.name} (${s.steamId}) out: ${s.release ? 'released' : 'served'}`);
@@ -457,6 +459,8 @@ export class Prison {
           left: fmtDuration(this.remainingOf(s)), escapes: typeof e['escapes'] === 'number' ? e['escapes'] : 1 };
         const ann = this.#deps.render('prison.escape.announce', vars);
         if (ann !== null) await this.#deps.announce(ann).catch(() => undefined);
+        const dm = this.#deps.render('prison.escape.player', { left: vars.left });
+        if (dm !== null) await this.#deps.directMessage(s.steamId, dm).catch(() => undefined);
         this.#deps.discord(`🚨 **${s.name}** \`${s.steamId}\` vượt ngục (lần ${vars.escapes})`);
         return;
       }
@@ -465,7 +469,7 @@ export class Prison {
         this.#remindedAt.delete(s.id);
         if (!live) return;
         if (type === 'prison_returned' && was) {
-          const ann = this.#deps.render('prison.returned.announce', { name: s.name });
+          const ann = this.#deps.render('prison.returned.announce', { name: s.name, left: fmtDuration(this.remainingOf(s)) });
           if (ann !== null) await this.#deps.announce(ann).catch(() => undefined);
           this.#deps.discord(`🔒 **${s.name}** \`${s.steamId}\` đã quay lại nhà tù`);
         }

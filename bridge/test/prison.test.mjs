@@ -197,3 +197,17 @@ test('the Prison mod\'s events get through the events parser (they were dropped 
   }
   assert.equal(parseEvent({ type: 'prison_escape', t: NOW, steamId: A }), null, 'without the sentence id: dropped');
 });
+
+test('clear messages: served vs released early (to them and to everyone), the escaper told in person', async () => {
+  await saveAiZones({ enabled: true, globalMax: 10, zones: [PRISON_ZONE] }, new GroundPoints());
+  const { prison, said } = setup();
+  await prison.saveSettings({ ...PRISON_DEFAULTS, enabled: true });
+  const s = prison.activeOf(HUNTER) ?? await prison.jail({ steamId: HUNTER, minutes: 30, reason: 'x' }, 'Admin', NOW);
+  await prison.handle({ type: 'prison_escape', t: NOW + 1, steamId: HUNTER, id: s.id, species: 'Carnotaurus', escapes: 1 });
+  assert.ok(said.dm.some(([id, t]) => id === HUNTER && t.startsWith('prison.escape.player')), 'the escaper is told the clock stopped');
+  await prison.release(s.id, 'Dã Tượng');
+  await prison.handle({ type: 'prison_released', t: NOW + 5, steamId: HUNTER, id: s.id, early: true, served: 120 });
+  assert.ok(said.dm.some(([id, t]) => id === HUNTER && t.startsWith('prison.releasedEarly.player')), 'released early: their own text');
+  assert.ok(said.announce.some((t) => t.startsWith('prison.releasedEarly.announce') && t.includes('"by":"Dã Tượng"')), 'everyone is told, with who let them out');
+  assert.ok(!said.announce.some((t) => t.startsWith('prison.released.announce')), 'not the "served" text');
+});
