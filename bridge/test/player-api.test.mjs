@@ -121,6 +121,7 @@ test('bars: vitals with their maxima; prime status', async () => {
   assert.equal(pb.needed, 5);
   assert.deepEqual(pb.conditions.filter((c) => !c.verified).map((c) => c.n), [2, 4, 9], 'the unsure labels say so (6: a patrol zone, zone-credit.ts)');
   assert.equal(pb.locked, false, 'growth 0.3 < 75 %');
+  assert.equal(pb.elderStacks, 0, 'its "đời" (elder stacks), for the card / overlay effect');
 });
 
 test('live vitals (1 s) win over the snapshot (5 s); positions still never leave', async () => {

@@ -39,6 +39,8 @@ export interface PrimeBoard {
   /** The game's own verdict (GetIsEligiblePrimeElder). */
   eligible: boolean | null;
   elder: boolean | null;
+  /** Elder stacks: the dino's "đời" (a rebirth at 100 % adds one); its card effect follows it. */
+  elderStacks: number | null;
   met: number;
   /** Conditions needed to be eligible (PRIME_NEEDED). */
   needed: number;
@@ -50,7 +52,8 @@ export interface PrimeBoard {
 }
 
 export function primeBoard(
-  p: { elder: boolean | null; prime: boolean | null; eligible: boolean | null; conditions: Record<string, boolean> | null } | null,
+  p: { elder: boolean | null; prime: boolean | null; eligible: boolean | null; conditions: Record<string, boolean> | null;
+    elderStacks?: number | null } | null,
   growth: number | null,
 ): PrimeBoard | null {
   if (p === null) return null;
@@ -62,6 +65,7 @@ export function primeBoard(
     isPrime: p.prime,
     eligible: p.eligible,
     elder: p.elder,
+    elderStacks: typeof p.elderStacks === 'number' && Number.isFinite(p.elderStacks) ? p.elderStacks : null,
     met: conditions.filter((c) => c.met === true).length,
     needed: PRIME_NEEDED,
     conditions,

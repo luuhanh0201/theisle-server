@@ -87,6 +87,66 @@
   .bar.hit { animation: hit .6s ease-out; }
   @keyframes hit { 0% { background: rgba(239,68,68,.55); transform: translateX(-2px); } 20% { transform: translateX(2px); } 40% { transform: translateX(-1px); } 100% { background: transparent; transform: none; } }
   .pops { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+
+  /* The dino's "đời" (elder stacks), as the portal's garage cards (portal index.html .tier-*):
+     amber = prime, dna = đời 2, rex = đời 3, apex = đời 4. Over the game: glow and layers only,
+     no shake and no scaling of the box (the numbers must stay readable). */
+  .dino > .tfx { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 0; }
+  .dino > .tfx > * { position: absolute; pointer-events: none; }
+  .dino > .head, .dino > .bar, .dino > .sub { position: relative; z-index: 1; }
+  .dino.tier-amber { border: 1px solid rgba(245,158,11,.7);
+    background: radial-gradient(circle at 25% 20%, rgba(245,158,11,.16) 0%, transparent 60%), var(--bg);
+    box-shadow: 0 0 0 1px rgba(245,158,11,.25), 0 0 18px rgba(245,158,11,.16), inset 0 0 16px rgba(245,158,11,.1); }
+  .tfx .amber-sheen { inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.04) 28%, transparent 58%); }
+  .tfx .amber-spec { top: 6px; left: 10px; width: 70px; height: 70px; border-radius: 50%; filter: blur(2px);
+    background: radial-gradient(circle, rgba(255,255,255,.3) 0%, rgba(255,255,255,.07) 35%, transparent 70%); }
+  .tfx .amber-crackle { inset: 0; width: 100%; height: 100%; color: rgba(251,191,36,.3); mix-blend-mode: screen; }
+  .dino.tier-dna { border: 1px solid rgba(16,185,129,.6);
+    background: radial-gradient(circle at 50% 30%, rgba(16,185,129,.16) 0%, transparent 65%), var(--bg);
+    animation: tDna 2.4s ease-in-out infinite; }
+  @keyframes tDna {
+    0%, 50%, 100% { box-shadow: 0 0 10px rgba(16,185,129,.22), inset 0 0 10px rgba(16,185,129,.1); border-color: rgba(16,185,129,.55); }
+    12% { box-shadow: 0 0 18px rgba(16,185,129,.5), inset 0 0 16px rgba(16,185,129,.28); border-color: rgba(52,211,153,.85); }
+    22% { box-shadow: 0 0 12px rgba(16,185,129,.25), inset 0 0 10px rgba(16,185,129,.12); }
+    34% { box-shadow: 0 0 22px rgba(16,185,129,.65), inset 0 0 20px rgba(16,185,129,.36); border-color: rgba(110,231,183,1); } }
+  .tfx .dna-veins { inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .tfx .dna-cap { fill: none; stroke: #10b981; stroke-width: 1.6; filter: drop-shadow(0 0 4px rgba(16,185,129,.8)); animation: tDnaVein 2.4s ease-in-out infinite; }
+  .tfx .dna-cap.c2 { stroke: #34d399; stroke-width: 1.2; }
+  .tfx .dna-cap.c3 { stroke: #059669; stroke-width: 1.4; }
+  .tfx .dna-node { fill: #6ee7b7; filter: drop-shadow(0 0 6px #10b981); animation: tDnaNode 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes tDnaVein { 0%, 50%, 100% { opacity: .3; } 12% { opacity: .8; } 22% { opacity: .4; } 34% { opacity: 1; } }
+  @keyframes tDnaNode { 0%, 50%, 100% { transform: scale(1); opacity: .4; } 34% { transform: scale(1.6); opacity: 1; } }
+  .dino.tier-rex { border: 1px solid rgba(249,115,22,.7);
+    background: radial-gradient(circle at 50% 90%, rgba(234,88,12,.24) 0%, transparent 70%), var(--bg);
+    animation: tRex 3s ease-in-out infinite; }
+  @keyframes tRex {
+    0%, 100% { box-shadow: 0 0 16px rgba(234,88,12,.35), inset 0 0 14px rgba(194,65,12,.2); border-color: rgba(249,115,22,.65); }
+    50% { box-shadow: 0 0 26px rgba(234,88,12,.6), inset 0 0 22px rgba(249,115,22,.35); border-color: rgba(251,146,60,.95); } }
+  .tfx .rex-aura { inset: -1px; background: radial-gradient(ellipse at bottom, rgba(234,88,12,.3) 0%, transparent 60%); mix-blend-mode: screen; }
+  .tfx .rex-cracks { bottom: 0; left: 0; width: 100%; height: 60%; color: #ea580c; opacity: .75;
+    filter: drop-shadow(0 0 5px #ea580c) drop-shadow(0 0 10px #c2410c); animation: tRexMagma 3s ease-in-out infinite; }
+  @keyframes tRexMagma { 0%, 100% { opacity: .55; } 50% { opacity: .95; } }
+  .dino.tier-apex { border: 1px solid rgba(239,68,68,.8);
+    background: radial-gradient(circle at 50% 15%, rgba(239,68,68,.22) 0%, transparent 65%), var(--bg);
+    animation: tApex 3.5s ease-in-out infinite; }
+  @keyframes tApex {
+    0%, 100% { box-shadow: 0 0 20px rgba(239,68,68,.4), inset 0 0 16px rgba(185,28,28,.25); border-color: rgba(239,68,68,.75); }
+    50% { box-shadow: 0 0 32px rgba(239,68,68,.7), inset 0 0 26px rgba(239,68,68,.4); border-color: rgba(248,113,113,1); } }
+  .tfx .apex-sweep { inset: 0; background: linear-gradient(115deg, transparent 20%, rgba(239,68,68,.2) 40%, rgba(255,255,255,.55) 48%, rgba(239,68,68,.3) 56%, transparent 75%);
+    background-size: 250% 250%; mix-blend-mode: screen; animation: tApexSweep 4s ease-in-out infinite; }
+  @keyframes tApexSweep { 0%, 25% { background-position: -150% 0; opacity: 0; } 35% { opacity: .8; } 55% { background-position: 150% 0; opacity: .8; } 65%, 100% { background-position: 150% 0; opacity: 0; } }
+  .tfx .apex-claws { top: -8px; right: -8px; width: 110px; height: 110px; transform: rotate(-15deg); }
+  .tfx .claw { fill: none; stroke: #ef4444; stroke-width: 3.5; stroke-linecap: round;
+    filter: drop-shadow(0 0 5px #ef4444) drop-shadow(0 0 10px #dc2626); animation: tClaw 3s ease-in-out infinite; }
+  .tfx .claw.s2 { stroke: #f87171; stroke-width: 2.8; }
+  .tfx .claw.s3 { stroke: #b91c1c; stroke-width: 3.2; }
+  @keyframes tClaw { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+  .tfx .apex-eye { top: 10px; right: 14px; width: 56px; height: 28px; animation: tEye 5.5s ease-in-out infinite; transform-origin: center; }
+  @keyframes tEye {
+    0%, 40% { opacity: .2; transform: scaleY(.08); } 45% { opacity: .9; transform: scaleY(1); }
+    70% { opacity: 1; transform: scaleY(1.05); filter: drop-shadow(0 0 10px rgba(239,68,68,1)); }
+    75% { opacity: .9; transform: scaleY(.1); } 78% { opacity: 1; transform: scaleY(1); }
+    88% { opacity: .85; transform: scaleY(.9); } 95%, 100% { opacity: .2; transform: scaleY(.08); } }
   .dmg { position: absolute; font-weight: 900; color: #ff4d4d; text-shadow: 0 0 6px rgba(0,0,0,.9), 0 1px 2px #000; white-space: nowrap; animation: dmg 1.3s cubic-bezier(.2,.7,.3,1) forwards; }
   @keyframes dmg {
     0% { opacity: 0; transform: translateY(6px) scale(.6); }

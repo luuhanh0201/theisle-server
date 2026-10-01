@@ -34,7 +34,7 @@
       ['landmarks', 'Địa danh'], ['labels', 'Tên địa điểm'], ['coords', 'Toạ độ của bạn']],
     dino: [['species', 'Loài'], ['growth', 'Growth %'], ['health', 'Máu'], ['hpValue', 'Số máu cụ thể (980 / 1.300 · 75%)'],
       ['damage', 'Hiệu ứng khi mất máu (−120 bay lên, thanh máu nháy)'], ['stamina', 'Thể lực'], ['hunger', 'Đói'], ['thirst', 'Nước'],
-      ['blood', 'Huyết'], ['oxygen', 'Oxy'], ['prime', 'Huy hiệu Prime']],
+      ['blood', 'Huyết'], ['oxygen', 'Oxy'], ['prime', 'Huy hiệu Prime / Đời'], ['tierFx', 'Hiệu ứng khung theo đời dino (như gara)']],
     quests: [['deadline', 'Thanh growth tới mốc chốt Prime (75%)'], ['passive', 'Cả điều kiện bị động (không bị vô sinh, loài nhỏ…)']],
   };
   const NOTE = {

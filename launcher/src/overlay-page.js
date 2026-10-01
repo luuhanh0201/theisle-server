@@ -35,6 +35,7 @@
       trail: [{ x: 128000, y: 322000 }, { x: 136000, y: 333000 }, { x: 143500, y: 342500 }],
       prime: {
         isPrime: false, eligible: false, met: 3, growth: 0.62, deadline: 0.75, locked: false,
+        elderStacks: 1,   // đời 2: the preview shows the tier effect
         conditions: [
           { n: 3, label: 'Chế độ ăn hoàn hảo', passive: false, met: true },
           { n: 4, label: 'Vào vùng Mass Migration', passive: false, met: true },
@@ -325,6 +326,35 @@
     ['thirst', 'Nước', '#38bdf8'], ['blood', 'Huyết', '#be123c'], ['oxygen', 'Oxy', '#22d3ee'],
   ];
   const dinoEl = {};
+  // The dino's "đời" (elder stacks; a rebirth at 100 % adds one), as the
+  // portal's garage cards: fossil = plain, amber = prime, dna = đời 2,
+  // rex = đời 3, apex = đời 4. The layers are the portal's, without its shake.
+  const TIERS = ['fossil', 'amber', 'dna', 'rex', 'apex'];
+  function tierOf(prime) {
+    const stacks = prime && typeof prime.elderStacks === 'number' ? prime.elderStacks : 0;
+    if (stacks >= 3) return 4;
+    if (stacks === 2) return 3;
+    if (stacks === 1) return 2;
+    return prime && prime.isPrime ? 1 : 0;
+  }
+  const TIER_FX = {
+    fossil: '',
+    amber: '<div class="amber-sheen"></div><div class="amber-spec"></div>'
+      + '<svg class="amber-crackle" viewBox="0 0 320 200" preserveAspectRatio="none"><path d="M 0,35 L 50,60 L 85,45 L 125,80 L 145,70 M 85,45 L 100,18 M 125,80 L 160,125 L 195,115 L 245,160 M 195,115 L 215,90 L 280,75 M 245,160 L 285,195 M 160,125 L 145,170 L 170,195 M 215,90 L 250,40" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
+    dna: '<svg class="dna-veins" viewBox="0 0 320 200" preserveAspectRatio="none">'
+      + '<path class="dna-cap" d="M -10,120 Q 35,95 65,115 T 135,88 T 215,118 T 330,80"/>'
+      + '<path class="dna-cap c2" d="M 40,-5 Q 65,50 115,65 T 185,48 T 265,78 T 325,25"/>'
+      + '<path class="dna-cap c3" d="M 75,205 Q 120,150 170,162 T 255,138 T 315,175"/>'
+      + '<circle class="dna-node" cx="65" cy="115" r="3.2"/><circle class="dna-node" cx="185" cy="48" r="3.2"/><circle class="dna-node" cx="255" cy="138" r="3.2"/></svg>',
+    rex: '<div class="rex-aura"></div><svg class="rex-cracks" viewBox="0 0 320 120" preserveAspectRatio="none">'
+      + '<path d="M 160,120 L 148,88 L 115,72 L 78,82 M 148,88 L 175,62 L 162,35 L 202,15 M 175,62 L 218,72 L 260,55 M 115,72 L 95,45 L 60,38" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
+    apex: '<div class="apex-sweep"></div>'
+      + '<svg class="apex-eye" viewBox="0 0 100 50"><defs><radialGradient id="apexIris" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fef08a"/><stop offset="40%" stop-color="#f97316"/><stop offset="80%" stop-color="#dc2626"/><stop offset="100%" stop-color="#450a0a"/></radialGradient></defs>'
+      + '<path d="M 6,25 Q 50,-4 94,25" fill="none" stroke="rgba(239,68,68,0.75)" stroke-width="1.6"/><path d="M 6,25 Q 50,54 94,25" fill="none" stroke="rgba(239,68,68,0.75)" stroke-width="1.6"/>'
+      + '<ellipse cx="50" cy="25" rx="36" ry="16" fill="rgba(185,28,28,0.32)"/><ellipse cx="50" cy="25" rx="18" ry="15" fill="url(#apexIris)"/>'
+      + '<polygon points="49,11 51,11 52,25 51,39 49,39 48,25" fill="#050101"/><ellipse cx="44" cy="20" rx="3" ry="1.5" fill="#ffffff"/></svg>'
+      + '<svg class="apex-claws" viewBox="0 0 160 160" preserveAspectRatio="none"><path class="claw" d="M 22,6 L 148,132"/><path class="claw s2" d="M 38,0 L 162,126"/><path class="claw s3" d="M 10,26 L 132,148"/></svg>',
+  };
   function buildDino() {
     const el = $('dino');
     const head = document.createElement('div'); head.className = 'head';
@@ -348,7 +378,9 @@
       return row;
     });
     dinoEl.pops = document.createElement('div'); dinoEl.pops.className = 'pops';
-    el.replaceChildren(head, ...rows, dinoEl.none, dinoEl.pops);
+    dinoEl.fx = document.createElement('div'); dinoEl.fx.className = 'tfx'; dinoEl.fx.setAttribute('aria-hidden', 'true');
+    dinoEl.fxKey = '';
+    el.replaceChildren(dinoEl.fx, head, ...rows, dinoEl.none, dinoEl.pops);
     dinoEl.head = head;
   }
 
@@ -364,8 +396,13 @@
     const g = preview() ? SAMPLE_GAME : game;
     const d = g && g.dino;
     if ($('w-dino').className !== `wrap a-${settings.anchor}`) $('w-dino').className = `wrap a-${settings.anchor}`;
-    if ($('dino').className !== `box dino l-${settings.layout}`) $('dino').className = `box dino l-${settings.layout}`;
     const show = settings.show;
+    const tierLevel = d ? tierOf(d.prime) : 0;
+    const tier = show.tierFx !== false ? TIERS[tierLevel] : 'fossil';
+    const cls = `box dino l-${settings.layout} tier-${tier}`;
+    if ($('dino').className !== cls) $('dino').className = cls;
+    // Built only when the tier changes (the animations are CSS: nothing redrawn each second).
+    if (dinoEl.fxKey !== tier) { dinoEl.fxKey = tier; dinoEl.fx.innerHTML = TIER_FX[tier]; }
     dinoEl.none.hidden = Boolean(d);
     if (!d) setText(dinoEl.none, noDinoText(g));
     dinoEl.head.hidden = !d;
@@ -375,12 +412,12 @@
     setText(dinoEl.species, d.species || 'Dino');
     dinoEl.growth.hidden = !(show.growth && typeof d.growth === 'number');
     if (typeof d.growth === 'number') setText(dinoEl.growth, `🌱 ${(d.growth * 100).toFixed(1)}%`);
-    const primeOn = show.prime && d.prime && (d.prime.isPrime || d.prime.eligible);
+    const primeOn = show.prime && d.prime && (d.prime.isPrime || d.prime.eligible || tierLevel > 1);
     dinoEl.prime.hidden = !primeOn;
-    // Icon only: 👑 prime; faded 👑 eligible (five tasks done, not prime yet).
+    // 👑 prime; faded 👑 eligible (five tasks done, not prime yet); "👑 Đời N" from đời 2 on.
     if (primeOn) {
-      setText(dinoEl.prime, '👑');
-      dinoEl.prime.classList.toggle('dim', !d.prime.isPrime);
+      setText(dinoEl.prime, tierLevel > 1 ? `👑 Đời ${tierLevel}` : '👑');
+      dinoEl.prime.classList.toggle('dim', tierLevel <= 1 && !d.prime.isPrime);
     }
     for (const [k] of VITALS) {
       const r = dinoEl.rows[k];

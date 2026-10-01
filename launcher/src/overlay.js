@@ -44,7 +44,7 @@ const DEFAULTS = {
     ...COMMON, position: 'bottom-left', autoHide: 'never', layout: 'bars',
     show: {
       species: true, growth: true, health: true, hpValue: true, damage: true,
-      stamina: true, hunger: true, thirst: true, blood: false, oxygen: false, prime: true,
+      stamina: true, hunger: true, thirst: true, blood: false, oxygen: false, prime: true, tierFx: true,
     },
   },
   quests: {

@@ -115,3 +115,9 @@ test('editing done shows the widgets again, even hidden by the overlay key befor
   assert.equal(dino().isVisible(), true, 'game mode: shown, with "no dino of Dev-Lucii in the game"');
   clearTimeout(o.graceTimer);
 });
+
+test('dino widget: the tier effect ("đời" of the dino) is on by default and can be turned off', () => {
+  assert.equal(normaliseWidget('dino', {}).show.tierFx, true);
+  assert.equal(normaliseWidget('dino', { show: { tierFx: false } }).show.tierFx, false);
+  assert.equal(normaliseWidget('dino', { show: { tierFx: 'yes' } }).show.tierFx, true, 'only a boolean changes it');
+});
