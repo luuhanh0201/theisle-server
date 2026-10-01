@@ -37,6 +37,10 @@ FishControl : 0
 ; Small dinos only in the zones the panel marks (bridge writes Saved/guard.json);
 ; off until the panel turns it on.
 ZoneGuard : 1
+; Prison: inmates moved to the zone the panel marks "Nhà tù", kept as they were,
+; serving time online and inside (bridge writes Saved/prison.json); off until
+; the panel turns it on.
+Prison : 1
 ; One-off: guessed fish class paths (StaticFindObject only), flag-guarded.
 FishFind : 0
 ; Done 2026-09-26: a fish a mod spawns is removed by the game within 10 s (fishspawn7.txt).
@@ -58,6 +62,9 @@ MutLab : 0
 ; StatLab: TEST SERVER ONLY (turned on by hand in the test copy): max health of a prime
 ; dino after growth / prime writes (the garage restore order)
 StatLab : 0
+; SpeciesLab: TEST SERVER ONLY (turned on by hand in the test copy): spawns each species
+; (22 playable + 4 blueprints) and reads its maxima at every growth; kills it after
+SpeciesLab : 0
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,

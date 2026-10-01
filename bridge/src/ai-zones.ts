@@ -58,6 +58,12 @@ export interface AiZone {
   smallOnly: boolean;
   /** A water zone (a lake, a river bank): the species in ignoreOccupants (a crocodile) fill it too. */
   water: boolean;
+  /**
+   * The prison (prison.ts, mods/Prison): inmates are dropped on ground spots
+   * inside it. No AI is ever spawned in it — the AIZones mod is not given it,
+   * and it needs no species. At most one zone is the prison.
+   */
+  prison: boolean;
 }
 
 export interface AiZonesSettings {
@@ -95,8 +101,9 @@ function validateZone(raw: unknown, i: number): AiZone {
   const id = typeof r['id'] === 'string' && /^[a-z0-9]{1,16}$/.test(r['id']) ? r['id'] : randomBytes(4).toString('hex');
   const name = typeof r['name'] === 'string' ? r['name'].trim().slice(0, 40) : '';
   if (name === '') throw new ValidationError(`${at}: a name is required`);
+  const prison = r['prison'] === true;
   const species = Array.isArray(r['species']) ? [...new Set(r['species'])] : [];
-  if (species.length === 0 || species.length > 12) throw new ValidationError(`${at}: pick 1–12 kinds of AI`);
+  if ((!prison && species.length === 0) || species.length > 12) throw new ValidationError(`${at}: pick 1–12 kinds of AI`);
   for (const s of species) if (typeof s !== 'string' || !AI_BY_KEY.has(s)) throw new ValidationError(`${at}: unknown AI "${String(s)}"`);
   // Files saved before the rename: idleMax is the min, perTurn both ends of the range.
   const max = int(r['max'], 0, 200, `${at}: max`);
@@ -146,6 +153,7 @@ function validateZone(raw: unknown, i: number): AiZone {
     growthMin, growthMax,
     smallOnly: r['smallOnly'] === true,
     water: r['water'] === true,
+    prison,
   };
 }
 
@@ -157,6 +165,7 @@ export function validateAiZones(raw: unknown): AiZonesSettings {
   if (!Array.isArray(zonesRaw) || zonesRaw.length > MAX_ZONES) throw new ValidationError(`zones must be a list of at most ${MAX_ZONES}`);
   const zones = zonesRaw.map(validateZone);
   if (new Set(zones.map((z) => z.id)).size !== zones.length) throw new ValidationError('two zones have the same id');
+  if (zones.filter((z) => z.prison).length > 1) throw new ValidationError('only one zone can be the prison');
   // Saved before this setting: the default (a Deinosuchus does not fill land zones).
   const ig = r['ignoreOccupants'] ?? DEFAULT_IGNORE_OCCUPANTS;
   if (!Array.isArray(ig) || ig.length > 40) throw new ValidationError('ignoreOccupants must be a list');
@@ -196,7 +205,8 @@ export function modFile(s: AiZonesSettings, points: GroundPoints): unknown {
     enabled: s.enabled,
     globalMax: s.globalMax,
     ignoreOccupants: (s.ignoreOccupants ?? DEFAULT_IGNORE_OCCUPANTS).map((k) => `BP_${k}_C`),
-    zones: s.zones.map((z) => ({
+    // The prison is not an AI zone: nothing spawns in it.
+    zones: s.zones.filter((z) => !z.prison).map((z) => ({
       id: z.id, name: z.name, enabled: z.enabled, x: z.x, y: z.y,
       // The circle around the shape, and the shape itself when it is not a circle.
       radius: boundRadiusCm(z),

@@ -25,6 +25,7 @@ import { readCommandsSettings, saveCommandsSettings } from './commands-settings.
 import { readVoiceSettings, saveVoiceSettings } from './voice-settings.js';
 import { speciesOfClassPath } from './catalog.js';
 import { maximaAt } from './species-stats.js';
+import { labPoints, SPECIES_LAB_MEASURED } from './species-lab.js';
 import { AI_SPECIES } from './ai-species.js';
 import { readAiZones, readAiZonesStatus, saveAiZones, zonePoints, type AiZonesSettings } from './ai-zones.js';
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
@@ -67,6 +68,7 @@ import {
   saveGarageSettings,
 } from './garage.js';
 import { addPrimeFix, listPrimeFixes } from './prime-fixes.js';
+import type { Prison } from './prison.js';
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
@@ -201,6 +203,7 @@ export interface Ctx {
   discord?: DiscordLog;
   bans?: BanWatcher;
   ddos?: { watch: DdosWatch; settings: DdosSettings; iface: string | null };
+  prison?: Prison;
 }
 
 /** Everything the Server tab shows, in one call. */
@@ -269,7 +272,7 @@ async function handle(
   // The player portal's read-only routes, behind their own token.
   if (await handlePlayerApi(req, res, path, { store, serverPhase: async () => (await power.status()).phase, live: readLiveState,
     serverInfo: async () => publicServerInfo((await readLive()).effective),
-    ...(ctx.voice ? { voice: ctx.voice } : {}) })) return;
+    ...(ctx.voice ? { voice: ctx.voice } : {}), ...(ctx.prison ? { prison: ctx.prison } : {}) })) return;
 
   // Everything else is the admin panel: allowed address + admin login (panel-gate.ts).
   const login = await panelGate(req, res, url, (name) => sendFile(res, name), (id) => store.player(id)?.player.name ?? null);
@@ -296,6 +299,11 @@ async function handlePanel(
       steamId: login.steamId, name, ip: login.ip, via: login.ip === null ? 'tunnel' : 'web',
       token: secret !== null && login.cookie !== undefined && login.steamId !== null ? writeToken(secret, login.cookie) : null,
     });
+    return;
+  }
+  if (path === '/api/prison' && req.method === 'GET') {
+    if (!ctx.prison) { sendJson(res, 503, { error: 'prison is not running' }); return; }
+    sendJson(res, 200, await ctx.prison.view());
     return;
   }
   if (path === '/api/bans' && req.method === 'GET') {
@@ -366,7 +374,11 @@ async function handlePanel(
     const note = /^\/api\/mutations\/([^/]+)$/.exec(path);
     const power_ = /^\/api\/server\/(start|stop|restart|cancel)$/.exec(path);
     const rconCmd = /^\/api\/rcon\/([A-Za-z]+)$/.exec(path);
+    const prisonAct = /^\/api\/prison\/sentence\/([a-f0-9]{10})\/(release|extend)$/.exec(path);
     const allowed =
+      (prisonAct !== null && req.method === 'POST') ||
+      (path === '/api/prison/jail' && req.method === 'POST') ||
+      (path === '/api/prison/settings' && req.method === 'PUT') ||
       (garage !== null && req.method !== 'PUT') ||
       (kill !== null && req.method === 'POST') ||
       (note !== null && req.method === 'PUT') ||
@@ -564,6 +576,36 @@ async function handlePanel(
         ok: true,
       });
       sendJson(res, 202, { id: queued.id, spots: queued.spots.length });
+      return;
+    }
+
+    if (path === '/api/prison/settings' || path === '/api/prison/jail' || prisonAct !== null) {
+      if (!ctx.prison) { sendJson(res, 503, { error: 'prison is not running' }); return; }
+      const who = name ?? 'admin';
+      if (path === '/api/prison/settings') {
+        const before = ctx.prison.settings;
+        const saved = await ctx.prison.saveSettings(await readJsonBody(req));
+        await audit({ action: 'prison settings saved', detail: describeChanges({ ...before, offenses: before.offenses.length }, { ...saved, offenses: saved.offenses.length }) || 'không đổi gì', ok: true });
+        sendJson(res, 200, saved);
+        return;
+      }
+      if (path === '/api/prison/jail') {
+        const s = await ctx.prison.jail(await readJsonBody(req), who);
+        await audit({ action: 'player jailed', detail: `${s.name} (${s.steamId}) · ${s.minutes} phút · ${s.offense}: ${s.reason}${s.prior ? ` · tiền án ${s.prior}` : ''}`, ok: true });
+        sendJson(res, 200, s);
+        return;
+      }
+      const [, id, act] = prisonAct as RegExpExecArray;
+      if (act === 'release') {
+        const s = await ctx.prison.release(id as string, who);
+        await audit({ action: 'prisoner released early', detail: `${s.name} (${s.steamId})`, ok: true });
+        sendJson(res, 200, s);
+        return;
+      }
+      const body = (await readJsonBody(req)) as { minutes?: unknown };
+      const s = await ctx.prison.extend(id as string, body.minutes, who);
+      await audit({ action: 'prison sentence changed', detail: `${s.name} (${s.steamId}) · ${String(body.minutes)} phút`, ok: true });
+      sendJson(res, 200, s);
       return;
     }
 
@@ -934,7 +976,9 @@ async function handlePanel(
       // With each player's garage: how many dinos stored, of the slots allowed.
       const [index, gs] = await Promise.all([listAll(), readGarageSettings()]);
       sendJson(res, 200, {
-        players: store.players().map((p) => ({ ...p, garage: Object.keys(index.players[p.steamId] ?? {}).length })),
+        players: store.players().map((p) => ({ ...p, garage: Object.keys(index.players[p.steamId] ?? {}).length,
+          // Serving a prison sentence: shown as [Tù] (prison.ts).
+          ...(ctx.prison?.isInmate(p.steamId) ? { prison: ctx.prison.playerView(p.steamId) } : {}) })),
         garageMax: gs.maxSlots,
       });
       return;
@@ -1090,7 +1134,12 @@ async function handlePanel(
       if (species === null) { sendJson(res, 200, { species: stats }); return; }
       const one = stats[species] ?? { points: [], prime: null };
       const g = Number(url.searchParams.get('growth'));
-      sendJson(res, 200, { species, ...one, at: Number.isFinite(g) ? maximaAt(one.points, g) : null });
+      // What the game gives a dino whose growth is set, as the garage does (species-lab.ts).
+      const lab = labPoints(species);
+      sendJson(res, 200, {
+        species, ...one, at: Number.isFinite(g) ? maximaAt(one.points, g) : null,
+        lab: lab === null ? null : { points: lab, at: Number.isFinite(g) ? maximaAt(lab, g) : null, measured: SPECIES_LAB_MEASURED },
+      });
       return;
     }
     case '/api/catalog': {
@@ -1103,7 +1152,8 @@ async function handlePanel(
       const live = await readLiveState();
       const players = store.map().map((p) => {
         const lp = livePlayer(live, p.steamId);
-        return lp === null ? p : { ...p, loc: lp.loc, yaw: lp.yaw ?? p.yaw, health: lp.vitals.health ?? p.health };
+        const base = lp === null ? p : { ...p, loc: lp.loc, yaw: lp.yaw ?? p.yaw, health: lp.vitals.health ?? p.health };
+        return ctx.prison?.isInmate(p.steamId) ? { ...base, prison: ctx.prison.playerView(p.steamId) } : base;
       });
       sendJson(res, 200, { players, ai: live?.ai ?? null });
       return;

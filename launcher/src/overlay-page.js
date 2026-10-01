@@ -143,6 +143,7 @@
       cw, ch, settings, Boolean(map.data),
       pos ? [Math.round(pos.x / 50), Math.round(pos.y / 50), Math.round((pos.yaw ?? 0) / 2)] : null,
       g && g.target, (g && g.ai || []).map((a) => [Math.round(a.x / 100), Math.round(a.y / 100)]),
+      (g && g.escapees || []).map((a) => [a.name, Math.round(a.x / 100), Math.round(a.y / 100)]),
       dino && dino.trail ? dino.trail.length : 0,
     ]);
     if (key !== '' && key === mapKey) return;
@@ -206,7 +207,27 @@
         ctx.lineWidth = lw(1); ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
       }
     }
+    // Escaped inmates (the server's prison): always shown, for everyone to hunt.
+    const escapees = Array.isArray(g.escapees) ? g.escapees.filter((a) => typeof a.x === 'number' && typeof a.y === 'number') : [];
+    for (const a of escapees) {
+      const [x, y] = toImg(unitsOf(a));
+      ctx.beginPath(); ctx.arc(x, y, lw(9), 0, Math.PI * 2); ctx.fillStyle = 'rgba(244,63,94,.28)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, lw(5), 0, Math.PI * 2); ctx.fillStyle = '#f43f5e'; ctx.fill();
+      ctx.lineWidth = lw(1.5); ctx.strokeStyle = '#fff'; ctx.stroke();
+    }
     ctx.restore();
+    // Their names, upright whatever the rotation; at the edge when off the map.
+    ctx.font = '800 10.5px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const a of escapees) {
+      const [x0, y0] = toImg(unitsOf(a));
+      const dx = (x0 - ix) * s; const dy = (y0 - iy) * s;
+      let x = cw / 2 + dx * Math.cos(turn) - dy * Math.sin(turn);
+      let y = ch / 2 + dx * Math.sin(turn) + dy * Math.cos(turn) - 13;
+      x = Math.max(30, Math.min(cw - 30, x)); y = Math.max(8, Math.min(ch - 8, y));
+      const label = `🚨 ${String(a.name ?? '?').slice(0, 18)}`;
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.strokeText(label, x, y);
+      ctx.fillStyle = '#fecdd3'; ctx.fillText(label, x, y);
+    }
     // Labels upright, whatever the rotation.
     if (show.labels) {
       ctx.font = '600 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

@@ -61,3 +61,16 @@ test("the snapshot's own prime flag wins over the events' times; a usual value a
   assert.deepEqual(v.points.map((p) => [p.growth, p.max.health]), [[0.75, 7943], [1, 9500]],
     'maxima only grow with growth: 10,823 at 90 % is a prime value');
 });
+
+test('lab numbers (species-lab.ts): what SetGrowth gives, stomach from the diet ratio, blood = health', async () => {
+  const { labPoints } = await import('../dist/species-lab.js');
+  const rex = labPoints('BP_Tyrannosaurus_C');
+  assert.ok(rex && rex.length === 7);
+  const at = maximaAt(rex, 0.75);
+  assert.equal(at.max.health, 9350);
+  assert.equal(at.max.blood, 9350);
+  assert.equal(at.max.hunger, Math.round(9350 * 0.33 * 100) / 100, 'meat eater: stomach = 0.33 x health');
+  assert.equal(maximaAt(labPoints('BP_Triceratops_C'), 1).max.hunger, 4750, 'plant eater: 0.5 x health');
+  assert.equal(maximaAt(rex, 0.45).exact, false, 'between two lab growths: an estimate');
+  assert.equal(labPoints('BP_Oviraptor_C'), null, 'not in this build: no lab numbers');
+});

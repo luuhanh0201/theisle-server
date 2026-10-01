@@ -22,7 +22,9 @@ GAME_PORT="${GAME_PORT:-7777}"
 # --- wine ---------------------------------------------------------------
 export WINEARCH=win64
 export WINEDEBUG="${WINEDEBUG:--all}"          # Wine noise drowns out UE4SS.log
-export WINEDLLOVERRIDES="dwmapi=n,b"           # load the UE4SS proxy DLL
+# Load the UE4SS proxy DLL. EXTRA_DLL_OVERRIDES (unset on the live server):
+# more proxies for the test server, e.g. "dsound=n,b".
+export WINEDLLOVERRIDES="dwmapi=n,b${EXTRA_DLL_OVERRIDES:+;$EXTRA_DLL_OVERRIDES}"
 export DISPLAY=""                              # headless
 
 if [[ ! -f "$BIN_DIR/$EXE" ]]; then

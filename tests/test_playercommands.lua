@@ -145,6 +145,27 @@ cmd("!food")
 check("allowed again after the cooldown", H.countCalls("ReleasePhysicsCharacter") == 2)
 
 say("")
+say("-- 10. an inmate (mods/Prison) cannot !slay or !unstuck; other commands work --")
+do
+  os.execute('mkdir -p "' .. RUN .. '/Mods/shared"')
+  local pf = assert(io.open("Mods/shared/isle-prison.json", "w"))
+  pf:write('{"inmates":["' .. STEAM .. '"]}'); pf:close()
+  require("shared.isle.prison").reset()
+  clock = clock + 700                     -- past every cooldown
+  H.calls = {}
+  cmd("!slay")
+  check("!slay refused in prison: no SetHealth", H.countCalls("SetHealth") == 0 and lastMsg():find("ở tù", 1, true) ~= nil, lastMsg())
+  cmd("!unstuck")
+  check("!unstuck refused in prison: not moved", H.countCalls("K2_SetActorLocation") == 0 and lastMsg():find("ở tù", 1, true) ~= nil, lastMsg())
+  cmd("!prime")
+  check("!prime still answers", lastMsg():find("Nhiệm vụ prime", 1, true) ~= nil, lastMsg())
+  os.remove("Mods/shared/isle-prison.json")
+  require("shared.isle.prison").reset()
+  cmd("!slay")
+  check("out of prison: !slay works again", H.countCalls("SetHealth") == 1)
+end
+
+say("")
 say("-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
 

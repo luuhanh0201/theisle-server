@@ -118,6 +118,22 @@ H.advance(10)
 hold.fn()
 check("!drop lets go", last(pc):find("Đã thả", 1, true) ~= nil, last(pc))
 
+say("\n-- 4b. an inmate (mods/Prison) is never carried off --")
+do
+  os.execute('mkdir -p "' .. RUN .. '/Mods/shared"')
+  local pf = assert(io.open("Mods/shared/isle-prison.json", "w"))
+  pf:write('{"inmates":["76561190000000002"]}'); pf:close()
+  require("shared.isle.prison").reset()
+  clock = clock + 40
+  H.calls = {}
+  grab(ptera, troo)
+  hold.fn()
+  check("the jailed Troodon is not taken", H.countCalls("K2_SetActorLocationAndRotation") == 0
+        and last(pc):find("tù nhân", 1, true) ~= nil, last(pc))
+  os.remove("Mods/shared/isle-prison.json")
+  require("shared.isle.prison").reset()
+end
+
 say("\n-- 5. only a Pteranodon carries; off on the panel does nothing --")
 clock = clock + 40
 grab(troo, ptera)

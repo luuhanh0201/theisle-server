@@ -13,6 +13,7 @@ import { PRIME_NEEDED, primeBoard, type PrimeBoard } from './prime.js';
 import { livePlayer, type Live } from './live.js';
 import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoom } from './voice.js';
 import { readVoiceSettings, shownName } from './voice-settings.js';
+import type { Prison } from './prison.js';
 
 /**
  * The player portal's view of the bridge (portal/ — the public site players
@@ -242,6 +243,7 @@ export async function handlePlayerApi(
     store: Store; serverPhase: () => Promise<string>; live?: () => Promise<Live | null>;
     serverInfo?: () => Promise<PublicServerInfo>;
     voice?: VoiceRoom;
+    prison?: Prison;
   },
 ): Promise<boolean> {
   if (!path.startsWith('/player-api/')) return false;
@@ -290,6 +292,8 @@ export async function handlePlayerApi(
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
     const body = await readSmallJson(req);
     if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    // In prison: no garage (storing the dino would be a way out).
+    if (ctx.prison?.isInmate(garageCmd[1] as string)) { send(res, 400, { error: 'Bạn đang ở tù: không dùng được gara.' }); return true; }
     try {
       const cmd = await queuePlayerCommand(garageCmd[1] as string, body['action'], { slot: body['slot'], where: body['where'] });
       send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt });
@@ -362,6 +366,8 @@ export async function handlePlayerApi(
         minHealthPct: gs.minHealthPct, minGrowthPct: gs.minGrowthPct },
       // Colours kept for the next times, by species (kept-skins.ts).
       keptSkins: await keptSkinsOf(steamId),
+      // Serving a prison sentence (prison.ts), or null.
+      prison: ctx.prison?.playerView(steamId) ?? null,
     });
     return true;
   }
@@ -371,6 +377,8 @@ export async function handlePlayerApi(
       kills: rank(lb.kills, (p) => p.kills),
       playtime: rank(lb.playtime, (p) => p.playtime),
       longestLife: rank(lb.longestLife, (p) => p.longestLife),
+      // Who brought escaped inmates down (prison.ts).
+      hunters: (ctx.prison?.hunters(20) ?? []).map((h) => ({ name: h.name, value: h.count })),
     });
     return true;
   }
@@ -391,6 +399,7 @@ export async function handlePlayerApi(
         ...(zoneOutline(z) ? { outline: zoneOutline(z) } : {}),
         species: z.species.map((k) => AI_BY_KEY.get(k)?.label ?? k),
         count: status && !status.stale ? status.zones[z.id]?.count ?? null : null,
+        ...(z.prison ? { prison: true } : {}),
       })),
     });
     return true;
@@ -399,13 +408,15 @@ export async function handlePlayerApi(
     // The server owner chose to show players every live AI (2026-09-24). AI
     // spawns around players, so clusters hint where others are — say so if asked.
     const ai = (ctx.live ? await ctx.live() : null)?.ai ?? null;
-    send(res, 200, ai === null ? { t: null, stale: true, count: 0, list: [] } : {
+    send(res, 200, ai === null ? { t: null, stale: true, count: 0, list: [], escapees: (ctx.prison?.escapees() ?? []).map((e) => ({ name: e.name, s: e.species, x: e.x, y: e.y, since: e.since })) } : {
       t: ai.t, stale: ai.stale, count: ai.count, aiAlive: ai.aiAlive,
       list: ai.stale ? [] : ai.list.filter((a) => !a.f).map((a) => ({ s: shortSpecies(a.c), x: a.x, y: a.y })),
       // The game's ambient fish, apart (the map draws them as their own layer).
       // Shown on the owner's request (2026-09-27), knowing they spawn only
       // around a player in the water: fish on a lake hint that someone is there.
       fish: ai.stale ? [] : ai.list.filter((a) => a.f).map((a) => ({ s: shortSpecies(a.c), x: a.x, y: a.y })),
+      // Escaped inmates, for every player to hunt (prison.ts): where the Prison mod last saw them.
+      escapees: (ctx.prison?.escapees() ?? []).map((e) => ({ name: e.name, s: e.species, x: e.x, y: e.y, since: e.since })),
     });
     return true;
   }

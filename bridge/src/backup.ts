@@ -71,7 +71,7 @@ export function defaultRoots(): Roots {
       'mods/PlayerCommands.json': join(mods, 'PlayerCommands', 'Saved', 'settings.json'),
       'mods/garage-settings.json': join(config.garageRoot, 'garage-settings.json'),
       ...Object.fromEntries(['ai-zones', 'messages', 'discord', 'game-settings', 'panel-access', 'power-schedule', 'voice-settings',
-        'zone-guard', 'ban-reasons', 'ddos', 'backup-settings', 'ground-points']
+        'zone-guard', 'ban-reasons', 'ddos', 'backup-settings', 'ground-points', 'prison']
         .map((n) => [`bridge/${n}.json`, join(config.dataDir, `${n}.json`)])),
     },
   };

@@ -2164,12 +2164,54 @@
   /* ==========================================================================
      PAGE 2: DINO LIVE MONITOR (GAME HUD)
      ========================================================================== */
+  .prison-banner { margin-bottom: 14px; padding: 12px 16px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+    background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.45); color: var(--text, #e5e7eb); }
+  .prison-banner.escaped { background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.55); }
   .dino-hero-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(12, 18, 32, 0.95) 100%);
     border: 1px solid rgba(16, 185, 129, 0.25);
     border-radius: var(--radius);
     padding: 24px;
     margin-bottom: 22px;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  }
+  .dino-hero-card > *:not(.slot-tier-fx) {
+    position: relative;
+    z-index: 2;
+  }
+  .dino-hero-card.tier-fossil {
+    background: linear-gradient(145deg, #1d2229 0%, #15181e 60%, #0f1215 100%);
+    border: 1px solid #3b4452;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.45);
+    animation: none !important;
+  }
+  .dino-hero-card.tier-amber {
+    background: radial-gradient(circle at 25% 20%, rgba(245, 158, 11, 0.16) 0%, transparent 60%),
+                linear-gradient(145deg, #281907 0%, #191004 60%, #100a02 100%);
+    border: 1px solid rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25), 0 8px 30px rgba(245, 158, 11, 0.18), inset 0 0 25px rgba(245, 158, 11, 0.1);
+  }
+  .dino-hero-card.tier-dna {
+    background: radial-gradient(circle at 50% 30%, rgba(16, 185, 129, 0.16) 0%, transparent 65%),
+                linear-gradient(145deg, #092116 0%, #06170f 60%, #040e09 100%);
+    border: 1px solid rgba(16, 185, 129, 0.65);
+    animation: dnaCardHeartbeat 2.4s ease-in-out infinite;
+  }
+  .dino-hero-card.tier-rex {
+    background: radial-gradient(circle at 50% 90%, rgba(234, 88, 12, 0.24) 0%, transparent 70%),
+                linear-gradient(145deg, #2d1305 0%, #1b0a03 60%, #100501 100%);
+    border: 1px solid rgba(249, 115, 22, 0.75);
+    animation: rexBurningAura 3s ease-in-out infinite, rexStepShake 6s ease-in-out infinite;
+  }
+  .dino-hero-card.tier-apex {
+    background: radial-gradient(circle at 50% 15%, rgba(239, 68, 68, 0.22) 0%, transparent 65%),
+                linear-gradient(145deg, #2b0808 0%, #1a0404 60%, #100202 100%);
+    border: 1px solid rgba(239, 68, 68, 0.85);
+    box-shadow: 0 0 35px rgba(239, 68, 68, 0.5), inset 0 0 28px rgba(185, 28, 28, 0.35);
+    animation: apexAuraPulse 3.5s ease-in-out infinite;
   }
   .dino-header {
     display: flex;
@@ -2413,6 +2455,28 @@
     background: var(--emerald-soft);
     color: var(--emerald-light);
   }
+  .gara-preview-btn {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-normal);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-left: auto;
+  }
+  .gara-preview-btn:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+  }
+  .gara-preview-btn.active {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.65);
+    color: #fca5a5;
+  }
 
   /* Garage Slots List */
   #gara-slots-list {
@@ -2420,10 +2484,15 @@
     margin: 0; padding: 0;
     display: grid;
     gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
   }
   #gara-slots-list > li:only-child:not(.garage-slot-card) { grid-column: 1 / -1; }
+
+  /* Base Garage Slot Card */
   .garage-slot-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -2431,17 +2500,331 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    transition: var(--transition);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   }
   .garage-slot-card:hover {
     border-color: var(--border-hover);
     background: var(--bg-card-hover);
   }
-  .garage-slot-card.prime {
-    border-color: rgba(250, 204, 21, 0.55);
-    box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.25), 0 8px 28px rgba(250, 204, 21, 0.10);
+
+  /* Lớp hiệu ứng thị giác (FX Layer) nằm dưới nội dung, không cản trở tương tác */
+  .slot-tier-fx {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: inherit;
+    z-index: 1;
   }
-  .garage-slot-body { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .garage-slot-body {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .garage-slot-body .slot-redeem { margin-top: auto; width: 100%; justify-content: center; }
+
+  /* ==========================================================================
+     5 CẤP ĐỘ KHẢO CỔ -> SINH VẬT SỐNG (ARCHAEOLOGY TO LIVING BEAST)
+     ========================================================================== */
+
+  /* --- Cấp 0: Bình thường - Đá Vôi (Fossil Rock) --- */
+  /* Khung đá trầm tích xám thô, bề mặt nhám mờ, hoàn toàn bất động không ánh sáng */
+  .garage-slot-card.tier-fossil {
+    background: linear-gradient(145deg, #1d2229 0%, #15181e 60%, #0f1215 100%);
+    border: 1px solid #3b4452;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.45);
+    animation: none !important;
+  }
+  .garage-slot-card.tier-fossil:hover {
+    border-color: #526075;
+    background: linear-gradient(145deg, #222832 0%, #181c24 60%, #12151b 100%);
+  }
+  .fossil-grit-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 7px 7px;
+    opacity: 0.65;
+    pointer-events: none;
+  }
+  .tag.tier-fossil {
+    background: rgba(71, 85, 105, 0.25);
+    border: 1px solid #475569;
+    color: #94a3b8;
+  }
+
+  /* --- Cấp 1: Prime - Hổ Phách Cổ (Amber Relic) --- */
+  /* Khung màu vàng hổ phách bóng, có vân nứt mạ rạn tinh tế, phản chiếu tia sáng trắng tĩnh */
+  .garage-slot-card.tier-amber {
+    background: radial-gradient(circle at 25% 20%, rgba(245, 158, 11, 0.16) 0%, transparent 60%),
+                linear-gradient(145deg, #281907 0%, #191004 60%, #100a02 100%);
+    border: 1px solid rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25), 0 8px 26px rgba(245, 158, 11, 0.14), inset 0 0 20px rgba(245, 158, 11, 0.08);
+  }
+  .garage-slot-card.tier-amber:hover {
+    border-color: rgba(251, 191, 36, 0.9);
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35), 0 10px 32px rgba(245, 158, 11, 0.22), inset 0 0 25px rgba(245, 158, 11, 0.12);
+  }
+  .amber-gloss-sheen {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 28%, transparent 58%);
+    pointer-events: none;
+  }
+  .amber-specular-light {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 35%, transparent 70%);
+    filter: blur(2px);
+    pointer-events: none;
+  }
+  .amber-crackle-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    color: rgba(251, 191, 36, 0.32);
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  .tag.tier-amber {
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid rgba(245, 158, 11, 0.7);
+    color: #fde047;
+    font-weight: 700;
+  }
+
+  /* --- Cấp 2: Đời 2 - Nhịp Đập Phôi (DNA Pulse) --- */
+  /* Các đường gân xanh rêu phát sáng nhịp nhàng mô phỏng nhịp tim của phôi thai khủng long */
+  .garage-slot-card.tier-dna {
+    background: radial-gradient(circle at 50% 30%, rgba(16, 185, 129, 0.16) 0%, transparent 65%),
+                linear-gradient(145deg, #092116 0%, #06170f 60%, #040e09 100%);
+    border: 1px solid rgba(16, 185, 129, 0.6);
+    animation: dnaCardHeartbeat 2.4s ease-in-out infinite;
+  }
+  @keyframes dnaCardHeartbeat {
+    0%, 100% {
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.22), inset 0 0 12px rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.55);
+      transform: scale(1);
+    }
+    12% {
+      box-shadow: 0 0 22px rgba(16, 185, 129, 0.55), inset 0 0 20px rgba(16, 185, 129, 0.3);
+      border-color: rgba(52, 211, 153, 0.85);
+      transform: scale(1.006);
+    }
+    22% {
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.25), inset 0 0 12px rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.6);
+      transform: scale(1);
+    }
+    34% {
+      box-shadow: 0 0 28px rgba(16, 185, 129, 0.7), inset 0 0 24px rgba(16, 185, 129, 0.4);
+      border-color: rgba(110, 231, 183, 1);
+      transform: scale(1.01);
+    }
+    50% {
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.22), inset 0 0 12px rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.55);
+      transform: scale(1);
+    }
+  }
+  .dna-veins-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .dna-capillary {
+    stroke: #10b981;
+    stroke-width: 1.6;
+    filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.8));
+    animation: dnaVeinPulse 2.4s ease-in-out infinite;
+  }
+  .dna-capillary.c2 { stroke-width: 1.2; stroke: #34d399; }
+  .dna-capillary.c3 { stroke-width: 1.4; stroke: #059669; }
+  .dna-node {
+    fill: #6ee7b7;
+    filter: drop-shadow(0 0 6px #10b981);
+    animation: dnaNodePulse 2.4s ease-in-out infinite;
+  }
+  @keyframes dnaVeinPulse {
+    0%, 100% { opacity: 0.35; stroke-width: 1.4; }
+    12% { opacity: 0.85; stroke-width: 2.2; }
+    22% { opacity: 0.45; stroke-width: 1.5; }
+    34% { opacity: 1.0; stroke-width: 2.6; filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.95)); }
+    50% { opacity: 0.35; stroke-width: 1.4; }
+  }
+  @keyframes dnaNodePulse {
+    0%, 100% { transform: scale(1); opacity: 0.4; }
+    34% { transform: scale(1.6); opacity: 1; filter: drop-shadow(0 0 10px #34d399); }
+    50% { transform: scale(1); opacity: 0.4; }
+  }
+  .tag.tier-dna {
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.7);
+    color: #6ee7b7;
+    font-weight: 700;
+  }
+
+  /* --- Cấp 3: Đời 3 - Dấu Chân Bạo Chúa (Rex Aura) --- */
+  /* Hào quang màu cam đất nung rực cháy, thẻ thỉnh thoảng giật nhẹ (screen shake) */
+  .garage-slot-card.tier-rex {
+    background: radial-gradient(circle at 50% 90%, rgba(234, 88, 12, 0.24) 0%, transparent 70%),
+                linear-gradient(145deg, #2d1305 0%, #1b0a03 60%, #100501 100%);
+    border: 1px solid rgba(249, 115, 22, 0.7);
+    animation: rexBurningAura 3s ease-in-out infinite, rexStepShake 6s ease-in-out infinite;
+  }
+  @keyframes rexBurningAura {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(234, 88, 12, 0.35), inset 0 0 18px rgba(194, 65, 12, 0.2);
+      border-color: rgba(249, 115, 22, 0.65);
+    }
+    50% {
+      box-shadow: 0 0 32px rgba(234, 88, 12, 0.6), inset 0 0 26px rgba(249, 115, 22, 0.35);
+      border-color: rgba(251, 146, 60, 0.95);
+    }
+  }
+  @keyframes rexStepShake {
+    0%, 84% { transform: translate(0, 0) rotate(0deg); }
+    85% { transform: translate(-2px, 3px) rotate(-0.35deg); }
+    86% { transform: translate(3px, -2px) rotate(0.4deg); }
+    87% { transform: translate(-2px, 1px) rotate(-0.2deg); }
+    88% { transform: translate(1px, -1px) rotate(0.1deg); }
+    89% { transform: translate(0, 0); }
+    92% { transform: translate(-3px, 4px) rotate(-0.5deg); }
+    93% { transform: translate(4px, -3px) rotate(0.5deg); }
+    94% { transform: translate(-2px, 2px) rotate(-0.3deg); }
+    95% { transform: translate(1px, -1px) rotate(0.15deg); }
+    96%, 100% { transform: translate(0, 0); }
+  }
+  .rex-flame-aura {
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at bottom, rgba(234, 88, 12, 0.32) 0%, transparent 60%);
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  .rex-cracks-svg {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 90px;
+    color: #ea580c;
+    filter: drop-shadow(0 0 6px #ea580c) drop-shadow(0 0 12px #c2410c);
+    pointer-events: none;
+    opacity: 0.8;
+    animation: rexMagmaGlow 3s ease-in-out infinite;
+  }
+  @keyframes rexMagmaGlow {
+    0%, 100% { opacity: 0.6; stroke-width: 1.6; }
+    50% { opacity: 0.95; stroke-width: 2.2; filter: drop-shadow(0 0 8px #f97316) drop-shadow(0 0 16px #ea580c); }
+  }
+  .tag.tier-rex {
+    background: rgba(234, 88, 12, 0.22);
+    border: 1px solid rgba(249, 115, 22, 0.8);
+    color: #fdba74;
+    font-weight: 700;
+  }
+
+  /* --- Cấp 4: Đời 4 - Thống Trị Kỷ Jura (Apex Alpha) --- */
+  /* Vết cào móng vuốt rách toạc không gian phát sáng đỏ rực, vệt lửa quét qua thẻ, hiệu ứng mắt khủng long chớp mở lóa sáng */
+  .garage-slot-card.tier-apex {
+    background: radial-gradient(circle at 50% 15%, rgba(239, 68, 68, 0.22) 0%, transparent 65%),
+                linear-gradient(145deg, #2b0808 0%, #1a0404 60%, #100202 100%);
+    border: 1px solid rgba(239, 68, 68, 0.8);
+    box-shadow: 0 0 28px rgba(239, 68, 68, 0.45), inset 0 0 24px rgba(185, 28, 28, 0.3);
+    animation: apexAuraPulse 3.5s ease-in-out infinite;
+  }
+  @keyframes apexAuraPulse {
+    0%, 100% {
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.4), inset 0 0 20px rgba(185, 28, 28, 0.25);
+      border-color: rgba(239, 68, 68, 0.75);
+    }
+    50% {
+      box-shadow: 0 0 38px rgba(239, 68, 68, 0.7), inset 0 0 30px rgba(239, 68, 68, 0.4);
+      border-color: rgba(248, 113, 113, 1);
+    }
+  }
+  .apex-fire-sweep {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 20%, rgba(239, 68, 68, 0.2) 40%, rgba(255, 255, 255, 0.7) 48%, rgba(239, 68, 68, 0.3) 56%, transparent 75%);
+    background-size: 250% 250%;
+    animation: apexFireSweepAnim 4s ease-in-out infinite;
+    mix-blend-mode: screen;
+  }
+  @keyframes apexFireSweepAnim {
+    0%, 25% { background-position: -150% 0; opacity: 0; }
+    35% { opacity: 0.85; }
+    55% { background-position: 150% 0; opacity: 0.85; }
+    65%, 100% { background-position: 150% 0; opacity: 0; }
+  }
+  .apex-claws-svg {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 140px;
+    height: 140px;
+    pointer-events: none;
+    transform: rotate(-15deg);
+  }
+  .claw-slash {
+    stroke: #ef4444;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px #ef4444) drop-shadow(0 0 12px #dc2626) drop-shadow(0 0 20px #991b1b);
+    animation: apexClawGlow 3s ease-in-out infinite;
+  }
+  .claw-slash.s2 { stroke: #f87171; stroke-width: 2.8; }
+  .claw-slash.s3 { stroke: #b91c1c; stroke-width: 3.2; }
+  @keyframes apexClawGlow {
+    0%, 100% { opacity: 0.65; }
+    50% { opacity: 1; filter: drop-shadow(0 0 10px #ff4444) drop-shadow(0 0 20px #ef4444); }
+  }
+  .apex-eye-box {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    width: 72px;
+    height: 36px;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .apex-eye-svg {
+    width: 100%;
+    height: 100%;
+    animation: apexEyeBlinkAnim 5.5s ease-in-out infinite;
+    transform-origin: center center;
+  }
+  @keyframes apexEyeBlinkAnim {
+    0%, 40% { opacity: 0.2; transform: scaleY(0.08); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
+    45% { opacity: 0.9; transform: scaleY(1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9)) drop-shadow(0 0 14px rgba(251, 146, 60, 0.8)); }
+    70% { opacity: 1; transform: scaleY(1.05); filter: drop-shadow(0 0 12px rgba(239, 68, 68, 1)) drop-shadow(0 0 22px rgba(255, 100, 100, 0.9)); }
+    75% { opacity: 0.9; transform: scaleY(0.1); }
+    78% { opacity: 1; transform: scaleY(1); }
+    88% { opacity: 0.85; transform: scaleY(0.9); }
+    95%, 100% { opacity: 0.2; transform: scaleY(0.08); }
+  }
+  .tag.tier-apex {
+    background: rgba(239, 68, 68, 0.22);
+    border: 1px solid rgba(239, 68, 68, 0.85);
+    color: #fca5a5;
+    font-weight: 700;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  }
   .garage-slot-body .slot-redeem { margin-top: auto; width: 100%; justify-content: center; }
   .slot-vitals { display: grid; gap: 6px; margin-top: 10px; width: 100%; }
   .slot-vitals .sv { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 8px; font-size: 12px; }
@@ -2547,19 +2930,277 @@
     border-radius: 10px; padding: 8px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition);
   }
   .ranking-tab-btn.active { background: var(--emerald-soft); color: var(--emerald-light); border-color: var(--emerald-light); }
-  .leaderboard-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .leaderboard-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
   .leaderboard-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 12px 18px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border); transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 20px;
+    border-radius: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   }
-  .leaderboard-item:hover { border-color: rgba(255, 255, 255, 0.15); }
+  .leaderboard-item:hover { border-color: rgba(255, 255, 255, 0.18); }
+  .leaderboard-item > *:not(.slot-tier-fx) {
+    position: relative;
+    z-index: 2;
+  }
+  .leaderboard-item-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+  .leaderboard-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .leaderboard-player-name {
+    font-size: 14.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .leaderboard-val-num {
+    font-size: 15.5px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    color: var(--emerald-light);
+  }
+
+  /* Badge thứ hạng */
   .leaderboard-rank {
-    width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center;
-    font-weight: 800; font-size: 13px; background: rgba(255, 255, 255, 0.05); color: var(--text-muted); flex-shrink: 0;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 8px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .leaderboard-rank.top-1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
-  .leaderboard-rank.top-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: #000; }
-  .leaderboard-rank.top-3 { background: linear-gradient(135deg, #b45309, #78350f); color: #fff; }
+  .leaderboard-rank.top-1 { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: 1.5px solid rgba(254, 202, 202, 0.8); box-shadow: 0 0 16px rgba(239, 68, 68, 0.85); }
+  .leaderboard-rank.top-2 { background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; border: 1.5px solid rgba(254, 215, 170, 0.8); box-shadow: 0 0 14px rgba(249, 115, 22, 0.85); }
+  .leaderboard-rank.top-3 { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: 1.5px solid rgba(167, 243, 208, 0.8); box-shadow: 0 0 14px rgba(16, 185, 129, 0.85); }
+
+  /* -------------------------------------------------------------------------
+     HIỆU ỨNG LÊN CẢ Ô ĐÓ: TOP 1 - THỐNG TRỊ KỶ JURA (APEX ALPHA)
+     Vết cào rách không gian đỏ rực, vệt lửa quét qua thẻ, mắt khủng long chớp mở
+     ------------------------------------------------------------------------- */
+  .leaderboard-item.tier-apex {
+    min-height: 76px;
+    padding: 16px 24px;
+    background: radial-gradient(circle at 50% 20%, rgba(239, 68, 68, 0.28) 0%, transparent 70%),
+                linear-gradient(135deg, #320a0a 0%, #1c0505 50%, #100202 100%);
+    border: 1.5px solid rgba(239, 68, 68, 0.9);
+    box-shadow: 0 0 32px rgba(239, 68, 68, 0.45), inset 0 0 24px rgba(185, 28, 28, 0.3);
+    animation: apexAuraPulse 3.5s ease-in-out infinite;
+  }
+  .leaderboard-item.tier-apex:hover {
+    border-color: #f87171;
+    box-shadow: 0 0 42px rgba(239, 68, 68, 0.65), inset 0 0 28px rgba(220, 38, 38, 0.4);
+  }
+  .leaderboard-item.tier-apex .leaderboard-player-name {
+    font-size: 16.5px;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.9);
+  }
+  .leaderboard-item.tier-apex .leaderboard-species {
+    color: #fca5a5 !important;
+    opacity: 0.9;
+  }
+  .leaderboard-item.tier-apex .leaderboard-val-num {
+    font-size: 19px;
+    color: #fca5a5 !important;
+    text-shadow: 0 0 14px rgba(239, 68, 68, 0.85);
+  }
+
+  /* Vệt lửa quét ngang toàn ô Apex */
+  .leaderboard-item.tier-apex .rank-fire-sweep {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 15%, rgba(239, 68, 68, 0.25) 35%, rgba(255, 255, 255, 0.85) 48%, rgba(239, 68, 68, 0.35) 58%, transparent 75%);
+    background-size: 200% 100%;
+    animation: rankFireSweepAnim 3.8s ease-in-out infinite;
+    mix-blend-mode: screen;
+  }
+  @keyframes rankFireSweepAnim {
+    0%, 18% { background-position: -120% 0; opacity: 0; }
+    28% { opacity: 0.9; }
+    58% { background-position: 120% 0; opacity: 0.9; }
+    68%, 100% { background-position: 120% 0; opacity: 0; }
+  }
+
+  /* Vết cào rách toạc không gian đỏ rực trên ô Apex */
+  .leaderboard-item.tier-apex .rank-claws {
+    position: absolute;
+    right: 140px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-12deg);
+    width: 130px;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.75;
+  }
+
+  /* Mắt khủng long Apex chớp mở lóa sáng trên ô Apex */
+  .leaderboard-item.tier-apex .rank-eye-wrap {
+    position: absolute;
+    right: 280px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .leaderboard-item.tier-apex .rank-eye {
+    width: 58px;
+    height: 29px;
+    position: relative;
+    top: auto;
+    right: auto;
+  }
+
+  /* -------------------------------------------------------------------------
+     HIỆU ỨNG LÊN CẢ Ô ĐÓ: TOP 2 - DẤU CHÂN BẠO CHÚA (REX AURA)
+     Hào quang cam đất nung rực cháy, thẻ thỉnh thoảng giật nhẹ (screen shake)
+     ------------------------------------------------------------------------- */
+  .leaderboard-item.tier-rex {
+    min-height: 70px;
+    padding: 15px 22px;
+    background: radial-gradient(circle at 50% 90%, rgba(234, 88, 12, 0.28) 0%, transparent 70%),
+                linear-gradient(135deg, #2a1104 0%, #190902 50%, #0e0501 100%);
+    border: 1.5px solid rgba(249, 115, 22, 0.85);
+    box-shadow: 0 0 26px rgba(234, 88, 12, 0.4), inset 0 0 20px rgba(194, 65, 12, 0.25);
+    animation: rexBurningAura 3s ease-in-out infinite, rexStepShake 6s ease-in-out infinite;
+  }
+  .leaderboard-item.tier-rex:hover {
+    border-color: #fb923c;
+    box-shadow: 0 0 35px rgba(234, 88, 12, 0.55), inset 0 0 24px rgba(249, 115, 22, 0.35);
+  }
+  .leaderboard-item.tier-rex .leaderboard-player-name {
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #ffedd5;
+    text-shadow: 0 0 10px rgba(249, 115, 22, 0.8);
+  }
+  .leaderboard-item.tier-rex .leaderboard-species {
+    color: #fed7aa !important;
+    opacity: 0.9;
+  }
+  .leaderboard-item.tier-rex .leaderboard-val-num {
+    font-size: 18px;
+    color: #fdba74 !important;
+    text-shadow: 0 0 12px rgba(234, 88, 12, 0.8);
+  }
+  .leaderboard-item.tier-rex .rex-flame-aura {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at bottom, rgba(234, 88, 12, 0.38) 0%, transparent 70%);
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  .leaderboard-item.tier-rex .rank-cracks {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 48px;
+    color: #ea580c;
+    filter: drop-shadow(0 0 6px #ea580c) drop-shadow(0 0 12px #c2410c);
+    pointer-events: none;
+    opacity: 0.85;
+    animation: rexMagmaGlow 3s ease-in-out infinite;
+  }
+
+  /* -------------------------------------------------------------------------
+     HIỆU ỨNG LÊN CẢ Ô ĐÓ: TOP 3 - NHỊP ĐẬP PHÔI (DNA PULSE)
+     Các đường gân xanh rêu phát sáng nhịp nhàng, cả ô co giãn đập nhịp tim phôi thai
+     ------------------------------------------------------------------------- */
+  .leaderboard-item.tier-dna {
+    min-height: 66px;
+    padding: 14px 20px;
+    background: radial-gradient(circle at 50% 30%, rgba(16, 185, 129, 0.22) 0%, transparent 65%),
+                linear-gradient(135deg, #092418 0%, #061810 50%, #030d08 100%);
+    border: 1.5px solid rgba(16, 185, 129, 0.75);
+    box-shadow: 0 0 22px rgba(16, 185, 129, 0.35), inset 0 0 16px rgba(16, 185, 129, 0.2);
+    animation: dnaCardHeartbeat 2.4s ease-in-out infinite;
+  }
+  .leaderboard-item.tier-dna:hover {
+    border-color: #34d399;
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.5), inset 0 0 20px rgba(52, 211, 153, 0.3);
+  }
+  .leaderboard-item.tier-dna .leaderboard-player-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ecfdf5;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+  }
+  .leaderboard-item.tier-dna .leaderboard-species {
+    color: #a7f3d0 !important;
+    opacity: 0.9;
+  }
+  .leaderboard-item.tier-dna .leaderboard-val-num {
+    font-size: 17px;
+    color: #6ee7b7 !important;
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+  }
+  .leaderboard-item.tier-dna .rank-dna-veins {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* -------------------------------------------------------------------------
+     HIỆU ỨNG LÊN CẢ Ô ĐÓ: PRIME - HỔ PHÁCH CỔ (AMBER RELIC)
+     ------------------------------------------------------------------------- */
+  .leaderboard-item.tier-amber {
+    background: radial-gradient(circle at 25% 20%, rgba(245, 158, 11, 0.18) 0%, transparent 60%),
+                linear-gradient(145deg, #281907 0%, #191004 60%, #100a02 100%);
+    border: 1.5px solid rgba(245, 158, 11, 0.75);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.12);
+  }
+
+  /* -------------------------------------------------------------------------
+     HIỆU ỨNG LÊN CẢ Ô ĐÓ: TOP 4 TRỞ ĐI - ĐÁ VÔI (FOSSIL ROCK)
+     Khung đá trầm tích xám thô, bề mặt nhám mờ, hoàn toàn bất động không ánh sáng
+     ------------------------------------------------------------------------- */
+  .leaderboard-item.tier-fossil {
+    background: linear-gradient(145deg, #181d24 0%, #13171d 60%, #0e1115 100%);
+    border: 1px solid #334155;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 3px 10px rgba(0, 0, 0, 0.35);
+  }
+  .leaderboard-item.tier-fossil:hover {
+    border-color: #475569;
+    background: linear-gradient(145deg, #1d222b 0%, #151a21 60%, #101318 100%);
+  }
+
+  /* Responsive trên mobile */
+  @media (max-width: 640px) {
+    .leaderboard-item.tier-apex .rank-eye-wrap { display: none; }
+    .leaderboard-item.tier-apex .rank-claws { right: 75px; width: 90px; opacity: 0.45; }
+    .leaderboard-item { padding: 12px 14px; gap: 10px; }
+    .leaderboard-player-name { max-width: 140px; }
+  }
 
   /* ==========================================================================
      PAGE 6: SKIN STUDIO
@@ -3629,10 +4270,15 @@
            ==================================================================== -->
       <section id="page-game" class="page-content" hidden>
         <!-- Logged in Dino Status Card -->
-        <div class="dino-hero-card">
+        <div class="prison-banner" id="game-prison" hidden></div>
+        <div class="dino-hero-card" id="game-hero-card">
+          <div class="slot-tier-fx hero-tier-fx" id="game-hero-fx" aria-hidden="true"></div>
           <div class="dino-header">
             <div>
-              <span class="tag info" style="margin-bottom:8px">ĐANG ĐIỀU KHIỂN</span>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+                <span class="tag info" id="game-live-tag">ĐANG ĐIỀU KHIỂN</span>
+                <span class="tag prime" id="game-dino-tier-badge" hidden>👑 Prime</span>
+              </div>
               <h2 class="dino-species" id="game-dino-species">Chưa vào game</h2>
               <p class="muted" id="game-dino-status" style="margin:4px 0 0;font-size:13px">Vào server để theo dõi chỉ số trực tiếp.</p>
             </div>
@@ -3784,6 +4430,7 @@
               <button type="button" class="gara-filter-btn" data-diet="carnivore">Ăn thịt (Carno)</button>
               <button type="button" class="gara-filter-btn" data-diet="herbivore">Ăn cỏ (Herbi)</button>
             </div>
+            <button type="button" class="gara-preview-btn" id="gara-preview-btn" title="Xem thử hiệu ứng hoạt ảnh của thẻ dino">👁️ Xem hiệu ứng thẻ</button>
           </div>
 
           <ul class="garage-list" id="gara-slots-list">
@@ -3826,6 +4473,7 @@
             <button type="button" class="ranking-tab-btn active" data-rtab="kills">⚔️ Top Hạ Gục (Kills)</button>
             <button type="button" class="ranking-tab-btn" data-rtab="playtime">⏱️ Top Giờ Chơi</button>
             <button type="button" class="ranking-tab-btn" data-rtab="longestLife">👑 Kỷ Lục Sống Lâu</button>
+            <button type="button" class="ranking-tab-btn" data-rtab="hunters">🏹 Thợ Săn</button>
             <button type="button" class="ranking-tab-btn" data-rtab="lives">📜 Các Đời Dino Của Bạn</button>
           </div>
 

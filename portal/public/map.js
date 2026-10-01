@@ -10,6 +10,7 @@
 // map X (down the image) is world Y, map Y (right) is world X.
 
 const LAYERS = [
+  ['escape', 'Kẻ vượt ngục', '#f43f5e', true],
   ['ai', 'AI (live)', '#ef4444', true],
   ['fish', 'Cá (live)', '#22d3ee', true],
   ['aizone', 'Vùng AI', '#fb923c', true],
@@ -102,7 +103,8 @@ export function createMap(root) {
     pointers: new Map(), drag: null, pinch: null,
     ai: [],              // [{ s: species, x, y }] from /api/ai
     fish: [],            // the game's fish, [{ s, x, y }] from /api/ai .fish
-    zones: [],           // AI zones the admins drew, from /api/ai-zones
+    zones: [],           // AI zones the admins drew, from /api/ai-zones (the prison flagged)
+    escapees: [],        // escaped inmates, [{ name, s, x, y, since }] from /api/ai .escapees
     wp: loadWaypoints(), // { target, saved }
     onTarget: null,      // told when the target changes (the launcher's overlay)
   };
@@ -253,14 +255,16 @@ export function createMap(root) {
         const f = Array.isArray(zn.outline) && zn.outline.length >= 3
           ? { kind: 'poly', at: unitsOf(zn), pts: [zn.outline.map(([x, y]) => unitsOf({ x, y }))] }
           : { kind: 'circle', at: unitsOf(zn), r: [zn.radiusM / 10, zn.radiusM / 10] };
+        // The prison (an admin zone ticked "Nhà tù"): purple, no AI in it.
+        const c = zn.prison ? '#a855f7' : LAYER.aizone.color;
         trace(ctx, f);
-        ctx.fillStyle = hexA(LAYER.aizone.color, 0.14); ctx.fill();
+        ctx.fillStyle = hexA(c, 0.14); ctx.fill();
         // A dark outline under a bright ring: the edge reads on any ground.
         ctx.lineWidth = 5.5; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
-        ctx.lineWidth = 2.5; ctx.strokeStyle = LAYER.aizone.color; ctx.stroke();
+        ctx.lineWidth = 2.5; ctx.strokeStyle = c; ctx.stroke();
         const [x, y] = scr(f.at);
-        text(ctx, zn.name, x, y - (z >= 1.8 ? 7 : 0), '700 11.5px Inter, system-ui, sans-serif', '#fed7aa');
-        if (z >= 1.8) text(ctx, zn.species.join(', '), x, y + 8, '600 10px Inter, system-ui, sans-serif', '#ffedd5');
+        text(ctx, zn.prison ? `🔒 ${zn.name}` : zn.name, x, y - (z >= 1.8 && !zn.prison ? 7 : 0), '700 11.5px Inter, system-ui, sans-serif', zn.prison ? '#e9d5ff' : '#fed7aa');
+        if (z >= 1.8 && !zn.prison) text(ctx, zn.species.join(', '), x, y + 8, '600 10px Inter, system-ui, sans-serif', '#ffedd5');
       }
     }
 
@@ -292,6 +296,21 @@ export function createMap(root) {
         ctx.fillStyle = LAYER.ai.color; ctx.fill();
         ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.stroke();
         if (z >= 3) text(ctx, a.s ?? 'AI', x, y - r - 8, '600 10.5px Inter, system-ui, sans-serif', '#fecaca');
+      }
+    }
+
+    // Escaped inmates: everyone may hunt them (the prison, bridge prison.ts). Always labelled.
+    if (st.on.has('escape')) {
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+      for (const a of st.escapees) {
+        const [x, y] = scr(unitsOf(a));
+        if (x < -20 || y < -20 || x > cw + 20 || y > ch + 20) continue;
+        ctx.beginPath(); ctx.arc(x, y, 10 + 4 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = hexA(LAYER.escape.color, 0.25); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = LAYER.escape.color; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+        text(ctx, `🚨 ${a.name ?? '?'}${a.s ? ` · ${a.s}` : ''}`, x, y - 18, '800 12px Inter, system-ui, sans-serif', '#fecdd3');
       }
     }
 
@@ -419,7 +438,7 @@ export function createMap(root) {
   // --- layers ---
   function chips() {
     root.querySelector('.map-chips').innerHTML = LAYERS.map(([id, label, color]) =>
-      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'fish' ? ` <b class="fish-n">${st.fish.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : ''}</button>`).join('');
+      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'escape' ? ` <b class="esc-n">${st.escapees.length}</b>` : id === 'fish' ? ` <b class="fish-n">${st.fish.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : ''}</button>`).join('');
   }
   root.querySelector('.map-chips').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-layer]');
@@ -523,6 +542,13 @@ export function createMap(root) {
       st.fish = Array.isArray(list) ? list.filter((a) => typeof a?.x === 'number' && typeof a?.y === 'number') : [];
       const n = root.querySelector('.map-chips .fish-n');
       if (n) n.textContent = String(st.fish.length);
+      draw();
+    },
+    /** /api/ai .escapees: escaped inmates [{ name, s, x, y, since }] (absent from an older bridge). */
+    setEscapees(list) {
+      st.escapees = Array.isArray(list) ? list.filter((a) => typeof a?.x === 'number' && typeof a?.y === 'number') : [];
+      const n = root.querySelector('.map-chips .esc-n');
+      if (n) n.textContent = String(st.escapees.length);
       draw();
     },
     /** /api/ai-zones .zones: [{ name, x, y, radiusM, species: [labels], count }]. */

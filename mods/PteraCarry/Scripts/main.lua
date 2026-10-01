@@ -48,6 +48,7 @@ end
 local H    = require("shared.isle.helpers")
 local json = require("shared.isle.json")
 local Msg  = require("shared.isle.messages")
+local Prison = require("shared.isle.prison")   -- inmates are never carried off (mods/Prison)
 
 local MOD = "PteraCarry"
 local SETTINGS_PATH = "Mods/PteraCarry/Saved/settings.json"
@@ -280,6 +281,10 @@ local function tryStart(grab, s, players, byAddr)
     if carrierId == nil or targetId == nil or carrierId == targetId then return end   -- not player to player
     local carrier, target = players[carrierId], players[targetId]
     if classOf(carrier.pawn) ~= PTERA or carries[carrierId] or carriedBy[targetId] or carries[targetId] then return end
+    if Prison.isInmate(targetId) then
+        Msg.notify(carrier.ctrl, "ptera.carry.inmate", "Không gắp được tù nhân.")
+        return
+    end
     local wait = lastCarry[carrierId] and (lastCarry[carrierId] + s.cooldown - os.time()) or 0
     if wait > 0 then
         Msg.notify(carrier.ctrl, "ptera.carry.cooldown", "Gắp đang hồi: chờ {seconds} giây.", { seconds = wait })

@@ -153,21 +153,69 @@ local function set(pawn, method, value)
     H.try("restore: " .. method, function() pawn[method](pawn, value) end)
 end
 
+local function readNumber(pawn, getter)
+    local ok, v = pcall(function() return pawn[getter](pawn) end)
+    if ok and type(v) == "number" then return v end
+    return nil
+end
+
+--- A stored current value for a dino whose max is now `newMax`: the same
+--- share of it (capped at full) when the stored max is known, else the value
+--- capped at `newMax`. nil `newMax` (unreadable): the value as stored.
+function R.scaled(value, storedMax, newMax)
+    if type(value) ~= "number" then return value end
+    if type(newMax) ~= "number" or newMax <= 0 then return value end
+    if type(storedMax) == "number" and storedMax > 0 then
+        return newMax * math.max(0, math.min(value / storedMax, 1))
+    end
+    return math.min(value, newMax)
+end
+
 --- Apply every vital. Called twice, per rule 1.
-local function applyVitals(pawn, state)
-    set(pawn, "SetMaxHunger",    state.maxHunger)
+-- The stomach and health go back as the SHARE of the max they had, on the
+-- max the game gives this dino now — never the stored absolute numbers. A
+-- prime's max health and stomach grow while it stays prime (×1.31 on a
+-- Rex); the dino taken out is a fresh prime with the base prime max. Written
+-- back as numbers, the stomach max stayed the old one until the game
+-- recomputed it (a growth tick, a relog): the stomach then stood above 100 %
+-- or was cut, and health above max was cut (2026-10-01).
+-- `stomachRatio`: MaxHunger / MaxHealth of the species (read on the fresh
+-- dino); the game's stomach at any growth, prime included.
+-- @return the stomach max written (nil when it could not be worked out)
+local function applyVitals(pawn, state, stomachRatio)
+    local maxHealth = readNumber(pawn, "GetMaxHealth")
+    local stomach = nil
+    if stomachRatio ~= nil and maxHealth ~= nil and maxHealth > 0 then
+        stomach = stomachRatio * maxHealth
+    end
+    set(pawn, "SetMaxHunger",    stomach or state.maxHunger)
     set(pawn, "SetMaxFoodValue", state.maxFoodValue)
     set(pawn, "SetMaxThirst",    state.maxThirst)
     set(pawn, "SetMaxStamina",   state.maxStamina)
 
-    set(pawn, "SetHealth",     state.health)
+    set(pawn, "SetHealth",     R.scaled(state.health, state.maxHealth, maxHealth))
     set(pawn, "SetStamina",    state.stamina)
-    set(pawn, "SetHunger",     state.hunger)
+    set(pawn, "SetHunger",     R.scaled(state.hunger, state.maxHunger, stomach))
     set(pawn, "SetThirst",     state.thirst)
     set(pawn, "SetOxygen",     state.oxygen)
     set(pawn, "SetBlood",      state.blood)
     set(pawn, "SetFood",       state.food)
     set(pawn, "SetWaterLevel", state.waterLevel)
+    return stomach
+end
+
+--- One line in UE4SS.log: every vital against its max, as the game has them
+--- once the restore is done (a relog that went wrong can be compared to it).
+local function logVitals(pawn, state)
+    local parts = {}
+    for _, v in ipairs({ "Health", "Hunger", "Thirst", "Stamina", "Blood", "Oxygen" }) do
+        local cur, max = readNumber(pawn, "Get" .. v), readNumber(pawn, "GetMax" .. v)
+        parts[#parts + 1] = string.format("%s %s/%s", v:lower(),
+            cur and string.format("%.1f", cur) or "?", max and string.format("%.1f", max) or "?")
+    end
+    H.log(string.format("restore: vitals now — %s (stored: health %s/%s, hunger %s/%s, blood %s)",
+        table.concat(parts, ", "), tostring(state.health), tostring(state.maxHealth),
+        tostring(state.hunger), tostring(state.maxHunger), tostring(state.blood)))
 end
 
 --- Write one FName slot. Strings crash; FName objects do not. A slot the
@@ -336,22 +384,24 @@ function R.apply(pawn, state, onDone)
     -- without it.
     local prime = state.isPrime
     if prime == nil and state.prime == true then prime = true end
-    -- A slot with no captured stomach (admin-made): SetGrowth brings health
-    -- and stamina to the new growth but NOT the stomach, which kept the
-    -- hatchling's until the player logged in again (a Rex at 37 % with 16.5
-    -- instead of ~125: it could not eat, 2026-09-26). Stomach / max health is
-    -- the species' own ratio at any growth: read it from the fresh dino here,
-    -- set the stomach from it after the growth.
+    -- SetGrowth brings health and stamina to the new growth but NOT the
+    -- stomach, which kept the hatchling's until the player logged in again (a
+    -- Rex at 37 % with 16.5 instead of ~125: it could not eat, 2026-09-26).
+    -- Stomach / max health is the species' own ratio at any growth, prime
+    -- included (both grow by the same factor): read it from the fresh dino
+    -- here, set the stomach from it after every growth write — for every
+    -- slot, not only the admin-made ones (see applyVitals).
     local stomachRatio = nil
-    if state.maxHunger == nil then
-        local okH, mh = pcall(function() return pawn:GetMaxHunger() end)
-        local okP, mhp = pcall(function() return pawn:GetMaxHealth() end)
-        if okH and okP and type(mh) == "number" and type(mhp) == "number" and mh > 0 and mhp > 0 then
+    do
+        local mh, mhp = readNumber(pawn, "GetMaxHunger"), readNumber(pawn, "GetMaxHealth")
+        if mh ~= nil and mhp ~= nil and mh > 0 and mhp > 0 then
             stomachRatio = mh / mhp
+        else
+            H.logError("restore: max stomach / health unreadable on the fresh dino — stored stomach max used")
         end
     end
     set(pawn, "SetGrowth", state.growth)
-    applyVitals(pawn, state)
+    applyVitals(pawn, state, stomachRatio)
     if prime ~= nil then
         H.try("restore: ServerSetPrimeEligible", function()
             pawn:ServerSetPrimeEligible(prime)
@@ -383,17 +433,11 @@ function R.apply(pawn, state, onDone)
         -- Step 5 — re-apply vitals. Rule 1: SetGrowth above wiped them. A
         -- function: a prime dino goes through it twice (step 7b).
         local function settleVitals()
-            applyVitals(pawn, state)
-
             -- The stomach for this growth (see stomachRatio above).
-            local stomach = nil
-            if stomachRatio ~= nil then
-                local okP, mhp = pcall(function() return pawn:GetMaxHealth() end)
-                if okP and type(mhp) == "number" and mhp > 0 then
-                    stomach = stomachRatio * mhp
-                    set(pawn, "SetMaxHunger", stomach)
-                    H.log(string.format("restore: stomach set to %.1f for this growth (%.3f of max health %.0f)", stomach, stomachRatio, mhp))
-                end
+            local stomach = applyVitals(pawn, state, stomachRatio)
+            if stomach ~= nil then
+                H.log(string.format("restore: stomach set to %.1f for this growth (%.3f of max health; stored max %s)",
+                    stomach, stomachRatio, tostring(state.maxHunger)))
             end
 
             -- Admin-made slots carry no captured stomach: fill it to the max
@@ -454,6 +498,8 @@ function R.apply(pawn, state, onDone)
                 H.log("restore: skin " .. tostring(wrote) .. " fields")
             end
         end
+
+        logVitals(pawn, state)
 
         if onDone then onDone(true) end
     end)

@@ -93,6 +93,18 @@ vì sao. Để người dùng quyết định.
   chỉ cập nhật DOM khi dữ liệu thật sự đổi (xem `setText` trong `overlay-page.js`).
 - Không dựng mô hình 3D dino bằng code (người dùng đã từ chối).
 
+## 4b. Sửa lỗi hay thêm chức năng: rà soát lại các luồng cũ
+
+Trước khi báo xong:
+1. Grep mọi nơi đang dùng thứ vừa sửa (`id`, `class`, hàm, key `localStorage`, nút,
+   endpoint mà trang gọi) trong cả `bridge/public`, `portal/public`, `launcher/src` —
+   không chỉ file vừa sửa.
+2. Với từng luồng đi qua chỗ đó (ví dụ một nút gara: cất, lấy ra, slot admin, dino prime;
+   trên điện thoại và máy tính; trong launcher và trình duyệt), nói rõ hành vi có đổi
+   không và vì sao vẫn đúng.
+3. Test cũ phải vẫn pass, không sửa test cho dễ qua.
+4. Báo cáo cuối task liệt kê các luồng đã rà soát và các luồng chưa kiểm tra được.
+
 ## 5. Verify sau khi sửa
 
 Chạy các lệnh phù hợp (chỉ đọc/kiểm tra, không deploy):

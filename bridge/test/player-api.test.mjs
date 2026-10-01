@@ -166,7 +166,7 @@ test('live AI for the map: species and position only, the fish apart', async () 
   const res = { writeHead: () => {}, end: (b) => { body = b; } };
   await handlePlayerApi(req, res, '/player-api/ai', { store, serverPhase: async () => 'running', live: async () => live });
   assert.deepEqual(JSON.parse(body), { t: t3, stale: false, count: 2, aiAlive: 2, list: [{ s: 'Boar', x: 10, y: 20 }],
-    fish: [{ s: 'Catfish', x: 5, y: 5 }] }, 'fish in their own list (the owner shows them to players)');
+    fish: [{ s: 'Catfish', x: 5, y: 5 }], escapees: [] }, 'fish in their own list (the owner shows them to players); no prison: no escapee');
   await handlePlayerApi(req, res, '/player-api/ai', { store, serverPhase: async () => 'running', live: async () => null });
   assert.deepEqual(JSON.parse(body).list, [], 'no live file: nothing');
 });

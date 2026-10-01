@@ -559,6 +559,50 @@ check("the game did not make it prime (this fake): the growth is not set again",
       "SetGrowth x" .. H.countCalls("SetGrowth"))
 check("the first-write flag is gone", io.open("Mods/DinoGarage/Saved/prime-write.trying", "r") == nil)
 
+print("\n-- 19b. a long-time prime comes out: stomach and health as shares of the game's max, not the old numbers --")
+-- Stored after a long prime: max health and stomach had grown (×1.31 on a Rex). The dino taken out
+-- is a fresh prime with a lower max. Written back as numbers, the stomach stood above 100 % once the
+-- game recomputed its max, and health above max was cut (2026-10-01).
+for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
+writeSettings('{"cooldown":0}')
+Storage.put(STEAM, "oldprime", { classPath = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C", growth = 1, prime = true,
+  health = 12274, maxHealth = 12274, hunger = 1100, maxHunger = 1227.4, blood = 12274 })
+local fresh19b = H.makePawn({ growth = 0.05, mutation = "None", prime = true, eligible = true, gasVitals = true })
+fresh19b.__props.MaxHunger = 10                       -- a hatchling: stomach 10 for max health 100
+local growthWrites = 0
+rawset(fresh19b, "GetMaxHealth", function()
+  if growthWrites == 0 then return 100 elseif growthWrites == 1 then return 9000 else return 10860 end
+end)
+rawset(fresh19b, "SetGrowth", function(_, v) H.record("SetGrowth", v); growthWrites = growthWrites + 1 end)
+useCtrl(H.makeCtrl(STEAM, fresh19b))
+H.calls = {}
+H.log = {}
+send("redeem", { slot = "oldprime" })
+H.advance(3100); H.advance(600)
+local lastMax, lastFood, lastHp
+for _, cl in ipairs(H.calls) do
+  if cl.what == "SetMaxHunger" then lastMax = cl.args[1] end
+  if cl.what == "SetHunger" then lastFood = cl.args[1] end
+  if cl.what == "SetHealth" then lastHp = cl.args[1] end
+end
+check("prime regrow ran (the max health the game gives now: 10,860)", growthWrites == 2, tostring(growthWrites))
+check("stomach max = the species' ratio × that max health, not the stored 1,227.4",
+      lastMax and math.abs(lastMax - 1086) < 0.01, tostring(lastMax))
+check("stomach = the same share as stored (89.6 %), never above its max",
+      lastFood and math.abs(lastFood - 1100 / 1227.4 * 1086) < 0.01 and lastFood <= lastMax, tostring(lastFood))
+check("health full as stored, on the new max — not 12,274 above a 10,860 max",
+      lastHp and math.abs(lastHp - 10860) < 0.01, tostring(lastHp))
+local vitalsLine = false
+for _, l in ipairs(H.log) do if l:find("restore: vitals now", 1, true) then vitalsLine = true end end
+check("every vital against its max logged once the restore is done", vitalsLine)
+do
+  local Restore = require("garage.restore")
+  check("scaled: a share of the stored max on the new max", Restore.scaled(50, 200, 80) == 20)
+  check("scaled: no stored max — capped at the new max", Restore.scaled(500, nil, 80) == 80 and Restore.scaled(30, nil, 80) == 30)
+  check("scaled: new max unreadable — the value as stored", Restore.scaled(500, 600, nil) == 500)
+  check("scaled: never above full", Restore.scaled(700, 600, 80) == 80)
+end
+
 print("\n-- 20. prime fixes: applied once, on the right dino only --")
 local fixLoop
 for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then fixLoop = l end end

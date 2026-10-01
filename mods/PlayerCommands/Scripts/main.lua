@@ -29,6 +29,7 @@ end
 local H    = require("shared.isle.helpers")
 local json = require("shared.isle.json")
 local Msg  = require("shared.isle.messages")   -- texts editable on the admin panel
+local Prison = require("shared.isle.prison")   -- who is serving time (mods/Prison)
 
 local MOD = "PlayerCommands"
 local SETTINGS_PATH = "Mods/PlayerCommands/Saved/settings.json"
@@ -310,6 +311,8 @@ local function doStatus(ctrl)
 end
 
 local COMMANDS = { slay = doSlay, unstuck = doUnstuck, prime = doPrime, status = doStatus, food = doFood }
+-- An inmate (mods/Prison) may not kill or move their dino out of the prison.
+local NOT_IN_PRISON = { slay = true, unstuck = true }
 
 H.onChat(function(ctrl, steamId, msg)
     local cmd = H.parseCommand(msg)
@@ -318,6 +321,10 @@ H.onChat(function(ctrl, steamId, msg)
     local settings = readSettings()
     if settings.enabled[cmd] == false then
         Msg.notify(ctrl, "cmd.disabled", "!{command} đang bị tắt trên server này.", { command = cmd })
+        return
+    end
+    if NOT_IN_PRISON[cmd] and Prison.isInmate(steamId) then
+        Msg.notify(ctrl, "cmd.prison", "!{command} không dùng được khi đang ở tù.", { command = cmd })
         return
     end
     handler(ctrl, steamId, settings)

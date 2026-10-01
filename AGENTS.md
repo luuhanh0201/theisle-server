@@ -8,7 +8,10 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 ## Hard rules
 - Never touch or delete anything under `**/Saved/` (player data).
 - Never write real secrets; use placeholders in `config/*.template`, values live in VPS `.env`.
-- Never run deploy, git, or ssh commands — propose them, the user runs them.
+- Claude Code may ssh to the VPS for read-only checks (logs, data, status).
+  Deploys, restarts and anything that changes the live server: only when the
+  user asks for it, never a restart while players are online. Other agents
+  (e.g. Antigravity) still never run deploy, git or ssh — they propose them.
 - Before writing Lua that calls game functions, read `docs/lua-safety-rules.md`.
 
 ## Lua mod rules (summary — full list in docs/lua-safety-rules.md)
@@ -20,6 +23,25 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 - Never call RequestRespawn / UpdateChat / UTISaveManager functions (crash).
 - FName fields: write FName("x"), never a Lua string.
 - Re-apply vitals after any SetGrowth.
+
+## Test server
+- `scripts/test-server.sh` (on the VPS: /home/isle/bin/test-server.sh, run as
+  `isle`): a copy of the live server at /home/isle/test, ports 7787 / 10001 / 8889.
+- The test server is always opened WITHOUT a password (bServerPassword=false).
+- Labs (SpeciesLab, StatLab…) are enabled only in the test copy's mods.txt.
+
+## Every fix or new feature: check the old flows still work
+Before calling a fix or a feature done:
+1. List every caller of what you changed (grep the function, field, event,
+   file name, API route, log line or setting) across mods/, bridge/, portal/,
+   launcher/ — not only the file you edited.
+2. For each flow that goes through it (e.g. a garage change: player store,
+   player redeem, admin-made slot, prime slot, prime fixes, unlock heal), say
+   whether its behaviour changes, and why that is fine.
+3. Keep the existing tests passing without weakening them; add a test for the
+   bug or feature next to the tests of the flows it touches.
+4. Report the flows you checked, and any you could not check (e.g. needs the
+   live server), in the final summary.
 
 ## How to verify a change
 User runs `scripts/logs.sh ue4ss` and pastes output. Look for

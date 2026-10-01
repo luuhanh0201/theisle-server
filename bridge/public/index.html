@@ -287,12 +287,120 @@
     cursor: pointer; padding: 0; margin-bottom: 14px; font-weight: 600; font-size: 13px;
   }
   .back:hover { color: var(--text); }
-  .vitals { display: grid; gap: 14px 22px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .vitals { display: grid; gap: 12px 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
   .vitals .lbl { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .vital-item {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    transition: border-color .2s;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .vital-item:hover { border-color: var(--border-strong); }
+  .vital-item .vital-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  .vital-item .vital-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .vital-item .vital-name .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex: none;
+  }
+  .vital-item .vital-vals {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    white-space: nowrap;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .vital-item .vital-cur {
+    font-weight: 800;
+    color: var(--text);
+  }
+  .vital-item .vital-pct {
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 2px;
+  }
+  .vital-item .vital-track {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--surface-3);
+    overflow: hidden;
+    position: relative;
+  }
+  .vital-item .vital-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width .4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .vital-item.low {
+    border-color: rgba(220, 38, 38, 0.3);
+  }
+  .vital-item.low .vital-cur {
+    color: var(--kill);
+  }
   .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-  .tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-  .tile .k { font-size: 11.5px; color: var(--muted); font-weight: 600; }
-  .tile .v { font-size: 19px; font-weight: 750; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .tile {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    min-width: 0;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .tile:hover { border-color: var(--border-strong); }
+  .tile .k {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile .v {
+    font-size: 18px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .tile .v .muted {
+    font-size: 12px;
+    font-weight: 600;
+  }
 
   /* ---- stored dinos + lives ------------------------------------------ */
   .section-title { display: flex; align-items: center; gap: 10px; margin: 26px 0 12px; }
@@ -323,6 +431,122 @@
   .foot { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; }
   .warnbox { font-size: 12.5px; color: var(--dmg); background: var(--dmg-soft); border-radius: 10px; padding: 8px 12px; }
   .grow-arrow { color: var(--muted); font-size: 12px; }
+  .dino-card .vitals {
+    display: grid;
+    gap: 8px 10px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  }
+  .dino-card .vital-item {
+    padding: 7px 10px;
+    gap: 5px;
+    border-radius: 8px;
+  }
+  .dino-card .vital-item .vital-head {
+    font-size: 11.5px;
+  }
+  .dino-card .vital-item .vital-name {
+    font-size: 11.5px;
+    max-width: 48%;
+  }
+  .dino-card .vital-item .vital-vals {
+    font-size: 11.5px;
+  }
+  .dino-card .vital-item .vital-pct {
+    font-size: 10.5px;
+  }
+  .dino-card .vital-item .vital-track {
+    height: 6px;
+  }
+  .card-prime-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .card-prime-box .prime-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .card-prime-box .prime-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  .card-prime-box .prime-title .crown {
+    font-size: 13px;
+  }
+  .card-prime-box .prime-count {
+    color: var(--text);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .card-prime-box .prime-sub {
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .card-prime-box .prime-cond-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 10px;
+  }
+  @media (max-width: 360px) {
+    .card-prime-box .prime-cond-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .prime-cond-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--muted);
+  }
+  .prime-cond-item.met {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .prime-cond-item .cond-check {
+    font-weight: 800;
+    font-size: 11px;
+    width: 12px;
+    text-align: center;
+    flex-shrink: 0;
+    color: var(--muted);
+  }
+  .prime-cond-item.met .cond-check {
+    color: var(--grow);
+  }
+  .prime-cond-item .cond-num {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .prime-cond-item.met .cond-num {
+    color: var(--text-2);
+  }
+  .prime-cond-item .cond-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
 
   /* ---- dino creator --------------------------------------------------- */
   .creator { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); }
@@ -1018,6 +1242,14 @@
   .garage-search-wrap .i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
   .garage-search-wrap input { padding-left: 34px; font-size: 13px; }
   .garage-stats-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .players-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .players-search-wrap { position: relative; flex: 1; min-width: 240px; }
+  .players-search-wrap .i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
+  .players-search-wrap input { padding-left: 34px; font-size: 13px; }
+  .players-pager { display: flex; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; font-size: 12.5px; }
+  .players-pager button { min-width: 34px; }
+  .players-pager button.on { background: var(--accent-2, #10b981); color: #fff; border-color: transparent; }
+  .players-pager .muted { margin-right: auto; }
   form.grid-form { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: end; }
   /* classPath is long: give it a full row at every width. */
   .wide { grid-column: 1 / -1; }
@@ -1135,13 +1367,38 @@
       <div class="dino-grid" id="player-garage"></div>
 
       <div class="section-title"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center" id="lives-ico"></span>
-        <h2>Các đời dino</h2><span class="sub">mọi dino người này đã chơi, mới nhất trước</span></div>
-      <section class="card"><div class="card-body table-wrap">
-        <table>
-          <thead><tr><th>Dino</th><th>Growth</th><th>Sống</th><th>Kill</th><th class="hide-sm">Gây / chịu dmg</th><th>Kết thúc</th><th>Nhiệm vụ</th><th class="hide-sm">Spawn lúc</th><th></th></tr></thead>
-          <tbody id="player-lives"></tbody>
-        </table>
-      </div></section>
+        <h2>Các đời dino</h2><span class="sub">mọi dino người này đã chơi, mới nhất trước</span>
+        <span class="garage-stats-pill" id="lives-stats-pill" style="margin-left:auto">0 đời dino</span>
+      </div>
+      <section class="card">
+        <div class="card-body">
+          <div class="players-toolbar" id="lives-toolbar" style="margin-bottom:14px">
+            <div style="display:inline-flex;align-items:center;gap:6px">
+              <label for="lives-filter-date" class="muted" style="margin:0;font-size:12.5px;font-weight:600;white-space:nowrap">Ngày spawn:</label>
+              <input type="date" id="lives-filter-date" style="width:auto;padding:6px 10px;font-size:12.5px">
+              <button type="button" class="btn-ghost sm" id="lives-clear-date" title="Xem tất cả ngày" style="padding:4px 8px;font-size:12px;display:none">✕</button>
+            </div>
+            <div style="display:inline-flex;align-items:center;gap:6px">
+              <label for="lives-filter-species" class="muted" style="margin:0;font-size:12.5px;font-weight:600;white-space:nowrap">Loài:</label>
+              <select id="lives-filter-species" style="width:auto;max-width:200px;padding:6px 10px;font-size:12.5px">
+                <option value="all">Tất cả loài</option>
+              </select>
+            </div>
+            <div class="seg" id="lives-filter-prime" role="group" aria-label="Lọc Prime">
+              <button type="button" class="on" data-prime="all">Tất cả</button>
+              <button type="button" data-prime="prime">👑 Prime</button>
+              <button type="button" data-prime="non-prime">Chưa Prime</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Dino</th><th>Growth</th><th>Sống</th><th>Kill</th><th class="hide-sm">Gây / chịu dmg</th><th>Kết thúc</th><th>Nhiệm vụ</th><th class="hide-sm">Spawn lúc</th><th></th></tr></thead>
+              <tbody id="player-lives"></tbody>
+            </table>
+          </div>
+          <div class="players-pager" id="lives-pager"></div>
+        </div>
+      </section>
     </div>
 
     <!-- Người chơi -->
@@ -1159,41 +1416,107 @@
           nên có thể trễ tới 5s và đôi khi không quy được ai là người giết.</p>
       </details>
         <section class="card">
-          <div class="card-head"><h2>Người chơi</h2><span class="sub" id="players-sub"></span></div>
-          <div class="card-body table-wrap">
-            <table>
-              <thead><tr>
-                <th>Người chơi</th><th title="Ping server đo, cập nhật mỗi 5 giây">Ping</th><th title="Số dino trong gara / số slot tối đa">Gara</th><th>K / D</th>
-                <th class="hide-sm">Damage</th><th class="hide-sm">Giờ chơi</th>
-              </tr></thead>
-              <tbody id="players"></tbody>
-            </table>
+          <div class="card-head">
+            <div>
+              <h2>Người chơi</h2>
+              <span class="sub" id="players-sub"></span>
+            </div>
+            <span class="garage-stats-pill" id="players-stats-pill" style="margin-left:auto">0 người chơi</span>
+          </div>
+          <div class="card-body">
+            <div class="players-toolbar" id="players-toolbar">
+              <div class="players-search-wrap">
+                <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" id="players-search" placeholder="Tìm theo tên, SteamID hoặc loài dino…" autocomplete="off">
+              </div>
+              <div class="seg" id="players-filter-status" role="group" aria-label="Lọc trạng thái">
+                <button type="button" class="on" data-status-filter="all">Tất cả</button>
+                <button type="button" data-status-filter="online">Đang online</button>
+                <button type="button" data-status-filter="offline">Offline</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr>
+                  <th>Người chơi</th>
+                  <th>SteamID</th>
+                  <th title="Ping server đo, cập nhật mỗi 5 giây">Ping</th>
+                  <th title="Số dino trong gara / số slot tối đa">Gara</th>
+                  <th>K / D</th>
+                  <th class="hide-sm">Damage</th>
+                  <th class="hide-sm">Giờ chơi</th>
+                </tr></thead>
+                <tbody id="players"></tbody>
+              </table>
+            </div>
+            <div class="players-pager" id="players-pager"></div>
           </div>
         </section>
       </div>
 
       <div data-sub="players:killfeed" hidden>
-
-      <section class="card"><div class="card-body"><ul class="feed tall" id="killfeed"></ul></div></section>
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Killfeed</h2>
+              <span class="sub" id="killfeed-sub">Nhật ký hạ gục gần nhất</span>
+            </div>
+            <span class="garage-stats-pill" id="killfeed-stats-pill" style="margin-left:auto">0 sự kiện</span>
+          </div>
+          <div class="card-body">
+            <div class="players-toolbar" id="killfeed-toolbar">
+              <div class="players-search-wrap">
+                <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" id="killfeed-search" placeholder="Tìm theo tên kẻ giết, nạn nhân hoặc loài…" autocomplete="off">
+              </div>
+            </div>
+            <ul class="feed tall" id="killfeed"></ul>
+            <div class="players-pager" id="killfeed-pager"></div>
+          </div>
+        </section>
       </div>
 
       <div data-sub="players:leaderboard" hidden>
 
       <div class="grid boards" id="boards"></div>
       <section class="card" style="margin-top:18px">
-        <div class="card-head"><h2>Con mồi lớn nhất theo loài</h2></div>
+        <div class="card-head">
+          <div>
+            <h2>Con mồi lớn nhất theo loài</h2>
+            <span class="sub">kỷ lục săn mồi theo từng loài dino</span>
+          </div>
+          <span class="garage-stats-pill" id="prey-stats-pill" style="margin-left:auto">0 loài</span>
+        </div>
         <div class="card-body table-wrap">
           <table>
             <thead><tr><th>Loài</th><th>Growth</th><th>Người giết</th><th class="hide-sm">Bằng</th><th class="hide-sm">Nạn nhân</th><th class="hide-sm">Lúc</th></tr></thead>
             <tbody id="prey"></tbody>
           </table>
+          <div class="players-pager" id="prey-pager"></div>
         </div>
       </section>
       </div>
 
       <div data-sub="players:chat" hidden>
-
-      <section class="card"><div class="card-body"><ul class="chat-list" id="chat"></ul></div></section>
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Chat trong game</h2>
+              <span class="sub" id="chat-sub">tin nhắn gần đây từ server</span>
+            </div>
+            <span class="garage-stats-pill" id="chat-stats-pill" style="margin-left:auto">0 tin nhắn</span>
+          </div>
+          <div class="card-body">
+            <div class="players-toolbar" id="chat-toolbar">
+              <div class="players-search-wrap">
+                <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" id="chat-search" placeholder="Tìm theo nội dung chat, tên người chơi hoặc SteamID…" autocomplete="off">
+              </div>
+            </div>
+            <ul class="chat-list" id="chat"></ul>
+            <div class="players-pager" id="chat-pager"></div>
+          </div>
+        </section>
       </div>
 
       <div data-sub="players:bans" hidden>
@@ -1225,13 +1548,79 @@
         </div>
         <section class="card" style="margin-top:16px"><div class="card-head"><h2>Danh sách ban</h2><span class="sub" id="ban-count"></span></div>
           <div class="card-body">
+            <div class="players-toolbar" id="bans-toolbar" style="margin-bottom:12px">
+              <div class="players-search-wrap">
+                <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" id="bans-search" placeholder="Tìm theo tên, SteamID hoặc lý do ban…" autocomplete="off">
+              </div>
+              <div class="seg" id="bans-filter-status" role="group" aria-label="Lọc trạng thái ban">
+                <button type="button" class="on" data-ban-filter="all">Tất cả</button>
+                <button type="button" data-ban-filter="active">Đang ban</button>
+                <button type="button" data-ban-filter="expired">Hết hạn</button>
+              </div>
+            </div>
             <div class="audit-table-wrap"><table class="audit-table">
               <thead><tr><th>Người chơi</th><th>Lý do</th><th>Thời hạn</th><th>Ban lúc</th><th>Hết hạn</th><th>Người ban</th><th></th></tr></thead>
               <tbody id="ban-list"></tbody></table></div>
+            <div class="players-pager" id="bans-pager"></div>
             <div class="step-hint" style="margin-top:8px">Lấy từ danh sách ban của game (PlayerBans.json). Gỡ ban / sửa: RCON không có lệnh này nên panel sửa
               thẳng danh sách của game (có sao lưu trước, và tự áp lại nếu game ghi đè). Game có áp dụng ngay khi đang chạy hay không <b>chưa kiểm chứng</b> —
               chắc chắn có hiệu lực sau lần khởi động lại server kế tiếp.</div>
           </div></section>
+      </div>
+
+      <div data-sub="players:prison" hidden>
+        <div class="step-hint" id="pr-zone-status" style="margin-bottom:12px"></div>
+        <div class="ban-grid">
+          <section class="card"><div class="card-head"><h2>Bỏ tù người chơi</h2><span class="sub">án gắn SteamID · trừ khi online và ở trong tù</span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="cfg-field"><label for="pr-player">Người chơi</label><select id="pr-player"></select></div>
+              <div class="row" id="pr-manual" hidden>
+                <input id="pr-steam" placeholder="SteamID64 (7656119…)" inputmode="numeric" maxlength="17" aria-label="SteamID64">
+                <input id="pr-name" placeholder="Tên (không bắt buộc)" maxlength="60" aria-label="Tên">
+              </div>
+              <div class="cfg-field"><label for="pr-offense">Lỗi vi phạm</label><select id="pr-offense"></select></div>
+              <div class="cfg-field"><label for="pr-minutes">Thời gian (phút)</label><input id="pr-minutes" type="number" min="1" max="100000" step="1">
+                <div class="step-hint" id="pr-calc"></div></div>
+              <div class="cfg-field"><label for="pr-reason">Lý do</label>
+                <textarea id="pr-reason" rows="2" maxlength="200" placeholder="Ghi lý do (người chơi và cả server sẽ thấy). Trống = tên lỗi."></textarea></div>
+              <div class="ban-preview" id="pr-preview"></div>
+              <div class="row"><button type="button" class="btn-danger solid" id="pr-go">Bỏ tù</button></div>
+              <div class="step-hint">Người chơi được đưa vào tù khi đang có dino (offline thì lần vào sau). Trong tù: không lớn, không đói / khát,
+                không mất máu, nhiệm vụ prime đứng yên; không dùng được !slay, !unstuck, gara; Ptera không gắp được. Ra khỏi vùng tù là
+                <b>vượt ngục</b>: cả server được báo, vị trí hiện trên bản đồ của mọi người, ai hạ được thành "Thợ săn".
+                Nội dung tin sửa ở <a href="#mods/messages">Tính năng mod → Thông báo → Nhà tù</a>.</div>
+            </div></section>
+          <section class="card"><div class="card-head"><h2>Cài đặt nhà tù</h2><span class="sub">vùng tù: tick "🔒 Nhà tù" ở một vùng trên Bản đồ</span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+              <label class="az-row"><input type="checkbox" class="switch" id="prs-enabled"> <span>Bật nhà tù</span></label>
+              <div class="cfg-field"><label for="prs-kill">Giết bạn tù trong tù: cộng án (phút)</label><input id="prs-kill" type="number" min="0" max="10000"></div>
+              <div class="cfg-field"><label for="prs-remind">Nhắc vượt ngục mỗi (phút, 0 = chỉ báo 1 lần)</label><input id="prs-remind" type="number" min="0" max="600"></div>
+              <div class="cfg-field"><label for="prs-step">Tái phạm: án × (1 + hệ số × số tiền án)</label><input id="prs-step" type="number" min="0" max="10" step="0.1"></div>
+              <div class="row">
+                <div class="cfg-field"><label for="prs-grace">Người ngoài vào: chờ (giây)</label><input id="prs-grace" type="number" min="0" max="600"></div>
+                <div class="cfg-field"><label for="prs-every">Ong đốt mỗi (giây)</label><input id="prs-every" type="number" min="1" max="60"></div>
+                <div class="cfg-field"><label for="prs-pct">% máu mỗi lần</label><input id="prs-pct" type="number" min="1" max="100"></div>
+              </div>
+              <div class="cfg-field"><label>Danh mục lỗi (tên · phút)</label><div id="prs-offenses" style="display:flex;flex-direction:column;gap:6px"></div>
+                <div class="row"><button type="button" class="btn-soft sm" id="prs-add">+ Thêm lỗi</button></div></div>
+              <div class="row"><button type="button" class="btn-soft" id="prs-save">Lưu cài đặt nhà tù</button></div>
+            </div></section>
+        </div>
+        <section class="card" style="margin-top:16px"><div class="card-head"><h2>Đang ở tù</h2><span class="sub" id="pr-count"></span></div>
+          <div class="card-body">
+            <div class="audit-table-wrap"><table class="audit-table">
+              <thead><tr><th>Người chơi</th><th>Lỗi / lý do</th><th>Còn lại</th><th>Trạng thái</th><th>Trốn</th><th>Bỏ tù bởi</th><th></th></tr></thead>
+              <tbody id="pr-list"></tbody></table></div>
+          </div></section>
+        <div class="ban-grid" style="margin-top:16px">
+          <section class="card"><div class="card-head"><h2>Lịch sử</h2><span class="sub">200 án gần nhất</span></div>
+            <div class="card-body"><div class="audit-table-wrap"><table class="audit-table">
+              <thead><tr><th>Người chơi</th><th>Lỗi / lý do</th><th>Án</th><th>Kết thúc</th><th>Trốn</th></tr></thead>
+              <tbody id="pr-history"></tbody></table></div></div></section>
+          <section class="card"><div class="card-head"><h2>🏹 Thợ săn</h2><span class="sub">hạ kẻ vượt ngục — trao thưởng tay nếu muốn</span></div>
+            <div class="card-body"><ul class="rank-list" id="pr-hunters"></ul></div></section>
+        </div>
       </div>
 
     </div>
@@ -1322,6 +1711,7 @@
                 </div></details>
               <label class="az-row"><input type="checkbox" class="switch" id="az-water"> <span>Vùng nước <span class="muted">— ven hồ/sông: cá sấu (và loài "không kích vùng") cũng kích vùng này</span></span></label>
               <label class="az-row"><input type="checkbox" class="switch" id="az-small"> <span>Chỉ dino nhỏ <span class="muted">— dino lớn bị cảnh báo rồi ong đốt (luật ở tab <b>Dino nhỏ</b>)</span></span></label>
+              <label class="az-row"><input type="checkbox" class="switch" id="az-prison"> <span>🔒 Nhà tù <span class="muted">— không sinh AI; tù nhân được thả ở các điểm mặt đất trong vùng (chỉ 1 vùng; cài đặt ở <a href="#players/prison">Người chơi → Nhà tù</a>)</span></span></label>
               <details class="az-sec"><summary>Nâng cao</summary>
                 <div class="az-grid">
                   <label>AI cách nhau tối thiểu (m)<input id="az-spacing" type="number" min="0" max="300" step="5"></label>
@@ -2927,39 +3317,292 @@ function pingCell(p) {
   return `<span class="chip ${tone}" style="font-variant-numeric:tabular-nums">${Math.round(p.ping)} ms</span>`;
 }
 
-function renderPlayers(players, garageMax) {
-  $('players-sub').textContent = `${players.filter((p) => p.online).length} online`;
-  const tbody = $('players');
-  if (players.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">Chưa có người chơi nào</td></tr>';
+function renderPager(pagerEl, total, page, limit, unit, dataAttr) {
+  if (!pagerEl) return;
+  if (total === 0) {
+    pagerEl.innerHTML = '';
     return;
   }
-  tbody.innerHTML = players.map((p) => `
-    <tr class="row-link" data-id="${esc(p.steamId)}">
-      <td><div class="who">${avatar(p.steamId, p.name)}
-        <div class="meta"><div class="nm">${esc(p.name ?? shortId(p.steamId))}
-          ${p.online ? '<span class="chip tone-accent"><span class="d"></span>online</span>' : ''}</div>
-          <div class="sp">${esc(dino(p.species))}</div></div></div></td>
-      <td>${pingCell(p)}</td>
-      <td class="${p.garage ? '' : 'muted'}" style="font-variant-numeric:tabular-nums">${p.garage ?? 0}${garageMax ? `/${garageMax}` : ''}</td>
-      <td><b>${p.kills}</b> <span class="muted">/ ${p.deaths}</span></td>
-      <td class="hide-sm">${num(p.damageDealt)}</td>
-      <td class="hide-sm muted">${dur(p.playtime)}</td>
-    </tr>`).join('');
+  const pages = Math.max(1, Math.ceil(total / limit));
+  const curPage = Math.min(Math.max(1, page), pages);
+  const startIdx = (curPage - 1) * limit;
+  const from = startIdx + 1;
+  const to = Math.min(startIdx + limit, total);
+  const btn = (p, label = String(p)) => `<button type="button" class="btn-ghost sm${p === curPage ? ' on' : ''}" data-${dataAttr}="${p}"${p < 1 || p > pages ? ' disabled' : ''}>${label}</button>`;
+  const around = [...new Set([1, curPage - 2, curPage - 1, curPage, curPage + 1, curPage + 2, pages])].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
+  let prev = 0;
+  const nums = around.map((p) => { const gap = p - prev > 1 ? '<span class="muted">…</span>' : ''; prev = p; return gap + btn(p); }).join('');
+  pagerEl.innerHTML = `<span class="muted">Hiển thị ${from}–${to} / ${total} ${unit} · trang ${curPage}/${pages}</span>${btn(curPage - 1, '‹')}${nums}${btn(curPage + 1, '›')}`;
+}
+
+const playerNamesCache = new Map();
+
+const playersState = {
+  all: [],
+  garageMax: 2,
+  page: 1,
+  limit: 20,
+  q: '',
+  status: 'all', // 'all' | 'online' | 'offline'
+  bound: false,
+};
+
+function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  } else {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    try { document.execCommand('copy'); } catch {}
+    input.remove();
+  }
+}
+
+function applyPlayersView() {
+  const tbody = $('players');
+  if (!tbody) return;
+
+  const q = playersState.q.trim().toLowerCase();
+  const stFilter = playersState.status;
+  const filtered = playersState.all.filter((p) => {
+    if (stFilter === 'online' && !p.online) return false;
+    if (stFilter === 'offline' && p.online) return false;
+    if (q) {
+      const nm = (p.name ?? '').toLowerCase();
+      const sid = String(p.steamId ?? '').toLowerCase();
+      const sp = (dino(p.species) ?? '').toLowerCase();
+      if (!nm.includes(q) && !sid.includes(q) && !sp.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const total = filtered.length;
+  const onlineCount = playersState.all.filter((p) => p.online).length;
+  if ($('players-sub')) $('players-sub').textContent = `${onlineCount} online / tổng ${playersState.all.length}`;
+  if ($('players-stats-pill')) $('players-stats-pill').textContent = `${total} người chơi`;
+
+  const limit = playersState.limit;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  if (playersState.page > pages) playersState.page = pages;
+  if (playersState.page < 1) playersState.page = 1;
+  const page = playersState.page;
+
+  const startIdx = (page - 1) * limit;
+  const pageRows = filtered.slice(startIdx, startIdx + limit);
+
+  if (pageRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">${playersState.q ? 'Không tìm thấy người chơi nào phù hợp' : 'Chưa có người chơi nào'}</td></tr>`;
+  } else {
+    tbody.innerHTML = pageRows.map((p) => `
+      <tr class="row-link" data-id="${esc(p.steamId)}">
+        <td><div class="who">${avatar(p.steamId, p.name)}
+          <div class="meta"><div class="nm">${esc(p.name ?? shortId(p.steamId))}
+            ${p.online ? '<span class="chip tone-accent"><span class="d"></span>online</span>' : ''}
+            ${p.prison ? `<span class="chip tone-kill" title="Đang ở tù: ${esc(p.prison.offense)} — còn ${esc(prDur(p.prison.remainingSec))}">${p.prison.escaped ? '🚨 trốn' : '🔒 Tù'}</span>` : ''}</div>
+            <div class="sp">${esc(dino(p.species))}</div></div></div></td>
+        <td style="white-space:nowrap">
+          <span class="mono" style="font-size:12px;user-select:all">${esc(p.steamId)}</span>
+          <button type="button" class="icon-btn" data-copy-steam="${esc(p.steamId)}" title="Sao chép SteamID" style="padding:2px 5px;margin-left:4px;vertical-align:middle;display:inline-flex;font-size:11px">📋</button>
+        </td>
+        <td>${pingCell(p)}</td>
+        <td class="${p.garage ? '' : 'muted'}" style="font-variant-numeric:tabular-nums">${p.garage ?? 0}${playersState.garageMax ? `/${playersState.garageMax}` : ''}</td>
+        <td><b>${p.kills}</b> <span class="muted">/ ${p.deaths}</span></td>
+        <td class="hide-sm">${num(p.damageDealt)}</td>
+        <td class="hide-sm muted">${dur(p.playtime)}</td>
+      </tr>`).join('');
+  }
+
+  renderPager($('players-pager'), total, page, limit, 'người chơi', 'players-page');
+}
+
+function bindPlayersToolbarOnce() {
+  if (playersState.bound) return;
+  playersState.bound = true;
+
+  const sInput = $('players-search');
+  if (sInput) {
+    sInput.addEventListener('input', () => {
+      playersState.q = sInput.value;
+      playersState.page = 1;
+      applyPlayersView();
+    });
+  }
+
+  const filterSeg = $('players-filter-status');
+  if (filterSeg) {
+    filterSeg.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-status-filter]');
+      if (!b) return;
+      filterSeg.querySelectorAll('button').forEach((el) => el.classList.remove('on'));
+      b.classList.add('on');
+      playersState.status = b.dataset.statusFilter;
+      playersState.page = 1;
+      applyPlayersView();
+    });
+  }
+
+  const pager = $('players-pager');
+  if (pager) {
+    pager.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-players-page]');
+      if (!b || b.disabled) return;
+      playersState.page = Number(b.dataset.playersPage);
+      applyPlayersView();
+    });
+  }
+}
+
+function renderPlayers(players, garageMax) {
+  playersState.all = players ?? [];
+  playersState.garageMax = garageMax ?? 2;
+  for (const p of playersState.all) {
+    if (p.steamId && p.name) playerNamesCache.set(p.steamId, p.name);
+  }
+  bindPlayersToolbarOnce();
+  applyPlayersView();
+}
+
+// --- Killfeed subtab state & pagination ---
+const killfeedState = {
+  all: [],
+  q: '',
+  page: 1,
+  limit: 20,
+  bound: false,
+};
+
+function applyKillfeedView() {
+  const el = $('killfeed');
+  if (!el) return;
+  const q = killfeedState.q.trim().toLowerCase();
+  const filtered = killfeedState.all.filter((e) => {
+    if (!q) return true;
+    const k = (e.killerName ?? e.killer ?? '').toLowerCase();
+    const v = (e.victimName ?? e.victim ?? '').toLowerCase();
+    const ks = (dino(e.killerSpecies) ?? '').toLowerCase();
+    const vs = (dino(e.victimSpecies) ?? '').toLowerCase();
+    return k.includes(q) || v.includes(q) || ks.includes(q) || vs.includes(q);
+  });
+
+  const total = filtered.length;
+  if ($('killfeed-stats-pill')) $('killfeed-stats-pill').textContent = `${total} sự kiện`;
+  if ($('killfeed-sub')) $('killfeed-sub').textContent = `Tổng cộng ${killfeedState.all.length} sự kiện`;
+
+  const limit = killfeedState.limit;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  if (killfeedState.page > pages) killfeedState.page = pages;
+  if (killfeedState.page < 1) killfeedState.page = 1;
+  const page = killfeedState.page;
+  const startIdx = (page - 1) * limit;
+  const pageItems = filtered.slice(startIdx, startIdx + limit);
+
+  renderFeed(el, pageItems, killfeedState.q ? 'Không tìm thấy sự kiện hạ gục nào' : 'Chưa có ai chết');
+  renderPager($('killfeed-pager'), total, page, limit, 'sự kiện', 'killfeed-page');
+}
+
+function bindKillfeedToolbarOnce() {
+  if (killfeedState.bound) return;
+  killfeedState.bound = true;
+  const sInput = $('killfeed-search');
+  if (sInput) {
+    sInput.addEventListener('input', () => {
+      killfeedState.q = sInput.value;
+      killfeedState.page = 1;
+      applyKillfeedView();
+    });
+  }
+  const pager = $('killfeed-pager');
+  if (pager) {
+    pager.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-killfeed-page]');
+      if (!b || b.disabled) return;
+      killfeedState.page = Number(b.dataset.killfeedPage);
+      applyKillfeedView();
+    });
+  }
+}
+
+function renderKillfeed(events) {
+  killfeedState.all = events ?? [];
+  bindKillfeedToolbarOnce();
+  applyKillfeedView();
 }
 $('players').addEventListener('click', (ev) => {
+  const copyBtn = ev.target.closest('[data-copy-steam]');
+  if (copyBtn) {
+    ev.stopPropagation();
+    copyToClipboard(copyBtn.dataset.copySteam);
+    const old = copyBtn.textContent;
+    copyBtn.textContent = '✓';
+    setTimeout(() => { copyBtn.textContent = old; }, 1200);
+    return;
+  }
   const row = ev.target.closest('tr[data-id]');
-  if (row && !ev.target.closest('a')) location.hash = `player/${row.dataset.id}`;
+  if (row && !ev.target.closest('a') && !ev.target.closest('button')) location.hash = `player/${row.dataset.id}`;
 });
 
 // --- player detail ------------------------------------------------------------
 
 let currentPlayerId = null;
 
+function vitalItem(label, cur, maxVal, color, isGrowth = false, emptyTip = 'Chưa có dữ liệu snapshot') {
+  if (cur === null || cur === undefined) {
+    return `
+      <div class="vital-item" title="${esc(label)}: ${esc(emptyTip)}">
+        <div class="vital-head">
+          <span class="vital-name" title="${esc(label)}"><i class="dot" style="background:${color}"></i>${esc(label)}</span>
+          <span class="vital-vals"><span class="vital-cur">–</span></span>
+        </div>
+        <div class="vital-track"><div class="vital-fill" style="width:0%;background:${color}"></div></div>
+      </div>`;
+  }
+  let curText = '';
+  let maxText = '';
+  let pctText = '';
+  let fullTip = '';
+  let ratio = 0;
+  let isLow = false;
+
+  if (isGrowth) {
+    const g = Number(cur) || 0;
+    ratio = Math.max(0, Math.min(1, g));
+    curText = `${(g * 100).toFixed(1)}%`;
+    maxText = '100%';
+    pctText = `${g.toFixed(2)}/1.00`;
+    fullTip = `${label}: ${curText} / ${maxText} (${pctText})`;
+  } else {
+    const c = Number(cur);
+    const m = (typeof maxVal === 'number' && maxVal > 0) ? maxVal : (c > 100 ? c : 100);
+    ratio = m > 0 ? Math.max(0, Math.min(1, c / m)) : 0;
+    curText = Math.round(c).toLocaleString('vi-VN');
+    maxText = Math.round(m).toLocaleString('vi-VN');
+    pctText = `${Math.round(ratio * 100)}%`;
+    isLow = ratio < 0.25;
+    fullTip = `${label}: ${curText} / ${maxText} (${pctText})`;
+  }
+
+  const wPct = Math.round(ratio * 1000) / 10;
+  return `
+    <div class="vital-item${isLow ? ' low' : ''}" title="${esc(fullTip)}">
+      <div class="vital-head">
+        <span class="vital-name" title="${esc(label)}"><i class="dot" style="background:${color}"></i>${esc(label)}</span>
+        <span class="vital-vals" title="${esc(fullTip)}">
+          <span class="vital-cur">${curText}</span> / ${maxText} <span class="vital-pct muted">(${pctText})</span>
+        </span>
+      </div>
+      <div class="vital-track">
+        <div class="vital-fill" style="width:${wPct}%;background:${color}"></div>
+      </div>
+    </div>`;
+}
+
 function renderPlayer(d) {
   const p = d.player;
   const id = d.steamId;
   currentPlayerId = id;
+  if (p?.name && id) playerNamesCache.set(id, p.name);
   if (p === null) {
     // Known only from the garage: an admin parked a dino for someone who has
     // not joined since the logs began.
@@ -2987,15 +3630,28 @@ function renderPlayer(d) {
       </div>`;
     $('kill-btn').onclick = () => askKill(p);
     renderKillStatus(p.steamId, d.timeline);
-    $('current-title').textContent = p.species ? `Dino hiện tại · ${dino(p.species)}` : 'Dino hiện tại';
-    const vital = (label, v, max = 100, kind = 'hp') =>
-      `<div><div class="lbl"><span>${label}</span></div>${meter(v, max, kind)}</div>`;
-    $('player-vitals').innerHTML = [
-      vital('HP', p.health), vital('Stamina', p.stamina), vital('Đói', p.hunger),
-      vital('Khát', p.thirst), vital('Oxy', p.oxygen), vital('Máu', p.blood),
-      vital('Growth', p.growth, 1, 'grow'),
-    ].join('');
-    const tile = (k, v) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+    $('current-title').textContent = p.species
+      ? `Dino hiện tại · ${dino(p.species)}${p.prime?.prime ? ' · 👑 Prime' : p.prime?.eligible ? ' · 👑 Đủ ĐK Prime' : ''}`
+      : 'Dino hiện tại';
+    const pMax = p.max || {};
+
+    if (!p.species && p.health === null && p.growth === null) {
+      $('player-vitals').innerHTML = '<div class="empty" style="grid-column:1/-1">Người chơi chưa có dino trong game</div>';
+    } else {
+      $('player-vitals').innerHTML = [
+        vitalItem('Máu (HP)', p.health, pMax.health, 'var(--kill)'),
+        vitalItem('Thể lực (Stamina)', p.stamina, pMax.stamina, 'var(--dmg)'),
+        vitalItem('Dạ dày (Đói)', p.hunger, pMax.hunger, 'var(--accent-2)'),
+        vitalItem('Nước (Khát)', p.thirst, pMax.thirst, 'var(--chat)'),
+        vitalItem('Oxy', p.oxygen, pMax.oxygen, 'var(--gar)'),
+        vitalItem('Huyết (Blood)', p.blood, pMax.blood, '#b91c1c'),
+        vitalItem('Tăng trưởng (Growth)', p.growth, 1, 'linear-gradient(90deg, var(--grow), var(--chat))', true),
+      ].join('');
+    }
+    const tile = (k, v, tip = '') => {
+      const plain = String(tip || v).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      return `<div class="tile" title="${esc(k)}: ${esc(plain)}"><div class="k" title="${esc(k)}">${esc(k)}</div><div class="v">${v}</div></div>`;
+    };
     $('player-stats').innerHTML = [
       tile('Kill', p.kills), tile('Chết', p.deaths), tile('K/D', (p.kills / Math.max(1, p.deaths)).toFixed(2)),
       tile('Gây damage', num(p.damageDealt)), tile('Chịu damage', num(p.damageTaken)), tile('Số đòn', p.hits),
@@ -3030,6 +3686,105 @@ function renderKillStatus(steamId, timeline) {
 }
 
 // --- a stored dino: everything in its slot file ---------------------------------
+
+const PRIME_TASKS = [
+  'Sanctuary', 'Nở từ tổ (?)', 'Ăn đủ ba chất', 'Nhiệm vụ 4 (?)', 'Vùng di cư', 'Vùng tuần tra',
+  'Chưa từng vô sinh', 'Chưa từng co giật cơ', 'Nuôi con (?)', 'Loài được tặng sẵn'
+];
+
+function primeConditionsOf(s) {
+  if (!s) return null;
+  const isPrime = s.isPrime === true || s.prime === true || s.prime?.prime === true;
+  const source = s.primeData || s.conditions || s.prime?.conditions || null;
+  let condMap = null;
+  let doneCount = 0;
+  let hasData = false;
+
+  if (source && typeof source === 'object') {
+    hasData = true;
+    condMap = {};
+    for (let i = 1; i <= 10; i++) {
+      const v = source[`cond${i}`] ?? source[String(i)] ?? source[i];
+      const met = v === true;
+      condMap[i] = met;
+      if (met) doneCount++;
+    }
+  } else if (typeof s.primeConditions === 'string' && /^[01]{10}$/.test(s.primeConditions)) {
+    hasData = true;
+    condMap = {};
+    for (let i = 1; i <= 10; i++) {
+      const met = s.primeConditions[i - 1] === '1';
+      condMap[i] = met;
+      if (met) doneCount++;
+    }
+  }
+
+  const isEligible = isPrime || (s.primeData?.eligible === true) || (s.prime?.eligible === true) || (s.eligible === true) || (doneCount >= 5);
+  return {
+    isPrime,
+    isEligible,
+    doneCount,
+    hasData,
+    condMap,
+  };
+}
+
+function renderCardPrime(primeInfo) {
+  if (!primeInfo || (!primeInfo.hasData && !primeInfo.isPrime && !primeInfo.isEligible)) {
+    return `
+      <div class="card-prime-box">
+        <div class="prime-head">
+          <span class="prime-title"><span class="crown">👑</span> Điều kiện Prime Elder</span>
+          <span class="chip tone-neutral">Chưa có dữ liệu</span>
+        </div>
+        <div class="muted" style="font-size:11.5px">Chưa có snapshot nhiệm vụ Prime cho dino này.</div>
+      </div>`;
+  }
+
+  const { isPrime, isEligible, doneCount, hasData, condMap } = primeInfo;
+  const badge = isPrime
+    ? '<span class="chip tone-grow">👑 Đã là Prime Elder</span>'
+    : isEligible
+    ? '<span class="chip tone-accent">✓ Đủ ĐK Prime</span>'
+    : '<span class="chip tone-neutral">Chưa đủ ĐK</span>';
+
+  if (!hasData) {
+    return `
+      <div class="card-prime-box">
+        <div class="prime-head">
+          <span class="prime-title"><span class="crown">👑</span> Trạng thái Prime Elder</span>
+          ${badge}
+        </div>
+        <div class="muted" style="font-size:11.5px">${isPrime ? 'Dino đã đạt danh hiệu Prime Elder.' : 'Chưa có dữ liệu 10 nhiệm vụ.'}</div>
+      </div>`;
+  }
+
+  const items = PRIME_TASKS.map((taskName, i) => {
+    const num = i + 1;
+    const met = condMap?.[num] === true;
+    return `
+      <div class="prime-cond-item ${met ? 'met' : 'unmet'}" title="${num}. ${esc(taskName)}: ${met ? 'Đã đạt' : 'Chưa đạt'}">
+        <span class="cond-check">${met ? '✓' : '○'}</span>
+        <span class="cond-num">${num}.</span>
+        <span class="cond-name">${esc(taskName)}</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="card-prime-box">
+      <div class="prime-head">
+        <span class="prime-title">
+          <span class="crown">👑</span> Điều kiện Prime:
+          <span class="prime-count">${doneCount}/10 đạt</span>
+          <span class="prime-sub muted">(cần 5)</span>
+        </span>
+        ${badge}
+      </div>
+      <div class="prime-cond-grid">
+        ${items}
+      </div>
+    </div>`;
+}
 
 const NUTRIENTS = [
   ['carbValue', 'Carb'], ['proteinValue', 'Protein'], ['lipidValue', 'Lipid'],
@@ -3069,15 +3824,34 @@ function storedDinoCard({ slot, meta, state }, { owner = null } = {}) {
   const s = state ?? {};
   const species = dino(s.classPath ?? meta.classPath);
   const h = hue(species);
+  const primeInfo = primeConditionsOf(s);
+  const emptyTip = s.createdBy === 'admin' ? 'Giữ nguyên chỉ số lúc lấy ra' : 'Chưa có dữ liệu snapshot';
+
   const tags = [
     `<span class="chip tone-gar">slot ${esc(slot)}</span>`,
     s.isFemale === true ? '<span class="chip tone-grow">♀ cái</span>' : s.isFemale === false ? '<span class="chip tone-chat">♂ đực</span>' : '',
-    s.isPrime === true ? '<span class="chip tone-dmg">Prime</span>' : '',
+    primeInfo?.isPrime ? '<span class="chip tone-grow">👑 Prime</span>'
+      : primeInfo?.isEligible ? `<span class="chip tone-accent">👑 Đủ ĐK Prime (${primeInfo.doneCount}/10)</span>`
+      : (primeInfo?.hasData ? `<span class="chip tone-neutral">Nhiệm vụ ${primeInfo.doneCount}/10</span>` : ''),
+    (s.elderStacks && s.elderStacks > 0) ? `<span class="chip tone-dmg">Elder x${s.elderStacks}</span>` : '',
     s.createdBy === 'admin' ? '<span class="chip tone-kill">admin tạo</span>' : '',
-  ].join('');
+  ].filter(Boolean).join('');
+
   const nutrients = s.nutrients ?? {};
   const hasNutrients = NUTRIENTS.some(([k]) => isNum(nutrients[k]));
   const loc = s.location;
+
+  const vitalsList = [
+    vitalItem('Tăng trưởng (Growth)', s.growth ?? meta.growth ?? null, 1, 'linear-gradient(90deg, var(--grow), var(--chat))', true, emptyTip),
+    vitalItem('Máu (HP)', s.health, s.maxHealth, 'var(--kill)', false, emptyTip),
+    vitalItem('Thể lực (Stamina)', s.stamina, s.maxStamina, 'var(--dmg)', false, emptyTip),
+    vitalItem('Dạ dày (Đói)', s.hunger, s.maxHunger, 'var(--accent-2)', false, emptyTip),
+    vitalItem('Nước (Khát)', s.thirst, s.maxThirst, 'var(--chat)', false, emptyTip),
+    vitalItem('Oxy', s.oxygen, s.maxOxygen, 'var(--gar)', false, emptyTip),
+    vitalItem('Huyết (Blood)', s.blood, s.maxBlood ?? s.maxHealth, '#b91c1c', false, emptyTip),
+    isNum(s.food) ? vitalItem('Thức ăn bụng', s.food, s.maxFoodValue, 'var(--accent)', false, emptyTip) : '',
+    isNum(s.waterLevel) ? vitalItem('Mức nước', s.waterLevel, 100, 'var(--chat)', false, emptyTip) : '',
+  ].filter(Boolean).join('');
 
   return `<section class="card dino-card">
     <div class="head">
@@ -3091,18 +3865,10 @@ function storedDinoCard({ slot, meta, state }, { owner = null } = {}) {
     </div>
     ${state === null ? '<div class="warnbox">Không đọc được file slot — chỉ còn thông tin trong index.</div>' : ''}
     ${s.createdBy === 'admin' ? '<div class="muted" style="font-size:12px">Chỉ số để trống sẽ giữ nguyên giá trị của dino lúc người chơi lấy ra.</div>' : ''}
-    <div><div class="lbl" style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px">
-      <span>Growth</span></div>${meter(s.growth ?? meta.growth ?? null, 1, 'grow')}</div>
-    <div class="kv">
-      ${kvItem('HP', s.health)}
-      ${kvItem('Stamina', s.stamina, s.maxStamina)}
-      ${kvItem('Đói', s.hunger, s.maxHunger)}
-      ${kvItem('Khát', s.thirst, s.maxThirst)}
-      ${kvItem('Thức ăn trong bụng', s.food, s.maxFoodValue)}
-      ${kvItem('Nước', s.waterLevel)}
-      ${kvItem('Oxy', s.oxygen)}
-      ${kvItem('Máu', s.blood)}
+    <div class="vitals">
+      ${vitalsList}
     </div>
+    ${renderCardPrime(primeInfo)}
     <details class="more" data-slot="${esc(slot)}"${openSlots.has(slot) ? ' open' : ''}>
       <summary>Mutation, dinh dưỡng và chi tiết khác</summary>
       <div class="inner">
@@ -3164,17 +3930,96 @@ function lifeEnd(l, online, isCurrent) {
 
 // The bridge keeps the whole path of the last PATH_LIVES (5) lives.
 const PATH_LIVES = 5;
-function renderLives(lives, online, steamId) {
-  $('lives-ico').innerHTML = icon('growth');
+const lifeDetailCache = { steamId: null, at: 0, map: null };
+
+function localIsoDate(t) {
+  if (!t) return '';
+  const d = new Date(t * 1000);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const livesState = {
+  all: [],
+  steamId: null,
+  online: false,
+  date: '',
+  species: 'all',
+  prime: 'all', // 'all' | 'prime' | 'non-prime'
+  page: 1,
+  limit: 10,
+  bound: false,
+};
+
+function applyLivesView() {
   const tbody = $('player-lives');
-  if (lives.length === 0) {
+  if (!tbody) return;
+
+  const clearBtn = $('lives-clear-date');
+  if (clearBtn) clearBtn.style.display = livesState.date ? 'inline-flex' : 'none';
+
+  if (livesState.all.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9" class="empty">Chưa thấy người này spawn dino nào</td></tr>';
+    if ($('lives-stats-pill')) $('lives-stats-pill').textContent = '0 đời dino';
+    if ($('lives-pager')) $('lives-pager').innerHTML = '';
     return;
   }
-  const draw = (details) => { tbody.innerHTML = lives.map((l, i) => {
+
+  const details = (lifeDetailCache.steamId === livesState.steamId ? lifeDetailCache.map : null) ?? new Map();
+  const recentLivesSet = new Set(livesState.all.slice(0, PATH_LIVES).map((x) => x.spawnedAt));
+  const currentSpawnedAt = livesState.all[0].spawnedAt;
+
+  const filtered = livesState.all.filter((l) => {
+    if (livesState.date) {
+      if (localIsoDate(l.spawnedAt) !== livesState.date) return false;
+    }
+    if (livesState.species !== 'all' && l.species !== livesState.species) {
+      return false;
+    }
+    if (livesState.prime !== 'all') {
+      const d = details.get(l.spawnedAt);
+      const isPrime = Boolean(
+        d?.prime?.prime ||
+        (d?.prime?.elderStacks != null && d.prime.elderStacks > 0) ||
+        (l.elderStacks != null && l.elderStacks > 0)
+      );
+      if (livesState.prime === 'prime' && !isPrime) return false;
+      if (livesState.prime === 'non-prime' && isPrime) return false;
+    }
+    return true;
+  });
+
+  const total = filtered.length;
+  if ($('lives-stats-pill')) {
+    if (total === livesState.all.length) {
+      $('lives-stats-pill').textContent = `${total} đời dino`;
+    } else {
+      $('lives-stats-pill').textContent = `${total} / ${livesState.all.length} đời dino`;
+    }
+  }
+
+  const limit = livesState.limit;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  if (livesState.page > pages) livesState.page = pages;
+  if (livesState.page < 1) livesState.page = 1;
+  const page = livesState.page;
+  const startIdx = (page - 1) * limit;
+  const pageItems = filtered.slice(startIdx, startIdx + limit);
+
+  if (pageItems.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Không tìm thấy đời dino nào phù hợp với bộ lọc</td></tr>';
+    renderPager($('lives-pager'), total, page, limit, 'đời dino', 'lives-page');
+    return;
+  }
+
+  tbody.innerHTML = pageItems.map((l) => {
     const d = details.get(l.spawnedAt);
     const alive = l.endedAt === null;
     const length = (alive ? l.lastAt : l.endedAt) - l.spawnedAt;
+    const isCurrent = l.spawnedAt === currentSpawnedAt;
+    const hasPath = recentLivesSet.has(l.spawnedAt);
     return `<tr>
       <td><div class="who"><span class="avatar sm" style="background:hsl(${hue(dino(l.species))} 60% 45%)">${esc(dino(l.species)[0] ?? '?')}</span>
         <div class="meta"><div class="nm">${esc(dino(l.species))}</div>
@@ -3183,16 +4028,110 @@ function renderLives(lives, online, steamId) {
       <td>${dur(length)}${alive ? '<span class="muted">+</span>' : ''}</td>
       <td><b>${l.kills}</b></td>
       <td class="hide-sm">${num(l.damageDealt)} <span class="muted">/ ${num(l.damageTaken)}</span></td>
-      <td>${lifeEnd(l, online, i === 0)}</td>
+      <td>${lifeEnd(l, livesState.online, isCurrent)}</td>
       <td>${lifeTasks(d)}</td>
       <td class="hide-sm muted">${esc(dateTime(l.spawnedAt))}</td>
-      <td><div style="display:flex;gap:6px;justify-content:flex-end">${lifeRestore(d, steamId)}${i < PATH_LIVES ? `<a class="btn-soft sm" style="white-space:nowrap" href="#map/path/${esc(encodeURIComponent(steamId))}/${l.spawnedAt}">Đường đi</a>` : ''}</div></td>
+      <td><div style="display:flex;gap:6px;justify-content:flex-end">${lifeRestore(d, livesState.steamId)}${hasPath ? `<a class="btn-soft sm" style="white-space:nowrap" href="#map/path/${esc(encodeURIComponent(livesState.steamId))}/${l.spawnedAt}">Đường đi</a>` : ''}</div></td>
     </tr>`;
-  }).join(''); };
-  // Prime tasks, and what can be put back in the garage: from the events
-  // (life-history.ts reads the whole events file) — so once a minute, not on every 2 s tick.
+  }).join('');
+
+  renderPager($('lives-pager'), total, page, limit, 'đời dino', 'lives-page');
+}
+
+function bindLivesToolbarOnce() {
+  if (livesState.bound) return;
+  livesState.bound = true;
+
+  const dateInput = $('lives-filter-date');
+  if (dateInput) {
+    dateInput.addEventListener('change', () => {
+      livesState.date = dateInput.value;
+      livesState.page = 1;
+      applyLivesView();
+    });
+  }
+
+  const clearDate = $('lives-clear-date');
+  if (clearDate) {
+    clearDate.addEventListener('click', () => {
+      if (dateInput) dateInput.value = '';
+      livesState.date = '';
+      livesState.page = 1;
+      applyLivesView();
+    });
+  }
+
+  const speciesSelect = $('lives-filter-species');
+  if (speciesSelect) {
+    speciesSelect.addEventListener('change', () => {
+      livesState.species = speciesSelect.value;
+      livesState.page = 1;
+      applyLivesView();
+    });
+  }
+
+  const primeFilter = $('lives-filter-prime');
+  if (primeFilter) {
+    primeFilter.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-prime]');
+      if (!b) return;
+      primeFilter.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+      b.classList.add('on');
+      livesState.prime = b.dataset.prime;
+      livesState.page = 1;
+      applyLivesView();
+    });
+  }
+
+  const pager = $('lives-pager');
+  if (pager) {
+    pager.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-lives-page]');
+      if (!b || b.disabled) return;
+      livesState.page = Number(b.dataset.livesPage);
+      applyLivesView();
+    });
+  }
+}
+
+function renderLives(lives, online, steamId) {
+  $('lives-ico').innerHTML = icon('growth');
+
+  if (livesState.steamId !== steamId) {
+    livesState.steamId = steamId;
+    livesState.date = '';
+    livesState.species = 'all';
+    livesState.prime = 'all';
+    livesState.page = 1;
+    if ($('lives-filter-date')) $('lives-filter-date').value = '';
+    const primeBtns = document.querySelectorAll('#lives-filter-prime button');
+    primeBtns.forEach((b) => b.classList.toggle('on', b.dataset.prime === 'all'));
+  }
+  livesState.all = lives ?? [];
+  livesState.online = Boolean(online);
+
+  const speciesSelect = $('lives-filter-species');
+  if (speciesSelect) {
+    const prevSpecies = livesState.species;
+    const speciesSet = new Set();
+    for (const l of livesState.all) {
+      if (l.species) speciesSet.add(l.species);
+    }
+    const sortedSpecies = Array.from(speciesSet).sort((a, b) => dino(a).localeCompare(dino(b), 'vi'));
+    speciesSelect.innerHTML = '<option value="all">Tất cả loài</option>' +
+      sortedSpecies.map((sp) => `<option value="${esc(sp)}">${esc(dino(sp))}</option>`).join('');
+    if (speciesSet.has(prevSpecies)) {
+      speciesSelect.value = prevSpecies;
+    } else {
+      speciesSelect.value = 'all';
+      livesState.species = 'all';
+    }
+  }
+
+  bindLivesToolbarOnce();
+
   const cached = lifeDetailCache.steamId === steamId ? lifeDetailCache : null;
-  draw(cached?.map ?? new Map());
+  applyLivesView();
   if (cached && Date.now() - cached.at < 60_000) return;
   lifeDetailCache.steamId = steamId;
   lifeDetailCache.at = Date.now();
@@ -3200,11 +4139,10 @@ function renderLives(lives, online, steamId) {
     .then((r) => {
       if (lifeDetailCache.steamId !== steamId) return;
       lifeDetailCache.map = new Map(r.lives.map((x) => [x.spawnedAt, x]));
-      draw(lifeDetailCache.map);
+      applyLivesView();
     })
     .catch(() => { lifeDetailCache.at = 0; });
 }
-const lifeDetailCache = { steamId: null, at: 0, map: null };
 
 /** "6/10 · 👑" — the prime tasks a life had done when last read. */
 function lifeTasks(d) {
@@ -3228,10 +4166,11 @@ document.addEventListener('click', (ev) => {
   const b = ev.target.closest?.('button[data-restore]');
   if (!b) return;
   const steamId = b.dataset.steam, spawnedAt = Number(b.dataset.restore), label = b.dataset.label;
+  const ownerName = playerNamesCache.get(steamId);
   confirmAction({
     title: 'Khôi phục dino vào gara?',
     body: `Đưa <b>${esc(label)}</b> (spawn ${esc(dateTime(spawnedAt))}) vào gara của
-      <span class="mono">${esc(steamId)}</span> như lúc trước khi chết: growth, đột biến, nhiệm vụ prime,
+      ${ownerName ? `<b>${esc(ownerName)}</b> (<span class="mono">${esc(steamId)}</span>)` : `<span class="mono">${esc(steamId)}</span>`} như lúc trước khi chết: growth, đột biến, nhiệm vụ prime,
       prime, elder, giới tính, màu. Máu / dạ dày / dinh dưỡng không được ghi lại nên dino ra sẽ khoẻ và no.
       Mỗi đời chỉ khôi phục được một lần.`,
     okLabel: 'Khôi phục',
@@ -3261,6 +4200,53 @@ function board(title, ic, tone, rows, value) {
     <div class="card-body"><ul class="rank-list">${body}</ul></div></section>`;
 }
 
+// --- Leaderboard subtab & prey pagination ---
+const preyState = {
+  all: [],
+  page: 1,
+  limit: 20,
+  bound: false,
+};
+
+function applyPreyView() {
+  const tbody = $('prey');
+  if (!tbody) return;
+  const total = preyState.all.length;
+  if ($('prey-stats-pill')) $('prey-stats-pill').textContent = `${total} loài`;
+
+  const limit = preyState.limit;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  if (preyState.page > pages) preyState.page = pages;
+  if (preyState.page < 1) preyState.page = 1;
+  const page = preyState.page;
+  const startIdx = (page - 1) * limit;
+  const pageRows = preyState.all.slice(startIdx, startIdx + limit);
+
+  if (pageRows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Chưa có kill nào được quy cho người chơi</td></tr>';
+  } else {
+    tbody.innerHTML = pageRows.map((k) => `<tr>
+        <td><b>${esc(dino(k.species))}</b></td><td>${meter(k.growth, 1, 'grow')}</td>
+        <td>${who(k.killer, k.killerName)}</td><td class="hide-sm muted">${esc(dino(k.killerSpecies))}</td>
+        <td class="hide-sm">${who(k.victim, k.victimName)}</td><td class="hide-sm muted">${esc(dateTime(k.t))}</td></tr>`).join('');
+  }
+  renderPager($('prey-pager'), total, page, limit, 'loài', 'prey-page');
+}
+
+function bindPreyOnce() {
+  if (preyState.bound) return;
+  preyState.bound = true;
+  const pager = $('prey-pager');
+  if (pager) {
+    pager.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-prey-page]');
+      if (!b || b.disabled) return;
+      preyState.page = Number(b.dataset.preyPage);
+      applyPreyView();
+    });
+  }
+}
+
 function renderLeaderboard(b) {
   $('boards').innerHTML = [
     board('Nhiều kill nhất', 'death', 'tone-kill', b.kills, (p) => p.kills),
@@ -3270,12 +4256,9 @@ function renderLeaderboard(b) {
     board('Sống lâu nhất', 'growth', 'tone-grow', b.longestLife,
       (p) => `${dur(p.longestLife)}<small>${esc(dino(p.longestLifeSpecies) || '')}${p.longestLifeAlive ? ' · còn sống' : ''}</small>`),
   ].join('');
-  $('prey').innerHTML = b.biggestPrey.length === 0
-    ? '<tr><td colspan="6" class="empty">Chưa có kill nào được quy cho người chơi</td></tr>'
-    : b.biggestPrey.map((k) => `<tr>
-        <td><b>${esc(dino(k.species))}</b></td><td>${meter(k.growth, 1, 'grow')}</td>
-        <td>${who(k.killer, k.killerName)}</td><td class="hide-sm muted">${esc(dino(k.killerSpecies))}</td>
-        <td class="hide-sm">${who(k.victim, k.victimName)}</td><td class="hide-sm muted">${esc(dateTime(k.t))}</td></tr>`).join('');
+  preyState.all = b.biggestPrey ?? [];
+  bindPreyOnce();
+  applyPreyView();
 }
 
 // --- live map -----------------------------------------------------------------
@@ -3598,10 +4581,12 @@ function drawMap() {
       const f = aiZoneShape(zn);
       const st = az.status?.zones?.[zn.id];
       const sel = az.sel === zn.id;
-      const on = az.draft.enabled && zn.enabled;
-      const c = on ? '#fb923c' : '#cbd5e1';
+      // The prison does not depend on the AI zones being on: purple when it is enabled.
+      const on = zn.prison ? zn.enabled : az.draft.enabled && zn.enabled;
+      const hue = zn.prison ? '#a855f7' : '#fb923c';
+      const c = on ? hue : '#cbd5e1';
       traceShape(ctx, f);
-      ctx.fillStyle = on ? hexA('#fb923c', sel ? 0.24 : 0.14) : 'rgba(148,163,184,.12)';
+      ctx.fillStyle = on ? hexA(hue, sel ? 0.24 : 0.14) : 'rgba(148,163,184,.12)';
       ctx.fill();
       ctx.lineWidth = sel ? 7 : 5.5; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
       ctx.setLineDash(on ? [] : [8, 6]);
@@ -3806,7 +4791,7 @@ function drawMap() {
     ctx.beginPath(); ctx.arc(x, y, 7.5, 0, Math.PI * 2);
     ctx.fillStyle = c; ctx.fill();
     ctx.lineWidth = 2.5; ctx.strokeStyle = hp !== null && hp < 0.3 ? '#ef4444' : '#fff'; ctx.stroke();
-    drawText(ctx, p.name ?? shortId(p.steamId), x + 13, y - 6, { font: '700 12px Inter, system-ui, sans-serif', color: '#fff', align: 'left' });
+    drawText(ctx, `${p.prison ? (p.prison.escaped ? '🚨 ' : '🔒 ') : ''}${p.name ?? shortId(p.steamId)}`, x + 13, y - 6, { font: '700 12px Inter, system-ui, sans-serif', color: p.prison?.escaped ? '#fca5a5' : '#fff', align: 'left' });
     drawText(ctx, `${dino(p.species)} · ${pct(p.growth)}`, x + 13, y + 8, { font: '600 10.5px Inter, system-ui, sans-serif', color: '#cbd5e1', align: 'left' });
   }
 
@@ -4084,6 +5069,7 @@ function renderAiZones() {
     : d.zones.map((zn) => {
       const s = st?.zones?.[zn.id];
       const n = s && typeof s.count === 'number' ? `${s.count}/${s.limit ?? zn.max}${s.occupied ? ' · có người' : ''}` : `${zn.min}–${zn.max}`;
+      if (zn.prison) return `<li data-az="${esc(zn.id)}" class="${zn.id === az.sel ? 'on' : ''}${zn.enabled ? '' : ' off'}"><span class="sw" style="background:#a855f7;width:10px;height:10px;border-radius:50%"></span>🔒 ${esc(zn.name)}<span class="n">nhà tù</span></li>`;
       return `<li data-az="${esc(zn.id)}" class="${zn.id === az.sel ? 'on' : ''}${zn.enabled ? '' : ' off'}"><span class="sw" style="background:#fb923c;width:10px;height:10px;border-radius:50%"></span>${esc(zn.name)}<span class="n">${esc(n)}</span></li>`;
     }).join('');
   renderAiZoneForm();
@@ -4110,6 +5096,7 @@ function renderAiZoneForm() {
   set('az-name', zn.name);
   $('az-zenabled').checked = zn.enabled;
   $('az-small').checked = zn.smallOnly === true;
+  $('az-prison').checked = zn.prison === true;
   $('az-water').checked = zn.water === true;
   set('az-radius', zn.radiusM);
   set('az-radius2', zn.radius2M ?? '');
@@ -4243,6 +5230,9 @@ $('az-edit').addEventListener('input', (e) => {
     zn.enabled = $('az-zenabled').checked;
     zn.smallOnly = $('az-small').checked;
     zn.water = $('az-water').checked;
+    // One prison only: ticking it here unticks it elsewhere.
+    zn.prison = $('az-prison').checked;
+    if (zn.prison) for (const o of az.draft.zones) if (o !== zn) o.prison = false;
     if (zn.shape !== 'polygon') zn.radiusM = n('az-radius');
     if (zn.shape === 'ellipse') { zn.radius2M = n('az-radius2'); zn.angleDeg = n('az-angle'); }
     zn.min = n('az-min'); zn.max = n('az-max'); zn.perTurnMin = n('az-ptmin'); zn.perTurnMax = n('az-ptmax'); zn.everySec = n('az-every'); zn.spacingM = n('az-spacing');
@@ -4406,7 +5396,7 @@ $('reset-cancel').addEventListener('click', () => withToken('huỷ làm mới AI
 // --- messages: every text players get, and how often (bridge/src/messages.ts) ---
 
 const MSG_GROUPS = [
-  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ban', 'Ban người chơi'], ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ'], ['garage', 'Gara — cất dino'],
+  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ban', 'Ban người chơi'], ['prison', 'Nhà tù'], ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ / ong đốt khu tù'], ['garage', 'Gara — cất dino'],
   ['redeem', 'Gara — lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
   ['admin', 'Admin'], ['hello', 'Chào mừng'], ['prime', 'Nhiệm vụ prime'], ['skin', 'Đổi màu dino (web)'],
 ];
@@ -4461,6 +5451,7 @@ const MSG_SAMPLE = {
   left: '5 phút', leftEn: '5 min', time: '04:00', count: '42', seconds: '30', wait: '2 phút', meters: '25',
   species: 'Carnotaurus', kg: '850', max: '150', slot: 'default', maxSlots: '5', growth: '80', pct: '5', every: '5',
   zone: 'Sanctuary 67', command: 'slay', error: 'slot trống', prime: 'có', eligible: 'chưa',
+  offense: 'Giết baby', times: '2', minutes: '10', hunter: 'Dã Tượng', escapes: '1',
 };
 const msgExample = (text) => String(text).replace(/\{(\w+)\}/g, (all, k) => MSG_SAMPLE[k] ?? all);
 
@@ -4730,7 +5721,7 @@ function tipHtml(h) {
   if (h.player) {
     const p = h.player;
     const hp = p.maxHealth > 0 && typeof p.health === 'number' ? ` · máu ${Math.round(p.health / p.maxHealth * 100)}%` : '';
-    return `<b>${esc(p.name ?? shortId(p.steamId))}</b><br>${esc(dino(p.species))} · ${pct(p.growth)}${hp}<br><span class="m">bấm để mở trang người chơi</span>`;
+    return `<b>${esc(p.name ?? shortId(p.steamId))}</b>${p.prison ? ` <span style="color:#fca5a5">${p.prison.escaped ? '🚨 đang trốn ngục' : '🔒 ở tù'} · còn ${esc(prDur(p.prison.remainingSec))}</span>` : ''}<br>${esc(dino(p.species))} · ${pct(p.growth)}${hp}<br><span class="m">bấm để mở trang người chơi</span>`;
   }
   const f = h.f;
   if (h.mark) {
@@ -5116,16 +6107,75 @@ function renderMap(players, ai = null) {
 
 // --- chat ---------------------------------------------------------------------
 
-function renderChat(events) {
+const chatState = {
+  all: [],
+  q: '',
+  page: 1,
+  limit: 20,
+  bound: false,
+};
+
+function applyChatView() {
   const el = $('chat');
-  if (events.length === 0) {
-    el.innerHTML = '<li class="empty">Chưa có tin chat</li>';
-    return;
+  if (!el) return;
+  const q = chatState.q.trim().toLowerCase();
+  const filtered = chatState.all.filter((e) => {
+    if (!q) return true;
+    const msg = (e.message ?? '').toLowerCase();
+    const nm = (e.name ?? '').toLowerCase();
+    const sid = String(e.steamId ?? '').toLowerCase();
+    return msg.includes(q) || nm.includes(q) || sid.includes(q);
+  });
+
+  const total = filtered.length;
+  if ($('chat-stats-pill')) $('chat-stats-pill').textContent = `${total} tin nhắn`;
+  if ($('chat-sub')) $('chat-sub').textContent = `Tổng cộng ${chatState.all.length} tin nhắn`;
+
+  const limit = chatState.limit;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  if (chatState.page > pages) chatState.page = pages;
+  if (chatState.page < 1) chatState.page = 1;
+  const page = chatState.page;
+  const startIdx = (page - 1) * limit;
+  const pageItems = filtered.slice(startIdx, startIdx + limit);
+
+  if (pageItems.length === 0) {
+    el.innerHTML = `<li class="empty">${chatState.q ? 'Không tìm thấy tin nhắn nào' : 'Chưa có tin chat'}</li>`;
+  } else {
+    el.innerHTML = pageItems.map((e) => `<li>${avatar(e.steamId, e.name)}
+      <div class="bubble ${/^\s*!/.test(e.message) ? 'cmd' : ''}">
+        <div class="top">${who(e.steamId, e.name)}<span class="muted" title="${esc(dateTime(e.t))}">${clock(e.t)}</span></div>
+        <div class="txt">${esc(e.message)}</div></div></li>`).join('');
   }
-  el.innerHTML = events.map((e) => `<li>${avatar(e.steamId, e.name)}
-    <div class="bubble ${/^\s*!/.test(e.message) ? 'cmd' : ''}">
-      <div class="top">${who(e.steamId, e.name)}<span class="muted" title="${esc(dateTime(e.t))}">${clock(e.t)}</span></div>
-      <div class="txt">${esc(e.message)}</div></div></li>`).join('');
+  renderPager($('chat-pager'), total, page, limit, 'tin nhắn', 'chat-page');
+}
+
+function bindChatToolbarOnce() {
+  if (chatState.bound) return;
+  chatState.bound = true;
+  const sInput = $('chat-search');
+  if (sInput) {
+    sInput.addEventListener('input', () => {
+      chatState.q = sInput.value;
+      chatState.page = 1;
+      applyChatView();
+    });
+  }
+  const pager = $('chat-pager');
+  if (pager) {
+    pager.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-chat-page]');
+      if (!b || b.disabled) return;
+      chatState.page = Number(b.dataset.chatPage);
+      applyChatView();
+    });
+  }
+}
+
+function renderChat(events) {
+  chatState.all = events ?? [];
+  bindChatToolbarOnce();
+  applyChatView();
 }
 
 // --- garage -------------------------------------------------------------------
@@ -5597,6 +6647,7 @@ function renderPreview() {
     meta: { classPath, growth: creator.growth / 100, capturedAt: now },
     state: { classPath, growth: creator.growth / 100,
              isPrime: primeWanted() || null, elderStacks: elderStacksWanted(),
+             primeConditions: primeCode(),
              mutations: chosenMutations(), createdBy: 'admin', version: 1 },
   });
   // The mutations are the point of the preview: show them without a click.
@@ -5609,8 +6660,6 @@ const PRIME_MIN = 75;
 const primeWanted = () => $('f-prime').checked && creator.growth >= PRIME_MIN;
 
 // --- the prime tasks the given dino comes out with (garage.ts primeConditions) ---
-const PRIME_TASKS = ['Sanctuary', 'Nở từ tổ (?)', 'Ăn đủ ba chất', 'Nhiệm vụ 4 (?)', 'Vùng di cư', 'Vùng tuần tra',
-  'Chưa từng vô sinh', 'Chưa từng co giật cơ', 'Nuôi con (?)', 'Loài được tặng sẵn'];
 $('f-prime-conds').innerHTML = PRIME_TASKS.map((t, i) =>
   `<label><input type="checkbox" data-cond="${i + 1}"${i === 6 || i === 7 ? ' checked' : ''}> ${i + 1}. ${esc(t)}</label>`).join('');
 const primeCode = () => [...$('f-prime-conds').querySelectorAll('input')].map((c) => (c.checked ? '1' : '0')).join('');
@@ -5728,7 +6777,8 @@ function renderGrowthStats() {
   const classPath = selectedClassPath();
   const species = classPath ? String(classPath).split('.').pop() : null;
   const data = growthStats.species === species ? growthStats.data : null;
-  const max = data ? maximaAtGrowth(data.points, creator.growth / 100) : null;
+  // The lab's numbers first: what the garage's SetGrowth gives (bridge species-lab.ts).
+  const max = data ? maximaAtGrowth(data.lab ? data.lab.points : data.points, creator.growth / 100) : null;
   if (!max) { el.innerHTML = species ? '<span>Chưa có số đo của loài này ở server.</span>' : ''; return; }
   const fmt = (v) => Math.round(v).toLocaleString('vi-VN');
   const cell = (label, v) => (isNum(v) ? `<span>${label} <b>${fmt(v)}</b></span>` : '');
@@ -5746,16 +6796,21 @@ function renderGrowthStats() {
 }
 function expectedCard(data, g) {
   const fmt = (v) => (isNum(v) ? Math.round(v).toLocaleString('vi-VN') : '—');
-  const at = data.at;
+  // The lab's numbers first: a fresh dino with its growth set, as the garage restores it.
+  const lab = data.lab && data.lab.at ? data.lab : null;
+  const at = lab ? lab.at : data.at;
   if (!at) {
     return `<section class="card" style="margin-bottom:12px"><div class="card-body">
       <div class="group-label">Thông số dự kiến</div>
       <div class="muted" style="font-size:12.5px">Chưa có số đo nào của loài này trên server — thông số sẽ là của game khi người chơi lấy ra.</div></div></section>`;
   }
   const pct = (x) => `${Math.round(x * 100)}%`;
-  const source = at.exact ? `đo trực tiếp ở ${pct(at.from === at.to ? at.from : g)}`
+  const where = at.exact ? `đo trực tiếp ở ${pct(at.from === at.to ? at.from : g)}`
     : at.from === at.to ? `gần nhất đã đo: ${pct(at.from)} (chưa có số đo ở ${pct(g)})`
     : `ước tính giữa hai mức đã đo ${pct(at.from)} và ${pct(at.to)}`;
+  const source = lab
+    ? `Số gốc của game khi đặt growth — đúng số dino có khi lấy ra từ gara (đo trên server test ${lab.measured}, ${where}). Dino người chơi có thể cao hơn nhờ đột biến, prime.`
+    : `Số tối đa game báo cho loài này trên server (${where}).`;
   // Prime: how much the maxima rose on prime elders of this species here.
   let primeNote = '';
   let factor = null;
@@ -5779,7 +6834,7 @@ function expectedCard(data, g) {
   return `<section class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;flex-direction:column;gap:10px">
     <div class="group-label">Thông số dự kiến ở growth ${pct(g)}</div>
     <div class="kv">${rows}</div>
-    <div class="muted" style="font-size:12px">Số tối đa game báo cho loài này trên server (${esc(source)}). Khi lấy ra: ${esc(fill)}.</div>
+    <div class="muted" style="font-size:12px">${esc(source)} Khi lấy ra: ${esc(fill)}.</div>
     ${primeNote ? `<div style="font-size:12.5px">${primeNote}</div>` : ''}
   </div></section>`;
 }
@@ -6167,23 +7222,80 @@ const AUDIT_VN = {
   'garage slot created': 'Tạo dino vào gara', 'garage slot deleted': 'Xoá dino khỏi gara', 'kill current dino queued': 'Giết dino đang chơi',
   'restart schedule set': 'Đặt lịch khởi động lại', 'mutation note set': 'Sửa mô tả mutation', 'mutation note cleared': 'Xoá mô tả mutation',
   'server start requested': 'Bật server', 'server stop requested': 'Tắt server', 'server restart requested': 'Khởi động lại server',
+  'life restored to garage': 'Khôi phục dino vào gara',
+  'light test': 'Gắn đèn thử nghiệm',
+  'player banned': 'Ban người chơi',
+  'ban reasons saved': 'Lưu mẫu lý do ban',
+  'backup made': 'Tạo bản backup',
+  'backup deleted': 'Xoá bản backup',
+  'backup restored': 'Khôi phục bản backup',
+  'backup settings saved': 'Lưu cài đặt backup',
+  'settings exported': 'Xuất cài đặt',
+  'server data wiped': 'Xoá trắng dữ liệu server',
+  'Discord log saved': 'Lưu cài đặt Discord',
+  'Discord slash commands registered': 'Đăng ký lệnh Discord',
+  'Discord webhook URL viewed': 'Xem webhook Discord',
+  'AI reset': 'Reset AI',
+  'AI reset requested': 'Yêu cầu reset AI',
+  'AI reset cancelled': 'Huỷ reset AI',
+  'corpses wiped (schedule)': 'Dọn xác định kỳ',
+  'plant settings saved': 'Lưu cài đặt thực vật',
+  'small-dinos-only zones saved': 'Lưu vùng chỉ dino nhỏ',
+  'Ptera carry settings saved': 'Lưu cài đặt Ptera gắp',
+  'messages saved': 'Lưu thông báo server',
+  'DDoS alert settings saved': 'Lưu cài đặt cảnh báo DDoS',
+  'prime fix added': 'Thêm sửa lỗi Prime',
+  'prime fix updated': 'Cập nhật sửa lỗi Prime',
+  'prime fix deleted': 'Xoá sửa lỗi Prime',
 };
 const auditName = (a) => AUDIT_VN[a] ?? (a.startsWith('rcon ') ? `RCON: ${a.slice(5)}` : a);
 const audits = { page: 1, q: '' };
+
+function formatAuditDetail(raw) {
+  if (!raw) return '';
+  let s = String(raw);
+
+  // 1. Chuyển đổi định dạng ISO timestamp sang ngày giờ VN (VD: 2026-09-30T17:17:45.000Z -> 00:17:45 01/10/2026)
+  s = s.replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\b/g, (iso) => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return `${d.toLocaleTimeString('vi-VN', { hour12: false })} ${d.toLocaleDateString('vi-VN')}`;
+  });
+
+  // 2. Chuyển classPath loài (VD: BP_Deinosuchus_C) sang tên thân thiện
+  s = s.replace(/\bBP_([A-Za-z0-9_]+)_C\b/g, (full) => dino(full));
+
+  // 3. Thoát HTML an toàn trước khi chèn thẻ link
+  let escaped = esc(s);
+
+  // 4. Đổi SteamID (17 số) thành tên người chơi (kèm link tới trang người chơi)
+  escaped = escaped.replace(/\b(7656\d{13})(?:\/([a-zA-Z0-9_.-]+))?\b/g, (full, steamId, slot) => {
+    const name = playerNamesCache.get(steamId);
+    const label = name ? `<b>${esc(name)}</b>` : `<span class="mono">${esc(shortId(steamId))}</span>`;
+    const link = `<a href="#player/${esc(steamId)}" class="plink" title="SteamID: ${esc(steamId)}">${label}</a>`;
+    if (slot) {
+      return `${link} / <span class="mono">${esc(slot)}</span>`;
+    }
+    return link;
+  });
+
+  return escaped;
+}
+
 function renderAudit(data) {
   const entries = data.entries ?? [];
   $('srv-audit').innerHTML = entries.length === 0
     ? `<tr><td colspan="4" class="empty">${audits.q ? 'Không có dòng nào khớp' : 'Chưa có thao tác nào trong 7 ngày qua'}</td></tr>`
     : entries.map((e) => {
       const d = new Date(e.t * 1000);
-      const who = e.byId ? `<b>${esc(e.byName ?? 'Không rõ tên')}</b><div class="id">${esc(e.byId)}</div>`
+      const who = e.byId ? `<b>${esc(e.byName ?? playerNamesCache.get(e.byId) ?? 'Không rõ tên')}</b><div class="id">${esc(e.byId)}</div>`
         : e.by === 'ADMIN_TOKEN' ? '<b>Script (ADMIN_TOKEN)</b>'
         : e.by ? esc(e.by) : '<span class="muted">Hệ thống</span>';
       return `<tr>
         <td class="when">${esc(d.toLocaleTimeString('vi-VN', { hour12: false }))}<div class="d">${esc(d.toLocaleDateString('vi-VN'))}</div></td>
         <td class="who">${who}</td>
         <td class="what${e.ok ? '' : ' fail'}">${e.ok ? '' : '✗ '}${esc(auditName(e.action))}</td>
-        <td class="detail">${esc(e.detail ?? '')}${e.error ? `<div class="err">${esc(e.error)}</div>` : ''}</td>
+        <td class="detail">${formatAuditDetail(e.detail ?? '')}${e.error ? `<div class="err">${esc(e.error)}</div>` : ''}</td>
       </tr>`;
     }).join('');
   const { page, pages, total } = data;
@@ -6383,7 +7495,92 @@ $('dc-save').addEventListener('click', () => withToken('lưu Discord', async (to
 
 // --- Người chơi → Ban (bridge/src/bans.ts) ---
 const bans = { data: null, texts: null, playersKey: null, reasonsKey: null };
-let banReasonsDirty = false;
+const bansState = {
+  all: [],
+  q: '',
+  status: 'all',
+  page: 1,
+  limit: 20,
+  bound: false,
+};
+
+function applyBansView() {
+  const tbody = $('ban-list');
+  if (!tbody) return;
+  const q = bansState.q.trim().toLowerCase();
+  const stFilter = bansState.status;
+  const filtered = bansState.all.filter((b) => {
+    if (stFilter === 'active' && !b.active) return false;
+    if (stFilter === 'expired' && b.active) return false;
+    if (q) {
+      const nm = (b.name ?? '').toLowerCase();
+      const sid = String(b.steamId ?? '').toLowerCase();
+      const r = (b.reason ?? '').toLowerCase();
+      if (!nm.includes(q) && !sid.includes(q) && !r.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const total = filtered.length;
+  const activeCount = bansState.all.filter((b) => b.active).length;
+  if ($('ban-count')) $('ban-count').textContent = `${activeCount} đang ban · ${bansState.all.length} tất cả`;
+
+  const limit = bansState.limit;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  if (bansState.page > pages) bansState.page = pages;
+  if (bansState.page < 1) bansState.page = 1;
+  const page = bansState.page;
+  const startIdx = (page - 1) * limit;
+  const pageRows = filtered.slice(startIdx, startIdx + limit);
+
+  if (pageRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="muted empty">${bansState.q ? 'Không tìm thấy người chơi bị ban nào phù hợp' : 'Chưa ai bị ban.'}</td></tr>`;
+  } else {
+    tbody.innerHTML = pageRows.map((b) => `<tr class="${b.active ? '' : 'ban-off'}">
+      <td><b>${esc(b.name)}</b>${(bans.data?.admins ?? []).includes(b.steamId) ? ' <span class="tag" title="Game không chặn admin vào lại; panel tự kick">admin</span>' : ''}<br><span class="mono muted" style="font-size:11.5px">${esc(b.steamId)}</span></td>
+      <td>${esc(b.reason || '(không ghi)')}</td><td>${esc(b.duration)}${b.active ? '' : ' · <i>hết hạn</i>'}</td>
+      <td>${b.bannedAt ? esc(dateTime(b.bannedAt)) : '—'}</td><td>${b.permanent ? 'không' : b.endsAt ? esc(dateTime(b.endsAt)) : '—'}</td>
+      <td>${esc(b.by === 'Rcon' ? 'panel / RCON' : b.by)}</td>
+      <td style="white-space:nowrap">${b.active ? `<button type="button" class="btn-soft sm" data-ban-edit="${esc(b.steamId)}|${esc(b.bannedTime)}">Sửa</button>
+        <button type="button" class="btn-ghost sm" data-ban-unban="${esc(b.steamId)}|${esc(b.bannedTime)}" style="color:var(--kill,#ef4444)">Gỡ ban</button>` : ''}</td></tr>`).join('');
+  }
+  renderPager($('bans-pager'), total, page, limit, 'lượt ban', 'bans-page');
+}
+
+function bindBansToolbarOnce() {
+  if (bansState.bound) return;
+  bansState.bound = true;
+  const sInput = $('bans-search');
+  if (sInput) {
+    sInput.addEventListener('input', () => {
+      bansState.q = sInput.value;
+      bansState.page = 1;
+      applyBansView();
+    });
+  }
+  const filterSeg = $('bans-filter-status');
+  if (filterSeg) {
+    filterSeg.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ban-filter]');
+      if (!b) return;
+      filterSeg.querySelectorAll('button').forEach((el) => el.classList.remove('on'));
+      b.classList.add('on');
+      bansState.status = b.dataset.banFilter;
+      bansState.page = 1;
+      applyBansView();
+    });
+  }
+  const pager = $('bans-pager');
+  if (pager) {
+    pager.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-bans-page]');
+      if (!b || b.disabled) return;
+      bansState.page = Number(b.dataset.bansPage);
+      applyBansView();
+    });
+  }
+}
+
 async function loadBans() {
   const [d, players, m] = await Promise.all([getJson('/api/bans'), getJson('/api/players'),
     bans.texts ? null : getJson('/api/messages')]);
@@ -6405,15 +7602,9 @@ async function loadBans() {
     $('ban-reason-pick').innerHTML = '<option value="">Chọn mẫu lý do…</option>' + d.reasons.map((r) => `<option>${esc(r)}</option>`).join('');
     if (!banReasonsDirty) $('ban-reasons').value = rKey;
   }
-  $('ban-count').textContent = `${d.bans.filter((b) => b.active).length} đang ban · ${d.bans.length} tất cả`;
-  $('ban-list').innerHTML = d.bans.map((b) => `<tr class="${b.active ? '' : 'ban-off'}">
-      <td><b>${esc(b.name)}</b>${(bans.data?.admins ?? []).includes(b.steamId) ? ' <span class="tag" title="Game không chặn admin vào lại; panel tự kick">admin</span>' : ''}<br><span class="mono muted" style="font-size:11.5px">${esc(b.steamId)}</span></td>
-      <td>${esc(b.reason || '(không ghi)')}</td><td>${esc(b.duration)}${b.active ? '' : ' · <i>hết hạn</i>'}</td>
-      <td>${b.bannedAt ? esc(dateTime(b.bannedAt)) : '—'}</td><td>${b.permanent ? 'không' : b.endsAt ? esc(dateTime(b.endsAt)) : '—'}</td>
-      <td>${esc(b.by === 'Rcon' ? 'panel / RCON' : b.by)}</td>
-      <td style="white-space:nowrap">${b.active ? `<button type="button" class="btn-soft sm" data-ban-edit="${esc(b.steamId)}|${esc(b.bannedTime)}">Sửa</button>
-        <button type="button" class="btn-ghost sm" data-ban-unban="${esc(b.steamId)}|${esc(b.bannedTime)}" style="color:var(--kill,#ef4444)">Gỡ ban</button>` : ''}</td></tr>`).join('')
-    || '<tr><td colspan="7" class="muted">Chưa ai bị ban.</td></tr>';
+  bansState.all = d.bans ?? [];
+  bindBansToolbarOnce();
+  applyBansView();
   renderBanPreview();
 }
 function banForm() {
@@ -6521,8 +7712,207 @@ $('ban-reasons-save').addEventListener('click', () => withToken('lưu mẫu lý 
   await loadBans();
 }));
 
+// --- prison (bridge prison.ts, mods/Prison): Người chơi → Nhà tù ---------------
+const pr = { data: null, texts: null, playersKey: '', offKey: '', settingsDirty: false, minutesEdited: false };
+/** "1 giờ 5 phút" / "45 phút" — as the bridge says it to players. */
+function prDur(sec) {
+  const s = Math.max(0, Math.round(sec));
+  if (s < 60) return `${s} giây`;
+  const m = Math.round(s / 60);
+  const h = Math.floor(m / 60);
+  return h === 0 ? `${m} phút` : m % 60 === 0 ? `${h} giờ` : `${h} giờ ${m % 60} phút`;
+}
+async function loadPrison() {
+  const [d, players, m] = await Promise.all([getJson('/api/prison'), getJson('/api/players'), pr.texts ? null : getJson('/api/messages')]);
+  pr.data = d;
+  if (m) pr.texts = { own: m.texts, defaults: Object.fromEntries(m.catalog.map((c) => [c.key, c.default])) };
+  const z = d.zone;
+  $('pr-zone-status').innerHTML = !z
+    ? '⚠ Chưa có vùng nhà tù: vào <a href="#map">Bản đồ</a>, chọn (hoặc tạo) một vùng, tick <b>🔒 Nhà tù</b> rồi lưu các vùng.'
+    : !z.enabled ? `⚠ Vùng nhà tù “${esc(z.name)}” đang tắt (bật lại ở <a href="#map">Bản đồ</a>).`
+    : z.drops === 0 ? `⚠ Vùng “${esc(z.name)}” chưa có điểm thả: cần một người chơi hoặc AI đi qua vùng này (điểm mặt đất cập nhật 10 phút/lần).`
+    : `Nhà tù: <b>${esc(z.name)}</b> · ${z.drops} điểm thả · ${d.settings.enabled ? 'đang <b>bật</b>' : '<b style="color:var(--dmg)">đang tắt</b> (bật ở Cài đặt nhà tù)'}`
+      + ` · mod ${d.modState.t ? `báo ${esc(ago(d.modState.t))}` : 'chưa báo (mod nạp ở lần khởi động lại server kế tiếp)'}.`;
+
+  const online = players.players.filter((p) => p.online);
+  const pKey = online.map((p) => p.steamId).join(',');
+  if (pKey !== pr.playersKey) {
+    pr.playersKey = pKey;
+    const cur = $('pr-player').value;
+    $('pr-player').innerHTML = online.map((p) => `<option value="${esc(p.steamId)}" data-name="${esc(p.name ?? '')}">${esc(p.name ?? p.steamId)} · ${esc(dino(p.species ?? ''))} (online)</option>`).join('')
+      + '<option value="">Nhập SteamID khác…</option>';
+    if ([...$('pr-player').options].some((o) => o.value === cur)) $('pr-player').value = cur;
+    $('pr-manual').hidden = $('pr-player').value !== '';
+  }
+  const offKey = JSON.stringify(d.settings.offenses);
+  if (offKey !== pr.offKey) {
+    pr.offKey = offKey;
+    const cur = $('pr-offense').value;
+    $('pr-offense').innerHTML = d.settings.offenses.map((o) => `<option value="${esc(o.id)}">${esc(o.name)} — ${o.minutes} phút</option>`).join('')
+      + '<option value="">Khác (tự nhập phút)</option>';
+    if ([...$('pr-offense').options].some((o) => o.value === cur)) $('pr-offense').value = cur;
+  }
+  if (!pr.settingsDirty && !document.activeElement?.closest?.('#prs-offenses')) renderPrisonSettings(d.settings);
+  renderPrisonCalc();
+
+  $('pr-count').textContent = `${d.active.length} người`;
+  $('pr-list').innerHTML = d.active.length === 0 ? '<tr><td colspan="7" class="muted">Không có ai ở tù.</td></tr>'
+    : d.active.map((s) => {
+      const state = s.release ? '🔓 chờ thả (khi online)'
+        : s.escaped ? '<b style="color:var(--dmg)">🚨 đang trốn</b>'
+        : !s.online ? '<span class="muted">offline · dừng đếm</span>'
+        : !s.jailed ? '<span class="muted">chưa vào tù</span>'
+        : s.inside ? '🔒 trong tù' : '<span class="muted">—</span>';
+      const log = s.log?.length ? `<div class="muted" style="font-size:11.5px">${s.log.map((l) => esc(l.text)).join(' · ')}</div>` : '';
+      return `<tr><td>${who(s.steamId, s.name)}<div class="mono muted" style="font-size:11.5px">${esc(s.steamId)}</div></td>
+        <td><b>${esc(s.offense)}</b><div class="muted">${esc(s.reason)}</div>${s.prior ? `<div class="muted" style="font-size:11.5px">tiền án ${s.prior} · ×${s.multiplier}</div>` : ''}</td>
+        <td><b>${esc(prDur(s.remainingSec))}</b><div class="muted" style="font-size:11.5px">/ ${esc(prDur(s.totalSec))}</div>${log}</td>
+        <td>${state}</td><td>${s.escapes || 0}</td>
+        <td>${esc(s.by)}<div class="muted" style="font-size:11.5px">${esc(dateTime(s.at))}</div></td>
+        <td style="white-space:nowrap"><button type="button" class="btn-soft sm" data-pr-ext="${esc(s.id)}">Đổi án</button>
+          ${s.release ? '' : `<button type="button" class="btn-soft sm" data-pr-rel="${esc(s.id)}">Thả</button>`}</td></tr>`;
+    }).join('');
+  $('pr-history').innerHTML = d.history.length === 0 ? '<tr><td colspan="5" class="muted">Chưa có.</td></tr>'
+    : d.history.map((h) => `<tr><td>${who(h.steamId, h.name)}</td><td><b>${esc(h.offense)}</b><div class="muted">${esc(h.reason)}</div></td>
+      <td>${esc(prDur(h.totalSec))}<div class="muted" style="font-size:11.5px">bởi ${esc(h.by)}</div></td>
+      <td>${h.outcome === 'released' ? 'thả sớm' : 'mãn hạn'}<div class="muted" style="font-size:11.5px">${esc(dateTime(h.endedAt))}</div></td><td>${h.escapes || 0}</td></tr>`).join('');
+  $('pr-hunters').innerHTML = d.hunters.length === 0 ? '<li class="empty">Chưa ai hạ kẻ vượt ngục.</li>'
+    : d.hunters.map((h, i) => `<li><span class="rank ${i < 3 ? 'r' + (i + 1) : ''}">${i + 1}</span>${avatar(h.steamId, h.name, 'sm')}
+      <div class="who"><div class="meta"><div class="nm">${who(h.steamId, h.name)}</div><div class="sp">lần cuối ${esc(ago(h.last))}</div></div></div>
+      <div class="score">${h.count}</div></li>`).join('');
+}
+function prForm() {
+  const sel = $('pr-player');
+  const manual = sel.value === '';
+  const steamId = manual ? $('pr-steam').value.trim() : sel.value;
+  const name = manual ? $('pr-name').value.trim() : sel.selectedOptions[0]?.dataset.name ?? '';
+  const off = pr.data?.settings.offenses.find((o) => o.id === $('pr-offense').value) ?? null;
+  return { steamId, name, off, minutes: Math.round(Number($('pr-minutes').value) || 0), reason: $('pr-reason').value.trim() };
+}
+/** The suggested minutes: the offense × (1 + step × earlier sentences), unless the admin typed a number. */
+function renderPrisonCalc() {
+  const d = pr.data;
+  if (!d) return;
+  const f = prForm();
+  const prior = d.priors[f.steamId] ?? 0;
+  const mult = Math.round((1 + d.settings.repeatStep * prior) * 100) / 100;
+  if (f.off && !pr.minutesEdited) $('pr-minutes').value = Math.max(1, Math.round(f.off.minutes * mult));
+  const active = d.active.find((s) => s.steamId === f.steamId);
+  $('pr-calc').innerHTML = active ? '<b style="color:var(--dmg)">Người này đang ở tù — dùng "Đổi án" ở danh sách bên dưới.</b>'
+    : f.off ? `${f.off.minutes} phút × ${mult} (tiền án: ${prior})${pr.minutesEdited ? ' — đã sửa tay' : ''}`
+    : `Tiền án: ${prior}. Nhập số phút.`;
+  const t = pr.texts;
+  if (!t) return;
+  const tpl = t.own['prison.jailed.announce'] ?? t.defaults['prison.jailed.announce'];
+  const vars = { name: f.name || f.steamId || 'Rex', duration: prDur((Math.round(Number($('pr-minutes').value) || 0)) * 60),
+    reason: f.reason || f.off?.name || '(chưa ghi lý do)', offense: f.off?.name ?? 'Khác', prior, times: prior + 1 };
+  $('pr-preview').innerHTML = tpl === '' ? '<span class="muted">Thông báo toàn server khi bỏ tù đang tắt.</span>'
+    : `<span class="muted">Cả server sẽ thấy:</span><br>${esc(String(tpl).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all))}`;
+}
+$('pr-player').addEventListener('change', () => { $('pr-manual').hidden = $('pr-player').value !== ''; pr.minutesEdited = false; renderPrisonCalc(); });
+$('pr-offense').addEventListener('change', () => { pr.minutesEdited = false; renderPrisonCalc(); });
+$('pr-minutes').addEventListener('input', () => { pr.minutesEdited = true; renderPrisonCalc(); });
+for (const id of ['pr-reason', 'pr-steam', 'pr-name']) $(id).addEventListener('input', renderPrisonCalc);
+$('pr-go').addEventListener('click', () => {
+  const f = prForm();
+  if (!/^7656119\d{10}$/.test(f.steamId)) { toast('Chọn người chơi hoặc nhập SteamID64 đúng.', 'err'); return; }
+  if (!(f.minutes >= 1)) { toast('Số phút phải từ 1 trở lên.', 'err'); $('pr-minutes').focus(); return; }
+  if (!f.off && !f.reason) { toast('Lỗi "Khác" cần ghi lý do.', 'err'); $('pr-reason').focus(); return; }
+  confirmAction({
+    title: `Bỏ tù ${f.name || f.steamId}?`,
+    body: `<p>Bỏ tù <b>${esc(f.name || f.steamId)}</b> <span class="mono">${esc(f.steamId)}</span> — <b>${esc(prDur(f.minutes * 60))}</b>.</p>
+      <p>${esc(f.off?.name ?? 'Khác')}${f.reason ? `: ${esc(f.reason)}` : ''}</p>
+      <p class="muted">Án chỉ trừ khi người chơi online và ở trong nhà tù. Đổi án / thả sớm ở danh sách bên dưới.</p>`,
+    okLabel: 'Bỏ tù', withReason: false, danger: true,
+    run: async (token) => {
+      await adminFetch('/api/prison/jail', 'POST', token, { steamId: f.steamId, name: f.name, offenseId: f.off?.id ?? null, minutes: f.minutes, reason: f.reason });
+      toast(`Đã bỏ tù ${f.name || f.steamId}.`);
+      $('pr-reason').value = '';
+      pr.minutesEdited = false;
+      await loadPrison();
+    },
+  });
+});
+$('pr-list').addEventListener('click', (e) => {
+  const ext = e.target.closest('[data-pr-ext]')?.dataset.prExt;
+  const rel = e.target.closest('[data-pr-rel]')?.dataset.prRel;
+  const s = pr.data?.active.find((x) => x.id === (ext ?? rel));
+  if (!s) return;
+  if (rel) {
+    confirmAction({
+      title: `Thả ${s.name}?`,
+      body: `<p>Thả sớm <b>${esc(s.name)}</b> (còn ${esc(prDur(s.remainingSec))}).</p><p class="muted">Đang online thì ra ngay và được đưa về chỗ bị bắt; offline thì ra ở lần vào sau.</p>`,
+      okLabel: 'Thả', withReason: false, danger: false,
+      run: async (token) => {
+        await adminFetch(`/api/prison/sentence/${s.id}/release`, 'POST', token, {});
+        toast(`${s.name} sẽ được thả.`);
+        await loadPrison();
+      },
+    });
+    return;
+  }
+  confirmAction({
+    title: `Đổi án ${s.name}`,
+    body: `<p><b>${esc(s.name)}</b> — còn ${esc(prDur(s.remainingSec))} / ${esc(prDur(s.totalSec))}.</p>
+      <div class="cfg-field" style="margin-top:10px"><label for="pr-x-min">Cộng thêm (phút, số âm để giảm)</label><input id="pr-x-min" type="number" value="10" min="-100000" max="100000"></div>`,
+    okLabel: 'Đổi án', withReason: false, danger: false,
+    run: async (token) => {
+      const minutes = Math.round(Number($('pr-x-min').value) || 0);
+      if (minutes === 0) throw new Error('Số phút phải khác 0');
+      await adminFetch(`/api/prison/sentence/${s.id}/extend`, 'POST', token, { minutes });
+      toast(`Đã đổi án ${s.name}: ${minutes > 0 ? '+' : ''}${minutes} phút.`);
+      await loadPrison();
+    },
+  });
+});
+function renderPrisonSettings(st) {
+  $('prs-enabled').checked = st.enabled;
+  $('prs-kill').value = st.killPenaltyMin; $('prs-remind').value = st.remindMin; $('prs-step').value = st.repeatStep;
+  $('prs-grace').value = st.stingGraceSec; $('prs-every').value = st.stingEverySec; $('prs-pct').value = st.stingPct;
+  $('prs-offenses').innerHTML = st.offenses.map((o) => prOffenseRow(o)).join('');
+}
+const prOffenseRow = (o) => `<div class="row" data-off="${esc(o.id ?? '')}"><input data-off-name maxlength="60" value="${esc(o.name)}" placeholder="Tên lỗi" style="flex:1">
+  <input data-off-min type="number" min="1" max="100000" value="${o.minutes}" style="width:90px" aria-label="phút"><span class="muted">phút</span>
+  <button type="button" class="btn-soft sm" data-off-del title="Xoá">✕</button></div>`;
+$('prs-add').addEventListener('click', () => {
+  $('prs-offenses').insertAdjacentHTML('beforeend', prOffenseRow({ id: '', name: '', minutes: 30 }));
+  pr.settingsDirty = true;
+});
+$('prs-offenses').addEventListener('click', (e) => {
+  const del = e.target.closest('[data-off-del]');
+  if (del) { del.closest('[data-off]').remove(); pr.settingsDirty = true; }
+});
+for (const id of ['prs-enabled', 'prs-kill', 'prs-remind', 'prs-step', 'prs-grace', 'prs-every', 'prs-pct', 'prs-offenses']) {
+  $(id).addEventListener('input', () => { pr.settingsDirty = true; });
+}
+$('prs-save').addEventListener('click', () => withToken('lưu cài đặt nhà tù', async (token) => {
+  const n = (id) => Number($(id).value);
+  const offenses = [...$('prs-offenses').querySelectorAll('[data-off]')].map((row) => ({
+    ...(row.dataset.off ? { id: row.dataset.off } : {}),
+    name: row.querySelector('[data-off-name]').value.trim(),
+    minutes: Math.round(Number(row.querySelector('[data-off-min]').value) || 0),
+  })).filter((o) => o.name !== '');
+  await adminFetch('/api/prison/settings', 'PUT', token, {
+    enabled: $('prs-enabled').checked, killPenaltyMin: Math.round(n('prs-kill')), remindMin: Math.round(n('prs-remind')),
+    repeatStep: n('prs-step'), stingGraceSec: Math.round(n('prs-grace')), stingEverySec: Math.round(n('prs-every')),
+    stingPct: Math.round(n('prs-pct')), offenses,
+  });
+  pr.settingsDirty = false;
+  pr.offKey = '';
+  toast('Đã lưu cài đặt nhà tù.');
+  await loadPrison();
+}));
+
 async function loadAudit() {
   const q = audits.q ? `&q=${encodeURIComponent(audits.q)}` : '';
+  if (playerNamesCache.size === 0) {
+    try {
+      const pData = await getJson('/api/players');
+      for (const p of pData?.players ?? []) {
+        if (p.steamId && p.name) playerNamesCache.set(p.steamId, p.name);
+      }
+    } catch { /* ignore */ }
+  }
   const data = await getJson(`/api/server/audit?page=${audits.page}&limit=30${q}`);
   audits.page = data.page;
   renderAudit(data);
@@ -7483,7 +8873,7 @@ async function renderWorldCards() {
 }
 
 const SUBS = {
-  players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban']],
+  players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban'], ['prison', 'Nhà tù']],
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
   mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['voice', 'Voice gần'], ['messages', 'Thông báo']],
@@ -7575,11 +8965,13 @@ async function refreshTab(tab) {
         renderKpis(players.players);
         renderPlayers(players.players, players.garageMax);
       } else if (sub === 'killfeed') {
-        renderFeed($('killfeed'), (await getJson('/api/killfeed?limit=200')).events, 'Chưa có ai chết');
+        renderKillfeed((await getJson('/api/killfeed?limit=200')).events);
       } else if (sub === 'leaderboard') {
         renderLeaderboard(await getJson('/api/leaderboard'));
       } else if (sub === 'bans') {
         await loadBans();
+      } else if (sub === 'prison') {
+        await loadPrison();
       } else {
         renderChat((await getJson('/api/chat?limit=300')).events);
       }

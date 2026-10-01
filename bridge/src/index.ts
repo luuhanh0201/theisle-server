@@ -35,6 +35,8 @@ import { DdosWatch, SAMPLE_S, defaultIface, endText, parseNetDev, readDdos, star
 import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
 import { auditListeners } from './audit.js';
+import { Prison } from './prison.js';
+import { adminIds } from './panel-auth.js';
 
 const store = new Store();
 const rcon = new Rcon(config.rcon);
@@ -62,6 +64,8 @@ await mkdir(config.aiZonesRoot, { recursive: true }).catch((error: unknown) => c
 // Flora writes its export there, and Lua cannot create a directory either.
 await mkdir(config.floraRoot, { recursive: true }).catch((error: unknown) => console.error('[flora] cannot create', config.floraRoot, error));
 await mkdir(config.fishRoot, { recursive: true }).catch((error: unknown) => console.error('[fish] cannot create', config.fishRoot, error));
+// The Prison mod writes its state next to prison.json (Lua cannot create the directory).
+await mkdir(config.prisonRoot, { recursive: true }).catch((error: unknown) => console.error('[prison] cannot create', config.prisonRoot, error));
 
 // The players' texts and announcement timings set on the panel; the mods'
 // file is rewritten so it matches them (a fresh server has none).
@@ -82,12 +86,30 @@ const primeNotifier = new PrimeNotifier(rcon, Math.floor(Date.now() / 1000), (ke
 const skinRelog = new SkinRelog(Math.floor(Date.now() / 1000),
   (steamId, skin) => queueSkinRepaint(steamId, skin),
   async (steamId, species) => (await keptSkinsOf(steamId))[species] !== undefined);
+// The prison (prison.ts): sentences, escapes, hunters; the Prison mod carries them out.
+// The Discord log is created further down: posts wait for it (lines before a start are not sent anyway).
+const prisonDiscord: { post: ((text: string) => void) | null } = { post: null };
+const prison = new Prison({
+  announce: (text) => (rcon.enabled ? rcon.run('announce', text) : Promise.resolve()),
+  directMessage: (steamId, text) => (rcon.enabled ? rcon.directMessage(steamId, text) : Promise.resolve()),
+  discord: (text) => prisonDiscord.post?.(text),
+  render: (key, vars) => renderMessage(key, vars),
+  nameOf: (steamId) => store.player(steamId)?.player.name ?? null,
+  speciesOf: (steamId) => store.player(steamId)?.player.species ?? null,
+  isOnline: (steamId) => store.online().some((p) => p.steamId === steamId),
+  adminIds: () => adminIds(),
+  groundPoints: store.groundPoints,
+  startedAt: Math.floor(Date.now() / 1000),
+});
+await prison.load();
+await prison.syncModFiles().catch((error: unknown) => console.error('[prison] cannot write the mod files:', error));
 const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {
     store.apply(event);
     void notifier.handle(event);
     void primeNotifier.handle(event);
     void skinRelog.handle(event);
+    prison.handle(event).catch((error: unknown) => console.error('[prison] event failed:', error));
   }),
 );
 
@@ -130,6 +152,7 @@ const aiReset = new AiReset({
 const discord = new DiscordLog({ startedAt: Math.floor(Date.now() / 1000) });
 await discord.load();
 store.onFeed = (entry) => discord.post(lineOf(entry));
+prisonDiscord.post = (text) => discord.post({ kind: 'prison', t: Math.floor(Date.now() / 1000), text });
 auditListeners.push((entry) => discord.post(auditLine(entry)));
 rcon.onRun = (name, args) => {
   if (name === 'announce' && typeof args === 'string') discord.post({ kind: 'announce', t: Math.floor(Date.now() / 1000), text: `📢 ${args}` });
@@ -234,7 +257,12 @@ setInterval(() => {
 }, 10_000);
 void bans.tick();
 
-startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, ...(voice ? { voice } : {}) });
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, ...(voice ? { voice } : {}) });
+
+// The prison: the mod's state, finished sentences, escape reminders, the mod's files (prison.ts).
+setInterval(() => {
+  prison.tick().catch((error: unknown) => console.error('[prison] tick failed:', error));
+}, 5_000);
 
 // AI zones: keep the ground points on disk and hand the mod the points found
 // since (a zone drawn where nobody had been yet gets spots as people go there).

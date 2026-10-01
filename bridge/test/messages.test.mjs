@@ -43,7 +43,7 @@ test('the catalog is what the mods send: every Msg call has its key, with the sa
     for (const [, v] of def.matchAll(/\{(\w+)\}/g)) assert.ok(MESSAGE_BY_KEY.get(key).vars.includes(v), `${key}: {${v}} not listed`);
   }
   for (const m of MESSAGES) {
-    if (m.group === 'server' || m.group === 'corpses' || m.group === 'ai' || m.group === 'ban' || m.group === 'prime') continue;
+    if (m.group === 'server' || m.group === 'corpses' || m.group === 'ai' || m.group === 'ban' || m.group === 'prime' || m.group === 'prison') continue;
     assert.ok(found.has(m.key), `${m.key} is in messages.ts but no mod sends it`);
   }
 });
@@ -85,7 +85,7 @@ test('off by default: not sent until the admin writes a text (the suggested one 
 test('save: kept for the bridge, the mods get only their own texts; loaded back at start', async () => {
   await saveMessages({ texts: { 'garage.stored': 'Cất rồi!', 'server.stop.now': 'Tắt đây' }, countdownMarks: [300, 60] });
   const mod = JSON.parse(readFileSync(process.env.MESSAGES_MOD_PATH, 'utf8'));
-  const offs = Object.fromEntries(MESSAGES.filter((m) => m.offByDefault && !['server', 'corpses', 'ai', 'ban'].includes(m.group)).map((m) => [m.key, '']));
+  const offs = Object.fromEntries(MESSAGES.filter((m) => m.offByDefault && !['server', 'corpses', 'ai', 'ban', 'prime', 'prison'].includes(m.group)).map((m) => [m.key, '']));
   assert.deepEqual(mod, { texts: { 'garage.stored': 'Cất rồi!', ...offs } }, 'the ones off by default are written off');
   await loadMessages();
   assert.deepEqual(currentMessages().countdownMarks, [300, 60]);

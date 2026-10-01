@@ -53,6 +53,10 @@ export const config = {
   pteraRoot: env('PTERA_ROOT', join(garageRoot, '..', '..', 'PteraCarry', 'Saved')),
   /** ZoneGuard mod's Saved/ (small dinos only in marked zones): guard.json. */
   zoneGuardRoot: env('ZONE_GUARD_ROOT', join(garageRoot, '..', '..', 'ZoneGuard', 'Saved')),
+  /** Prison mod's Saved/: prison.json (written here), state.json (the mod's). */
+  prisonRoot: env('PRISON_ROOT', join(garageRoot, '..', '..', 'Prison', 'Saved')),
+  /** Who is serving a sentence, for the other mods (mods/_shared/prison.lua). */
+  prisonInmatesPath: env('PRISON_INMATES_PATH', join(garageRoot, '..', '..', 'shared', 'isle-prison.json')),
 
   /** The players' texts as edited on the panel, read by every mod (mods/_shared/messages.lua). */
   messagesModPath: env('MESSAGES_MOD_PATH', join(garageRoot, '..', '..', 'shared', 'isle-messages.json')),

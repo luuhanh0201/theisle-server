@@ -1,31 +1,39 @@
 #!/usr/bin/env bash
 # test-server.sh — a second The Isle server on the same VPS, for trying mods
-# without touching the live one. Run ON THE VPS as root.
+# and game updates without touching the live one. Run ON THE VPS as `isle`
+# (no root needed: it is a plain process, not a systemd unit).
 #
 #   ./test-server.sh setup    copy the live install (game + mods, NOT the player
 #                             data), its own Wine prefix, a Game.ini with its own
-#                             ports and no password, and theisle-test.service
+#                             ports and NO password (rule: the test server is open)
 #   ./test-server.sh start | stop | status
 #
 # The copy: /home/isle/test/{server,prefix}. Ports: game 7787, queue 10001,
 # RCON 8889 (live: 7777 / 10000 / 8888). Its own Wine prefix = its own
-# wineserver (sharing one slowed both). The service runs below the live one
-# (Nice=10, at most one core), does not come back after a crash, and does not
-# start with the VPS. Mods run with empty Saved/ folders: no AI zones, no garage.
+# wineserver (sharing one slowed both). It runs below the live one (nice 10,
+# pinned to one core: TEST_CPU, default the last one), does not come back after
+# a crash, and does not start with the VPS. Mods run with empty Saved/ folders:
+# no AI zones, no garage. Extra launch arguments: TEST_ARGS="-Foo -Bar".
 #
-# NOT JOINABLE as it is (2026-09-27): the in-game list shows "[TEST] …" with
-# the live server's player count, and joining it lands on the LIVE server —
-# the listing carries port 7777 whatever -Port/-QueryPort/?Port/[URL] Port say.
-# A test server needs its own IP (another VPS). Removed from the VPS.
+# 2026-09-27: the in-game list showed "[TEST] …" with the live server's player
+# count, and joining it landed on the LIVE server (the listing carried port
+# 7777). Being re-checked 2026-10-01 — see docs/NHAT-KY-VAN-HANH.md.
 
 set -euo pipefail
 
 LIVE=/home/isle/server
 ROOT=/home/isle/test
-UNIT=/etc/systemd/system/theisle-test.service
+PIDFILE="$ROOT/server.pid"
+CONSOLE="$ROOT/console.log"
+# The test copy's own start.sh when there is one (so a change for the test
+# server never touches the live server's /home/isle/bin/start.sh).
+START_SH=/home/isle/bin/start.sh
+[[ -x "$ROOT/start.sh" ]] && START_SH="$ROOT/start.sh"
+
+running() { [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
 
 setup() {
-    systemctl stop theisle-test 2>/dev/null || true
+    if running; then echo "test server is running — stop it first: $0 stop" >&2; exit 1; fi
     mkdir -p "$ROOT/server"
     # Everything but the player data (TheIsle/Saved) and each mod's Saved/.
     rsync -a --delete --exclude 'TheIsle/Saved/' --exclude 'Binaries/Win64/Mods/*/Saved/' --exclude '*.log' \
@@ -38,6 +46,8 @@ setup() {
     local cfg="$ROOT/server/TheIsle/Saved/Config/WindowsServer"
     mkdir -p "$cfg"
     cp "$LIVE/TheIsle/Saved/Config/WindowsServer/Engine.ini" "$cfg/"
+    # No password on the test server (the admin's rule, 2026-10-01): testers
+    # join it straight from the list.
     python3 - "$LIVE/TheIsle/Saved/Config/WindowsServer/Game.ini" "$cfg/Game.ini" "$(openssl rand -hex 8)" <<'EOF'
 import re, sys
 src, dst, rcon = sys.argv[1:4]
@@ -49,38 +59,34 @@ for k, v in (("ServerName", "[TEST] XG EVO - server thu nghiem"), ("bServerPassw
     s = setk(s, k, v)
 open(dst, "w").write(s)
 EOF
-    chown -R isle:isle "$ROOT"
+    echo "test server ready in $ROOT (no password) — start it with: $0 start"
+}
 
-    cat > "$UNIT" <<'EOF'
-[Unit]
-Description=The Isle Evrima TEST server (Wine) - mod experiments, started by hand
-After=network-online.target
+start() {
+    if running; then echo "already running (pid $(cat "$PIDFILE"))"; return; fi
+    local cpu="${TEST_CPU:-$(( $(nproc) - 1 ))}"
+    # shellcheck disable=SC2086  # TEST_ARGS is a list of words on purpose
+    WINEPREFIX="$ROOT/prefix" GAME_ROOT="$ROOT/server" GAME_PORT="${TEST_PORT:-7787}" WINEDEBUG=-all \
+        setsid nohup nice -n 10 taskset -c "$cpu" "$START_SH" ${TEST_ARGS:-} >"$CONSOLE" 2>&1 </dev/null &
+    echo $! > "$PIDFILE"
+    echo "started (pid $!, cpu $cpu, port ${TEST_PORT:-7787}); console: $CONSOLE"
+}
 
-[Service]
-Type=simple
-User=isle
-WorkingDirectory=/home/isle/test/server/TheIsle/Binaries/Win64
-Environment=WINEPREFIX=/home/isle/test/prefix
-Environment=GAME_ROOT=/home/isle/test/server
-Environment=GAME_PORT=7787
-Environment=WINEDEBUG=-all
-ExecStart=/home/isle/bin/start.sh
-# Below the live server (Nice=-5), and never more than one core.
-Nice=10
-CPUQuota=100%
-# A crash stays down: experiments must not loop.
-Restart=no
-TimeoutStopSec=60
-KillSignal=SIGINT
-EOF
-    systemctl daemon-reload
-    echo "test server ready in $ROOT — start it with: $0 start"
+stop() {
+    if running; then
+        kill -INT "$(cat "$PIDFILE")" 2>/dev/null || true
+        for _ in $(seq 1 30); do running || break; sleep 1; done
+    fi
+    # Only the test prefix's own wineserver: the live one is a different prefix.
+    WINEPREFIX="$ROOT/prefix" wineserver -k 2>/dev/null || true
+    rm -f "$PIDFILE"
+    echo "stopped"
 }
 
 case "${1:-}" in
     setup)  setup ;;
-    start)  systemctl start theisle-test ;;
-    stop)   systemctl stop theisle-test ;;
-    status) systemctl status theisle-test --no-pager | head -5 ;;
-    *) sed -n '2,15p' "$0"; exit 1 ;;
+    start)  start ;;
+    stop)   stop ;;
+    status) if running; then echo "running (pid $(cat "$PIDFILE"))"; else echo "stopped"; fi ;;
+    *) sed -n '2,17p' "$0"; exit 1 ;;
 esac

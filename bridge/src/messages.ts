@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello' | 'prime' | 'skin';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello' | 'prime' | 'skin' | 'prison';
 
 export interface MessageDef {
   key: string;
@@ -83,6 +83,10 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'guard.warn', group: 'guard', label: 'Dino quá lớn vào vùng chỉ dino nhỏ (cảnh báo)', default: 'Dino của bạn quá lớn cho “{zone}” ({growth}% — tối đa {max}%). Rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['zone', 'growth', 'max', 'seconds'] },
   { key: 'guard.sting', group: 'guard', label: 'Bắt đầu bị ong đốt', default: 'Bạn đang bị ong đốt ở “{zone}” — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['zone', 'pct', 'every'] },
   { key: 'ptera.carry.nothing', group: 'ptera', label: '!drop khi không gắp gì', default: 'Bạn không gắp con nào.', vars: [] },
+  { key: 'ptera.carry.inmate', group: 'ptera', label: 'Gắp tù nhân (bị chặn)', default: 'Không gắp được tù nhân.', vars: [], offByDefault: true },
+  // --- prison: outsiders in the prison zone (mods/Prison) ---
+  { key: 'prison.sting.warn', group: 'guard', label: 'Người ngoài vào khu nhà tù (cảnh báo)', default: 'Đây là khu nhà tù — rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['seconds'] },
+  { key: 'prison.sting', group: 'guard', label: 'Người ngoài bắt đầu bị ong đốt ở khu nhà tù', default: 'Bạn đang bị ong đốt ở khu nhà tù — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['pct', 'every'] },
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
   { key: 'garage.tenSeconds', group: 'garage', label: 'Còn 10 giây', default: 'Còn 10 giây là cất xong — đứng yên.', vars: [] },
@@ -132,6 +136,7 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'cmd.prime.noDino', group: 'commands', label: '!prime: chưa có dino', default: '!prime: bạn chưa điều khiển dino nào.', vars: [] },
   { key: 'cmd.status.noDino', group: 'commands', label: '!status: chưa có dino', default: '!status: bạn chưa điều khiển dino nào.', vars: [] },
   { key: 'cmd.disabled', group: 'commands', label: 'Lệnh đang bị tắt', default: '!{command} đang bị tắt trên server này.', vars: ['command'] },
+  { key: 'cmd.prison', group: 'commands', label: '!slay / !unstuck khi đang ở tù', default: '!{command} không dùng được khi đang ở tù.', vars: ['command'] },
   // --- admin actions (mods/DinoGarage inbox) ---
   { key: 'admin.kill', group: 'admin', label: 'Admin xoá dino (không lý do)', default: 'An admin removed your dino.', vars: [] },
   { key: 'admin.killReason', group: 'admin', label: 'Admin xoá dino (có lý do)', default: 'An admin removed your dino. Reason: {reason}', vars: ['reason'] },
@@ -143,6 +148,18 @@ export const MESSAGES: readonly MessageDef[] = [
   // --- prime tasks (prime-notify.ts): sent by the bridge when a task turns on ---
   { key: 'prime.conditionDone', group: 'prime', label: 'Hoàn thành một nhiệm vụ prime ({task} = tên nhiệm vụ)', default: '✅ Đã hoàn thành nhiệm vụ prime: {task} ({done}/10 — cần {needed} để đủ điều kiện prime).', vars: ['task', 'n', 'done', 'needed'] },
   { key: 'prime.eligible', group: 'prime', label: 'Dino vừa đủ điều kiện prime', default: '🌟 Dino của bạn đã đủ điều kiện prime ({done}/10)! Game xét prime khi dino đạt 75% growth.', vars: ['done', 'needed'] },
+  // --- prison (prison.ts): sent by the bridge ---
+  { key: 'prison.jailed.announce', group: 'prison', label: 'Thông báo toàn server khi có người bị bỏ tù', default: '🔒 {name} bị bỏ tù {duration}. Lý do: {reason}', vars: ['name', 'duration', 'reason', 'offense', 'prior', 'times'] },
+  { key: 'prison.jailed.player', group: 'prison', label: 'Tin riêng cho người bị bỏ tù', default: 'Bạn bị bỏ tù {duration}. Lý do: {reason}. Án chỉ trừ khi bạn online và ở trong nhà tù.', vars: ['name', 'duration', 'reason', 'offense', 'prior', 'times'] },
+  { key: 'prison.moved.player', group: 'prison', label: 'Dino được đưa vào tù (tin riêng)', default: '🔒 Bạn đang ở tù — còn {left}. Ra khỏi khu tù là vượt ngục: cả server sẽ thấy vị trí của bạn.', vars: ['left', 'reason'] },
+  { key: 'prison.escape.announce', group: 'prison', label: 'Vượt ngục (toàn server)', default: '🚨 {name} ({species}) đã VƯỢT NGỤC! Vị trí hiện trên bản đồ — ai hạ được sẽ được ghi công Thợ săn.', vars: ['name', 'species', 'left', 'escapes'] },
+  { key: 'prison.escape.remind', group: 'prison', label: 'Nhắc lại khi còn đang trốn (toàn server)', default: '🚨 {name} ({species}) vẫn đang trốn ngục ({minutes} phút). Xem vị trí trên bản đồ.', vars: ['name', 'species', 'minutes', 'left'] },
+  { key: 'prison.returned.announce', group: 'prison', label: 'Kẻ vượt ngục quay lại tù (toàn server)', default: '🔒 {name} đã quay lại nhà tù.', vars: ['name'] },
+  { key: 'prison.bounty.announce', group: 'prison', label: 'Có người hạ kẻ vượt ngục (toàn server)', default: '🏹 {hunter} đã hạ kẻ vượt ngục {name}!', vars: ['hunter', 'name', 'count'] },
+  { key: 'prison.killPenalty.player', group: 'prison', label: 'Giết bạn tù: bị cộng án (tin riêng)', default: '⚖️ Bạn đã giết bạn tù {name}: án +{minutes} phút (còn {left}).', vars: ['minutes', 'name', 'left'] },
+  { key: 'prison.extended.player', group: 'prison', label: 'Admin đổi thời gian án (tin riêng)', default: 'Án tù của bạn đổi {minutes} phút — còn {left}.', vars: ['minutes', 'left'] },
+  { key: 'prison.released.player', group: 'prison', label: 'Ra tù (tin riêng)', default: '🔓 Bạn đã ra tù và được đưa về chỗ bị bắt.', vars: ['name'] },
+  { key: 'prison.released.announce', group: 'prison', label: 'Ra tù (toàn server)', default: '🔓 {name} đã ra tù.', vars: ['name'], offByDefault: true },
   // --- greeting (mods/HelloIsle) ---
   { key: 'hello.welcome', group: 'hello', label: 'Chào khi vào game / spawn', default: 'Welcome to the island. Type !ping to check the mods.', vars: [] },
   { key: 'hello.pong', group: 'hello', label: 'Trả lời !ping', default: 'pong — mods are alive', vars: [] },
@@ -150,7 +167,7 @@ export const MESSAGES: readonly MessageDef[] = [
 
 export const MESSAGE_BY_KEY: ReadonlyMap<string, MessageDef> = new Map(MESSAGES.map((m) => [m.key, m]));
 /** Sent by the bridge itself (RCON announce); the rest by the mods. */
-const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses', 'ai', 'ban', 'prime']);
+const BRIDGE_GROUPS: ReadonlySet<MessageGroup> = new Set(['server', 'corpses', 'ai', 'ban', 'prime', 'prison']);
 
 export interface Periodic {
   id: string;

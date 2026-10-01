@@ -508,7 +508,8 @@ function initCommandPalette() {
 
 function initGarageFilter() {
   const searchInput = $('gara-search-input');
-  const filterBtns = document.querySelectorAll('.gara-filter-btn');
+  const filterBtns = document.querySelectorAll('.gara-diet-tabs .gara-filter-btn');
+  const previewBtn = $('gara-preview-btn');
 
   let currentDiet = 'all';
   let currentSearch = '';
@@ -546,6 +547,17 @@ function initGarageFilter() {
       applyFilter();
     });
   });
+
+  if (previewBtn) {
+    previewBtn.addEventListener('click', () => {
+      garagePreviewTiers = !garagePreviewTiers;
+      previewBtn.classList.toggle('active', garagePreviewTiers);
+      previewBtn.textContent = garagePreviewTiers ? '✕ Tắt xem hiệu ứng' : '👁️ Xem hiệu ứng thẻ';
+      const list = $('gara-slots-list');
+      if (list) delete list.dataset.key;
+      renderGara(lastMeData);
+    });
+  }
 
   window._reapplyGarageFilter = applyFilter;
 }
@@ -1131,7 +1143,74 @@ function renderServer(srv) {
   if (sidebarSlots) sidebarSlots.textContent = `${online} / ${max} slot`;
 }
 
+function getHeroCardTier(dino) {
+  if (!dino) return DINO_TIERS.fossil;
+  const stacks = typeof dino.prime?.elderStacks === 'number' ? dino.prime.elderStacks
+    : typeof dino.elderStacks === 'number' ? dino.elderStacks
+    : typeof dino.generation === 'number' ? Math.max(0, dino.generation - 1)
+    : 0;
+
+  if (stacks >= 3) return DINO_TIERS.apex;
+  if (stacks === 2) return DINO_TIERS.rex;
+  if (stacks === 1) return DINO_TIERS.dna;
+  const isPrime = dino.prime?.prime === true || dino.prime === true;
+  if (isPrime) return DINO_TIERS.amber;
+  return DINO_TIERS.fossil;
+}
+
+function updateHeroTierFx(dino) {
+  const card = $('game-hero-card');
+  const fx = $('game-hero-fx');
+  const badge = $('game-dino-tier-badge');
+  if (!card || !fx) return;
+
+  const tier = getHeroCardTier(dino);
+
+  card.classList.remove('tier-fossil', 'tier-amber', 'tier-dna', 'tier-rex', 'tier-apex', 'prime');
+  card.classList.add(tier.key === 'amber' ? 'tier-amber' : tier.className);
+  if (tier.level > 0) card.classList.add('prime');
+
+  fx.innerHTML = renderSlotFx(tier);
+
+  if (badge) {
+    if (tier.level > 1) {
+      badge.textContent = `👑 Đời ${tier.level}`;
+      badge.hidden = false;
+    } else if (tier.level === 1) {
+      badge.textContent = '👑 Prime';
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+  }
+
+  const hubCard = $('hub-dino-card');
+  if (hubCard) {
+    hubCard.classList.remove('tier-fossil', 'tier-amber', 'tier-dna', 'tier-rex', 'tier-apex', 'prime');
+    hubCard.classList.add(tier.key === 'amber' ? 'tier-amber' : tier.className);
+    if (tier.level > 0) hubCard.classList.add('prime');
+  }
+}
+
+/** "1 giờ 5 phút" / "45 phút", as the server says it. */
+function prisonDur(sec) {
+  const m = Math.max(1, Math.round(Math.max(0, sec) / 60));
+  const h = Math.floor(m / 60);
+  return h === 0 ? `${m} phút` : m % 60 === 0 ? `${h} giờ` : `${h} giờ ${m % 60} phút`;
+}
+/** Serving a prison sentence (bridge prison.ts): what is left, and how it runs. */
+function renderPrison(p) {
+  const el = $('game-prison');
+  if (!el) return;
+  el.hidden = !p;
+  if (!p) return;
+  el.classList.toggle('escaped', p.escaped === true);
+  el.innerHTML = p.escaped
+    ? `<b>🚨 Bạn đang vượt ngục</b> — cả server thấy vị trí của bạn trên bản đồ, ai hạ được bạn sẽ được ghi công. Án còn <b>${esc(prisonDur(p.remainingSec))}</b>, chỉ trừ khi bạn quay lại khu tù.`
+    : `<b>🔒 Bạn đang ở tù</b> — còn <b>${esc(prisonDur(p.remainingSec))}</b> (${esc(p.offense)}: ${esc(p.reason)}). Án chỉ trừ khi bạn online và ở trong khu tù; trong tù không lớn, không đói khát, không mất máu, không dùng được gara.`;
+}
 function renderGame(me) {
+  renderPrison(me.prison ?? null);
   const navBadge = $('nav-dino-badge');
   if (me.dino && me.online) {
     navBadge.hidden = false;
@@ -1221,6 +1300,7 @@ function renderGame(me) {
     }
   }
   renderKept(me.keptSkins);
+  updateHeroTierFx(me.online && me.dino ? me.dino : null);
 
   // Lifetime Stats
   const s = me.stats;
@@ -1382,11 +1462,181 @@ function slotVitals(g) {
   }).join('')}</div>`;
 }
 
+// ============================================================================
+// 5 Cấp độ tiến hoá Gara: Khảo cổ học chuyển mình thành sinh vật sống
+// ============================================================================
+const DINO_TIERS = {
+  fossil: { level: 0, key: 'fossil', className: 'tier-fossil' },
+  amber: { level: 1, key: 'amber', className: 'tier-amber prime' },
+  dna: { level: 2, key: 'dna', className: 'tier-dna' },
+  rex: { level: 3, key: 'rex', className: 'tier-rex' },
+  apex: { level: 4, key: 'apex', className: 'tier-apex' },
+};
+
+function getDinoTier(g) {
+  if (g.tier === 'apex' || g.tier === 4) return DINO_TIERS.apex;
+  if (g.tier === 'rex' || g.tier === 3) return DINO_TIERS.rex;
+  if (g.tier === 'dna' || g.tier === 2) return DINO_TIERS.dna;
+  if (g.tier === 'amber' || g.tier === 1) return DINO_TIERS.amber;
+  if (g.tier === 'fossil' || g.tier === 0) return DINO_TIERS.fossil;
+
+  const stacks = typeof g.elderStacks === 'number' ? g.elderStacks
+    : typeof g.generation === 'number' ? Math.max(0, g.generation - 1)
+    : 0;
+
+  if (stacks >= 3) return DINO_TIERS.apex;
+  if (stacks === 2) return DINO_TIERS.rex;
+  if (stacks === 1) return DINO_TIERS.dna;
+  if (g.prime) return DINO_TIERS.amber;
+  return DINO_TIERS.fossil;
+}
+
+function renderSlotFx(tier) {
+  if (tier.key === 'amber') {
+    return `
+      <div class="slot-tier-fx tier-amber-fx" aria-hidden="true">
+        <div class="amber-gloss-sheen"></div>
+        <div class="amber-specular-light"></div>
+        <svg class="amber-crackle-svg" viewBox="0 0 320 200" preserveAspectRatio="none">
+          <path d="M 0,35 L 50,60 L 85,45 L 125,80 L 145,70 M 85,45 L 100,18 M 125,80 L 160,125 L 195,115 L 245,160 M 195,115 L 215,90 L 280,75 M 245,160 L 285,195 M 160,125 L 145,170 L 170,195 M 215,90 L 250,40" fill="none" stroke="currentColor" stroke-width="1.2" />
+        </svg>
+      </div>`;
+  }
+  if (tier.key === 'dna') {
+    return `
+      <div class="slot-tier-fx tier-dna-fx" aria-hidden="true">
+        <svg class="dna-veins-svg" viewBox="0 0 320 200" preserveAspectRatio="none">
+          <path class="dna-capillary c1" d="M -10,120 Q 35,95 65,115 T 135,88 T 215,118 T 330,80" fill="none" />
+          <path class="dna-capillary c2" d="M 40,-5 Q 65,50 115,65 T 185,48 T 265,78 T 325,25" fill="none" />
+          <path class="dna-capillary c3" d="M 75,205 Q 120,150 170,162 T 255,138 T 315,175" fill="none" />
+          <path class="dna-capillary c4" d="M 115,65 Q 145,105 135,88" fill="none" />
+          <circle class="dna-node n1" cx="65" cy="115" r="3.2" />
+          <circle class="dna-node n2" cx="185" cy="48" r="3.2" />
+          <circle class="dna-node n3" cx="255" cy="138" r="3.2" />
+        </svg>
+      </div>`;
+  }
+  if (tier.key === 'rex') {
+    return `
+      <div class="slot-tier-fx tier-rex-fx" aria-hidden="true">
+        <div class="rex-flame-aura"></div>
+        <svg class="rex-cracks-svg" viewBox="0 0 320 120" preserveAspectRatio="none">
+          <path d="M 160,120 L 148,88 L 115,72 L 78,82 M 148,88 L 175,62 L 162,35 L 202,15 M 175,62 L 218,72 L 260,55 M 115,72 L 95,45 L 60,38" fill="none" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+      </div>`;
+  }
+  if (tier.key === 'apex') {
+    return `
+      <div class="slot-tier-fx tier-apex-fx" aria-hidden="true">
+        <div class="apex-fire-sweep"></div>
+        <div class="apex-eye-box">
+          <svg class="apex-eye-svg" viewBox="0 0 100 50">
+            <defs>
+              <radialGradient id="apexIrisGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fef08a" />
+                <stop offset="40%" stop-color="#f97316" />
+                <stop offset="80%" stop-color="#dc2626" />
+                <stop offset="100%" stop-color="#450a0a" />
+              </radialGradient>
+            </defs>
+            <path class="eye-lid-upper" d="M 6,25 Q 50,-4 94,25" fill="none" stroke="rgba(239,68,68,0.75)" stroke-width="1.6" />
+            <path class="eye-lid-lower" d="M 6,25 Q 50,54 94,25" fill="none" stroke="rgba(239,68,68,0.75)" stroke-width="1.6" />
+            <ellipse class="eye-sclera" cx="50" cy="25" rx="36" ry="16" fill="rgba(185,28,28,0.32)" />
+            <ellipse class="eye-iris" cx="50" cy="25" rx="18" ry="15" fill="url(#apexIrisGrad)" />
+            <polygon class="eye-pupil" points="49,11 51,11 52,25 51,39 49,39 48,25" fill="#050101" />
+            <ellipse class="eye-glint" cx="44" cy="20" rx="3" ry="1.5" fill="#ffffff" />
+          </svg>
+        </div>
+        <svg class="apex-claws-svg" viewBox="0 0 160 160" preserveAspectRatio="none">
+          <path class="claw-slash s1" d="M 22,6 L 148,132" fill="none" />
+          <path class="claw-slash s2" d="M 38,0 L 162,126" fill="none" />
+          <path class="claw-slash s3" d="M 10,26 L 132,148" fill="none" />
+        </svg>
+      </div>`;
+  }
+  return `
+    <div class="slot-tier-fx tier-fossil-fx" aria-hidden="true">
+      <div class="fossil-grit-overlay"></div>
+    </div>`;
+}
+
+let garagePreviewTiers = false;
+const DEMO_TIER_SLOTS = [
+  {
+    slot: 'demo-fossil',
+    species: 'Carnotaurus',
+    growth: 0.65,
+    storedAt: Date.now() - 3600_000 * 3,
+    gift: false,
+    prime: false,
+    primeTasks: { done: 3, eligible: false },
+    vitals: { health: 950, stamina: 85, thirst: 75 },
+    max: { health: 1400, stamina: 100, thirst: 100 },
+    tier: 'fossil',
+    skin: null,
+  },
+  {
+    slot: 'demo-amber',
+    species: 'Stegosaurus',
+    growth: 1.0,
+    storedAt: Date.now() - 3600_000 * 20,
+    gift: false,
+    prime: true,
+    primeTasks: { done: 10, eligible: true },
+    vitals: { health: 3200, stamina: 100, thirst: 100 },
+    max: { health: 3200, stamina: 100, thirst: 100 },
+    tier: 'amber',
+    skin: null,
+  },
+  {
+    slot: 'demo-dna',
+    species: 'Ceratosaurus',
+    growth: 1.0,
+    storedAt: Date.now() - 3600_000 * 35,
+    gift: false,
+    prime: true,
+    elderStacks: 1,
+    primeTasks: { done: 10, eligible: true },
+    vitals: { health: 2100, stamina: 100, thirst: 90 },
+    max: { health: 2100, stamina: 100, thirst: 100 },
+    tier: 'dna',
+    skin: null,
+  },
+  {
+    slot: 'demo-rex',
+    species: 'Tyrannosaurus',
+    growth: 1.0,
+    storedAt: Date.now() - 3600_000 * 60,
+    gift: false,
+    prime: true,
+    elderStacks: 2,
+    primeTasks: { done: 10, eligible: true },
+    vitals: { health: 5800, stamina: 95, thirst: 95 },
+    max: { health: 5800, stamina: 100, thirst: 100 },
+    tier: 'rex',
+    skin: null,
+  },
+  {
+    slot: 'demo-apex',
+    species: 'Deinosuchus',
+    growth: 1.0,
+    storedAt: Date.now() - 3600_000 * 90,
+    gift: false,
+    prime: true,
+    elderStacks: 3,
+    primeTasks: { done: 10, eligible: true },
+    vitals: { health: 8000, stamina: 100, thirst: 100 },
+    max: { health: 8000, stamina: 100, thirst: 100 },
+    tier: 'apex',
+    skin: null,
+  },
+];
+
 function renderGara(me) {
   if (!me) return;
   const rules = me.garageRules ?? { maxSlots: 2, redeemAt: 'current', storeCountdown: 30 };
   $('nav-gara-badge').textContent = me.garage.length;
-  $('gara-count-tag').textContent = `${me.garage.length} / ${rules.maxSlots}`;
+  $('gara-count-tag').textContent = garagePreviewTiers ? 'Demo hiệu ứng' : `${me.garage.length} / ${rules.maxSlots}`;
   $('gara-where-box').hidden = rules.redeemAt !== 'choice';
   const hubGaraSub = $('hub-gara-sub');
   if (hubGaraSub) {
@@ -1412,46 +1662,58 @@ function renderGara(me) {
     : young ? `Dino phải lớn từ ${rules.minGrowthPct}% trở lên mới cất được (đang ${Math.floor(growPct)}%).`
     : `Cất ${me.dino.species ?? 'dino'} đang chơi: đếm ngược ${rules.storeCountdown} giây, trong lúc đó đứng yên (trong 5 m), không đánh và không bị đánh.`;
 
-  if (me.garage.length === 0) {
+  const sourceGarage = garagePreviewTiers ? DEMO_TIER_SLOTS : me.garage;
+
+  if (sourceGarage.length === 0) {
     delete $('gara-slots-list').dataset.key;
     $('gara-slots-list').innerHTML = `
       <li style="padding:32px 16px;text-align:center;background:var(--bg-surface);border-radius:12px;border:1px solid var(--border)">
         <div style="font-size:32px;margin-bottom:8px">🚗</div>
         <b>Gara của bạn đang trống</b>
-        <p class="muted" style="margin:4px 0 0;font-size:12px">Bấm <b>Cất dino đang chơi</b> ở trên để cất.</p>
+        <p class="muted" style="margin:4px 0 0;font-size:12px">Bấm <b>Cất dino đang chơi</b> ở trên để cất, hoặc bấm <b>Xem hiệu ứng thẻ</b> để xem hoạt ảnh.</p>
       </li>`;
     return;
   }
 
-  const rows = me.garage.map((g) => {
+  const rows = sourceGarage.map((g) => {
     // Redeem: online, playing the SAME species (the mod checks it too).
+    const isDemo = Boolean(garagePreviewTiers);
     const same = me.dino && g.species && me.dino.species === g.species;
-    const why = !me.online ? 'Vào game trước'
+    const why = isDemo ? 'Mẫu thử nghiệm cấp độ'
+      : !me.online ? 'Vào game trước'
       : !me.dino ? `Spawn ${g.species ?? 'đúng loài'} trước`
       : !same ? `Respawn thành ${g.species ?? 'đúng loài'} để lấy ra`
       : '';
-    return { g, why };
+    const tier = getDinoTier(g);
+    return { g, why, tier, isDemo };
   });
   // Rebuild only when something shown changes.
-  const key = JSON.stringify([rows.map(({ g, why }) => [g.slot, g.species, g.growth, g.storedAt, g.gift, g.prime, g.primeTasks, g.vitals, g.max, g.skin, why]), garageBusy]);
+  const key = JSON.stringify([
+    garagePreviewTiers,
+    rows.map(({ g, why, tier }) => [g.slot, g.species, g.growth, g.storedAt, g.gift, g.prime, g.primeTasks, g.vitals, g.max, g.skin, g.elderStacks, tier.key, why]),
+    garageBusy,
+  ]);
   const list = $('gara-slots-list');
   if (list.dataset.key === key) { placeSlot3d(rows.map(({ g }) => g)); return; }
   list.dataset.key = key;
-  list.innerHTML = rows.map(({ g, why }) => `
-    <li class="garage-slot-card stacked${g.prime ? ' prime' : ''}">
+  list.innerHTML = rows.map(({ g, why, tier, isDemo }) => `
+    <li class="garage-slot-card stacked ${tier.className}" data-tier="${tier.key}">
+      ${renderSlotFx(tier)}
       <div class="garage-slot-body">
         <div class="slot-3d-spot" data-slot3d="${esc(g.slot)}"></div>
         <div style="flex:1;min-width:0">
-          <b style="font-size:15px">${esc(g.species ?? 'Dino')}</b>
-          <span class="tag" style="margin-left:6px">Growth ${pct(g.growth)}</span>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+            <b style="font-size:15px">${esc(g.species ?? 'Dino')}</b>
+            <span class="tag">Growth ${pct(g.growth)}</span>
+            ${tier.level > 1 ? `<span class="tag prime">👑 Đời ${tier.level}</span>` : g.prime ? '<span class="tag prime">👑 Prime</span>' : ''}
+            ${g.gift ? '<span class="tag purple">Quà Admin</span>' : ''}
+          </div>
           ${skinStrip(g.skin)}
-          ${g.prime ? '<span class="tag prime" style="margin-left:6px">👑 Prime</span>' : ''}
-          ${g.primeTasks ? `<span class="tag${g.primeTasks.eligible ? '' : ' warning'}" style="margin-left:6px" title="Nhiệm vụ prime đã hoàn thành">Nhiệm vụ ${g.primeTasks.done}/10${g.primeTasks.eligible ? ' · đủ điều kiện' : ''}</span>` : ''}
-          ${g.gift ? '<span class="tag purple" style="margin-left:6px">Quà Admin</span>' : ''}
-          <div class="muted" style="font-size:12px;margin-top:2px">Cất lúc: ${when(g.storedAt)}${why ? ` · ${esc(why)}` : ''}</div>
+          ${g.primeTasks ? `<div style="margin-top:6px"><span class="tag${g.primeTasks.eligible ? '' : ' warning'}" title="Nhiệm vụ prime đã hoàn thành">Nhiệm vụ ${g.primeTasks.done}/10${g.primeTasks.eligible ? ' · đủ điều kiện' : ''}</span></div>` : ''}
+          <div class="muted" style="font-size:12px;margin-top:4px">Cất lúc: ${when(g.storedAt)}${why ? ` · ${esc(why)}` : ''}</div>
           ${slotVitals(g)}
         </div>
-        <button type="button" class="btn btn-emerald slot-redeem" data-redeem="${esc(g.slot)}" ${why || garageBusy ? 'disabled' : ''}>📤 Lấy ra</button>
+        <button type="button" class="btn btn-emerald slot-redeem" data-redeem="${esc(g.slot)}" ${why || garageBusy || isDemo ? 'disabled' : ''}>${isDemo ? '👁️ Mẫu demo' : '📤 Lấy ra'}</button>
       </div>
     </li>`).join('');
   placeSlot3d(rows.map(({ g }) => g));
@@ -1522,6 +1784,66 @@ function renderMap(me) {
   }
 }
 
+function renderRankFx(rank) {
+  if (rank === 1) {
+    return `
+      <div class="slot-tier-fx tier-apex-fx rank-fx" aria-hidden="true">
+        <div class="apex-fire-sweep rank-fire-sweep"></div>
+        <div class="rank-eye-wrap">
+          <div class="apex-eye-box rank-eye">
+            <svg class="apex-eye-svg" viewBox="0 0 100 50">
+              <defs>
+                <radialGradient id="rankEyeGrad1" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#fef08a" />
+                  <stop offset="40%" stop-color="#f97316" />
+                  <stop offset="80%" stop-color="#dc2626" />
+                  <stop offset="100%" stop-color="#450a0a" />
+                </radialGradient>
+              </defs>
+              <path class="eye-lid-upper" d="M 6,25 Q 50,-4 94,25" fill="none" stroke="rgba(239,68,68,0.75)" stroke-width="1.6" />
+              <path class="eye-lid-lower" d="M 6,25 Q 50,54 94,25" fill="none" stroke="rgba(239,68,68,0.75)" stroke-width="1.6" />
+              <ellipse class="eye-sclera" cx="50" cy="25" rx="36" ry="16" fill="rgba(185,28,28,0.32)" />
+              <ellipse class="eye-iris" cx="50" cy="25" rx="18" ry="15" fill="url(#rankEyeGrad1)" />
+              <polygon class="eye-pupil" points="49,11 51,11 52,25 51,39 49,39 48,25" fill="#050101" />
+              <ellipse class="eye-glint" cx="44" cy="20" rx="3" ry="1.5" fill="#ffffff" />
+            </svg>
+          </div>
+        </div>
+        <svg class="apex-claws-svg rank-claws" viewBox="0 0 160 160" preserveAspectRatio="none">
+          <path class="claw-slash s1" d="M 22,6 L 148,132" fill="none" />
+          <path class="claw-slash s2" d="M 38,0 L 162,126" fill="none" />
+          <path class="claw-slash s3" d="M 10,26 L 132,148" fill="none" />
+        </svg>
+      </div>`;
+  }
+  if (rank === 2) {
+    return `
+      <div class="slot-tier-fx tier-rex-fx rank-fx" aria-hidden="true">
+        <div class="rex-flame-aura"></div>
+        <svg class="rex-cracks-svg rank-cracks" viewBox="0 0 600 60" preserveAspectRatio="none">
+          <path d="M 0,60 L 60,35 L 120,48 L 190,25 L 260,40 L 340,15 L 420,38 L 510,20 L 600,45" fill="none" stroke="currentColor" stroke-width="2.2" />
+          <path d="M 120,48 L 150,60 M 260,40 L 290,60 M 420,38 L 460,60" fill="none" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+      </div>`;
+  }
+  if (rank === 3) {
+    return `
+      <div class="slot-tier-fx tier-dna-fx rank-fx" aria-hidden="true">
+        <svg class="dna-veins-svg rank-dna-veins" viewBox="0 0 600 60" preserveAspectRatio="none">
+          <path class="dna-capillary c1" d="M -10,30 Q 80,10 160,35 T 320,20 T 480,40 T 610,25" fill="none" />
+          <path class="dna-capillary c2" d="M 40,55 Q 140,20 240,45 T 400,25 T 560,50" fill="none" />
+          <circle class="dna-node n1" cx="160" cy="35" r="3.2" />
+          <circle class="dna-node n2" cx="320" cy="20" r="3.2" />
+          <circle class="dna-node n3" cx="480" cy="40" r="3.2" />
+        </svg>
+      </div>`;
+  }
+  return `
+    <div class="slot-tier-fx tier-fossil-fx rank-fx" aria-hidden="true">
+      <div class="fossil-grit-overlay"></div>
+    </div>`;
+}
+
 function renderRanking() {
   const container = $('ranking-list');
   if (!lastBoardData && currentRankingTab !== 'lives') {
@@ -1536,22 +1858,29 @@ function renderRanking() {
       return;
     }
     const END = { death: 'Tử vong', garage: 'Cất vào gara', admin: 'Admin can thiệp' };
-    container.innerHTML = lives.map((l, i) => `
-      <li class="leaderboard-item">
-        <div style="display:flex;align-items:center;gap:12px">
-          <span class="leaderboard-rank">#${i + 1}</span>
-          <div>
-            <b>${esc(l.species ?? 'Dino')}</b>
-            <span class="tag" style="margin-left:6px">Growth ${pct(l.growth)}</span>
-            <span class="muted" style="font-size:12px;margin-left:6px">⚔️ ${l.kills} kills</span>
+    container.innerHTML = lives.map((l, i) => {
+      const tier = getDinoTier(l);
+      const isTop = i < 3;
+      return `
+      <li class="leaderboard-item ${tier.key === 'amber' ? 'tier-amber' : tier.className}">
+        ${renderSlotFx(tier)}
+        <div class="leaderboard-item-left">
+          <span class="leaderboard-rank ${isTop ? (i === 0 ? 'top-1' : i === 1 ? 'top-2' : 'top-3') : ''}">#${i + 1}</span>
+          <div class="leaderboard-item-details">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
+              <b class="leaderboard-player-name">${esc(l.species ?? 'Dino')}</b>
+              <span class="tag" style="font-size:11px">Growth ${pct(l.growth)}</span>
+              ${tier.level > 1 ? `<span class="tag prime" style="font-size:11px">👑 Đời ${tier.level}</span>` : tier.level === 1 ? '<span class="tag prime" style="font-size:11px">👑 Prime</span>' : ''}
+            </div>
             <div class="muted" style="font-size:11.5px;margin-top:2px">
               ${l.end ? `<span class="tag ${l.end === 'death' ? 'kill' : ''}">${END[l.end] ?? esc(l.end)}${l.killedBy ? ` bởi ${esc(l.killedBy)}` : ''}</span>` : '<span class="tag">Đang sống</span>'}
               · Sinh ra: ${when(l.spawnedAt)}
             </div>
           </div>
         </div>
-      </li>
-    `).join('');
+        <b class="leaderboard-val-num">⚔️ ${l.kills} kills</b>
+      </li>`;
+    }).join('');
     return;
   }
 
@@ -1561,22 +1890,37 @@ function renderRanking() {
     return;
   }
 
-  const formatVal = (v) => currentRankingTab === 'playtime' || currentRankingTab === 'longestLife' ? dur(v) : `${v} kills`;
+  const formatVal = (v) => currentRankingTab === 'playtime' || currentRankingTab === 'longestLife' ? dur(v)
+    : currentRankingTab === 'hunters' ? `🏹 ${v} lần` : `${v} kills`;
 
-  container.innerHTML = list.map((item, idx) => `
-    <li class="leaderboard-item">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span class="leaderboard-rank ${idx === 0 ? 'top-1' : idx === 1 ? 'top-2' : idx === 2 ? 'top-3' : ''}">
-          ${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx + 1)}
-        </span>
-        <div>
-          <b>${esc(item.name ?? 'Ẩn danh')}</b>
-          ${item.species ? `<span class="muted" style="font-size:12px;margin-left:6px">(${esc(item.species)})</span>` : ''}
+  container.innerHTML = list.map((item, idx) => {
+    const rankNum = idx + 1;
+    const isTop = rankNum <= 3;
+    const tierClass = rankNum === 1 ? 'tier-apex' : rankNum === 2 ? 'tier-rex' : rankNum === 3 ? 'tier-dna' : 'tier-fossil';
+    const rankClass = isTop ? `rank-top rank-${rankNum}` : 'rank-rest';
+    const badgeClass = rankNum === 1 ? 'top-1' : rankNum === 2 ? 'top-2' : rankNum === 3 ? 'top-3' : '';
+    const badgeIcon = rankNum === 1 ? '👑 #1' : rankNum === 2 ? '👑 #2' : rankNum === 3 ? '👑 #3' : `#${rankNum}`;
+    const crownTag = rankNum === 1 ? '<span class="tag tier-apex" style="margin-left:6px;font-size:11px">👑 Top 1</span>'
+      : rankNum === 2 ? '<span class="tag tier-rex" style="margin-left:6px;font-size:11px">👑 Top 2</span>'
+      : rankNum === 3 ? '<span class="tag tier-dna" style="margin-left:6px;font-size:11px">👑 Top 3</span>'
+      : '';
+
+    return `
+      <li class="leaderboard-item ${tierClass} ${rankClass}">
+        ${renderRankFx(rankNum)}
+        <div class="leaderboard-item-left">
+          <span class="leaderboard-rank ${badgeClass}">${badgeIcon}</span>
+          <div class="leaderboard-item-details">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+              <b class="leaderboard-player-name">${esc(item.name ?? 'Ẩn danh')}</b>
+              ${crownTag}
+            </div>
+            ${item.species ? `<span class="muted leaderboard-species" style="font-size:12px">${esc(item.species)}</span>` : ''}
+          </div>
         </div>
-      </div>
-      <b style="font-size:15px;color:var(--emerald-light)">${formatVal(item.value)}</b>
-    </li>
-  `).join('');
+        <b class="leaderboard-val-num">${formatVal(item.value)}</b>
+      </li>`;
+  }).join('');
 }
 
 // Ranking Sub-tabs handlers
@@ -1647,6 +1991,8 @@ async function refresh() {
 // Xóm Gáy Launcher's overlay (mini map, dino numbers, prime quests): the same
 // data this page shows, handed over each second. Nothing else leaves the page.
 let lastAi = [];
+// Escaped inmates (the prison): on the map page and the overlay's mini map for everyone to hunt.
+let lastEscapees = [];
 function pushOverlayGame(dino, me = lastMeData) {
   if (!window.isleLauncher?.overlayGame) return;
   window.isleLauncher.overlayGame({
@@ -1657,6 +2003,7 @@ function pushOverlayGame(dino, me = lastMeData) {
       position: dino.position, trail: dino.trail, prime: dino.prime,
     } : null,
     ai: lastAi,
+    escapees: lastEscapees,
     // The point set on the map (map.js): the mini map draws a line to it.
     target: map ? map.getTarget() : loadWaypoints().target,
   });
@@ -1666,12 +2013,14 @@ function pushOverlayGame(dino, me = lastMeData) {
 // the launcher) while the overlay's mini map is on and shows AI.
 let aiBusy = false;
 let miniMapAi = false;
+let miniMapOn = false;
 let overlaySettings = null;
 function readOverlayAi(settings) {
   if (settings) overlaySettings = settings;
   const m = overlaySettings && overlaySettings.widgets && overlaySettings.widgets.map;
-  miniMapAi = Boolean(overlaySettings && overlaySettings.enabled && m && m.enabled && m.show && m.show.ai !== false
-    && (!gameMode.on || gameMode.keep.map));
+  // The mini map shown at all: escaped inmates are drawn on it whatever the AI setting.
+  miniMapOn = Boolean(overlaySettings && overlaySettings.enabled && m && m.enabled && (!gameMode.on || gameMode.keep.map));
+  miniMapAi = Boolean(miniMapOn && m.show && m.show.ai !== false);
 }
 if (window.isleLauncher?.overlayGet) {
   readOverlayAi(window.isleLauncher.overlayGet()?.settings);
@@ -1680,12 +2029,16 @@ if (window.isleLauncher?.overlayGet) {
   setInterval(() => readOverlayAi(window.isleLauncher.overlayGet()?.settings), 10_000);
 }
 setInterval(async () => {
-  const wanted = (currentTab === 'map' && !document.hidden) || miniMapAi;
+  const wanted = (currentTab === 'map' && !document.hidden) || miniMapAi || miniMapOn;
   if (aiBusy || !wanted || !lastMeData || !map) return;
   aiBusy = true;
   try {
     const ai = await getJson('/api/ai');
-    if (ai.status === 200) { lastAi = ai.body?.list ?? []; map.setAi(lastAi); map.setFish(ai.body?.fish ?? []); }
+    if (ai.status === 200) {
+      lastAi = ai.body?.list ?? [];
+      lastEscapees = Array.isArray(ai.body?.escapees) ? ai.body.escapees : [];
+      map.setAi(lastAi); map.setFish(ai.body?.fish ?? []); map.setEscapees(lastEscapees);
+    }
   } catch {
     // The next tick tries again.
   } finally {
