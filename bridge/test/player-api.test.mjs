@@ -13,7 +13,7 @@ const ME = '76561198000000001';
 const OTHER = '76561198000000002';
 writeFileSync(join(root, 'stored', `${ME}__default.json`), JSON.stringify({
   version: 1, slot: 'default', classPath: 'BlueprintGeneratedClass /Game/X/BP_Carnotaurus.BP_Carnotaurus_C',
-  growth: 1, capturedAt: 1000, location: { x: 1, y: 2, z: 3 }, health: 1300,
+  growth: 1, capturedAt: 1000, location: { x: 1, y: 2, z: 3 }, health: 1300, elderStacks: 2,
   skin: { colors: { Body: { r: 0.2, g: 0.3, b: 0.4 }, 'bad key!': { r: 1, g: 1, b: 1 }, Eyes: { r: 'x', g: 0, b: 0 } },
     patternIndex: 2, extra: '<script>' },
 }));
@@ -73,8 +73,9 @@ test('me: own stats, lives and garage — nothing that leaks others or positions
   assert.equal(body.stats.deaths, 1);
   assert.equal(body.lives[0].species, 'Carnotaurus');
   assert.equal(body.lives[0].killedBy, 'Other', 'the killer by name, as the game showed it');
+  assert.ok('elderStacks' in body.lives[0], 'each life says its "đời" (elder stacks), for its effect');
   assert.deepEqual(body.garage, [{ slot: 'default', species: 'Carnotaurus', growth: 1, storedAt: 1000, gift: false,
-    skin: { colors: { Body: { r: 0.2, g: 0.3, b: 0.4 } }, patternIndex: 2 }, prime: false, primeTasks: null,
+    skin: { colors: { Body: { r: 0.2, g: 0.3, b: 0.4 } }, patternIndex: 2 }, prime: false, elderStacks: 2, primeTasks: null,
     vitals: { health: 1300, stamina: null, thirst: null }, max: { health: null, stamina: null, thirst: null } }],
     'skin cleaned: bad keys, non-numbers and extras dropped; vitals as stored, missing = null');
   const text = JSON.stringify(body);

@@ -110,11 +110,15 @@ export interface PlayerView {
   lives: Array<{
     species: string | null; spawnedAt: number; endedAt: number | null; end: string | null;
     growth: number | null; kills: number; killedBy: string | null; killedBySpecies: string | null;
+    /** Elder stacks (the dino's "đời": a rebirth at 100 % adds one); null when never read. */
+    elderStacks: number | null;
   }>;
   garage: Array<{
     slot: string; species: string | null; growth: number | null; storedAt: number | null; gift: boolean; skin: Skin | null;
     /** Stored as a prime elder (the web garage highlights it). */
     prime: boolean;
+    /** Elder stacks when stored (the dino's "đời"), which the slot's effect follows; null if the slot has none. */
+    elderStacks: number | null;
     /** What the dino will come back with (as stored); max = its maxima then, null if the slot has none. */
     vitals: { health: number | null; stamina: number | null; thirst: number | null };
     max: { health: number | null; stamina: number | null; thirst: number | null };
@@ -159,6 +163,7 @@ export function playerView(
       growth: num(l.growth), kills: l.kills,
       // A killer's NAME is what the game showed the victim anyway; never their SteamID.
       killedBy: l.killerName, killedBySpecies: shortSpecies(l.killerSpecies),
+      elderStacks: num(l.elderStacks),
     })),
     garage: garage.map((g) => ({
       slot: g.slot,
@@ -168,6 +173,8 @@ export function playerView(
       gift: g.state?.['createdBy'] === 'admin',
       skin: cleanSkin(g.state?.['skin']),
       prime: g.state?.['prime'] === true || g.state?.['isPrime'] === true,
+      // The "đời" it was stored at (capture.lua GetElderReplicationStacks / an admin's elderStacks).
+      elderStacks: num(g.state?.['elderStacks']),
       // The prime tasks it had (capture.lua primeData / an admin's primeConditions): done of 10, eligible.
       primeTasks: primeTasksOf(g.state?.['primeData']),
       vitals: { health: num(g.state?.['health']), stamina: num(g.state?.['stamina']), thirst: num(g.state?.['thirst']) },
