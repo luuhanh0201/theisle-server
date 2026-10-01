@@ -24,7 +24,7 @@ if (params.get('login_error')) {
 }
 
 // Test mode ("lab"): features not released to players yet: skin effects,
-// glow, kept colours, the 3D on the Game / Gara tabs, show only in a browser
+// glow, kept colours, the 3D on the Game tab, show only in a browser
 // opened once with ?lab=1 (remembered; ?lab=0 turns it off).
 const LAB = (() => {
   try {
@@ -1722,10 +1722,11 @@ function renderGara(me) {
 
 // Each garage slot in 3D, in the colours it was stored with. A slot keeps its
 // viewer (and its canvas) across list rebuilds: the box is moved, not re-made.
+// Released to everyone (2026-10-01), the launcher included: no longer lab-only.
 const slotViewers = new Map();   // slot -> { box, viewer, key }
 function placeSlot3d(slots) {
   // Only while the Gara tab is shown (renderGara runs every second): a model is loaded when first seen.
-  if (!LAB || !window.Dino3D || !$('gara-slots-list').offsetParent) return;
+  if (!window.Dino3D || !$('gara-slots-list').offsetParent) return;
   const keep = new Set();
   for (const g of slots) {
     if (!g.species) continue;
