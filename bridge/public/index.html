@@ -264,6 +264,253 @@
   .feed .ev-body { flex: 1; min-width: 0; font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; }
   .feed .ev-body b { color: var(--text); }
   .feed .ev-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  /* A death's coordinates: opens its scene (who stood near, the fight). */
+  /* Vật phẩm → Skin dino (items.ts) */
+  .itm-layout { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 980px) { .itm-layout { grid-template-columns: 1fr; } }
+  .itm-list { display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - 220px); overflow: auto; }
+  .itm-row { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; text-align: left; font: inherit; color: var(--text-2); }
+  .itm-row:hover { border-color: var(--border-strong); }
+  .itm-row.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .itm-row .top { display: flex; gap: 6px; align-items: center; }
+  .itm-row b { color: var(--text); font-size: 13.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .itm-row .sub { font-size: 11.5px; color: var(--muted); }
+  .itm-sw { display: inline-flex; gap: 3px; }
+  .itm-sw i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,.18); display: inline-block; }
+  .rar { font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .rar.common { color: #94a3b8; } .rar.rare { color: #38bdf8; } .rar.epic { color: #c084fc; } .rar.legendary { color: #fbbf24; }
+  .rar.special { color: #fb7185; border-color: transparent; background: linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(90deg, #f43f5e, #f59e0b, #22d3ee, #a855f7) border-box; border: 1px solid transparent; }
+  /* Rarity looks on an item row (items.ts RARITIES; special = a quest mutation) */
+  .itm-row.r-rare { border-color: rgba(56, 189, 248, .35); }
+  .itm-row.r-epic { border-color: rgba(192, 132, 252, .45); box-shadow: 0 0 14px -8px rgba(168, 85, 247, .8); }
+  .itm-row.r-legendary { border-color: rgba(251, 191, 36, .5); box-shadow: 0 0 16px -8px rgba(245, 158, 11, .9); }
+  .itm-row.r-special { border-color: transparent; background: linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(120deg, #f43f5e, #f59e0b, #22d3ee, #a855f7) border-box; }
+  .itm-row.on { border-color: var(--accent); }
+  /* The owner's mutation icons (public/img/mutations/<slug>.svg) */
+  .mico { width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; margin-right: 5px; }
+  .mico.md { width: 28px; height: 28px; border-radius: 7px; vertical-align: middle; flex: none; }
+  .mico.lg { width: 56px; height: 56px; border-radius: 12px; float: left; margin: 0 12px 4px 0; }
+  .itm-editor { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 1280px) { .itm-editor { grid-template-columns: 1fr; } }
+  .itm-3d { position: relative; height: 420px; border-radius: 12px; background: radial-gradient(ellipse at 50% 40%, #1e293b, #0b1220 70%); border: 1px solid var(--border); overflow: hidden; }
+  .itm-3d canvas { width: 100% !important; height: 100% !important; display: block; }
+  .itm-3d .note { position: absolute; left: 10px; bottom: 8px; font-size: 11.5px; color: #94a3b8; }
+  .itm-3d .sex { position: absolute; right: 10px; top: 10px; display: flex; gap: 4px; }
+  .itm-3d .sex button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(148,163,184,.35); background: rgba(2,6,23,.6); color: #cbd5e1; cursor: pointer; }
+  .itm-3d .sex button.on { background: var(--accent); color: #fff; border-color: transparent; }
+  .itm-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .itm-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; }
+  .itm-regions { display: flex; flex-direction: column; gap: 2px; }
+  .itm-reg { display: grid; grid-template-columns: 110px 40px minmax(0, 1fr) 74px; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+  .itm-reg.all { border-bottom: 0; margin-top: 6px; font-weight: 700; color: var(--text); }
+  .itm-reg input[type=color] { width: 40px; height: 28px; padding: 0; border: 1px solid var(--border-strong); border-radius: 6px; background: none; cursor: pointer; }
+  .itm-reg input[type=range] { width: 100%; margin: 0; accent-color: var(--accent); }
+  .itm-reg .v { font-size: 12px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .itm-reg .v.dark { color: #60a5fa; } .itm-reg .v.bright { color: #fbbf24; }
+  .itm-owners { display: flex; flex-direction: column; gap: 6px; }
+  .itm-owner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; }
+  .itm-owner .who { flex: 1; min-width: 160px; }
+  .itm-owner .who .mono { font-size: 11px; color: var(--muted); display: block; }
+  /* Người chơi → Thao tác admin */
+  .padm { display: flex; flex-direction: column; gap: 14px; }
+  .padm-quick-heal {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    padding: 13px 16px; border-radius: 12px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--kill) 8%, var(--surface-2)), var(--surface-2));
+    border: 1px solid color-mix(in srgb, var(--kill) 22%, var(--border));
+  }
+  .padm-qh-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .padm-qh-title { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .padm-qh-title b { color: var(--text); }
+  .padm-qh-badge {
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 7px; border-radius: 6px; background: var(--kill-soft); color: var(--kill);
+  }
+  .padm-qh-desc { font-size: 12px; color: var(--muted); }
+  .padm-btn-heal {
+    background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.28); font-weight: 750; white-space: nowrap; flex: none;
+  }
+  .padm-btn-heal:hover { filter: brightness(1.1); }
+
+  .padm-tabs {
+    display: flex; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 11px; flex-wrap: wrap;
+  }
+  .padm-tab-btn {
+    flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px 12px; border-radius: 8px; border: 0; background: none; color: var(--muted);
+    font: 600 12.5px Inter, system-ui, sans-serif; cursor: pointer; transition: background .15s, color .15s;
+    white-space: nowrap;
+  }
+  .padm-tab-btn:hover { color: var(--text); background: var(--surface-3); }
+  .padm-tab-btn.on { color: var(--text); background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-weight: 750; }
+
+  .padm-section { display: flex; flex-direction: column; gap: 12px; }
+  .padm-section[hidden] { display: none !important; }
+
+  .padm-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  }
+  .padm-toolbar-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+  .padm-vitals {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 14px;
+  }
+  .padm-vitals label {
+    display: grid; grid-template-columns: 82px minmax(80px, 1fr) 52px; gap: 12px; align-items: center;
+    font-size: 12.5px; color: var(--text-2); padding: 9px 12px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--border); transition: border-color .15s, background .15s;
+  }
+  .padm-vitals label:hover { border-color: var(--border-strong); }
+  .padm-vitals label.changed {
+    border-color: color-mix(in srgb, var(--dmg) 45%, var(--border));
+    background: color-mix(in srgb, var(--dmg-soft) 40%, var(--surface-2));
+  }
+  .padm-vitals label span {
+    font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .padm-vitals label span::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none;
+    background: var(--muted);
+  }
+  .padm-vitals label[data-k="health"] span::before { background: var(--kill); }
+  .padm-vitals label[data-k="blood"] span::before { background: #b91c1c; }
+  .padm-vitals label[data-k="stamina"] span::before { background: var(--dmg); }
+  .padm-vitals label[data-k="oxygen"] span::before { background: var(--gar); }
+  .padm-vitals label[data-k="hunger"] span::before { background: var(--accent-2); }
+  .padm-vitals label[data-k="thirst"] span::before { background: var(--chat); }
+  .padm-vitals label[data-k="carb"] span::before { background: var(--gold); }
+  .padm-vitals label[data-k="protein"] span::before { background: var(--series-2); }
+  .padm-vitals label[data-k="lipid"] span::before { background: var(--grow); }
+
+  /* Reset toàn diện cho thanh kéo: không padding, không border, tách biệt 100% với số % ở cạnh */
+  .padm input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    background: transparent !important; border: none !important;
+    padding: 0 !important; box-shadow: none !important; outline: none !important;
+    min-width: 0; width: 100%; height: 20px; margin: 0; cursor: pointer; vertical-align: middle;
+  }
+  .padm input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 999px; background: var(--surface-3); border: none;
+  }
+  .padm input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); margin-top: -5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25); border: 2px solid var(--surface); cursor: grab;
+  }
+  .padm input[type=range]::-moz-range-track {
+    height: 6px; border-radius: 999px; background: var(--surface-3); border: none;
+  }
+  .padm input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--surface);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25); cursor: grab;
+  }
+
+  .padm-vitals b {
+    text-align: right; font-variant-numeric: tabular-nums; font-weight: 750; font-size: 13px;
+    color: var(--muted); min-width: 52px; white-space: nowrap; flex-shrink: 0;
+  }
+  .padm-vitals label.changed b { color: var(--dmg); font-weight: 800; }
+
+  .padm-grow-card {
+    padding: 14px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .padm-grow-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .padm-grow-head b { font-size: 13.5px; color: var(--text); }
+  .padm-grow-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .padm-grow-ctrl { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .padm-grow-ctrl input[type=range] { flex: 1 1 180px; min-width: 140px; margin: 0; }
+  .padm-grow-ctrl input[type=range]::-webkit-slider-thumb { background: var(--grow); }
+  .padm-grow-ctrl input[type=range]::-moz-range-thumb { background: var(--grow); }
+  .padm-grow-val-wrap { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+  .padm-grow-val-wrap input[type=number] {
+    width: 72px; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border-strong);
+    background: var(--surface); font-size: 13.5px; font-weight: 750; font-variant-numeric: tabular-nums; text-align: right;
+  }
+  .padm-grow-unit { font-size: 13px; font-weight: 750; color: var(--text-2); }
+
+  .padm-tp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .padm-tp-card {
+    padding: 14px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 10px; justify-content: space-between;
+  }
+  .padm-tp-head { display: flex; flex-direction: column; gap: 3px; }
+  .padm-tp-title { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text); }
+  .padm-tp-title svg.i { width: 16px; height: 16px; color: var(--accent); flex: none; }
+  .padm-tp-body { display: flex; flex-direction: column; gap: 8px; }
+  .padm-tp-body select, .padm-tp-body input {
+    width: 100%; padding: 8px 12px; border-radius: 9px; border: 1px solid var(--border-strong);
+    background: var(--surface); font-size: 13px; color: var(--text);
+  }
+  .padm-tp-body .btn { width: 100%; }
+
+  .padm-status {
+    display: none; font-size: 12.5px; line-height: 1.4; padding: 10px 14px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--text-2);
+  }
+  .padm-status:not(:empty) { display: flex; align-items: center; gap: 8px; animation: slide-in .25s ease; }
+  .padm-status.off { background: var(--surface-2); border-color: var(--border); color: var(--muted); }
+  .padm-status.ok { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--accent); font-weight: 600; }
+  .padm-status.err { background: var(--kill-soft); border-color: color-mix(in srgb, var(--kill) 30%, transparent); color: var(--kill); font-weight: 600; }
+  .padm-status.sending { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-2); }
+  .padm-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  .padm-row label { display: flex; gap: 8px; align-items: center; }
+  /* Quản trị → Phân quyền */
+  .perm-list { display: flex; flex-direction: column; gap: 14px; }
+  .perm-card .card-head { gap: 10px; flex-wrap: wrap; }
+  .perm-card .card-head .who b { font-size: 14.5px; color: var(--text); }
+  .perm-card .card-head .who .mono { font-size: 11.5px; color: var(--muted); display: block; }
+  .perm-card .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }
+  .perm-card .tag.super { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .perm-card .tag.warn { background: var(--dmg-soft); color: var(--dmg); border-color: transparent; }
+  .perm-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 18px; }
+  .perm-groups h4 { margin: 0 0 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .perm-groups label { display: flex; gap: 12px; align-items: center; font-size: 13px; color: var(--text-2); padding: 7px 0; cursor: pointer; border-bottom: 1px solid var(--border); }
+  .perm-groups label:last-child { border-bottom: 0; }
+  .perm-groups label span { flex: 1; text-align: left; }
+  .perm-card .role { margin-left: auto; display: flex; gap: 8px; align-items: center; font-size: 13px; white-space: nowrap; }
+  .perm-groups label.extra { color: var(--accent); font-weight: 650; }
+  .perm-groups label.removed { color: var(--kill); }
+  .perm-groups label small { display: block; font-size: 11px; font-weight: 600; }
+  .perm-ingame { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; }
+  .scene-btn {
+    display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding: 1px 7px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--kill) 35%, transparent); background: var(--kill-soft); color: var(--kill);
+    font: inherit; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .scene-btn:hover { background: color-mix(in srgb, var(--kill) 20%, transparent); }
+  .scene-modal { width: min(880px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .scene-modal .head { display: flex; align-items: flex-start; gap: 12px; }
+  .scene-modal .head h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text); }
+  .scene-modal .head .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .scene-modal .head .icon-btn { margin-left: auto; }
+  .scene-map { position: relative; flex: none; height: min(460px, 58vh); border-radius: 12px; overflow: hidden; background: #0b1220; border: 1px solid var(--border); touch-action: none; }
+  .scene-map canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  .scene-map canvas.drag { cursor: grabbing; }
+  .scene-map .msg { position: absolute; inset: 0; display: grid; place-items: center; color: #cbd5e1; font-size: 13px; text-align: center; padding: 16px; }
+  .scene-tip {
+    position: absolute; z-index: 2; pointer-events: none; min-width: 150px; padding: 8px 10px; border-radius: 10px; font-size: 12px;
+    background: rgba(2, 6, 23, .92); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, .3); box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  .scene-tip b { color: #fff; font-size: 13px; }
+  .scene-tip .r { color: #94a3b8; }
+  .scene-people { display: flex; flex-wrap: wrap; gap: 6px; }
+  .scene-people span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; font-size: 12px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); cursor: default; }
+  .scene-people i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .scene-people span.hl { border-color: var(--text-2); }
+  .scene-fight { display: flex; flex-direction: column; gap: 10px; }
+  .scene-fight table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .scene-fight th, .scene-fight td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  .scene-fight th { color: var(--muted); font-weight: 700; font-size: 11.5px; }
+  .scene-fight th.n { text-align: right; }
+  .scene-fight td.n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .scene-fight .hits { max-height: 240px; overflow: auto; }
+  .scene-fight .dealt { color: var(--dmg); }
+  .scene-fight .taken { color: var(--kill); }
   .feed .ev-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .feed li.new { animation: slide-in .45s ease; }
   @keyframes slide-in { from { opacity: 0; transform: translateY(-6px); background: var(--accent-soft); } to { opacity: 1; transform: none; } }
@@ -753,41 +1000,10 @@
   select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   select:disabled { opacity: .5; cursor: not-allowed; }
   select.chosen { border-color: color-mix(in srgb, var(--grow) 55%, transparent); }
-  /* Custom select (see the "Custom select" script): the native <select> stays
-     for its value and events, hidden; .cs-btn shows it, .cs-pop lists it. */
-  select.cs-native { display: none !important; }
-  .cs-btn {
-    display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; padding: 9px 12px; text-align: left;
-    border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-2); color: var(--text);
-    font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.35; cursor: pointer; box-shadow: none;
-  }
-  .cs-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)); }
-  .cs-btn:focus-visible, .cs-btn[aria-expanded="true"] { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .cs-btn:disabled { opacity: .5; cursor: not-allowed; }
-  .cs-btn.chosen { border-color: color-mix(in srgb, var(--grow) 55%, transparent); }
-  .cs-btn .cs-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cs-btn .cs-val.ph { color: var(--muted); }
-  .cs-btn .cs-arrow { flex: none; width: 14px; height: 14px; color: var(--muted); transition: transform .15s; }
-  .cs-btn[aria-expanded="true"] .cs-arrow { transform: rotate(180deg); }
-  .cs-pop {
-    position: fixed; z-index: 1000; display: flex; flex-direction: column; min-width: 220px; max-width: min(520px, calc(100vw - 16px));
-    background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: 12px;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, .18), 0 2px 6px rgba(15, 23, 42, .08); overflow: hidden;
-  }
-  .cs-pop[hidden] { display: none; }
-  .cs-search { margin: 6px 6px 0; padding: 7px 10px; font-size: 13px; border-radius: 8px; width: auto; }
-  .cs-list { overflow-y: auto; padding: 4px; overscroll-behavior: contain; }
-  .cs-group { padding: 8px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
-  .cs-opt { display: flex; flex-direction: column; gap: 1px; padding: 7px 10px 7px 28px; border-radius: 8px; cursor: pointer; font-size: 13.5px; position: relative; }
-  .cs-opt.in-group { padding-left: 36px; }
-  .cs-opt .cs-sub { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cs-opt.active { background: var(--accent-soft); }
-  .cs-opt[aria-selected="true"] { font-weight: 650; color: var(--accent); }
-  .cs-opt[aria-selected="true"]::before { content: ""; position: absolute; left: 10px; top: 11px; width: 10px; height: 6px;
-    border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
-  .cs-opt.in-group[aria-selected="true"]::before { left: 18px; }
-  .cs-opt[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
-  .cs-empty { padding: 10px; font-size: 12.5px; color: var(--muted); }
+  /* The select box: ui-select.js brings its own CSS (.cs-*), the page's colour tokens. */
+  /* Number and date / time inputs: ui-inputs.js brings its own CSS (.nf, .dt-*); the panel's own layout of them: */
+  .msg-line .nf { width: 120px; } .msg-periodic li .nf { width: 110px; }
+  .cfg-field > .nf, .cfg-field > .dt-btn { align-self: start; height: 38px; box-sizing: border-box; }
   .mut-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .mut-head label { margin: 0; }
   .info-btn {
@@ -902,6 +1118,7 @@
   .btn-soft:hover { border-color: var(--accent); color: var(--accent); }
   .btn-soft:disabled { opacity: .45; cursor: not-allowed; }
   .btn-soft.sm { padding: 5px 10px; font-size: 12.5px; border-radius: 8px; }
+  .btn-ghost.sm, .btn-danger.sm { padding: 5px 10px; font-size: 12.5px; border-radius: 8px; }
   a.btn-soft { text-decoration: none; }
   .btn-soft svg.i { width: 16px; height: 16px; }
   .op-box { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
@@ -984,6 +1201,14 @@
   input[type=checkbox].switch.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   input[type=checkbox].switch.switch:disabled { opacity: .5; cursor: not-allowed; }
   .ops-sec { margin-top: 26px; scroll-margin-top: 16px; }
+  .ge-list { display: flex; flex-direction: column; gap: 8px; }
+  .ge-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; }
+  .ge-row.live { border-color: var(--grow); box-shadow: 0 0 0 1px var(--grow) inset; }
+  .ge-row .x { font-size: 18px; font-weight: 800; color: var(--grow); min-width: 46px; }
+  .ge-row .when { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 2px; }
+  .ge-row .when small { color: var(--muted); }
+  .ge-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .ge-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; flex: 1; min-width: 150px; margin: 0; }
   .rd-verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
   .rd-verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
   .rd-verdict.ready .led { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
@@ -1214,6 +1439,13 @@
 
   /* ---- chat ----------------------------------------------------------- */
   .chat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  /* The super admin's delete (deletions.ts): a tick per line, a bar with the count. */
+  .del-pick { flex: none; margin: 10px 0 0; width: 16px; height: 16px; accent-color: var(--kill, #ef4444); cursor: pointer; }
+  .del-one { flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 4px 6px; border-radius: 6px; margin-top: 4px; }
+  .del-one:hover { color: var(--kill, #ef4444); background: var(--dmg-soft, rgba(239,68,68,.12)); }
+  .del-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); font-size: 13px; }
+  .del-bar[hidden] { display: none; }
+  .audit-table td.pick, .audit-table th.pick { width: 34px; }
   .chat-list li { display: flex; gap: 10px; align-items: flex-start; }
   .bubble { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px 14px 14px 14px; padding: 8px 12px; max-width: min(640px, 100%); }
   .bubble .top { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
@@ -1350,6 +1582,113 @@
           <section class="card">
             <div class="card-head"><h2 id="current-title">Dino hiện tại</h2><span class="sub">snapshot gần nhất</span></div>
             <div class="card-body"><div class="vitals" id="player-vitals"></div></div>
+          </section>
+          <section class="card padm-card" id="padm" hidden>
+            <div class="card-head">
+              <h2><svg class="i" style="vertical-align:-3px;margin-right:6px;color:var(--accent)" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>Thao tác admin</h2>
+              <span class="sub">lệnh trực tiếp vào game (/adminpanel) · người chơi phải online</span>
+            </div>
+            <div class="card-body padm">
+              <!-- Cấp tốc: Hồi máu & chữa trị -->
+              <div class="padm-quick-heal">
+                <div class="padm-qh-info">
+                  <div class="padm-qh-title">
+                    <span class="padm-qh-badge">Cấp tốc</span>
+                    <b>Hồi phục toàn diện</b>
+                  </div>
+                  <div class="padm-qh-desc">Hồi đầy 100% máu, huyết, thể lực, oxy · Gỡ bỏ gãy xương, trúng độc, nôn mửa</div>
+                </div>
+                <button type="button" class="btn padm-btn-heal" id="padm-heal">
+                  <span>❤️</span> Hồi máu & chữa trị
+                </button>
+              </div>
+
+              <!-- Thanh chuyển mục -->
+              <div class="padm-tabs" role="tablist" aria-label="Mục thao tác admin">
+                <button type="button" class="padm-tab-btn on" data-padm-tab="vitals">🩺 Chỉ số sinh tồn</button>
+                <button type="button" class="padm-tab-btn" data-padm-tab="grow">📈 Tăng trưởng</button>
+                <button type="button" class="padm-tab-btn" data-padm-tab="tp">📍 Dịch chuyển</button>
+                <button type="button" class="padm-tab-btn" data-padm-tab="all">📑 Xem tất cả</button>
+              </div>
+
+              <!-- Tab 1: Chỉ số sinh tồn -->
+              <div class="padm-section" data-padm-sec="vitals" id="padm-sec-vitals">
+                <div class="padm-toolbar">
+                  <div class="padm-toolbar-left">
+                    <span class="muted" style="font-size:12px;font-weight:600">Đặt nhanh:</span>
+                    <button type="button" class="btn-ghost sm" id="padm-vitals-all100" title="Kéo tất cả chỉ số lên 100%">⚡ Đầy 100%</button>
+                    <button type="button" class="btn-ghost sm" id="padm-vitals-diet100" title="Kéo carb, protein, lipid, đói, khát lên 100%">🍖 Đầy dinh dưỡng</button>
+                    <button type="button" class="btn-ghost sm" id="padm-vitals-reset" title="Khôi phục về snapshot ban đầu">↺ Lấy lại số hiện tại</button>
+                  </div>
+                  <button type="button" class="btn" id="padm-vitals-go">✓ Áp chỉ số</button>
+                </div>
+                <div class="padm-vitals" id="padm-vitals"></div>
+              </div>
+
+              <!-- Tab 2: Tăng trưởng -->
+              <div class="padm-section" data-padm-sec="grow" id="padm-sec-grow" hidden>
+                <div class="padm-grow-card">
+                  <div class="padm-grow-head">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <b>Mức tăng trưởng mục tiêu</b>
+                      <span class="muted" style="font-size:12px">(từ 10% đến 100%)</span>
+                    </div>
+                    <span class="muted" style="font-size:12px">Giữ nguyên % các chỉ số sinh tồn</span>
+                  </div>
+                  <div class="padm-grow-presets" role="group" aria-label="Mốc tăng trưởng chuẩn">
+                    <span class="muted" style="font-size:12px;font-weight:600">Mốc chuẩn:</span>
+                    <button type="button" class="btn-ghost sm" data-grow="20">🐣 20% (Con non)</button>
+                    <button type="button" class="btn-ghost sm" data-grow="50">🦖 50% (Thiếu niên)</button>
+                    <button type="button" class="btn-ghost sm" data-grow="75">🦕 75% (Cận lớn)</button>
+                    <button type="button" class="btn-ghost sm" data-grow="100">👑 100% (Trưởng thành)</button>
+                  </div>
+                  <div class="padm-grow-ctrl">
+                    <input type="range" id="padm-grow-slider" min="10" max="100" step="1" value="100" aria-label="Kéo mức tăng trưởng">
+                    <div class="padm-grow-val-wrap">
+                      <input type="number" id="padm-grow" min="10" max="100" step="1" aria-label="Nhập % tăng trưởng">
+                      <span class="padm-grow-unit">%</span>
+                    </div>
+                    <label class="switch-wrap" title="Prime chỉ đặt được ở 100%: đủ 10 điều kiện prime rồi game tính lại chỉ số prime sau vài giây"><input type="checkbox" class="switch" id="padm-grow-prime"> 👑 Prime</label>
+                    <button type="button" class="btn" id="padm-grow-go">Đặt tăng trưởng</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 3: Dịch chuyển -->
+              <div class="padm-section" data-padm-sec="tp" id="padm-sec-tp" hidden>
+                <div class="padm-tp-grid">
+                  <div class="padm-tp-card">
+                    <div class="padm-tp-head">
+                      <div class="padm-tp-title">
+                        <svg class="i" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+                        <b>Tới người chơi online</b>
+                      </div>
+                      <span class="muted">Dịch chuyển đặt cạnh đồng đội hoặc mục tiêu</span>
+                    </div>
+                    <div class="padm-tp-body">
+                      <select id="padm-to-player" aria-label="Chọn người chơi đích"></select>
+                      <button type="button" class="btn" id="padm-tp-player">Dịch chuyển tới người chơi</button>
+                    </div>
+                  </div>
+                  <div class="padm-tp-card">
+                    <div class="padm-tp-head">
+                      <div class="padm-tp-title">
+                        <svg class="i" viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <b>Tới toạ độ bản đồ</b>
+                      </div>
+                      <span class="muted">Hạ thổ xuống điểm đất an toàn gần nhất (≤ 50 m)</span>
+                    </div>
+                    <div class="padm-tp-body">
+                      <input id="padm-to-xy" placeholder="Toạ độ game: ví dụ 349,211, 148,696" aria-label="Toạ độ dịch chuyển">
+                      <button type="button" class="btn" id="padm-tp-xy">Dịch chuyển tới toạ độ</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trạng thái lệnh -->
+              <div class="padm-status" id="padm-status"></div>
+            </div>
           </section>
           <section class="card">
             <div class="card-head"><h2>Thành tích</h2></div>
@@ -1513,6 +1852,8 @@
                 <input type="search" id="chat-search" placeholder="Tìm theo nội dung chat, tên người chơi hoặc SteamID…" autocomplete="off">
               </div>
             </div>
+            <div class="del-bar" id="chat-del-bar" hidden><label style="display:flex;gap:6px;align-items:center;margin:0;cursor:pointer"><input type="checkbox" class="del-pick" id="chat-pick-all" style="margin:0"> Chọn cả trang</label>
+              <span class="muted" id="chat-del-n">0 tin đã chọn</span><button type="button" class="btn-danger sm" id="chat-del-go" style="margin-left:auto" disabled>Xoá đã chọn</button></div>
             <ul class="chat-list" id="chat"></ul>
             <div class="players-pager" id="chat-pager"></div>
           </div>
@@ -2350,6 +2691,24 @@
           </section>
       </div>
 
+      <div id="ops-growth" class="ops-sec">
+          <section class="card">
+            <div class="card-head"><h2>Sự kiện tốc độ lớn</h2><span class="sub" id="ge-now"></span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="ge-list" id="ge-list"></div>
+              <div class="ge-form" id="ge-form">
+                <label>Bắt đầu<input type="datetime-local" id="ge-start"></label>
+                <label>Kết thúc<input type="datetime-local" id="ge-end"></label>
+                <label>Hệ số<input type="number" id="ge-mult" min="0.1" max="20" step="0.1" value="2"></label>
+                <label style="flex:2">Ghi chú (người chơi thấy)<input id="ge-note" maxlength="80" placeholder="vd: Cuối tuần x2"></label>
+                <button type="button" class="btn" id="ge-add">+ Thêm sự kiện</button>
+              </div>
+              <div class="step-hint">Tốc độ lớn (GrowthMultiplier) chỉ đổi khi server <b>khởi động</b>: sự kiện bắt đầu ở lần khởi động lại đầu tiên sau giờ bắt đầu và kết thúc ở lần đầu tiên sau giờ kết thúc
+                (theo lịch khởi động lại ở trên, hoặc khi admin khởi động lại tay). Lúc server lên, người chơi được báo sự kiện đang diễn ra / đã kết thúc. Hết sự kiện: về hệ số trong Cấu hình game.</div>
+            </div>
+          </section>
+      </div>
+
       <div id="ops-ddos" class="ops-sec">
           <section class="card">
             <div class="card-head"><h2>Cảnh báo DDoS</h2><span class="sub" id="dd-iface"></span></div>
@@ -2483,6 +2842,131 @@
       </div>
     </div>
 
+    <!-- Vật phẩm -->
+    <div data-view="items" hidden>
+      <div class="page-head"><div><h1>Vật phẩm</h1><p>Vật phẩm của server: admin tạo, đặt tên, tặng vào kho của người chơi. Hiện có <b>Skin dino</b>, <b>Mutation</b> và <b>Phiếu</b> (đổi / bỏ mutation, Prime) — người chơi dùng từ Túi đồ lên dino đang chơi; sau này thêm quay hòm, cửa hàng.</p></div></div>
+      <nav class="subtabs" data-subnav="items" aria-label="Loại vật phẩm"></nav>
+      <div data-sub="items:skins">
+        <div class="itm-layout">
+          <section class="card"><div class="card-head"><h2>Skin dino</h2><span class="sub" id="itm-count"></span>
+              <button type="button" class="btn-soft sm" id="itm-new" style="margin-left:auto">+ Skin mới</button></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+              <input type="search" id="itm-q" placeholder="Tìm tên, loài…">
+              <div class="itm-list" id="itm-list"></div>
+            </div></section>
+          <section class="card"><div class="card-head"><h2 id="itm-title">Skin mới</h2><span class="sub" id="itm-sub"></span></div>
+            <div class="card-body" id="itm-body" style="display:flex;flex-direction:column;gap:16px">
+              <div class="itm-fields">
+                <label>Tên skin<input id="itm-name" maxlength="60" placeholder="vd: Hắc Long"></label>
+                <label>Loài<select id="itm-species"></select></label>
+                <label>Độ hiếm<select id="itm-rarity"></select></label>
+              </div>
+              <div class="itm-editor">
+                <div>
+                  <div class="itm-3d" id="itm-3d"><div class="sex" id="itm-sex"><button type="button" data-g="m" class="on">Đực</button><button type="button" data-g="f">Cái</button></div>
+                    <div class="note" id="itm-3d-note"></div></div>
+                  <div class="step-hint" style="margin-top:8px">Xem trước gần đúng: màu, độ tối và độ sáng nhân như game (mỗi kênh tối đa ×4). Skin chỉ đổi màu (và sáng / tối từng vùng): kiểu hoa văn của dino giữ như người chơi đã chọn trong game — kiểu đó có thể đặt Thân / Hông / Hoa văn khác chỗ so với xem trước.</div>
+                  <div class="step-hint" id="itm-warn" hidden style="margin-top:6px;border-color:rgba(245,158,11,.5)"></div>
+                </div>
+                <div>
+                  <!-- The players' editor (portal skin-editor.js) + a light per region -->
+                  <div id="itm-regions"></div>
+                  <div class="itm-reg all" id="itm-bright"><span>Cả con</span><span></span><input type="range" id="itm-bright-r" aria-label="Độ sáng cả con" title="Bấm đúp: về thường"><span class="v" id="itm-bright-v"></span></div>
+                  <h4 style="margin:14px 0 8px;font-size:13px;color:var(--muted)">Bảng màu gợi ý <span style="font-weight:500">(bấm để áp cả 10 vùng)</span></h4>
+                  <div id="itm-presets"></div>
+                </div>
+              </div>
+              <div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap">
+                <span class="muted" id="itm-dirty" style="margin-right:auto;font-size:12.5px"></span>
+                <button type="button" class="btn-ghost" id="itm-retire" hidden></button>
+                <button type="button" class="btn-ghost" id="itm-copy" hidden>Tạo bản sao</button>
+                <button type="button" class="btn" id="itm-save">Lưu skin</button>
+              </div>
+              <div id="itm-own-wrap" hidden style="border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:10px">
+                <h3 style="margin:0;font-size:14.5px">Người sở hữu <span class="muted" id="itm-own-count" style="font-weight:600"></span></h3>
+                <div class="row" style="gap:8px;flex-wrap:wrap">
+                  <input id="itm-to" list="itm-players" placeholder="SteamID64 hoặc chọn tên" style="flex:1;min-width:220px">
+                  <input id="itm-note" maxlength="200" placeholder="Ghi chú (vd: quà sự kiện)" style="flex:1;min-width:180px">
+                  <button type="button" class="btn" id="itm-grant">Tặng vào kho</button>
+                  <button type="button" class="btn-ghost" id="itm-apply" title="Sơn ngay lên dino người đó đang chơi (phải đúng loài)">Áp ngay lên dino</button>
+                </div>
+                <datalist id="itm-players"></datalist>
+                <div class="itm-owners" id="itm-owners"></div>
+              </div>
+            </div></section>
+        </div>
+      </div>
+      <div data-sub="items:tickets" hidden>
+        <div class="itm-layout">
+          <section class="card"><div class="card-head"><h2>Phiếu</h2><span class="sub" id="tkt-count"></span>
+              <button type="button" class="btn-soft sm" id="tkt-new" style="margin-left:auto">+ Phiếu mới</button></div>
+            <div class="card-body"><div class="itm-list" id="tkt-list"></div></div></section>
+          <section class="card"><div class="card-head"><h2 id="tkt-title">Phiếu mới</h2><span class="sub" id="tkt-sub"></span></div>
+            <div class="card-body" id="tkt-body" style="display:flex;flex-direction:column;gap:16px">
+              <div class="itm-fields">
+                <label>Loại phiếu<select id="tkt-type">
+                  <option value="mutation_ticket">🎟️ Phiếu đổi mutation</option>
+                  <option value="mutation_clear">🧹 Phiếu bỏ mutation</option>
+                  <option value="prime_ticket">👑 Phiếu Prime</option></select></label>
+                <label>Tên phiếu<input id="tkt-name" maxlength="60" placeholder="vd: Phiếu đổi mutation Hiếm"></label>
+                <label id="tkt-rarity-l">Độ hiếm<select id="tkt-rarity"></select></label>
+              </div>
+              <div class="step-hint" id="tkt-info"></div>
+              <div class="row" style="justify-content:flex-end">
+                <span class="muted" id="tkt-dirty" style="margin-right:auto;font-size:12.5px"></span>
+                <button type="button" class="btn-ghost" id="tkt-retire" hidden></button>
+                <button type="button" class="btn" id="tkt-save">Lưu phiếu</button>
+              </div>
+              <div id="tkt-own-wrap" hidden style="border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:10px">
+                <h3 style="margin:0;font-size:14.5px">Người sở hữu <span class="muted" id="tkt-own-count" style="font-weight:600"></span></h3>
+                <div class="row">
+                  <input id="tkt-to" list="itm-players" placeholder="SteamID64 hoặc chọn tên" style="flex:1;min-width:220px">
+                  <input id="tkt-note" maxlength="200" placeholder="Ghi chú (vd: đền bù lỗi gara)" style="flex:1;min-width:180px">
+                  <button type="button" class="btn" id="tkt-grant">Tặng 1 phiếu</button>
+                </div>
+                <div class="itm-owners" id="tkt-owners"></div>
+              </div>
+            </div></section>
+        </div>
+      </div>
+      <div data-sub="items:mutations" hidden>
+        <div class="itm-layout">
+          <section class="card"><div class="card-head"><h2>Mutation</h2><span class="sub" id="mit-count"></span>
+              <button type="button" class="btn-soft sm" id="mit-new" style="margin-left:auto">+ Mutation mới</button></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+              <input type="search" id="mit-q" placeholder="Tìm tên, mutation…">
+              <div class="itm-list" id="mit-list"></div>
+            </div></section>
+          <section class="card"><div class="card-head"><h2 id="mit-title">Mutation mới</h2><span class="sub" id="mit-sub"></span></div>
+            <div class="card-body" id="mit-body" style="display:flex;flex-direction:column;gap:16px">
+              <div class="itm-fields">
+                <label>Tên vật phẩm<input id="mit-name" maxlength="60" placeholder="vd: Hồi máu nhanh"></label>
+                <label>Mutation<select id="mit-mutation"></select></label>
+                <label>Độ hiếm<select id="mit-rarity"></select></label>
+              </div>
+              <div class="step-hint" id="mit-info"></div>
+              <div class="step-hint">Người chơi chọn ô 1–4 trên dino đang chơi (hộp so sánh chỉ số mutation đang ở ô đó với mutation mới), dùng xong vật phẩm mất, mutation ở lại trên con đó.
+                Dino đã có mutation này ở ô chính thì bị từ chối, vật phẩm giữ nguyên (nâng cấp riêng một mutation đang thử nghiệm trên server test).
+                Chỉ dùng được khi đúng chế độ ăn của loài. Độ hiếm: admin chọn Thường → Huyền thoại; mutation nhiệm vụ luôn là <b>Đặc biệt</b>.</div>
+              <div class="row" style="justify-content:flex-end">
+                <span class="muted" id="mit-dirty" style="margin-right:auto;font-size:12.5px"></span>
+                <button type="button" class="btn-ghost" id="mit-retire" hidden></button>
+                <button type="button" class="btn" id="mit-save">Lưu mutation</button>
+              </div>
+              <div id="mit-own-wrap" hidden style="border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:10px">
+                <h3 style="margin:0;font-size:14.5px">Người sở hữu <span class="muted" id="mit-own-count" style="font-weight:600"></span></h3>
+                <div class="row">
+                  <input id="mit-to" list="itm-players" placeholder="SteamID64 hoặc chọn tên" style="flex:1;min-width:220px">
+                  <input id="mit-note" maxlength="200" placeholder="Ghi chú (vd: quà sự kiện)" style="flex:1;min-width:180px">
+                  <button type="button" class="btn" id="mit-grant">Tặng 1 cái vào kho</button>
+                </div>
+                <div class="itm-owners" id="mit-owners"></div>
+              </div>
+            </div></section>
+        </div>
+      </div>
+    </div>
+
     <!-- Quản trị -->
     <div data-view="admin" hidden>
       <div class="page-head"><div><h1>Quản trị</h1><p>Ai được vào panel, nhật ký mọi thao tác của admin, và log gửi lên Discord.</p></div></div>
@@ -2502,13 +2986,25 @@
       </div></section>
       </div>
 
+      <div data-sub="admin:perms" hidden>
+        <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🛡️</span>
+          <h2>Phân quyền admin</h2><span class="sub">chỉ admin tổng thấy trang này · quyền trên panel có hiệu lực ngay</span></div>
+        <div class="step-hint" style="margin-bottom:14px">Chọn <b>vai trò</b> để gán nhanh, rồi bật / tắt từng quyền nếu cần.
+          <b>Admin trong game</b> (/adminpanel, bay, kéo / dịch chuyển, hồi máu, growth, thời tiết…): tắt thì người đó bị bỏ khỏi danh sách admin của game —
+          có hiệu lực hoàn toàn từ <b>lần khởi động lại tới</b>; trước đó mod cố gỡ quyền ngay, và mọi lệnh admin họ còn dùng được ghi đỏ trong Nhật ký admin.
+          Mọi lệnh admin trong game của mọi người đều được ghi vào Nhật ký admin.</div>
+        <div class="perm-list" id="perm-list"></div>
+      </div>
+
       <div data-sub="admin:audit" hidden>
         <section class="card">
           <div class="card-head"><h2>Nhật ký admin</h2><span class="sub">mọi thay đổi và mọi lượt đăng nhập panel · giữ 7 ngày rồi tự xoá</span>
             <input type="search" id="audit-q" placeholder="Tìm: tên, SteamID, thao tác…" style="margin-left:auto;max-width:260px"></div>
           <div class="card-body">
+            <div class="del-bar" id="audit-del-bar" hidden><label style="display:flex;gap:6px;align-items:center;margin:0;cursor:pointer"><input type="checkbox" class="del-pick" id="audit-pick-all" style="margin:0"> Chọn cả trang</label>
+              <span class="muted" id="audit-del-n">0 dòng đã chọn</span><button type="button" class="btn-danger sm" id="audit-del-go" style="margin-left:auto" disabled>Xoá đã chọn</button></div>
             <div class="audit-table-wrap"><table class="audit-table">
-              <thead><tr><th>Thời gian</th><th>Admin</th><th>Thao tác</th><th>Thay đổi</th></tr></thead>
+              <thead><tr id="audit-head"><th>Thời gian</th><th>Admin</th><th>Thao tác</th><th>Thay đổi</th></tr></thead>
               <tbody id="srv-audit"></tbody>
             </table></div>
             <div class="audit-pager" id="audit-pager"></div>
@@ -2582,6 +3078,19 @@
   <div class="unsaved-bar" id="unsaved-bar" hidden></div>
 </div>
 
+<div class="modal-back" id="scene" hidden>
+  <div class="card scene-modal" role="dialog" aria-modal="true" aria-labelledby="scene-title">
+    <div class="head">
+      <div><h3 id="scene-title"></h3><div class="sub" id="scene-sub"></div></div>
+      <button type="button" class="icon-btn" id="scene-close" aria-label="Đóng">✕</button>
+    </div>
+    <div class="scene-map" id="scene-map"><canvas id="scene-canvas"></canvas><div class="scene-tip" id="scene-tip" hidden></div><div class="msg" id="scene-msg" hidden></div></div>
+    <div class="scene-people" id="scene-people"></div>
+    <div><button type="button" class="btn-ghost" id="scene-more">Xem chi tiết giao chiến</button></div>
+    <div class="scene-fight" id="scene-fight" hidden></div>
+  </div>
+</div>
+
 <div class="modal-back" id="modal" hidden>
   <form class="card modal" id="modal-form" autocomplete="off">
     <h3 id="modal-title"></h3>
@@ -2602,281 +3111,12 @@
 <div class="toast-wrap" id="toasts"></div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
-<script>
-/*
- * Custom select — every <select> on the page, the ones in the HTML and the
- * ones built later, is shown with the panel's own button + list instead of the
- * browser's. The native <select> stays (hidden) and remains the truth: the
- * code keeps reading and writing sel.value / innerHTML / disabled, and a pick
- * here sets it and fires its input + change events, so nothing else changes.
- *
- * Kept in step by: a MutationObserver (options rebuilt, disabled, class) and
- * sel.value / sel.selectedIndex wrapped per instance (set from code, no event).
- * One list popup, fixed to the viewport; a search box when there are many.
- * Keyboard: Enter / Space / arrows open; arrows, Home, End, type to jump,
- * Enter picks, Esc / Tab close.
- */
-(() => {
-  const SEARCH_FROM = 12;
-  const proto = HTMLSelectElement.prototype;
-  const valueDesc = Object.getOwnPropertyDescriptor(proto, 'value');
-  const indexDesc = Object.getOwnPropertyDescriptor(proto, 'selectedIndex');
-  const ARROW = '<svg class="cs-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>';
-  const btnOf = new WeakMap();
-  let uid = 0;
-
-  const pop = document.createElement('div');
-  pop.className = 'cs-pop';
-  pop.hidden = true;
-  pop.innerHTML = '<input class="cs-search" type="text" placeholder="Tìm…" autocomplete="off" spellcheck="false"><div class="cs-list" role="listbox"></div>';
-  const search = pop.querySelector('.cs-search');
-  const list = pop.querySelector('.cs-list');
-  let open = null;            // { sel, btn, items: [{ el, opt }], active }
-  let typed = '', typedAt = 0;
-
-  function sync(sel) {
-    const btn = btnOf.get(sel);
-    if (!btn) return;
-    const opt = sel.options[indexDesc.get.call(sel)];
-    const val = btn.querySelector('.cs-val');
-    val.textContent = opt ? opt.label || opt.textContent : '';
-    val.classList.toggle('ph', !opt || opt.value === '');
-    btn.title = opt?.title || val.textContent;
-    btn.disabled = sel.disabled;
-    btn.hidden = sel.hidden;
-    for (const c of sel.classList) if (c !== 'cs-native') btn.classList.add(c);
-    for (const c of [...btn.classList]) if (c !== 'cs-btn' && !sel.classList.contains(c)) btn.classList.remove(c);
-    if (open?.sel === sel) render();
-  }
-
-  function enhance(sel) {
-    if (btnOf.has(sel) || sel.multiple || sel.size > 1) return;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'cs-btn';
-    btn.setAttribute('aria-haspopup', 'listbox');
-    btn.setAttribute('aria-expanded', 'false');
-    btn.innerHTML = `<span class="cs-val"></span>${ARROW}`;
-    if (sel.id) {
-      btn.id = `cs-${sel.id}`;
-      const label = document.querySelector(`label[for="${CSS.escape(sel.id)}"]`);
-      if (label) {
-        if (!label.id) label.id = `cs-l${++uid}`;
-        btn.setAttribute('aria-labelledby', label.id);
-      }
-    }
-    btnOf.set(sel, btn);
-    sel.classList.add('cs-native');
-    sel.tabIndex = -1;
-    sel.after(btn);
-    Object.defineProperty(sel, 'value', { configurable: true, get() { return valueDesc.get.call(this); }, set(v) { valueDesc.set.call(this, v); sync(this); } });
-    Object.defineProperty(sel, 'selectedIndex', { configurable: true, get() { return indexDesc.get.call(this); }, set(v) { indexDesc.set.call(this, v); sync(this); } });
-    sel.focus = () => btn.focus();
-    new MutationObserver(() => sync(sel)).observe(sel, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled', 'hidden', 'class', 'selected', 'label'] });
-    btn.addEventListener('click', () => (open?.sel === sel ? close(true) : show(sel)));
-    btn.addEventListener('keydown', (ev) => {
-      if (open?.sel === sel) return keyNav(ev);
-      if (['Enter', ' ', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(ev.key)) { ev.preventDefault(); show(sel); }
-    });
-    sync(sel);
-  }
-
-  function items() {
-    const out = [];
-    for (const node of open.sel.children) {
-      if (node.tagName === 'OPTGROUP') {
-        out.push({ group: node.label, disabled: node.disabled });
-        for (const opt of node.children) if (opt.tagName === 'OPTION') out.push({ opt, inGroup: true, disabled: node.disabled || opt.disabled });
-      } else if (node.tagName === 'OPTION') out.push({ opt: node, disabled: node.disabled });
-    }
-    return out;
-  }
-
-  function render() {
-    const q = search.value.trim().toLowerCase();
-    const all = items();
-    const cur = indexDesc.get.call(open.sel);
-    list.textContent = '';
-    open.items = [];
-    let pendingGroup = null;
-    for (const it of all) {
-      if (it.group !== undefined) { pendingGroup = it; continue; }
-      if (!it.inGroup) pendingGroup = null;
-      const text = it.opt.label || it.opt.textContent;
-      if (q && !`${text} ${it.opt.title} ${it.opt.value}`.toLowerCase().includes(q)) continue;
-      if (pendingGroup) {
-        const g = document.createElement('div');
-        g.className = 'cs-group';
-        g.textContent = pendingGroup.group;
-        g.setAttribute('role', 'presentation');
-        list.append(g);
-        pendingGroup = null;
-      }
-      const el = document.createElement('div');
-      el.className = `cs-opt${it.inGroup ? ' in-group' : ''}`;
-      el.id = `cs-o${++uid}`;
-      el.setAttribute('role', 'option');
-      el.setAttribute('aria-selected', String(it.opt.index === cur));
-      if (it.disabled) el.setAttribute('aria-disabled', 'true');
-      const main = document.createElement('span');
-      main.textContent = text;
-      el.append(main);
-      if (it.opt.title) {
-        const sub = document.createElement('span');
-        sub.className = 'cs-sub';
-        sub.textContent = it.opt.title;
-        el.append(sub);
-        el.title = it.opt.title;
-      }
-      el.addEventListener('mousedown', (ev) => ev.preventDefault());
-      el.addEventListener('click', () => { if (!it.disabled) pick(it.opt); });
-      el.addEventListener('mousemove', () => setActive(open.items.findIndex((x) => x.el === el), false));
-      list.append(el);
-      open.items.push({ el, opt: it.opt, disabled: it.disabled });
-    }
-    if (!open.items.length) {
-      const e = document.createElement('div');
-      e.className = 'cs-empty';
-      e.textContent = q ? 'Không tìm thấy' : 'Không có lựa chọn';
-      list.append(e);
-    }
-    const selIdx = open.items.findIndex((x) => x.opt.index === cur);
-    setActive(selIdx >= 0 ? selIdx : open.items.findIndex((x) => !x.disabled), true);
-  }
-
-  function setActive(i, scroll) {
-    if (!open) return;
-    open.items[open.active]?.el.classList.remove('active');
-    open.active = i;
-    const it = open.items[i];
-    if (!it) { list.removeAttribute('aria-activedescendant'); return; }
-    it.el.classList.add('active');
-    list.setAttribute('aria-activedescendant', it.el.id);
-    if (scroll) it.el.scrollIntoView({ block: 'nearest' });
-  }
-
-  function move(step) {
-    const n = open.items.length;
-    if (!n) return;
-    let i = open.active;
-    for (let k = 0; k < n; k++) {
-      i = i < 0 ? (step > 0 ? 0 : n - 1) : Math.min(n - 1, Math.max(0, i + step));
-      if (!open.items[i].disabled) return setActive(i, true);
-      if ((step > 0 && i === n - 1) || (step < 0 && i === 0)) return;
-    }
-  }
-
-  function edge(first) {
-    const idx = open.items.map((x, i) => (x.disabled ? -1 : i)).filter((i) => i >= 0);
-    if (idx.length) setActive(first ? idx[0] : idx[idx.length - 1], true);
-  }
-
-  function keyNav(ev) {
-    const k = ev.key;
-    if (k === 'ArrowDown') { ev.preventDefault(); move(1); }
-    else if (k === 'ArrowUp') { ev.preventDefault(); move(-1); }
-    else if (k === 'PageDown') { ev.preventDefault(); move(8); }
-    else if (k === 'PageUp') { ev.preventDefault(); move(-8); }
-    else if (k === 'Home' && ev.target !== search) { ev.preventDefault(); edge(true); }
-    else if (k === 'End' && ev.target !== search) { ev.preventDefault(); edge(false); }
-    else if (k === 'Enter' || (k === ' ' && ev.target !== search)) {
-      ev.preventDefault();
-      const it = open.items[open.active];
-      if (it && !it.disabled) pick(it.opt);
-    } else if (k === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(true); }
-    else if (k === 'Tab') close(true);
-    else if (k.length === 1 && ev.target !== search && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
-      const now = Date.now();
-      typed = now - typedAt > 700 ? k.toLowerCase() : typed + k.toLowerCase();
-      typedAt = now;
-      const i = open.items.findIndex((x) => !x.disabled && (x.opt.label || x.opt.textContent).trim().toLowerCase().startsWith(typed));
-      if (i >= 0) setActive(i, true);
-    }
-  }
-
-  function place() {
-    const r = open.btn.getBoundingClientRect();
-    const gap = 4, margin = 8;
-    const below = window.innerHeight - r.bottom - gap - margin;
-    const above = r.top - gap - margin;
-    const up = below < 220 && above > below;
-    const room = Math.max(120, Math.min(360, up ? above : below));
-    pop.style.width = `${Math.max(r.width, 220)}px`;
-    pop.style.maxHeight = `${room}px`;
-    list.style.maxHeight = `${room - (search.hidden ? 0 : 44)}px`;
-    const w = pop.offsetWidth;
-    pop.style.left = `${Math.max(margin, Math.min(r.left, window.innerWidth - w - margin))}px`;
-    pop.style.top = up ? '' : `${r.bottom + gap}px`;
-    pop.style.bottom = up ? `${window.innerHeight - r.top + gap}px` : '';
-  }
-
-  function show(sel) {
-    const btn = btnOf.get(sel);
-    if (sel.disabled || !btn.getClientRects().length) return;
-    if (open) close(false);
-    open = { sel, btn, items: [], active: -1 };
-    if (!pop.isConnected) document.body.append(pop);
-    search.value = '';
-    search.hidden = sel.options.length < SEARCH_FROM;
-    list.id = `cs-list-${++uid}`;
-    btn.setAttribute('aria-expanded', 'true');
-    btn.setAttribute('aria-controls', list.id);
-    pop.hidden = false;
-    render();
-    place();
-    open.items[open.active]?.el.scrollIntoView({ block: 'nearest' });
-    (search.hidden ? btn : search).focus();
-  }
-
-  function close(refocus) {
-    if (!open) return;
-    const { btn } = open;
-    open = null;
-    pop.hidden = true;
-    btn.setAttribute('aria-expanded', 'false');
-    btn.removeAttribute('aria-controls');
-    if (refocus) btn.focus();
-  }
-
-  function pick(opt) {
-    const sel = open.sel;
-    const changed = indexDesc.get.call(sel) !== opt.index;
-    close(true);
-    if (!changed) return;
-    indexDesc.set.call(sel, opt.index);
-    sync(sel);
-    sel.dispatchEvent(new Event('input', { bubbles: true }));
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  search.addEventListener('input', () => render());
-  search.addEventListener('keydown', keyNav);
-  document.addEventListener('mousedown', (ev) => {
-    if (open && !pop.contains(ev.target) && !open.btn.contains(ev.target)) close(false);
-  }, true);
-  window.addEventListener('scroll', (ev) => { if (open && !pop.contains(ev.target)) place(); }, true);
-  window.addEventListener('resize', () => { if (open) place(); });
-  // A <label for> of a hidden select would do nothing: send it to the button.
-  document.addEventListener('click', (ev) => {
-    const label = ev.target.closest?.('label[for]');
-    const sel = label && document.getElementById(label.htmlFor);
-    if (sel instanceof HTMLSelectElement && btnOf.has(sel)) { ev.preventDefault(); btnOf.get(sel).focus(); }
-  });
-
-  const scan = (root) => {
-    if (root instanceof HTMLSelectElement) enhance(root);
-    else root.querySelectorAll?.('select').forEach(enhance);
-  };
-  scan(document);
-  new MutationObserver((muts) => {
-    for (const m of muts) {
-      for (const n of m.addedNodes) if (n.nodeType === 1) scan(n);
-      // A select's button leaves with it; a list open on it closes.
-      if (open && !open.sel.isConnected) close(false);
-    }
-  }).observe(document.body, { childList: true, subtree: true });
-})();
-</script>
+<!-- The system's one select box (portal public/ui-select.js, served from the portal; rule: AGENTS.md "UI") -->
+<script src="/ui-select.js"></script>
+<!-- The system's number and date / time inputs (portal public/ui-inputs.js; rule: AGENTS.md "UI") -->
+<script src="/ui-inputs.js"></script>
+<!-- The mutation icons, one request for all (portal public/mut-icons.js) -->
+<script src="/mut-icons.js"></script>
 <script type="module">
 const $ = (id) => document.getElementById(id);
 
@@ -2924,6 +3164,7 @@ const PATHS = {
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
   messages: '<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
   garage: '<path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8M7 17h10"/>',
+  items: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12h18M12 8c-1.5-3.5-6-4-6-1.5C6 8 9.5 8 12 8zm0 0c1.5-3.5 6-4 6-1.5C18 8 14.5 8 12 8z"/>',
   damage: '<path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/>',
   death: '<path d="M12 3a8 8 0 0 0-5 14.2V20h10v-2.8A8 8 0 0 0 12 3z"/><path d="M10 20v-2M14 20v-2"/><circle cx="9" cy="11" r="1.4"/><circle cx="15" cy="11" r="1.4"/>',
   spawn: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
@@ -2950,6 +3191,33 @@ PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14
 let adminToken = '';
 let sessionToken = false;
 
+// What this admin may do (bridge/src/permissions.ts, from /api/me). null until
+// /api/me answers: nothing is hidden before then (the bridge refuses anyway).
+let ME = { perms: null, super: false };
+const can = (key) => ME.super || ME.perms === null || ME.perms.has(key);
+// The permission each page needs to be shown ('*': the super admin only).
+const TAB_NEED = { overview: 'players.view', player: 'players.view', map: 'map.view' };
+const SUB_NEED = {
+  players: { list: 'players.view', killfeed: 'players.view', leaderboard: 'players.view', chat: 'players.view', bans: 'bans.view', prison: 'prison.view' },
+  world: { overview: 'world.view', flora: 'world.view', fish: 'world.view' },
+  garage: { stored: 'garage.view', settings: 'garage.view' },
+  items: { skins: 'items.view', mutations: 'items.view', tickets: 'items.view' },
+  mods: { commands: 'mods.view', ptera: 'mods.view', voice: 'mods.view', messages: 'mods.view' },
+  admin: { access: 'access.edit', audit: 'audit.view', discord: 'discord.view', perms: '*' },
+};
+const SRV_NEED = { ops: 'server.view', cfg: 'config.view', data: 'backups.view' };
+function subAllowed(view, id) {
+  const need = view === 'server' ? SRV_NEED[id] : SUB_NEED[view]?.[id];
+  if (need === undefined) return true;
+  return need === '*' ? ME.super : can(need);
+}
+function tabAllowed(tab) {
+  if (TAB_NEED[tab]) return can(TAB_NEED[tab]);
+  if (tab === 'server') return Object.keys(SRV_NEED).some((id) => subAllowed('server', id));
+  if (SUB_NEED[tab]) return Object.keys(SUB_NEED[tab]).some((id) => subAllowed(tab, id));
+  return true;
+}
+
 /** The login ended (expired, or no longer an admin): back to the login page. */
 const toLogin = () => { location.href = '/login?e=expired'; };
 
@@ -2964,6 +3232,9 @@ async function loadLogin() {
     $('f-token-wrap').hidden = true;
     $('f-token').value = me.token;
   }
+  ME = { perms: new Set(me.perms ?? []), super: me.super === true };
+  renderTabsNav();
+  showTab();
   if (me.steamId) {
     $('me-name').textContent = me.name ?? 'Admin';
     $('me-sub').textContent = `${me.steamId}${me.ip ? ` · ${me.ip}` : ' · SSH tunnel'}`;
@@ -3149,10 +3420,10 @@ function describe(e) {
       if (e.attributed && e.killer) {
         const hit = e.lastHit !== undefined ? ` · đòn cuối ${num(e.lastHit)}` : '';
         return [`<span class="kill">${who(e.killer, e.killerName)}</span> đã giết ${who(e.steamId, e.name)}`,
-          `${esc(dino(e.killerSpecies))} giết ${esc(dino(e.species))} ${pct(e.growth)}${hit}${life}${locText(e.loc)}`];
+          `${esc(dino(e.killerSpecies))} giết ${esc(dino(e.species))} ${pct(e.growth)}${hit}${life}${sceneBtn(e)}`];
       }
       return [`${who(e.steamId, e.name)} đã chết`,
-        `${esc(dino(e.species))} ${pct(e.growth)} · không rõ nguyên nhân${life}${locText(e.loc)}`];
+        `${esc(dino(e.species))} ${pct(e.growth)} · không rõ nguyên nhân${life}${sceneBtn(e)}`];
     }
     case 'spawn':
       return [`${who(e.steamId, e.name)} spawn <b>${esc(dino(e.species))}</b>`, `growth ${pct(e.growth)}${locText(e.loc)}`];
@@ -3176,7 +3447,19 @@ function describe(e) {
            `lệnh #${e.id} · ${esc(KILL_ERRORS[e.error] ?? e.error ?? 'không rõ')}`];
     case 'portal_command': {
       // A player's own store / redeem from the web garage (DinoGarage inbox).
-      const what = e.action === 'store' ? 'cất dino' : 'lấy dino ra';
+      if (e.action === 'admin') {
+        // An admin's /adminpanel action from the panel (garage/admin.lua): the mod's own line.
+        const line = Array.isArray(e.messages) && e.messages.length ? e.messages[e.messages.length - 1] : '';
+        return [`Admin thao tác lên dino của ${who(e.steamId, e.name)}${e.ok ? '' : ' — <span class="kill">không thực hiện được</span>'}`,
+          esc(e.ok ? line : (WEB_CMD_ERRORS[e.error] ?? (e.error || line)))];
+      }
+      if (e.action === 'mutation') {
+        // A mutation item from the player's bag (garage/mutation.lua): the mod's own line.
+        const line = Array.isArray(e.messages) && e.messages.length ? e.messages[e.messages.length - 1] : '';
+        return [`${who(e.steamId, e.name)} dùng vật phẩm mutation trên web${e.ok ? '' : ' — <span class="kill">không dùng được</span>'}`,
+          esc(e.ok ? line : (WEB_CMD_ERRORS[e.error] ?? (line || e.error || '')))];
+      }
+      const what = e.action === 'store' ? 'cất dino' : e.action === 'skin' ? 'đổi màu dino' : 'lấy dino ra';
       const reply = Array.isArray(e.messages) && e.messages.length ? ` · ${esc(e.messages[e.messages.length - 1])}` : '';
       return e.ok
         ? [`${who(e.steamId, e.name)} ${what} trên web`, `game đã nhận${reply}`]
@@ -3185,9 +3468,9 @@ function describe(e) {
     }
     case 'mutation':
       return e.to
-        ? [`${who(e.steamId, e.name)} chọn mutation <b>${esc(mutName(e.to))}</b>`,
+        ? [`${who(e.steamId, e.name)} chọn mutation <b>${mutIco(e.to)}${esc(mutName(e.to))}</b>`,
            `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}${e.from ? ` · thay ${esc(mutName(e.from))}` : ''}${e.growth !== undefined ? ` · growth ${pct(e.growth)}` : ''}`]
-        : [`${who(e.steamId, e.name)} bỏ mutation <b>${esc(mutName(e.from ?? ''))}</b>`, `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}`];
+        : [`${who(e.steamId, e.name)} bỏ mutation <b>${mutIco(e.from ?? '')}${esc(mutName(e.from ?? ''))}</b>`, `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}`];
     case 'garage_store':
       return [`${who(e.steamId, e.name)} cất <b>${esc(dino(e.species))}</b>`, `slot ${esc(e.slot)} · growth ${pct(e.growth)}`];
     case 'garage_redeem':
@@ -3246,15 +3529,1053 @@ function valueOf(e) {
   }
 }
 
+// --- a death's scene: map of who stood near, the fight (kill-scene.ts) -----------
+// The 📍 on a death opens a modal (the map tab is not left): the spot, the players
+// within 200 m then (their last snapshot), hover for name / dino / growth, and
+// "Xem chi tiết" for the damage each dino in the fight dealt and took.
+
+const sceneDeaths = new Map();   // feed id -> the death entry (for the modal)
+function sceneBtn(e) {
+  if (!e.loc) return '';
+  sceneDeaths.set(e.id, e);
+  return ` · <button type="button" class="scene-btn" data-scene="${e.id}" title="Xem bản đồ lúc chết và người xung quanh">📍 ${num(e.loc.x)}, ${num(e.loc.y)}</button>`;
+}
+
+const SCENE_COLOR = { victim: '#ef4444', killer: '#f59e0b', near: '#38bdf8' };
+const SCENE_ROLE = { victim: 'Người chết', killer: 'Kẻ giết', near: 'Ở gần' };
+const sc = { scene: null, view: null, fit: 1, hover: null, drag: null, raf: 0, entry: null };
+
+function sceneFallback(e) {
+  // A death from before scenes were kept: only its own spot.
+  return { t: e.t, steamId: e.steamId, loc: e.loc, killer: e.killer && e.killer !== 'ai' ? e.killer : null, near: 200, missing: true,
+    players: [{ steamId: e.steamId, name: e.name ?? null, species: e.species, growth: e.growth, x: e.loc.x, y: e.loc.y, dist: 0, age: 0, role: 'victim' }],
+    fight: null };
+}
+
+async function openScene(id) {
+  const e = sceneDeaths.get(id);
+  if (!e) return;
+  sc.entry = e;
+  $('scene-title').innerHTML = e.attributed && e.killer
+    ? `${esc(e.killerName ?? shortId(e.killer))} giết ${esc(e.name ?? shortId(e.steamId))}`
+    : `${esc(e.name ?? shortId(e.steamId))} đã chết`;
+  $('scene-sub').textContent = `${dateTime(e.t)} · ${dino(e.species)} ${pct(e.growth)} · toạ độ ${num(e.loc.x)}, ${num(e.loc.y)}`;
+  $('scene-fight').hidden = true;
+  $('scene-more').textContent = 'Xem chi tiết giao chiến';
+  $('scene-tip').hidden = true;
+  $('scene-people').innerHTML = '';
+  $('scene-msg').hidden = false;
+  $('scene-msg').textContent = 'Đang tải…';
+  $('scene').hidden = false;
+  try {
+    sc.scene = await getJson(`/api/kill-scene?steamId=${encodeURIComponent(e.steamId)}&t=${e.t}`);
+  } catch {
+    sc.scene = sceneFallback(e);
+  }
+  if (sc.entry !== e) return;   // another one was opened meanwhile
+  renderScenePeople();
+  try {
+    await loadMapData();
+    if (!lm.img) throw new Error(lm.failed ?? 'không tải được ảnh bản đồ');
+    $('scene-msg').hidden = true;
+    sc.view = null;
+    sceneDraw();
+  } catch (err) {
+    $('scene-msg').textContent = `Không hiện được bản đồ: ${err.message ?? err}`;
+  }
+}
+function closeScene() {
+  $('scene').hidden = true;
+  sc.scene = null; sc.entry = null; sc.hover = null;
+}
+
+function renderScenePeople() {
+  const s = sc.scene;
+  const note = s.missing
+    ? '<span class="muted" style="border:0;background:none">Lần chết này có trước khi panel lưu hiện trường: chỉ có vị trí người chết.</span>'
+    : s.players.length === 1 ? `<span class="muted" style="border:0;background:none">Không có người chơi nào khác trong ${s.near} m.</span>` : '';
+  $('scene-people').innerHTML = s.players.map((p, i) =>
+    `<span data-scene-p="${i}"><i style="background:${SCENE_COLOR[p.role]}"></i><b>${esc(p.name ?? shortId(p.steamId))}</b> ${esc(dino(p.species))} ${pct(p.growth)}${p.role === 'victim' ? '' : ` · ${num(p.dist)} m`}</span>`).join('') + note;
+}
+
+/** Game location -> canvas px (the map tab's projection: map units = [game Y, game X] / 1000). */
+function sceneScr(x, y) {
+  const [ix, iy] = toImg(unitsOf({ x, y }));
+  return [sc.view.ox + ix * sc.view.s, sc.view.oy + iy * sc.view.s];
+}
+/** Metres on the ground -> canvas px (the image is near enough square per unit). */
+function sceneMetres(m) {
+  const b = lm.data.bounds;
+  return (m / 10) / (b.maxY - b.minY) * lm.img.naturalWidth * sc.view.s;
+}
+
+function sceneDraw() {
+  sc.raf = 0;
+  const s = sc.scene;
+  const canvas = $('scene-canvas');
+  if (!s || !lm.img || $('scene').hidden) return;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  if (!cw || !ch) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
+    canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+  }
+  if (!sc.view) {
+    // The 200 m ring (and the killer, if further) fills most of the view, the death in the middle.
+    const far = Math.max(s.near, ...s.players.map((p) => p.dist));
+    const b = lm.data.bounds;
+    const pxPerM = (1 / 10) / (b.maxY - b.minY) * lm.img.naturalWidth;
+    const scale = (Math.min(cw, ch) * 0.42) / (far * 1.1 * pxPerM);
+    const [ix, iy] = toImg(unitsOf(s.loc));
+    sc.fit = scale;
+    sc.view = { s: scale, ox: cw / 2 - ix * scale, oy: ch / 2 - iy * scale };
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(lm.img, sc.view.ox, sc.view.oy, lm.img.naturalWidth * sc.view.s, lm.img.naturalHeight * sc.view.s);
+
+  // The 200 m ring around the death.
+  const [vx, vy] = sceneScr(s.loc.x, s.loc.y);
+  const r = sceneMetres(s.near);
+  ctx.beginPath(); ctx.arc(vx, vy, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(239,68,68,.08)'; ctx.fill();
+  ctx.setLineDash([7, 5]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(248,113,113,.9)'; ctx.stroke(); ctx.setLineDash([]);
+  drawText(ctx, `${s.near} m`, vx, vy - r - 9, { font: '700 11px Inter, system-ui, sans-serif', color: '#fecaca' });
+
+  // Who hit whom in the fight: a line between them.
+  if (s.fight) {
+    const at = new Map(s.players.map((p) => [p.steamId, p]));
+    const pairs = new Set(s.fight.hits.map((h) => [h.attacker, h.victim].sort().join('|')));
+    for (const pair of pairs) {
+      const [a, b] = pair.split('|').map((id) => at.get(id));
+      if (!a || !b) continue;
+      const [ax, ay] = sceneScr(a.x, a.y), [bx, by] = sceneScr(b.x, b.y);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(251,191,36,.55)'; ctx.stroke();
+    }
+  }
+
+  // The players, the victim on top.
+  const order = [...s.players.keys()].sort((a, b) => (s.players[a].role === 'victim') - (s.players[b].role === 'victim'));
+  for (const i of order) {
+    const p = s.players[i];
+    const [x, y] = sceneScr(p.x, p.y);
+    const hov = sc.hover === i;
+    const rad = (p.role === 'victim' ? 8 : 6.5) + (hov ? 2 : 0);
+    ctx.beginPath(); ctx.arc(x, y, rad + 2.5, 0, Math.PI * 2); ctx.fillStyle = 'rgba(2,6,23,.85)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fillStyle = SCENE_COLOR[p.role]; ctx.fill();
+    if (p.role === 'victim') {
+      ctx.beginPath(); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5);
+      ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+    }
+    drawText(ctx, p.name ?? shortId(p.steamId), x, y - rad - 10, { font: `${hov ? 800 : 700} 11.5px Inter, system-ui, sans-serif`, color: hov ? '#fff' : '#e2e8f0' });
+  }
+}
+const sceneRequest = () => { if (!sc.raf) sc.raf = requestAnimationFrame(sceneDraw); };
+
+function sceneHit(ev) {
+  const s = sc.scene;
+  if (!s || !sc.view) return null;
+  const rect = $('scene-canvas').getBoundingClientRect();
+  const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+  let best = null, bestD = 14;
+  s.players.forEach((p, i) => {
+    const [x, y] = sceneScr(p.x, p.y);
+    const d = Math.hypot(x - mx, y - my);
+    if (d < bestD) { best = i; bestD = d; }
+  });
+  return { i: best, mx, my };
+}
+function sceneTip(i, mx, my) {
+  const tip = $('scene-tip');
+  document.querySelectorAll('#scene-people span').forEach((el) => el.classList.toggle('hl', Number(el.dataset.sceneP) === i));
+  if (i === null) { tip.hidden = true; return; }
+  const p = sc.scene.players[i];
+  const when = p.role === 'victim' ? 'nơi chết' : `cách ${num(p.dist)} m${p.age > 0 ? ` · vị trí ${p.age} s trước lúc chết` : ''}`;
+  tip.innerHTML = `<b>${esc(p.name ?? shortId(p.steamId))}</b><div>${esc(dino(p.species))} · tăng trưởng ${pct(p.growth)}</div>`
+    + `<div class="r">${SCENE_ROLE[p.role]} · ${when}</div>`;
+  tip.hidden = false;
+  const box = $('scene-map').getBoundingClientRect();
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = `${Math.min(box.width - w - 6, Math.max(6, mx + 14))}px`;
+  tip.style.top = `${my + h + 20 > box.height ? Math.max(6, my - h - 12) : my + 14}px`;
+}
+
+function renderSceneFight() {
+  const s = sc.scene;
+  const el = $('scene-fight');
+  if (!s.fight) {
+    el.innerHTML = `<div class="muted">${s.missing ? 'Lần chết này có trước khi panel lưu hiện trường.' : 'Không có đòn PvP nào ngay trước khi chết (chết vì AI, ngã, đói, chảy máu… — game không báo những thứ đó).'}</div>`;
+    return;
+  }
+  const f = s.fight;
+  const nameOf = (id) => {
+    const r = f.rows.find((x) => x.steamId === id);
+    return esc(r?.name ?? shortId(id));
+  };
+  const rows = f.rows.map((r) => {
+    const role = r.steamId === s.steamId ? ' <span class="kill">(chết)</span>' : r.steamId === s.killer ? ' <span style="color:var(--dmg);font-weight:700">(kẻ giết)</span>' : '';
+    return `<tr><td><b>${esc(r.name ?? shortId(r.steamId))}</b>${role}<div class="muted">${esc(dino(r.species))} · ${pct(r.growth)}</div></td>`
+      + `<td class="n dealt">${num(r.dealt)}</td><td class="n taken">${num(r.taken)}</td><td class="n">${r.hits}</td><td class="n">${r.hitsTaken}</td></tr>`;
+  }).join('');
+  const hits = f.hits.map((h) => `<tr><td class="muted">${h.t - s.t === 0 ? 'lúc chết' : `${h.t - s.t} s`}</td>`
+    + `<td>${nameOf(h.attacker)} <span class="muted">→</span> ${nameOf(h.victim)}</td>`
+    + `<td class="n taken">−${num(h.amount)}${h.ticks > 1 ? ` <span class="muted">(cắn giữ ×${h.ticks})</span>` : ''}</td></tr>`).join('');
+  el.innerHTML = `<div class="muted">Trận đánh ${dur(f.to - f.from)}, ${clock(f.from)} → ${clock(f.to)} · chỉ đòn giữa người chơi</div>
+    <table><thead><tr><th>Dino tham gia</th><th class="n">Gây dame</th><th class="n">Chịu dame</th><th class="n">Số đòn</th><th class="n">Bị trúng</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="hits"><table><thead><tr><th>Trước khi chết</th><th>Đòn</th><th class="n">Sát thương</th></tr></thead><tbody>${hits}</tbody></table></div>`;
+}
+
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-scene]');
+  if (!b) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  openScene(Number(b.dataset.scene));
+});
+$('scene-close').addEventListener('click', closeScene);
+$('scene').addEventListener('click', (ev) => { if (ev.target === $('scene')) closeScene(); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('scene').hidden) closeScene(); });
+$('scene-more').addEventListener('click', () => {
+  const el = $('scene-fight');
+  el.hidden = !el.hidden;
+  $('scene-more').textContent = el.hidden ? 'Xem chi tiết giao chiến' : 'Ẩn chi tiết';
+  if (!el.hidden && sc.scene) renderSceneFight();
+});
+{
+  const canvas = $('scene-canvas');
+  canvas.addEventListener('pointermove', (ev) => {
+    if (sc.drag) {
+      sc.view.ox = sc.drag.ox + ev.clientX - sc.drag.x;
+      sc.view.oy = sc.drag.oy + ev.clientY - sc.drag.y;
+      sceneTip(null);
+      sceneRequest();
+      return;
+    }
+    const h = sceneHit(ev);
+    if (!h) return;
+    if (h.i !== sc.hover) { sc.hover = h.i; sceneRequest(); }
+    sceneTip(h.i, h.mx, h.my);
+  });
+  canvas.addEventListener('pointerleave', () => { sc.hover = null; sceneTip(null); sceneRequest(); });
+  canvas.addEventListener('pointerdown', (ev) => {
+    if (!sc.view) return;
+    sc.drag = { x: ev.clientX, y: ev.clientY, ox: sc.view.ox, oy: sc.view.oy };
+    canvas.setPointerCapture(ev.pointerId);
+    canvas.classList.add('drag');
+  });
+  const end = () => { sc.drag = null; canvas.classList.remove('drag'); };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+  canvas.addEventListener('wheel', (ev) => {
+    if (!sc.view) return;
+    ev.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    const v = sc.view;
+    const s = Math.min(sc.fit * 6, Math.max(sc.fit * 0.25, v.s * (ev.deltaY < 0 ? 1.2 : 1 / 1.2)));
+    v.ox = mx - (mx - v.ox) * (s / v.s);
+    v.oy = my - (my - v.oy) * (s / v.s);
+    v.s = s;
+    sceneRequest();
+  }, { passive: false });
+  window.addEventListener('resize', () => { if (!$('scene').hidden) { sc.view = null; sceneRequest(); } });
+}
+
+// --- Quản trị → Phân quyền (the super admin only; bridge/src/permissions.ts) -------------
+const pm = { data: null, drafts: new Map(), dirty: false, at: 0 };
+async function loadPerms() {
+  pm.data = await getJson('/api/permissions');
+  pm.drafts = new Map(pm.data.admins.map((a) => [a.steamId, structuredClone(a.perm)]));
+  pm.dirty = false;
+  pm.at = Date.now();
+  renderPerms();
+}
+const permEffective = (d) => {
+  const out = new Set(pm.data.roles[d.role].perms);
+  for (const k of d.allow) out.add(k);
+  for (const k of d.deny) out.delete(k);
+  return out;
+};
+function renderPerms() {
+  const d = pm.data;
+  if (!d) return;
+  const groups = [...new Set(d.perms.map((p) => p.group))];
+  $('perm-list').innerHTML = d.admins.slice().sort((a, b) => (b.super - a.super) || (a.name ?? '').localeCompare(b.name ?? '')).map((a) => {
+    const name = esc(a.name ?? 'Chưa rõ tên');
+    if (a.super) {
+      return `<section class="card perm-card"><div class="card-head"><div class="who"><b>${name}</b><span class="mono">${esc(a.steamId)}</span></div>
+        <span class="tag super">Admin tổng · toàn quyền, không chỉnh được</span></div></section>`;
+    }
+    const dr = pm.drafts.get(a.steamId);
+    const eff = permEffective(dr);
+    const role = d.roles[dr.role].perms;
+    const changed = JSON.stringify(dr) !== JSON.stringify(a.perm);
+    const ingameNote = dr.ingame === a.inGameNow ? '' : dr.ingame
+      ? '<span class="tag warn">sẽ có lại quyền admin trong game sau lần khởi động lại</span>'
+      : '<span class="tag warn">đã bỏ khỏi danh sách admin của game · hết hẳn quyền sau lần khởi động lại</span>';
+    return `<section class="card perm-card" data-perm-id="${esc(a.steamId)}"><div class="card-head">
+        <div class="who"><b>${name}</b><span class="mono">${esc(a.steamId)}</span></div>
+        ${a.owner ? '<span class="tag">trong ADMIN_STEAM_IDS</span>' : ''}${a.set ? '' : '<span class="tag">chưa đặt quyền · đang toàn quyền</span>'}
+        <label class="role">Vai trò
+          <select data-perm-role style="width:150px">${Object.entries(d.roles).map(([k, r]) => `<option value="${k}" ${k === dr.role ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select></label>
+      </div><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="perm-ingame"><label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" class="switch" data-perm-ingame ${dr.ingame ? 'checked' : ''}> Admin trong game (/adminpanel)</label>
+          <span class="muted">${a.inGameNow ? 'đang có trong danh sách admin của game' : 'không có trong danh sách admin của game'}</span>${ingameNote}</div>
+        <div class="perm-groups">${groups.map((g) => `<div><h4>${esc(g)}</h4>${d.perms.filter((p) => p.group === g).map((p) => {
+          const cls = eff.has(p.key) && !role.includes(p.key) ? 'extra' : !eff.has(p.key) && role.includes(p.key) ? 'removed' : '';
+          return `<label class="${cls}" title="${cls === 'extra' ? 'thêm ngoài vai trò' : cls === 'removed' ? 'bỏ khỏi vai trò' : ''}"><span>${esc(p.label)}${cls === 'extra' ? '<small>thêm ngoài vai trò</small>' : cls === 'removed' ? '<small>đã tắt khỏi vai trò</small>' : ''}</span>`
+            + `<input type="checkbox" class="switch" role="switch" data-perm-key="${esc(p.key)}" ${eff.has(p.key) ? 'checked' : ''} aria-label="${esc(p.label)}"></label>`;
+        }).join('')}</div>`).join('')}</div>
+        <div class="row" style="gap:8px;justify-content:flex-end">
+          <button type="button" class="btn-ghost" data-perm-reset ${changed ? '' : 'disabled'}>Huỷ thay đổi</button>
+          <button type="button" class="btn" data-perm-save ${changed ? '' : 'disabled'}>Lưu quyền của ${name}</button></div>
+      </div></section>`;
+  }).join('') || '<div class="empty">Chưa có admin nào.</div>';
+}
+$('perm-list').addEventListener('change', (ev) => {
+  const card = ev.target.closest('[data-perm-id]');
+  if (!card) return;
+  const id = card.dataset.permId;
+  const dr = pm.drafts.get(id);
+  if (ev.target.matches('[data-perm-role]')) {
+    // A new role: its own permissions, nothing added or removed.
+    dr.role = ev.target.value; dr.allow = []; dr.deny = [];
+  } else if (ev.target.matches('[data-perm-ingame]')) {
+    dr.ingame = ev.target.checked;
+  } else if (ev.target.matches('[data-perm-key]')) {
+    const key = ev.target.dataset.permKey;
+    const inRole = pm.data.roles[dr.role].perms.includes(key);
+    dr.allow = dr.allow.filter((k) => k !== key);
+    dr.deny = dr.deny.filter((k) => k !== key);
+    if (ev.target.checked && !inRole) dr.allow.push(key);
+    if (!ev.target.checked && inRole) dr.deny.push(key);
+  }
+  pm.dirty = true;
+  renderPerms();
+});
+$('perm-list').addEventListener('click', async (ev) => {
+  const card = ev.target.closest('[data-perm-id]');
+  if (!card) return;
+  const id = card.dataset.permId;
+  const admin = pm.data.admins.find((a) => a.steamId === id);
+  if (ev.target.closest('[data-perm-reset]')) {
+    pm.drafts.set(id, structuredClone(admin.perm));
+    renderPerms();
+    return;
+  }
+  if (!ev.target.closest('[data-perm-save]')) return;
+  try {
+    await adminFetch(`/api/permissions/${id}`, 'PUT', adminToken, pm.drafts.get(id));
+    toast(`Đã lưu quyền của ${admin.name ?? id}`);
+    await loadPerms();
+  } catch (e) {
+    toast(e.message ?? String(e), 'err');
+  }
+});
+
+// --- Vật phẩm → Skin dino (bridge/src/items.ts) -------------------------------------------
+// The 3D is the portal's own viewer and models (/skin3d.js, /dino3d: the bridge serves them
+// from the portal's folder), loaded only when this page is opened.
+const ITM_REGIONS = [
+  ['Body', 'Thân'], ['Flank', 'Hông'], ['Underbelly', 'Bụng'], ['Markings', 'Hoa văn'], ['MaleDisplay', 'Phô trương (đực)'],
+  ['Detail1', 'Chi tiết'], ['Eyes', 'Mắt'], ['Teeth', 'Răng'], ['Mouth', 'Miệng'], ['Claws', 'Móng'],
+];
+// A real Carnotaurus skin of this server (linear): what a new skin starts from.
+const ITM_DEFAULT = {
+  Body: { r: 0.347, g: 0.22, b: 0.156 }, Flank: { r: 0.195, g: 0.109, b: 0.091 }, Underbelly: { r: 0.397, g: 0.314, b: 0.266 },
+  Markings: { r: 0.056, g: 0.045, b: 0.037 }, MaleDisplay: { r: 0.342, g: 0.1, b: 0.06 }, Detail1: { r: 0.02, g: 0.017, b: 0.015 },
+  Eyes: { r: 0.25, g: 0.12, b: 0.02 }, Teeth: { r: 0.62, g: 0.55, b: 0.42 }, Mouth: { r: 0.4, g: 0.223, b: 0.179 }, Claws: { r: 0.05, g: 0.041, b: 0.033 },
+};
+const itmHex = (c) => {
+  const ch = (v) => { const x = Math.min(1, Math.max(0, Number(v) || 0)); return Math.round(255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055)).toString(16).padStart(2, '0'); };
+  return `#${ch(c.r)}${ch(c.g)}${ch(c.b)}`;
+};
+const itmLinear = (hexText) => {
+  const n = parseInt(String(hexText).replace('#', ''), 16);
+  const ch = (v) => { const x = v / 255; return Math.round((x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4) * 10000) / 10000; };
+  return { r: ch((n >> 16) & 255), g: ch((n >> 8) & 255), b: ch(n & 255) };
+};
+// Light sliders are logarithmic: the same drag doubles or halves; 0 = × 1.
+const LIGHT_MIN = 0.05, LIGHT_MAX = 4;
+const toSlider = (f) => Math.log(f);
+const fromSlider = (v) => Math.round(Math.exp(Number(v)) * 100) / 100;
+const lightText = (f) => (Math.abs(f - 1) < 0.005 ? ['thường', ''] : f < 1 ? [`tối ×${f.toFixed(2)}`, 'dark'] : [`sáng ×${f.toFixed(2)}`, 'bright']);
+
+const itm = { data: null, sel: null, draft: null, saved: null, viewer: null, female: false, owners: [], loadedAt: 0, ready: null };
+const itmDirty = () => itm.draft !== null && JSON.stringify(itm.draft) !== itm.saved;
+
+async function loadItemsPage(force = false) {
+  if (!force && itm.data && (itmDirty() || Date.now() - itm.loadedAt < 30_000)) return;
+  itm.ready ??= import('/skin3d.js').then(() => window.Dino3D.ready).catch(() => null);
+  itm.seReady ??= import('/skin-editor.js').then((m) => { itm.se = m; }).catch(() => null);
+  const [data] = await Promise.all([getJson('/api/items'), itm.ready, itm.seReady]);
+  itm.data = data;
+  itm.loadedAt = Date.now();
+  if (!$('itm-species').options.length) {
+    const names = window.Dino3D?.species?.() ?? [];
+    $('itm-species').innerHTML = names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    $('itm-rarity').innerHTML = data.rarities.filter((r) => r.pickable).map((r) => `<option value="${esc(r.key)}">${esc(r.label)}</option>`).join('');
+    renderItmRegions();
+    if (can('items.grant') && can('players.view')) {
+      getJson('/api/players').then((p) => {
+        $('itm-players').innerHTML = p.players.map((x) => `<option value="${esc(x.steamId)}">${esc(x.name ?? '')} · ${esc(dino(x.species))}</option>`).join('');
+      }).catch(() => undefined);
+    }
+  }
+  if (itm.draft === null) selectItem(data.items.find((i) => i.type === 'skin')?.id ?? null);
+  renderItmList();
+  renderMit();
+  renderTkt();
+}
+
+function renderItmList() {
+  const q = $('itm-q').value.trim().toLowerCase();
+  const skins = (itm.data?.items ?? []).filter((i) => i.type === 'skin')
+    .filter((i) => !q || i.name.toLowerCase().includes(q) || i.data.species.toLowerCase().includes(q));
+  const rar = Object.fromEntries((itm.data?.rarities ?? []).map((r) => [r.key, r.label]));
+  $('itm-count').textContent = `${(itm.data?.items ?? []).filter((i) => i.type === 'skin').length} skin`;
+  $('itm-list').innerHTML = skins.map((i) => `<button type="button" class="itm-row r-${esc(i.rarity)} ${i.id === itm.sel ? 'on' : ''}" data-itm="${esc(i.id)}">
+      <span class="top"><b>${esc(i.name)}</b><span class="rar ${esc(i.rarity)}">${esc(rar[i.rarity] ?? i.rarity)}</span></span>
+      <span class="top"><span class="itm-sw">${['Body', 'Flank', 'Underbelly', 'Markings', 'Eyes'].filter((k) => i.data.colors[k]).map((k) => `<i style="background:${itmHex(i.data.colors[k])}"></i>`).join('')}</span>
+        <span class="sub">${esc(i.data.species)} · ${i.owners} người có${i.retired ? ' · <span class="kill">ngừng phát hành</span>' : ''}</span></span>
+    </button>`).join('') || `<div class="empty">${q ? 'Không có skin nào khớp' : 'Chưa có skin nào — bấm “+ Skin mới”.'}</div>`;
+  $('itm-new').hidden = !can('items.edit');
+}
+
+function newDraft() {
+  const species = $('itm-species').value || 'Carnotaurus';
+  return { type: 'skin', name: '', rarity: 'common', data: { species, colors: structuredClone(ITM_DEFAULT), light: {}, brightness: 1, pattern: null, theme: null, variation: null } };
+}
+function selectItem(id, force = false) {
+  if (!force && itmDirty()) {
+    confirmAction({ title: 'Bỏ thay đổi chưa lưu?', body: 'Skin đang sửa có thay đổi chưa lưu. Chuyển sang skin khác sẽ mất các thay đổi đó.',
+      okLabel: 'Bỏ thay đổi', run: async () => selectItem(id, true) });
+    return;
+  }
+  const item = id ? itm.data.items.find((i) => i.id === id) : null;
+  itm.sel = item?.id ?? null;
+  itm.draft = item ? { type: item.type, name: item.name, rarity: item.rarity, data: structuredClone(item.data) } : newDraft();
+  itm.saved = item ? JSON.stringify(itm.draft) : null;
+  renderItmEditor();
+  renderItmList();
+  void loadItmOwners();
+}
+
+function renderItmRegions() {
+  // The players' Skin Studio region list (skin-editor.js), with a light per region.
+  if (!itm.se) { $('itm-regions').innerHTML = '<div class="muted">Chưa tải được bộ chỉnh màu (portal).</div>'; return; }
+  itm.regions = itm.se.mountRegions($('itm-regions'), { prefix: 'itm-', light: true, onChange: () => {
+    const d = itm.draft;
+    if (!d) return;
+    const { colors, light } = itm.regions.get();
+    // Only a region whose colour the admin changed is written again (no rounding of the others).
+    for (const [id] of ITM_REGIONS) if (colors[id] !== itmHex(d.data.colors[id] ?? ITM_DEFAULT[id])) d.data.colors[id] = itmLinear(colors[id]);
+    d.data.light = light;
+    renderItmValues();
+  } });
+  itm.se.mountPresets($('itm-presets'), (colors) => {
+    if (!itm.draft) return;
+    itm.regions.set({ colors });
+    for (const [id] of ITM_REGIONS) itm.draft.data.colors[id] = itmLinear(colors[id]);
+    renderItmValues();
+  });
+  const r = $('itm-bright-r');
+  r.min = String(itm.se.lightSlider.min); r.max = String(itm.se.lightSlider.max); r.step = '0.01';
+}
+
+function renderItmEditor() {
+  const d = itm.draft;
+  const item = itm.sel ? itm.data.items.find((i) => i.id === itm.sel) : null;
+  const edit = can('items.edit');
+  $('itm-title').textContent = item ? item.name : 'Skin mới';
+  $('itm-sub').textContent = item ? `${item.id}${item.retired ? ' · ngừng phát hành' : ''}` : 'chưa lưu';
+  $('itm-name').value = d.name;
+  if (![...$('itm-species').options].some((o) => o.value === d.data.species)) $('itm-species').insertAdjacentHTML('beforeend', `<option value="${esc(d.data.species)}">${esc(d.data.species)}</option>`);
+  $('itm-species').value = d.data.species;
+  $('itm-rarity').value = d.rarity;
+  itm.regions?.set({ colors: Object.fromEntries(ITM_REGIONS.map(([id]) => [id, d.data.colors[id] ?? ITM_DEFAULT[id]])), light: d.data.light });
+  $('itm-bright-r').value = toSlider(d.data.brightness);
+  for (const el of $('itm-body').querySelectorAll('input, select')) if (!el.closest('#itm-own-wrap')) el.disabled = !edit;
+  $('itm-save').hidden = !edit;
+  $('itm-copy').hidden = !edit || !item;
+  $('itm-retire').hidden = !edit || !item;
+  $('itm-retire').textContent = item?.retired ? 'Phát hành lại' : 'Ngừng phát hành';
+  $('itm-own-wrap').hidden = !item;
+  $('itm-grant').hidden = !can('items.grant');
+  $('itm-apply').hidden = !can('items.grant');
+  $('itm-to').hidden = $('itm-note').hidden = !can('items.grant');
+  renderItmValues();
+  void showItm3d();
+}
+
+/** The value labels, the unsaved note, the 3D. */
+function renderItmValues() {
+  const d = itm.draft;
+  const [text, cls] = lightText(d.data.brightness);
+  $('itm-bright-v').textContent = text;
+  $('itm-bright-v').className = `v ${cls}`;
+  // Regions past what the game takes (each channel at most × 4 of 1): the rest is lost.
+  const over = ITM_REGIONS.filter(([id]) => {
+    const c = d.data.colors[id] ?? ITM_DEFAULT[id];
+    return Math.max(c.r, c.g, c.b) * (d.data.light[id] ?? 1) * d.data.brightness > 4.001;
+  }).map(([, label]) => label);
+  const warn = [];
+  if (over.length) warn.push(`⚠ ${over.join(', ')}: vượt ×4 — game chỉ nhận tới ×4, kéo thêm không sáng hơn.`);
+  $('itm-warn').hidden = warn.length === 0;
+  $('itm-warn').innerHTML = warn.map(esc).join('<br>');
+  $('itm-dirty').textContent = itmDirty() ? '● Có thay đổi chưa lưu' : itm.sel ? 'Đã lưu' : '';
+  itm.viewer?.setSkin(itmPreview());
+}
+const itmPreview = () => {
+  const d = itm.draft.data;
+  return { colors: Object.fromEntries(ITM_REGIONS.map(([id]) => [id, itmHex(d.colors[id] ?? ITM_DEFAULT[id])])),
+    light: d.light, brightness: d.brightness, female: itm.female };
+};
+async function showItm3d() {
+  if (!window.Dino3D) { $('itm-3d-note').textContent = 'Chưa tải được mô hình 3D (thư mục portal trên server).'; return; }
+  itm.viewer ??= window.Dino3D.create($('itm-3d'), { note: $('itm-3d-note') });
+  await itm.viewer.show(itm.draft.data.species, itmPreview());
+  // Edits made while the model loaded: show() took the skin as it was when called.
+  itm.viewer.setSkin(itmPreview());
+}
+
+$('itm-q').addEventListener('input', renderItmList);
+$('itm-list').addEventListener('click', (e) => { const b = e.target.closest('[data-itm]'); if (b) selectItem(b.dataset.itm); });
+$('itm-new').addEventListener('click', () => selectItem(null));
+$('itm-sex').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-g]');
+  if (!b) return;
+  itm.female = b.dataset.g === 'f';
+  for (const x of $('itm-sex').querySelectorAll('button')) x.classList.toggle('on', x === b);
+  // The display colour means nothing on a female (as the players' editor).
+  $('itm-regions').querySelector('[data-region="MaleDisplay"]')?.classList.toggle('off', itm.female);
+  itm.viewer?.setFemale(itm.female);
+});
+$('itm-body').addEventListener('input', (e) => {
+  const t = e.target, d = itm.draft;
+  if (!d || t.closest('#itm-own-wrap')) return;
+  // The region list (colours, light per region) answers through its own onChange (renderItmRegions).
+  if (t.closest('#itm-regions')) return;
+  if (t.id === 'itm-bright-r') d.data.brightness = itm.se.lightSlider.value(t);
+  else if (t.id === 'itm-name') d.name = t.value;
+  else if (t.id === 'itm-rarity') d.rarity = t.value;
+  else if (t.id === 'itm-species') { d.data.species = t.value; void showItm3d(); }
+  renderItmValues();
+});
+$('itm-bright-r').addEventListener('dblclick', (e) => {
+  e.target.value = 0;
+  e.target.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+async function saveItem(body, id) {
+  const r = id ? await adminFetch(`/api/items/${id}`, 'PUT', adminToken, body) : await adminFetch('/api/items', 'POST', adminToken, body);
+  itm.saved = null;
+  itm.draft = null;
+  await loadItemsPage(true);
+  selectItem(r.item.id, true);
+  return r.item;
+}
+$('itm-save').addEventListener('click', async () => {
+  try {
+    const item = await saveItem(itm.draft, itm.sel);
+    toast(`Đã lưu skin “${item.name}”`);
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+$('itm-copy').addEventListener('click', () => {
+  const copy = structuredClone(itm.draft);
+  copy.name = `${copy.name} (bản sao)`.slice(0, 60);
+  itm.sel = null; itm.saved = null; itm.draft = copy;
+  renderItmEditor(); renderItmList();
+});
+$('itm-retire').addEventListener('click', async () => {
+  const item = itm.data.items.find((i) => i.id === itm.sel);
+  if (!item) return;
+  try {
+    await saveItem({ type: item.type, name: item.name, rarity: item.rarity, data: item.data, retired: !item.retired }, item.id);
+    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành — người đã có vẫn giữ');
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+
+async function loadItmOwners() {
+  if (!itm.sel) { $('itm-owners').innerHTML = ''; return; }
+  const id = itm.sel;
+  const { owners } = await getJson(`/api/items/${id}/owners`).catch(() => ({ owners: [] }));
+  if (itm.sel !== id) return;
+  itm.owners = owners;
+  const SRC = { admin: 'admin tặng', gacha: 'quay hòm', shop: 'mua', event: 'sự kiện' };
+  $('itm-own-count').textContent = `(${owners.length})`;
+  $('itm-owners').innerHTML = owners.map((o) => `<div class="itm-owner"><div class="who"><b>${esc(o.name ?? 'Chưa rõ tên')}</b><span class="mono">${esc(o.steamId)}</span></div>
+      <span class="muted">${esc(SRC[o.source] ?? o.source)} · ${esc(dateTime(o.grantedAt))}${o.note ? ` · ${esc(o.note)}` : ''}</span>
+      ${can('items.grant') ? `<button type="button" class="btn-ghost sm" data-own-apply="${esc(o.steamId)}">Áp ngay</button>
+      <button type="button" class="btn-danger sm" data-own-revoke="${esc(o.steamId)}">Thu hồi</button>` : ''}</div>`).join('')
+    || '<div class="muted" style="font-size:13px">Chưa ai có skin này.</div>';
+}
+async function itmApply(steamId) {
+  try {
+    await adminFetch(`/api/items/${itm.sel}/apply`, 'POST', adminToken, { steamId });
+    toast('Đã gửi skin vào game — đổi màu sau vài giây');
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+}
+$('itm-grant').addEventListener('click', async () => {
+  const steamId = $('itm-to').value.trim();
+  try {
+    await adminFetch(`/api/items/${itm.sel}/grant`, 'POST', adminToken, { steamId, note: $('itm-note').value });
+    toast('Đã tặng skin vào kho người chơi');
+    $('itm-to').value = ''; $('itm-note').value = '';
+    await loadItemsPage(true);
+    void loadItmOwners();
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+$('itm-apply').addEventListener('click', () => itmApply($('itm-to').value.trim()));
+$('itm-owners').addEventListener('click', async (e) => {
+  const a = e.target.closest('[data-own-apply]');
+  if (a) { void itmApply(a.dataset.ownApply); return; }
+  const r = e.target.closest('[data-own-revoke]');
+  if (!r) return;
+  const o = itm.owners.find((x) => x.steamId === r.dataset.ownRevoke);
+  confirmAction({ title: 'Thu hồi skin?', body: `Lấy skin <b>${esc(itm.draft.name)}</b> khỏi kho của <b>${esc(o?.name ?? r.dataset.ownRevoke)}</b>. Màu đang có trên dino không đổi.`,
+    okLabel: 'Thu hồi', run: async (token) => {
+      await adminFetch(`/api/items/${itm.sel}/grant/${r.dataset.ownRevoke}`, 'DELETE', token);
+      toast('Đã thu hồi');
+      await loadItemsPage(true);
+      void loadItmOwners();
+    } });
+});
+
+// --- Vật phẩm → Mutation (items.ts type 'mutation'; players use one from Túi đồ, mods/DinoGarage garage/mutation.lua) ---
+const MIT_DIET = { all: 'Mọi loài', carnivore: 'Ăn thịt', herbivore: 'Ăn cỏ', herbivore_omnivore: 'Ăn cỏ / ăn tạp' };
+const mit = { sel: null, draft: null, saved: null, owners: [] };
+const mitDirty = () => mit.draft !== null && JSON.stringify(mit.draft) !== mit.saved;
+const mitRef = (name) => (itm.data?.mutations ?? []).find((m) => m.name === name) ?? null;
+function renderMit() {
+  if (!itm.data) return;
+  const sel = $('mit-mutation');
+  if (!sel.options.length) {
+    // Only the quest mutations are items (2026-10-02): the others come from a Phiếu đổi mutation.
+    const groups = Object.entries(MIT_DIET).map(([diet, label]) => {
+      const list = itm.data.mutations.filter((m) => m.diet === diet && m.kind === 'unlock').sort((a, b) => a.name.localeCompare(b.name));
+      return list.length ? `<optgroup label="${esc(label)}">${list.map((m) => `<option value="${esc(m.name)}">${esc(m.name)}${m.kind === 'slot2' ? ' (ô 2/4)' : m.kind === 'unlock' ? ' (nhiệm vụ)' : ''}</option>`).join('')}</optgroup>` : '';
+    });
+    sel.innerHTML = groups.join('');
+    $('mit-rarity').innerHTML = itm.data.rarities.map((r) => `<option value="${esc(r.key)}"${r.pickable ? '' : ' hidden'}>${esc(r.label)}${r.pickable ? '' : ' (mutation nhiệm vụ)'}</option>`).join('');
+  }
+  if (mit.draft === null) mitSelect(itm.data.items.find((i) => i.type === 'mutation')?.id ?? null, true);
+  renderMitList();
+}
+function renderMitList() {
+  const q = $('mit-q').value.trim().toLowerCase();
+  const all = (itm.data?.items ?? []).filter((i) => i.type === 'mutation');
+  const shown = all.filter((i) => !q || i.name.toLowerCase().includes(q) || i.data.mutation.toLowerCase().includes(q));
+  const rar = Object.fromEntries((itm.data?.rarities ?? []).map((r) => [r.key, r.label]));
+  $('mit-count').textContent = `${all.length} mutation`;
+  $('mit-list').innerHTML = shown.map((i) => `<button type="button" class="itm-row r-${esc(i.rarity)} ${i.id === mit.sel ? 'on' : ''}" data-mit="${esc(i.id)}">
+      <span class="top">${mutIco(i.data.mutation, 'md', true)}<b>${esc(i.name)}</b><span class="rar ${esc(i.rarity)}">${esc(rar[i.rarity] ?? i.rarity)}</span></span>
+      <span class="sub">${esc(i.data.mutation)} · ${esc(MIT_DIET[i.data.diet] ?? i.data.diet)} · ${i.owners} cái trong kho${i.retired ? ' · <span class="kill">ngừng phát hành</span>' : ''}</span>
+    </button>`).join('') || `<div class="empty">${q ? 'Không có mutation nào khớp' : 'Chưa có mutation nào — bấm “+ Mutation mới”.'}</div>`;
+  $('mit-new').hidden = !can('items.edit');
+}
+function mitSelect(id, force = false) {
+  if (!force && mitDirty()) {
+    confirmAction({ title: 'Bỏ thay đổi chưa lưu?', body: 'Mutation đang sửa có thay đổi chưa lưu.', okLabel: 'Bỏ thay đổi', run: async () => mitSelect(id, true) });
+    return;
+  }
+  const item = id ? itm.data.items.find((i) => i.id === id) : null;
+  mit.sel = item?.id ?? null;
+  mit.draft = item ? { type: 'mutation', name: item.name, rarity: item.rarity, data: { mutation: item.data.mutation } }
+    : { type: 'mutation', name: '', rarity: 'special', data: { mutation: $('mit-mutation').value || itm.data.mutations.find((m) => m.kind === 'unlock')?.name || '' } };
+  mit.saved = item ? JSON.stringify(mit.draft) : null;
+  const edit = can('items.edit');
+  $('mit-title').textContent = item ? item.name : 'Mutation mới';
+  $('mit-sub').textContent = item ? `${item.id}${item.retired ? ' · ngừng phát hành' : ''}` : 'chưa lưu';
+  $('mit-name').value = mit.draft.name;
+  $('mit-mutation').value = mit.draft.data.mutation;
+  $('mit-rarity').value = mit.draft.rarity;
+  for (const el of $('mit-body').querySelectorAll('input, select')) if (!el.closest('#mit-own-wrap')) el.disabled = !edit;
+  $('mit-save').hidden = !edit;
+  $('mit-retire').hidden = !edit || !item;
+  $('mit-retire').textContent = item?.retired ? 'Phát hành lại' : 'Ngừng phát hành';
+  $('mit-own-wrap').hidden = !item;
+  $('mit-grant').hidden = $('mit-to').hidden = $('mit-note').hidden = !can('items.grant');
+  renderMitList();
+  renderMitInfo();
+  void loadMitOwners();
+}
+function renderMitInfo() {
+  const m = mitRef(mit.draft?.data.mutation);
+  // A quest mutation is special, fixed (items.ts); the others: the admin picks.
+  const quest = m?.kind === 'unlock';
+  if (mit.draft) {
+    if (quest) mit.draft.rarity = 'special';
+    else if (mit.draft.rarity === 'special') mit.draft.rarity = 'legendary';
+    $('mit-rarity').value = mit.draft.rarity;
+    $('mit-rarity').disabled = quest || !can('items.edit');
+  }
+  $('mit-info').innerHTML = m ? `${mutIco(m.name, 'lg', true)}<b>${esc(m.name)}</b> — ${esc(m.description)}<br>
+    Chế độ ăn: <b>${esc(MIT_DIET[m.diet] ?? m.diet)}</b>${m.kind === 'slot2' ? ' · chỉ đặt ở <b>ô 2 hoặc 4</b>' : ''}${m.kind === 'unlock' ? ` · mutation nhiệm vụ (mod tự mở khoá trước khi gắn${m.unlock ? `; trong game: ${esc(m.unlock)}` : ''})` : ''}${m.femaleOnly ? ' · chỉ có tác dụng với con cái' : ''}${m.status === 'test' ? ' · <span class="kill">đang thử nghiệm trong game</span>' : ''}
+    ${quest ? '<br>Độ hiếm: <b>Đặc biệt</b> — cố định cho mutation nhiệm vụ.' : ''}
+    ${m.tiers ? `<br>Mức theo đời${m.stat ? ` (${esc(m.stat)})` : ''}: ${esc(m.tiers)} (theo đời của cả dino)` : '<br>Không có số liệu theo đời.'}<div style="clear:both"></div>` : '';
+  $('mit-dirty').textContent = mitDirty() ? '● Có thay đổi chưa lưu' : mit.sel ? 'Đã lưu' : '';
+}
+$('mit-q').addEventListener('input', renderMitList);
+$('mit-list').addEventListener('click', (e) => { const b = e.target.closest('[data-mit]'); if (b) mitSelect(b.dataset.mit); });
+$('mit-new').addEventListener('click', () => mitSelect(null));
+$('mit-body').addEventListener('input', (e) => {
+  const t = e.target, d = mit.draft;
+  if (!d || t.closest('#mit-own-wrap')) return;
+  if (t.id === 'mit-name') d.name = t.value;
+  else if (t.id === 'mit-rarity') d.rarity = t.value;
+  else if (t.id === 'mit-mutation') {
+    // A new item named after its mutation until the admin types a name.
+    const before = mitRef(d.data.mutation)?.name;
+    if (!d.name || d.name === before) { d.name = t.value; $('mit-name').value = t.value; }
+    d.data.mutation = t.value;
+  }
+  renderMitInfo();
+});
+async function mitSave(body, id) {
+  const r = id ? await adminFetch(`/api/items/${id}`, 'PUT', adminToken, body) : await adminFetch('/api/items', 'POST', adminToken, body);
+  mit.saved = null; mit.draft = null;
+  await loadItemsPage(true);
+  mitSelect(r.item.id, true);
+}
+$('mit-save').addEventListener('click', async () => {
+  if (!mit.draft.name.trim()) mit.draft.name = mit.draft.data.mutation;
+  try { await mitSave(mit.draft, mit.sel); toast('Đã lưu mutation'); } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+$('mit-retire').addEventListener('click', async () => {
+  const item = itm.data.items.find((i) => i.id === mit.sel);
+  if (!item) return;
+  try {
+    await mitSave({ type: 'mutation', name: item.name, rarity: item.rarity, data: { mutation: item.data.mutation }, retired: !item.retired }, item.id);
+    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành — người đã có vẫn giữ');
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+async function loadMitOwners() {
+  if (!mit.sel) { $('mit-owners').innerHTML = ''; return; }
+  const id = mit.sel;
+  const { owners } = await getJson(`/api/items/${id}/owners`).catch(() => ({ owners: [] }));
+  if (mit.sel !== id) return;
+  // One row a player, with how many copies they hold.
+  const by = new Map();
+  for (const o of owners) { const x = by.get(o.steamId); if (x) x.n += 1; else by.set(o.steamId, { ...o, n: 1 }); }
+  mit.owners = [...by.values()];
+  const SRC = { admin: 'admin tặng', gacha: 'quay hòm', shop: 'mua', event: 'sự kiện' };
+  const slots = itm.data.items.find((i) => i.id === id)?.data.slot2 ? [2, 4] : [1, 2, 3, 4];
+  $('mit-own-count').textContent = `(${mit.owners.length} người · ${owners.length} cái)`;
+  $('mit-owners').innerHTML = mit.owners.map((o) => `<div class="itm-owner"><div class="who"><b>${esc(o.name ?? 'Chưa rõ tên')} × ${o.n}</b><span class="mono">${esc(o.steamId)}</span></div>
+      <span class="muted">${esc(SRC[o.source] ?? o.source)} · ${esc(dateTime(o.grantedAt))}${o.note ? ` · ${esc(o.note)}` : ''}</span>
+      ${can('items.grant') ? `<select data-mit-slot="${esc(o.steamId)}" aria-label="Ô mutation" style="width:auto">${slots.map((n) => `<option value="${n}">Ô ${n}</option>`).join('')}</select>
+      <button type="button" class="btn-ghost sm" data-mit-use="${esc(o.steamId)}" title="Dùng 1 cái trong kho người đó lên dino họ đang chơi — như người chơi tự dùng (đúng chế độ ăn, đang online)">Dùng lên dino</button>
+      <button type="button" class="btn-danger sm" data-mit-revoke="${esc(o.steamId)}">Thu hồi hết</button>` : ''}</div>`).join('')
+    || '<div class="muted" style="font-size:13px">Chưa ai có mutation này trong kho.</div>';
+}
+$('mit-grant').addEventListener('click', async () => {
+  const steamId = $('mit-to').value.trim();
+  try {
+    await adminFetch(`/api/items/${mit.sel}/grant`, 'POST', adminToken, { steamId, note: $('mit-note').value });
+    toast('Đã tặng 1 mutation vào kho người chơi');
+    $('mit-to').value = ''; $('mit-note').value = '';
+    await loadItemsPage(true);
+    void loadMitOwners();
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+$('mit-owners').addEventListener('click', async (e) => {
+  const u = e.target.closest('[data-mit-use]');
+  if (u) {
+    const steamId = u.dataset.mitUse;
+    const pick = $('mit-owners').querySelector(`[data-mit-slot="${CSS.escape(steamId)}"]`)?.value;
+    const body = pick === 'up' ? { steamId, upgrade: true } : { steamId, slot: Number(pick) };
+    try {
+      await adminFetch(`/api/items/${mit.sel}/apply`, 'POST', adminToken, body);
+      toast(`Đã gửi vào game (${pick === 'up' ? 'nâng cấp +1 đời' : `ô ${pick}`}) — kho trừ 1 khi game xác nhận`);
+      setTimeout(() => { void loadItemsPage(true).then(loadMitOwners); }, 6000);
+    } catch (err) { toast(err.message ?? String(err), 'err'); }
+    return;
+  }
+  const r = e.target.closest('[data-mit-revoke]');
+  if (!r) return;
+  const o = mit.owners.find((x) => x.steamId === r.dataset.mitRevoke);
+  confirmAction({ title: 'Thu hồi mutation?', body: `Lấy hết <b>${o?.n ?? ''}</b> cái <b>${esc(mit.draft.name)}</b> khỏi kho của <b>${esc(o?.name ?? r.dataset.mitRevoke)}</b>. Mutation đã gắn lên dino không đổi.`,
+    okLabel: 'Thu hồi', run: async (token) => {
+      await adminFetch(`/api/items/${mit.sel}/grant/${r.dataset.mitRevoke}`, 'DELETE', token);
+      toast('Đã thu hồi');
+      await loadItemsPage(true);
+      void loadMitOwners();
+    } });
+});
+
+// --- Vật phẩm → Phiếu (items.ts mutation_ticket / mutation_clear / prime_ticket; used in the player's Túi đồ) ---
+const TKT_TYPES = { mutation_ticket: '🎟️ Phiếu đổi mutation', mutation_clear: '🧹 Phiếu bỏ mutation', prime_ticket: '👑 Phiếu Prime' };
+const TKT_INFO = {
+  mutation_ticket: 'Người chơi tự chọn một mutation khi dùng: mọi mutation còn trong game, đúng chế độ ăn của loài. Phiếu <b>Đặc biệt</b> đổi được cả mutation nhiệm vụ; độ hiếm khác chỉ để hiển thị. Chỉ vào ô đã mở theo tăng trưởng như game (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%).',
+  mutation_clear: 'Bỏ mutation ở một ô (1–4) để người chơi chọn lại trong game.',
+  prime_ticket: 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện, chỉ số prime sau vài giây). Dùng cho trường hợp lỡ prime.',
+};
+const tkt = { sel: null, draft: null, saved: null };
+const tktDirty = () => tkt.draft !== null && JSON.stringify(tkt.draft) !== tkt.saved;
+function renderTkt() {
+  if (!itm.data) return;
+  if (!$('tkt-rarity').options.length) $('tkt-rarity').innerHTML = itm.data.rarities.map((r) => `<option value="${esc(r.key)}">${esc(r.label)}</option>`).join('');
+  if (tkt.draft === null) tktSelect(itm.data.items.find((i) => TKT_TYPES[i.type])?.id ?? null, true);
+  const all = itm.data.items.filter((i) => TKT_TYPES[i.type]);
+  const rar = Object.fromEntries(itm.data.rarities.map((r) => [r.key, r.label]));
+  $('tkt-count').textContent = `${all.length} phiếu`;
+  $('tkt-list').innerHTML = all.map((i) => `<button type="button" class="itm-row r-${esc(i.rarity)} ${i.id === tkt.sel ? 'on' : ''}" data-tkt="${esc(i.id)}">
+      <span class="top"><b>${esc(i.name)}</b><span class="rar ${esc(i.rarity)}">${esc(rar[i.rarity] ?? i.rarity)}</span></span>
+      <span class="sub">${esc(TKT_TYPES[i.type])} · ${i.owners} cái trong kho${i.retired ? ' · <span class="kill">ngừng phát hành</span>' : ''}</span></button>`).join('')
+    || '<div class="empty">Chưa có phiếu nào — bấm “+ Phiếu mới”.</div>';
+  $('tkt-new').hidden = !can('items.edit');
+}
+function tktSelect(id, force = false) {
+  if (!force && tktDirty()) {
+    confirmAction({ title: 'Bỏ thay đổi chưa lưu?', body: 'Phiếu đang sửa có thay đổi chưa lưu.', okLabel: 'Bỏ thay đổi', run: async () => tktSelect(id, true) });
+    return;
+  }
+  const item = id ? itm.data.items.find((i) => i.id === id) : null;
+  tkt.sel = item?.id ?? null;
+  tkt.draft = item ? { type: item.type, name: item.name, rarity: item.rarity, data: structuredClone(item.data) }
+    : { type: 'mutation_ticket', name: '', rarity: 'rare', data: { maxRarity: 'rare' } };
+  tkt.saved = item ? JSON.stringify(tkt.draft) : null;
+  const edit = can('items.edit');
+  $('tkt-title').textContent = item ? item.name : 'Phiếu mới';
+  $('tkt-sub').textContent = item ? `${item.id}${item.retired ? ' · ngừng phát hành' : ''}` : 'chưa lưu';
+  $('tkt-type').value = tkt.draft.type;
+  $('tkt-type').disabled = !edit || Boolean(item);   // an item keeps its type
+  $('tkt-name').value = tkt.draft.name;
+  $('tkt-name').disabled = $('tkt-rarity').disabled = !edit;
+  $('tkt-save').hidden = !edit;
+  $('tkt-retire').hidden = !edit || !item;
+  $('tkt-retire').textContent = item?.retired ? 'Phát hành lại' : 'Ngừng phát hành';
+  $('tkt-own-wrap').hidden = !item;
+  $('tkt-grant').hidden = $('tkt-to').hidden = $('tkt-note').hidden = !can('items.grant');
+  tktFields();
+  renderTkt();
+  void loadTktOwners();
+}
+function tktFields() {
+  const d = tkt.draft;
+  const ticket = d.type === 'mutation_ticket';
+  $('tkt-rarity-l').firstChild.textContent = ticket ? 'Độ hiếm (Đặc biệt = cả mutation nhiệm vụ)' : 'Độ hiếm';
+  for (const o of $('tkt-rarity').options) o.hidden = !ticket && o.value === 'special';
+  $('tkt-rarity').value = ticket ? d.data.maxRarity : d.rarity;
+  $('tkt-info').innerHTML = TKT_INFO[d.type];
+  $('tkt-dirty').textContent = tktDirty() ? '● Có thay đổi chưa lưu' : tkt.sel ? 'Đã lưu' : '';
+}
+$('tkt-list').addEventListener('click', (e) => { const b = e.target.closest('[data-tkt]'); if (b) tktSelect(b.dataset.tkt); });
+$('tkt-new').addEventListener('click', () => tktSelect(null));
+$('tkt-body').addEventListener('input', (e) => {
+  const t = e.target, d = tkt.draft;
+  if (!d || t.closest('#tkt-own-wrap')) return;
+  if (t.id === 'tkt-name') d.name = t.value;
+  else if (t.id === 'tkt-type') { d.type = t.value; d.data = t.value === 'mutation_ticket' ? { maxRarity: d.rarity === 'special' ? 'special' : d.rarity } : {}; if (t.value !== 'mutation_ticket' && d.rarity === 'special') d.rarity = 'legendary'; }
+  else if (t.id === 'tkt-rarity') { if (d.type === 'mutation_ticket') d.data.maxRarity = t.value; d.rarity = t.value; }
+  tktFields();
+});
+async function tktSave(body, id) {
+  const r = id ? await adminFetch(`/api/items/${id}`, 'PUT', adminToken, body) : await adminFetch('/api/items', 'POST', adminToken, body);
+  tkt.saved = null; tkt.draft = null;
+  await loadItemsPage(true);
+  tktSelect(r.item.id, true);
+}
+$('tkt-save').addEventListener('click', async () => {
+  if (!tkt.draft.name.trim()) tkt.draft.name = TKT_TYPES[tkt.draft.type].replace(/^\S+\s/, '');
+  try { await tktSave(tkt.draft, tkt.sel); toast('Đã lưu phiếu'); } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+$('tkt-retire').addEventListener('click', async () => {
+  const item = itm.data.items.find((i) => i.id === tkt.sel);
+  if (!item) return;
+  try {
+    await tktSave({ type: item.type, name: item.name, rarity: item.rarity, data: item.data, retired: !item.retired }, item.id);
+    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành — người đã có vẫn giữ');
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+let tktOwners = [];
+async function loadTktOwners() {
+  if (!tkt.sel) { $('tkt-owners').innerHTML = ''; return; }
+  const id = tkt.sel;
+  const { owners } = await getJson(`/api/items/${id}/owners`).catch(() => ({ owners: [] }));
+  if (tkt.sel !== id) return;
+  const by = new Map();
+  for (const o of owners) { const x = by.get(o.steamId); if (x) x.n += 1; else by.set(o.steamId, { ...o, n: 1 }); }
+  tktOwners = [...by.values()];
+  $('tkt-own-count').textContent = `(${tktOwners.length} người · ${owners.length} cái)`;
+  $('tkt-owners').innerHTML = tktOwners.map((o) => `<div class="itm-owner"><div class="who"><b>${esc(o.name ?? 'Chưa rõ tên')} × ${o.n}</b><span class="mono">${esc(o.steamId)}</span></div>
+      <span class="muted">${esc(dateTime(o.grantedAt))}${o.note ? ` · ${esc(o.note)}` : ''}</span>
+      ${can('items.grant') ? `<button type="button" class="btn-danger sm" data-tkt-revoke="${esc(o.steamId)}">Thu hồi hết</button>` : ''}</div>`).join('')
+    || '<div class="muted" style="font-size:13px">Chưa ai có phiếu này.</div>';
+}
+$('tkt-grant').addEventListener('click', async () => {
+  const steamId = $('tkt-to').value.trim();
+  try {
+    await adminFetch(`/api/items/${tkt.sel}/grant`, 'POST', adminToken, { steamId, note: $('tkt-note').value });
+    toast('Đã tặng 1 phiếu vào kho người chơi');
+    $('tkt-to').value = ''; $('tkt-note').value = '';
+    await loadItemsPage(true);
+    void loadTktOwners();
+  } catch (e) { toast(e.message ?? String(e), 'err'); }
+});
+$('tkt-owners').addEventListener('click', (e) => {
+  const r = e.target.closest('[data-tkt-revoke]');
+  if (!r) return;
+  const o = tktOwners.find((x) => x.steamId === r.dataset.tktRevoke);
+  confirmAction({ title: 'Thu hồi phiếu?', body: `Lấy hết <b>${o?.n ?? ''}</b> phiếu <b>${esc(tkt.draft.name)}</b> khỏi kho của <b>${esc(o?.name ?? r.dataset.tktRevoke)}</b>.`,
+    okLabel: 'Thu hồi', run: async (token) => {
+      await adminFetch(`/api/items/${tkt.sel}/grant/${r.dataset.tktRevoke}`, 'DELETE', token);
+      toast('Đã thu hồi');
+      await loadItemsPage(true);
+      void loadTktOwners();
+    } });
+});
+
+// --- Người chơi → Thao tác admin (POST /api/player/<id>/admin; mods/DinoGarage garage/admin.lua) ---
+const PADM_VITALS = [['health', 'Máu'], ['hunger', 'Dạ dày'], ['thirst', 'Nước'], ['stamina', 'Thể lực'], ['blood', 'Huyết'],
+  ['oxygen', 'Oxy'], ['carb', 'Carb'], ['protein', 'Protein'], ['lipid', 'Lipid']];
+const padm = { id: null, start: {} };
+function renderPlayerAdmin(p) {
+  const show = Boolean(p) && can('players.admin');
+  $('padm').hidden = !show;
+  if (!show) return;
+  const off = !p.online || !p.species;
+  for (const b of $('padm').querySelectorAll('button:not(.padm-tab-btn)')) b.disabled = off;
+  if (off) {
+    $('padm-status').textContent = 'Người chơi không online hoặc chưa có dino.';
+    $('padm-status').className = 'padm-status off';
+  }
+  // The online players to teleport to (refreshed each time; the choice kept).
+  const keep = $('padm-to-player').value;
+  getJson('/api/players').then((d) => {
+    $('padm-to-player').innerHTML = d.players.filter((x) => x.online && x.steamId !== p.steamId)
+      .map((x) => `<option value="${esc(x.steamId)}">${esc(x.name ?? x.steamId)} · ${esc(dino(x.species))}</option>`).join('')
+      || '<option value="">(không ai khác online)</option>';
+    if (keep) $('padm-to-player').value = keep;
+  }).catch(() => undefined);
+  if (padm.id === p.steamId) return;   // the sliders being set are not reset by the 2 s refresh
+  padm.id = p.steamId;
+  const m = p.max || {};
+  const shareOf = (k) => (isNum(p[k]) && isNum(m[k]) && m[k] > 0 ? Math.round(p[k] / m[k] * 100) : null);
+  padm.start = Object.fromEntries(PADM_VITALS.map(([k]) => [k, shareOf(k)]));
+  $('padm-vitals').innerHTML = PADM_VITALS.map(([k, label]) => {
+    const v = padm.start[k];
+    return `<label data-k="${k}"><span>${esc(label)}</span><input type="range" min="0" max="100" step="1" value="${v ?? 100}"><b>${v === null ? '–' : `${v}%`}</b></label>`;
+  }).join('');
+  const gw = isNum(p.growth) ? Math.round(p.growth * 100) : '';
+  $('padm-grow').value = gw;
+  if ($('padm-grow-slider')) $('padm-grow-slider').value = gw || 100;
+  if (!off) {
+    $('padm-status').textContent = '';
+    $('padm-status').className = 'padm-status';
+  }
+}
+$('padm-vitals').addEventListener('input', (e) => {
+  const l = e.target.closest('label[data-k]');
+  if (!l) return;
+  l.querySelector('b').textContent = `${e.target.value}%`;
+  l.classList.add('changed');
+});
+$('padm-vitals-all100')?.addEventListener('click', () => {
+  for (const l of $('padm-vitals').querySelectorAll('label[data-k]')) {
+    const input = l.querySelector('input');
+    if (input) {
+      input.value = 100;
+      l.querySelector('b').textContent = '100%';
+      l.classList.add('changed');
+    }
+  }
+});
+$('padm-vitals-diet100')?.addEventListener('click', () => {
+  for (const k of ['hunger', 'thirst', 'carb', 'protein', 'lipid']) {
+    const l = $('padm-vitals').querySelector(`label[data-k="${k}"]`);
+    if (l) {
+      const input = l.querySelector('input');
+      if (input) {
+        input.value = 100;
+        l.querySelector('b').textContent = '100%';
+        l.classList.add('changed');
+      }
+    }
+  }
+});
+$('padm-grow-slider')?.addEventListener('input', (e) => {
+  $('padm-grow').value = e.target.value;
+});
+$('padm-grow')?.addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  if (v >= 10 && v <= 100 && $('padm-grow-slider')) $('padm-grow-slider').value = v;
+});
+$('padm')?.addEventListener('click', (e) => {
+  const tBtn = e.target.closest('.padm-tab-btn');
+  if (tBtn) {
+    const tab = tBtn.dataset.padmTab;
+    for (const b of $('padm').querySelectorAll('.padm-tab-btn')) b.classList.toggle('on', b === tBtn);
+    for (const s of $('padm').querySelectorAll('.padm-section')) {
+      s.hidden = (tab !== 'all' && s.dataset.padmSec !== tab);
+    }
+    return;
+  }
+  const gBtn = e.target.closest('.padm-grow-presets button');
+  if (gBtn) {
+    const val = Number(gBtn.dataset.grow);
+    $('padm-grow').value = val;
+    if ($('padm-grow-slider')) $('padm-grow-slider').value = val;
+    return;
+  }
+});
+async function padmSend(body, label) {
+  try {
+    $('padm-status').className = 'padm-status sending';
+    $('padm-status').textContent = `Đang gửi lệnh “${label}”…`;
+    const { command } = await adminFetch(`/api/player/${encodeURIComponent(padm.id)}/admin`, 'POST', adminToken, body);
+    $('padm-status').className = 'padm-status ok';
+    $('padm-status').textContent = `Đã gửi “${label}” (lệnh #${command.id}) — game thực hiện trong vài giây.`;
+    toast(`Đã gửi: ${label}`);
+  } catch (e) {
+    $('padm-status').className = 'padm-status err';
+    $('padm-status').textContent = e.message ?? String(e);
+    toast(e.message ?? String(e), 'err');
+  }
+}
+$('padm-heal').addEventListener('click', () => padmSend({ action: 'heal' }, 'hồi máu & chữa trị'));
+$('padm-vitals-go').addEventListener('click', () => {
+  const values = {};
+  for (const l of $('padm-vitals').querySelectorAll('label.changed')) values[l.dataset.k] = Number(l.querySelector('input').value) / 100;
+  if (Object.keys(values).length === 0) { toast('Chưa kéo chỉ số nào', 'err'); return; }
+  padmSend({ action: 'vitals', values }, 'chỉnh chỉ số');
+});
+$('padm-vitals-reset').addEventListener('click', () => { padm.id = null; refresh(); });
+$('padm-grow-go').addEventListener('click', () => {
+  const g = Number($('padm-grow').value);
+  if (!(g >= 10 && g <= 100)) { toast('Tăng trưởng 10–100%', 'err'); return; }
+  const prime = $('padm-grow-prime').checked;
+  if (prime && g !== 100) { toast('Prime chỉ đặt được ở tăng trưởng 100%', 'err'); return; }
+  padmSend({ action: 'grow', growth: g / 100, ...(prime ? { prime: true } : {}) }, `tăng trưởng ${g}%${prime ? ' + prime' : ''}`);
+});
+$('padm-tp-player').addEventListener('click', () => {
+  const to = $('padm-to-player').value;
+  if (!to) { toast('Không có người chơi nào để dịch chuyển tới', 'err'); return; }
+  padmSend({ action: 'teleport', toPlayer: to }, `dịch chuyển tới ${$('padm-to-player').selectedOptions[0]?.textContent ?? to}`);
+});
+$('padm-tp-xy').addEventListener('click', () => {
+  const pt = parseCoords($('padm-to-xy').value);
+  if (!pt) { toast('Toạ độ như trong game: "349,211, 148,696" (Y, X)', 'err'); return; }
+  const [x, y] = toGame(pt);
+  padmSend({ action: 'teleport', to: { x, y } }, `dịch chuyển tới ${x}, ${y}`);
+});
+
 // --- navigation ---------------------------------------------------------------
 
 // One block per job. Inside a block, sub-pages (SUBS) at #<block>/<sub>.
 const TABS = [
   ['overview', 'Tổng quan'], ['players', 'Người chơi'], ['map', 'Bản đồ'], ['world', 'Thế giới'],
-  ['garage', 'Gara'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['admin', 'Quản trị'],
+  ['garage', 'Gara'], ['items', 'Vật phẩm'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['admin', 'Quản trị'],
 ];
-$('tabs').innerHTML = TABS.map(([id, label]) =>
-  `<a href="#${id}" data-tab="${id}">${icon(id)}<span class="label">${label}</span><span class="count" id="count-${id}" hidden></span></a>`).join('');
+function renderTabsNav() {
+  $('tabs').innerHTML = TABS.filter(([id]) => tabAllowed(id)).map(([id, label]) =>
+    `<a href="#${id}" data-tab="${id}">${icon(id)}<span class="label">${label}</span><span class="count" id="count-${id}" hidden></span></a>`).join('');
+}
+renderTabsNav();
 
 function setCount(tab, n) {
   const el = $(`count-${tab}`);
@@ -3610,6 +4931,7 @@ function renderPlayer(d) {
   currentPlayerId = id;
   if (p?.name && id) playerNamesCache.set(id, p.name);
   if (p === null) {
+    renderPlayerAdmin(null);
     // Known only from the garage: an admin parked a dino for someone who has
     // not joined since the logs began.
     $('player-hero').innerHTML = `${avatar(id, null, 'lg')}
@@ -3635,6 +4957,7 @@ function renderPlayer(d) {
         <div class="status" id="kill-status"></div>
       </div>`;
     $('kill-btn').onclick = () => askKill(p);
+    renderPlayerAdmin(p);
     renderKillStatus(p.steamId, d.timeline);
     $('current-title').textContent = p.species
       ? `Dino hiện tại · ${dino(p.species)}${p.prime?.prime ? ' · 👑 Prime' : p.prime?.eligible ? ' · 👑 Đủ ĐK Prime' : ''}`
@@ -3821,7 +5144,7 @@ function mutationBlock(muts, species) {
     const present = keys.map((k) => muts?.[k]).filter((v) => typeof v === 'string' && v !== '');
     const chips = present.length === 0
       ? '<span class="mut none">trống</span>'
-      : present.map((m) => `<span class="mut ${cls}" tabindex="0" data-mut-tip="${esc(m)}" data-species="${esc(species)}">${esc(mutName(m))}</span>`).join('');
+      : present.map((m) => `<span class="mut ${cls}" tabindex="0" data-mut-tip="${esc(m)}" data-species="${esc(species)}">${mutIco(m)}${esc(mutName(m))}</span>`).join('');
     return `<div><div class="group-label">${label}</div><div class="muts">${chips}</div></div>`;
   }).join('');
 }
@@ -6115,6 +7438,8 @@ function renderMap(players, ai = null) {
 
 const chatState = {
   all: [],
+  /** The super admin's ticked lines (keys), kept across pages. */
+  picked: new Set(),
   q: '',
   page: 1,
   limit: 20,
@@ -6148,13 +7473,47 @@ function applyChatView() {
   if (pageItems.length === 0) {
     el.innerHTML = `<li class="empty">${chatState.q ? 'Không tìm thấy tin nhắn nào' : 'Chưa có tin chat'}</li>`;
   } else {
-    el.innerHTML = pageItems.map((e) => `<li>${avatar(e.steamId, e.name)}
+    // The super admin only: a tick and a delete per line (the bridge sends `key` to them alone).
+    const del = (e) => (ME.super && e.key);
+    el.innerHTML = pageItems.map((e) => `<li>${del(e) ? `<input type="checkbox" class="del-pick" data-chat-pick="${esc(e.key)}"${chatState.picked.has(e.key) ? ' checked' : ''} aria-label="Chọn tin này">` : ''}${avatar(e.steamId, e.name)}
       <div class="bubble ${/^\s*!/.test(e.message) ? 'cmd' : ''}">
         <div class="top">${who(e.steamId, e.name)}<span class="muted" title="${esc(dateTime(e.t))}">${clock(e.t)}</span></div>
-        <div class="txt">${esc(e.message)}</div></div></li>`).join('');
+        <div class="txt">${esc(e.message)}</div></div>${del(e) ? `<button type="button" class="del-one" data-chat-del="${esc(e.key)}" title="Xoá tin này" aria-label="Xoá tin này">🗑</button>` : ''}</li>`).join('');
   }
   renderPager($('chat-pager'), total, page, limit, 'tin nhắn', 'chat-page');
+  renderChatDelBar(pageItems);
 }
+function renderChatDelBar(pageItems = []) {
+  const on = ME.super && chatState.all.some((e) => e.key);
+  $('chat-del-bar').hidden = !on;
+  if (!on) return;
+  const keys = pageItems.map((e) => e.key).filter(Boolean);
+  $('chat-pick-all').checked = keys.length > 0 && keys.every((k) => chatState.picked.has(k));
+  $('chat-del-n').textContent = `${chatState.picked.size} tin đã chọn`;
+  $('chat-del-go').disabled = chatState.picked.size === 0;
+}
+function deleteChat(keys) {
+  confirmAction({ title: `Xoá ${keys.length} tin chat?`, body: 'Tin bị xoá khỏi panel (trang Chat, feed, lịch sử người chơi). Không ghi vào nhật ký admin.', okLabel: 'Xoá',
+    run: async (token) => {
+      await adminFetch('/api/chat/delete', 'POST', token, { keys });
+      const gone = new Set(keys);
+      chatState.all = chatState.all.filter((e) => !gone.has(e.key));
+      for (const k of keys) chatState.picked.delete(k);
+      applyChatView();
+      toast(`Đã xoá ${keys.length} tin`);
+    } });
+}
+$('chat').addEventListener('click', (e) => {
+  const d = e.target.closest('[data-chat-del]');
+  if (d) { deleteChat([d.dataset.chatDel]); return; }
+  const p = e.target.closest('[data-chat-pick]');
+  if (p) { if (p.checked) chatState.picked.add(p.dataset.chatPick); else chatState.picked.delete(p.dataset.chatPick); renderChatDelBar([...$('chat').querySelectorAll('[data-chat-pick]')].map((x) => ({ key: x.dataset.chatPick }))); }
+});
+$('chat-pick-all').addEventListener('change', (e) => {
+  for (const x of $('chat').querySelectorAll('[data-chat-pick]')) { x.checked = e.target.checked; if (x.checked) chatState.picked.add(x.dataset.chatPick); else chatState.picked.delete(x.dataset.chatPick); }
+  renderChatDelBar([...$('chat').querySelectorAll('[data-chat-pick]')].map((x) => ({ key: x.dataset.chatPick })));
+});
+$('chat-del-go').addEventListener('click', () => { if (chatState.picked.size) deleteChat([...chatState.picked]); });
 
 function bindChatToolbarOnce() {
   if (chatState.bound) return;
@@ -6360,6 +7719,15 @@ function refFor(name) {
   return null;
 }
 
+const mutSlug = (n) => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+/** The owner's icon of a mutation the reference knows (''): `known` for a name taken from the reference itself. */
+function mutIco(name, cls = '', known = false) {
+  const ref = known ? null : refFor(name);
+  if (!known && !ref) return '';
+  // Filled in by mut-icons.js (all icons in one request, kept in memory).
+  return `<img class="mico ${cls}" data-mut-icon="${esc(mutSlug(ref?.name ?? name))}" alt="">`;
+}
+
 const DIET_VN = { all: 'Mọi loài', carnivore: 'Chỉ ăn thịt', herbivore: 'Chỉ ăn cỏ', herbivore_omnivore: 'Ăn cỏ / ăn tạp' };
 const STATUS_VN = {
   removed: '⚠ Theo wiki: đã bị gỡ khỏi game',
@@ -6494,7 +7862,7 @@ function mutationTipHtml(name, species) {
     : ref
       ? wiki
       : '<div class="t-desc none">Chưa có mô tả — tên này không có trong bảng tham chiếu. Admin bấm ✎ cạnh ô chọn để thêm.</div>';
-  return `<div class="t-name">${esc(ref ? ref.name : mutName(name))}</div><div class="t-id">${esc(name)}</div>
+  return `<div class="t-name">${mutIco(name, 'md')}${esc(ref ? ref.name : mutName(name))}</div><div class="t-id">${esc(name)}</div>
     ${body}
     ${proof ? `<div class="t-label">Trên server này</div><div class="t-proof">${proof}</div>` : ''}`;
 }
@@ -7220,13 +8588,58 @@ $('sch-save').addEventListener('click', () => withToken('lưu lịch', async (to
   refresh();
 }));
 
+// --- Sự kiện tốc độ lớn (growth-events.ts): GrowthMultiplier ×N, applied at a start of the game ---
+const geTime = (s) => new Date(s * 1000).toLocaleString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+const geLocal = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
+let geData = null;
+async function loadGrowthEvents() {
+  geData = await getJson('/api/server/growth-events');
+  const nowS = Date.now() / 1000;
+  const a = geData.applied;
+  $('ge-now').textContent = a ? `đang chạy: ×${a.multiplier}${a.event ? ' (sự kiện)' : ''} từ lần khởi động ${geTime(a.at)}` : '';
+  const edit = can('server.schedule');
+  $('ge-form').hidden = !edit;
+  if (!$('ge-start').value) {
+    // A first suggestion: the coming Saturday 00:00 → Monday 00:00.
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7));
+    $('ge-start').value = geLocal(d.getTime());
+    $('ge-end').value = geLocal(d.getTime() + 2 * 86400000);
+  }
+  $('ge-list').innerHTML = geData.events.map((e) => {
+    const live = a?.event?.id === e.id;
+    const done = e.end <= nowS;
+    const state = done ? 'đã kết thúc'
+      : live ? `đang áp dụng · kết thúc ở lần khởi động ${e.endsAt ? geTime(e.endsAt) : 'tay sau giờ kết thúc (chưa có lịch)'}`
+        : e.appliesAt ? `bắt đầu ở lần khởi động ${geTime(e.appliesAt)}` : 'chưa có lịch khởi động lại — chỉ áp khi khởi động lại tay';
+    return `<div class="ge-row${live ? ' live' : ''}"><span class="x">×${esc(e.multiplier)}</span>
+      <span class="when"><b>${esc(geTime(e.start))} → ${esc(geTime(e.end))}</b><small>${esc(state)}${e.note ? ` · ${esc(e.note)}` : ''}</small></span>
+      ${edit ? `<button type="button" class="btn-danger sm" data-ge-del="${esc(e.id)}">Xoá</button>` : ''}</div>`;
+  }).join('') || '<div class="muted" style="font-size:13px">Chưa có sự kiện nào.</div>';
+}
+$('ge-add').addEventListener('click', () => withToken('thêm sự kiện tốc độ lớn', async (token) => {
+  const start = Date.parse($('ge-start').value), end = Date.parse($('ge-end').value);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) { toast('Chọn giờ bắt đầu và kết thúc.', 'err'); return; }
+  await adminFetch('/api/server/growth-events', 'POST', token, {
+    start: Math.floor(start / 1000), end: Math.floor(end / 1000), multiplier: Number($('ge-mult').value), note: $('ge-note').value,
+  });
+  $('ge-note').value = '';
+  toast('Đã thêm sự kiện — áp dụng ở lần khởi động lại sau giờ bắt đầu.');
+  await loadGrowthEvents();
+}));
+$('ge-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ge-del]');
+  if (!b) return;
+  confirmAction({ title: 'Xoá sự kiện tốc độ lớn?', body: 'Nếu sự kiện đang áp dụng, tốc độ lớn về bình thường ở lần khởi động lại tới.', okLabel: 'Xoá',
+    run: async (token) => { await adminFetch(`/api/server/growth-events/${b.dataset.geDel}`, 'DELETE', token); toast('Đã xoá'); await loadGrowthEvents(); } });
+});
+
 // Admin log: a page at a time, newest first (bridge audit.ts keeps 7 days).
 const AUDIT_VN = {
   'panel login': 'Đăng nhập panel', 'panel logout': 'Đăng xuất panel', 'panel login refused': 'Đăng nhập bị từ chối',
   'game config saved': 'Lưu cấu hình game', 'garage settings saved': 'Lưu cài đặt gara', 'player command settings saved': 'Lưu lệnh người chơi',
   'voice settings saved': 'Lưu cài đặt voice', 'panel allowed IPs saved': 'Lưu IP được vào panel', 'AI zones saved': 'Lưu vùng AI',
   'garage slot created': 'Tạo dino vào gara', 'garage slot deleted': 'Xoá dino khỏi gara', 'kill current dino queued': 'Giết dino đang chơi',
-  'restart schedule set': 'Đặt lịch khởi động lại', 'mutation note set': 'Sửa mô tả mutation', 'mutation note cleared': 'Xoá mô tả mutation',
+  'restart schedule set': 'Đặt lịch khởi động lại', 'growth event added': 'Thêm sự kiện tốc độ lớn', 'growth event removed': 'Xoá sự kiện tốc độ lớn', 'mutation note set': 'Sửa mô tả mutation', 'mutation note cleared': 'Xoá mô tả mutation',
   'server start requested': 'Bật server', 'server stop requested': 'Tắt server', 'server restart requested': 'Khởi động lại server',
   'life restored to garage': 'Khôi phục dino vào gara',
   'light test': 'Gắn đèn thử nghiệm',
@@ -7253,9 +8666,22 @@ const AUDIT_VN = {
   'prime fix added': 'Thêm sửa lỗi Prime',
   'prime fix updated': 'Cập nhật sửa lỗi Prime',
   'prime fix deleted': 'Xoá sửa lỗi Prime',
+  'admin permissions changed': 'Đổi quyền admin',
+  'item created': 'Tạo vật phẩm', 'item updated': 'Sửa vật phẩm', 'item granted': 'Tặng vật phẩm', 'item revoked': 'Thu hồi vật phẩm', 'item deleted': 'Xoá vật phẩm', 'mutation used': 'Dùng mutation lên dino',
+  'skin applied': 'Áp skin lên dino',
+  'admin action heal': 'Admin: hồi máu & chữa trị', 'admin action vitals': 'Admin: chỉnh chỉ số',
+  'admin action grow': 'Admin: đặt tăng trưởng', 'admin action teleport': 'Admin: dịch chuyển',
 };
-const auditName = (a) => AUDIT_VN[a] ?? (a.startsWith('rcon ') ? `RCON: ${a.slice(5)}` : a);
-const audits = { page: 1, q: '' };
+// Admin commands used in the game (bridge/src/game-admin-log.ts).
+const GAME_CMD_VN = {
+  'Bring': 'Kéo người chơi tới', 'Go to': 'Dịch chuyển tới người chơi', 'Heal': 'Hồi đầy máu', 'Grow': 'Đặt growth',
+  'SetHunger': 'Đặt đói', 'SetThirst': 'Đặt khát', 'SetStamina': 'Đặt stamina', 'SetHealth': 'Đặt máu', 'SetBlood': 'Đặt huyết',
+  'SetNutrientValue': 'Đặt dinh dưỡng', 'SetOxygen': 'Đặt oxy', 'Changed weather': 'Đổi thời tiết',
+  'Enter Specmode': 'Vào chế độ quan sát (bay)', 'Leave Specmode': 'Thoát chế độ quan sát',
+};
+const auditName = (a) => AUDIT_VN[a] ?? (a.startsWith('rcon ') ? `RCON: ${a.slice(5)}`
+  : a.startsWith('in-game ') ? `🎮 Trong game: ${GAME_CMD_VN[a.slice(8)] ?? a.slice(8)}` : a);
+const audits = { page: 1, q: '', /** The super admin's ticked lines (keys), kept across pages. */ picked: new Set() };
 
 function formatAuditDetail(raw) {
   if (!raw) return '';
@@ -7290,18 +8716,22 @@ function formatAuditDetail(raw) {
 
 function renderAudit(data) {
   const entries = data.entries ?? [];
+  // The super admin only: a tick and a delete per line (the bridge sends `key` to them alone).
+  const del = ME.super && entries.some((e) => e.key);
+  $('audit-head').innerHTML = `${del ? '<th class="pick"></th>' : ''}<th>Thời gian</th><th>Admin</th><th>Thao tác</th><th>Thay đổi</th>${del ? '<th class="pick"></th>' : ''}`;
   $('srv-audit').innerHTML = entries.length === 0
-    ? `<tr><td colspan="4" class="empty">${audits.q ? 'Không có dòng nào khớp' : 'Chưa có thao tác nào trong 7 ngày qua'}</td></tr>`
+    ? `<tr><td colspan="${del ? 6 : 4}" class="empty">${audits.q ? 'Không có dòng nào khớp' : 'Chưa có thao tác nào trong 7 ngày qua'}</td></tr>`
     : entries.map((e) => {
       const d = new Date(e.t * 1000);
       const who = e.byId ? `<b>${esc(e.byName ?? playerNamesCache.get(e.byId) ?? 'Không rõ tên')}</b><div class="id">${esc(e.byId)}</div>`
         : e.by === 'ADMIN_TOKEN' ? '<b>Script (ADMIN_TOKEN)</b>'
         : e.by ? esc(e.by) : '<span class="muted">Hệ thống</span>';
-      return `<tr>
+      return `<tr>${del ? `<td class="pick">${e.key ? `<input type="checkbox" class="del-pick" style="margin:2px 0 0" data-audit-pick="${esc(e.key)}"${audits.picked.has(e.key) ? ' checked' : ''} aria-label="Chọn dòng này">` : ''}</td>` : ''}
         <td class="when">${esc(d.toLocaleTimeString('vi-VN', { hour12: false }))}<div class="d">${esc(d.toLocaleDateString('vi-VN'))}</div></td>
         <td class="who">${who}</td>
         <td class="what${e.ok ? '' : ' fail'}">${e.ok ? '' : '✗ '}${esc(auditName(e.action))}</td>
         <td class="detail">${formatAuditDetail(e.detail ?? '')}${e.error ? `<div class="err">${esc(e.error)}</div>` : ''}</td>
+        ${del ? `<td class="pick">${e.key ? `<button type="button" class="del-one" style="margin:0" data-audit-del="${esc(e.key)}" title="Xoá dòng này" aria-label="Xoá dòng này">🗑</button>` : ''}</td>` : ''}
       </tr>`;
     }).join('');
   const { page, pages, total } = data;
@@ -7310,7 +8740,36 @@ function renderAudit(data) {
   let prev = 0;
   const nums = around.map((p) => { const gap = p - prev > 1 ? '<span class="muted">…</span>' : ''; prev = p; return gap + btn(p); }).join('');
   $('audit-pager').innerHTML = `<span class="muted">${total} dòng · trang ${page}/${pages}</span>${btn(page - 1, '‹')}${nums}${btn(page + 1, '›')}`;
+  renderAuditDelBar(del);
 }
+function renderAuditDelBar(on = !$('audit-del-bar').hidden) {
+  $('audit-del-bar').hidden = !on;
+  if (!on) return;
+  const ticks = [...$('srv-audit').querySelectorAll('[data-audit-pick]')];
+  $('audit-pick-all').checked = ticks.length > 0 && ticks.every((x) => x.checked);
+  $('audit-del-n').textContent = `${audits.picked.size} dòng đã chọn`;
+  $('audit-del-go').disabled = audits.picked.size === 0;
+}
+function deleteAudit(keys) {
+  confirmAction({ title: `Xoá ${keys.length} dòng nhật ký?`, body: 'Các dòng bị xoá khỏi nhật ký admin (máy chủ giữ một bản sao trước khi xoá). Việc xoá không được ghi lại.', okLabel: 'Xoá',
+    run: async (token) => {
+      await adminFetch('/api/server/audit/delete', 'POST', token, { keys });
+      for (const k of keys) audits.picked.delete(k);
+      await loadAudit();
+      toast(`Đã xoá ${keys.length} dòng`);
+    } });
+}
+$('srv-audit').addEventListener('click', (e) => {
+  const d = e.target.closest('[data-audit-del]');
+  if (d) { deleteAudit([d.dataset.auditDel]); return; }
+  const p = e.target.closest('[data-audit-pick]');
+  if (p) { if (p.checked) audits.picked.add(p.dataset.auditPick); else audits.picked.delete(p.dataset.auditPick); renderAuditDelBar(); }
+});
+$('audit-pick-all').addEventListener('change', (e) => {
+  for (const x of $('srv-audit').querySelectorAll('[data-audit-pick]')) { x.checked = e.target.checked; if (x.checked) audits.picked.add(x.dataset.auditPick); else audits.picked.delete(x.dataset.auditPick); }
+  renderAuditDelBar();
+});
+$('audit-del-go').addEventListener('click', () => { if (audits.picked.size) deleteAudit([...audits.picked]); });
 // --- Quản trị → Discord: the log sent by webhook (bridge/src/discord.ts) ---
 const dc = { data: null, draft: null, dirty: false };
 const newId = () => Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, '') || 'c' + Date.now().toString(36);
@@ -7998,10 +9457,12 @@ function currentSub() {
   const h = location.hash.slice(1);
   const sub = h.startsWith('server/') ? decodeURIComponent(h.slice('server/'.length)) : 'ops';
   const cfgGroups = Object.keys(cfgData?.groups ?? {});
-  if (sub === 'cfg' || sub === 'cfg:') return `cfg:${lastCfgGroup ?? cfgGroups[0] ?? ''}`;
-  if (sub.startsWith('cfg:') && (cfgGroups.length === 0 || cfgGroups.includes(sub.slice(4)))) return sub;
-  if (sub === 'data') return 'data';
-  return 'ops';
+  if ((sub === 'cfg' || sub === 'cfg:') && subAllowed('server', 'cfg')) return `cfg:${lastCfgGroup ?? cfgGroups[0] ?? ''}`;
+  const pick = (id) => (subAllowed('server', id) ? id : SRV_SUBS.map(([x]) => x).find((x) => subAllowed('server', x)) ?? id);
+  if (sub.startsWith('cfg:') && (cfgGroups.length === 0 || cfgGroups.includes(sub.slice(4)))) return pick('cfg') === 'cfg' ? sub : pick('cfg');
+  if (sub === 'data') return pick('data');
+  if (pick('ops') === 'cfg') return `cfg:${lastCfgGroup ?? cfgGroups[0] ?? ''}`;
+  return pick('ops');
 }
 function renderSubtabs() {
   const cur = currentSub();
@@ -8009,7 +9470,7 @@ function renderSubtabs() {
   const href = (id) => (id === 'cfg' ? `#server/${encodeURIComponent(`cfg:${lastCfgGroup ?? Object.keys(cfgData?.groups ?? {})[0] ?? ''}`)}` : `#server/${id}`);
   const dot = ' <span class="dot" title="Có thay đổi chưa lưu"></span>';
   const dirty = (id) => (id === 'cfg' ? cfgDirty : id === 'ops' ? schDraft !== null : false);
-  $('srv-subtabs').innerHTML = SRV_SUBS.map(([id, label]) => `<a href="${href(id)}" class="${id === page ? 'on' : ''}">${esc(label)}${dirty(id) ? dot : ''}</a>`).join('');
+  $('srv-subtabs').innerHTML = SRV_SUBS.filter(([id]) => subAllowed('server', id)).map(([id, label]) => `<a href="${href(id)}" class="${id === page ? 'on' : ''}">${esc(label)}${dirty(id) ? dot : ''}</a>`).join('');
   $('cfg-groups').innerHTML = Object.entries(cfgData?.groups ?? {}).map(([g, t]) => `<a href="#server/${encodeURIComponent(`cfg:${g}`)}" class="${`cfg:${g}` === cur ? 'on' : ''}">${esc(t)}`
     + `${cfgDirty && dirtyGroups.has(g) ? dot : ''}</a>`).join('');
 }
@@ -8343,9 +9804,15 @@ $('bk-wipe').addEventListener('click', () => {
 });
 
 async function refreshServerTab() {
+  if (!can('server.view')) {
+    // Only the game config (or the backups) for this admin.
+    const cfg = cfgDirty || !can('config.view') ? null : await getJson('/api/game-config');
+    if (cfg && !cfgDirty) renderConfig(cfg);
+    return;
+  }
   const [status, cfg, readiness] = await Promise.all([
     getJson('/api/server/status'),
-    cfgDirty ? Promise.resolve(null) : getJson('/api/game-config'),
+    cfgDirty || !can('config.view') ? Promise.resolve(null) : getJson('/api/game-config'),
     getJson('/api/server/readiness'),
     refreshCatalog(),
     buildToggles(),
@@ -8353,6 +9820,7 @@ async function refreshServerTab() {
   renderServer(status);
   renderReadiness(readiness);
   loadDdos().catch(() => undefined);
+  loadGrowthEvents().catch(() => undefined);
 
   if (cfg && !cfgDirty) renderConfig(cfg);
 }
@@ -8888,8 +10356,9 @@ const SUBS = {
   players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban'], ['prison', 'Nhà tù']],
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
+  items: [['skins', 'Skin dino'], ['mutations', 'Mutation'], ['tickets', 'Phiếu']],
   mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['voice', 'Voice gần'], ['messages', 'Thông báo']],
-  admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin'], ['discord', 'Discord']],
+  admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin'], ['discord', 'Discord'], ['perms', 'Phân quyền']],
 };
 // Where the pages of the old layout went: bookmarks and old links still land.
 const MOVED = {
@@ -8910,13 +10379,15 @@ function currentSubOf(view) {
   if (!subs) return null;
   const [v, ...rest] = location.hash.slice(1).split('/');
   const want = v === view ? decodeURIComponent(rest.join('/')) : '';
-  return subs.some(([id]) => id === want) ? want : subs[0][0];
+  const ok = subs.filter(([id]) => subAllowed(view, id));
+  if (ok.length === 0) return subs[0][0];
+  return ok.some(([id]) => id === want) ? want : ok[0][0];
 }
 function renderSubnav(view) {
   const nav = document.querySelector(`[data-subnav="${view}"]`);
   if (!nav) return;
   const cur = currentSubOf(view);
-  nav.innerHTML = SUBS[view].map(([id, label]) => `<a href="#${view}/${id}" class="${id === cur ? 'on' : ''}">${esc(label)}`
+  nav.innerHTML = SUBS[view].filter(([id]) => subAllowed(view, id)).map(([id, label]) => `<a href="#${view}/${id}" class="${id === cur ? 'on' : ''}">${esc(label)}`
     + `${pageDirty(view, id) ? ' <span class="dot" title="Có thay đổi chưa lưu"></span>' : ''}</a>`).join('');
   for (const el of document.querySelectorAll(`[data-sub^="${view}:"]`)) el.hidden = el.dataset.sub !== `${view}:${cur}`;
 }
@@ -8925,6 +10396,11 @@ function showTab() {
   const h = location.hash.slice(1);
   if (MOVED[h] !== undefined) { location.replace(`#${MOVED[h]}`); return; }
   const tab = currentTab();
+  if (!tabAllowed(tab)) {
+    // A page this admin may not see: the first one they may.
+    const first = TABS.find(([id]) => tabAllowed(id));
+    if (first && first[0] !== tab) { location.replace(`#${first[0]}`); return; }
+  }
   if (tab === 'server') { renderSubtabs(); showSub(); }
   if (SUBS[tab]) renderSubnav(tab);
   for (const v of document.querySelectorAll('[data-view]')) v.hidden = v.dataset.view !== tab;
@@ -8949,7 +10425,8 @@ async function refreshTab(tab) {
   switch (tab) {
     case 'overview': {
       const q = feedFilter ? `&type=${encodeURIComponent(feedFilter)}` : '';
-      const [players, feed] = await Promise.all([getJson('/api/players'), getJson(`/api/feed?limit=150${q}`), refreshPerf(), renderOverviewExtras()]);
+      const [players, feed] = await Promise.all([getJson('/api/players'), getJson(`/api/feed?limit=150${q}`),
+        can('server.view') ? refreshPerf() : null, can('server.view') ? renderOverviewExtras() : null]);
       renderKpis(players.players);
       renderPlayers(players.players, players.garageMax);
       renderFeed($('feed'), feed.events);
@@ -9007,12 +10484,16 @@ async function refreshTab(tab) {
       ]);
       break;
     case 'admin':
-      await Promise.all([loadAudit(), getJson('/api/panel-access').then(renderPanelAccess),
-        currentSubOf('admin') === 'discord' ? loadDiscord() : null]);
+      await Promise.all([can('audit.view') ? loadAudit() : null, can('access.edit') ? getJson('/api/panel-access').then(renderPanelAccess) : null,
+        currentSubOf('admin') === 'discord' && can('discord.view') ? loadDiscord() : null,
+        currentSubOf('admin') === 'perms' && ME.super && !pm.dirty && Date.now() - pm.at > 30_000 ? loadPerms() : null]);
+      break;
+    case 'items':
+      await loadItemsPage();
       break;
     case 'map':
       {
-        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones(), resetPolling ? null : pollReset(), loadFlora(), gd.dirty ? null : loadGuard()]);
+        const [m] = await Promise.all([getJson('/api/map'), refreshAiZones(), resetPolling || !can('world.view') ? null : pollReset(), loadFlora(), gd.dirty ? null : loadGuard()]);
         renderMap(m.players, m.ai ?? null);
       }
       break;
@@ -9020,7 +10501,7 @@ async function refreshTab(tab) {
       await refreshServerTab();
       break;
     case 'garage': {
-      const [garage, health] = await Promise.all([getJson('/api/garage'), getJson('/api/health'), refreshCreator(),
+      const [garage, health] = await Promise.all([getJson('/api/garage'), getJson('/api/health'), can('garage.edit') && can('players.view') ? refreshCreator() : null,
         getJson('/api/garage-settings').then(renderGarageSettings)]);
       renderGarage(garage);
       garageWritesEnabled = health.writesEnabled;

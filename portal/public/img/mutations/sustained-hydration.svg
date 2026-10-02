@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Sustained Hydration - The Isle Evrima Mutation</title>
+  <desc>Thanh khát (nước) tụt chậm hơn.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_sustained-hydration" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_sustained-hydration" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="50%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_sustained-hydration" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#022c22" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_sustained-hydration" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_sustained-hydration)"
+           stroke="url(#strokeGrad_sustained-hydration)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_sustained-hydration)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#10b981"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_sustained-hydration)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Pristine Water Droplet Protected by Time Lock Hourglass -->
+      <g transform="translate(128,128)">
+        <!-- Outer Time Stasis Halo -->
+        <circle cx="0" cy="4" r="42" fill="none" stroke="#38bdf8" stroke-width="3" stroke-dasharray="8,5"/>
+        <!-- Clock Hour ticks -->
+        <line x1="0" y1="-34" x2="0" y2="-38" stroke="#7dd3fc" stroke-width="3"/>
+        <line x1="38" y1="4" x2="42" y2="4" stroke="#7dd3fc" stroke-width="3"/>
+        <line x1="0" y1="42" x2="0" y2="46" stroke="#7dd3fc" stroke-width="3"/>
+        <line x1="-38" y1="4" x2="-42" y2="4" stroke="#7dd3fc" stroke-width="3"/>
+        <!-- Glowing Pure Water Droplet -->
+        <path d="M0,-28 C0,-28 22,-4 22,12 C22,26 12,36 0,36 C-12,36 -22,26 -22,12 C-22,-4 0,-28 0,-28 Z" fill="#0284c7" stroke="#38bdf8" stroke-width="3.5"/>
+        <path d="M-6,-4 C-6,-4 12,6 12,16 C12,24 6,30 0,30 C-4,30 -14,24 -14,14 C-14,4 -6,-4 -6,-4 Z" fill="#0369a1"/>
+        <ellipse cx="-6" cy="6" rx="4" ry="10" fill="#e0f2fe"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

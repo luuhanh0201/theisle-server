@@ -24,6 +24,29 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 - FName fields: write FName("x"), never a Lua string.
 - Re-apply vitals after any SetGrowth.
 
+## UI (panel, portal, launcher pages)
+- Never the browser's own select box, number spinner or date / time picker:
+  every page loads the shared controls, before its own code —
+  `<script src="/ui-select.js"></script>` and `<script src="/ui-inputs.js"></script>`
+  (files in `portal/public/`; the bridge serves them to the panel). They
+  turn every `<select>`, `input[type=number|date|time|datetime-local]` into
+  the system's own (the native element stays hidden as the value). Write
+  plain `<select>` / `<input>`; never a one-off dropdown or picker.
+  `data-plain` opts one element out (only with a reason in a comment).
+- CSS around them: the number box is `span.nf` (a `> input` selector no longer
+  matches), the date box `button.dt-btn`, the select `button.cs-btn`.
+- The skin colour editor is shared too (`portal/public/skin-editor.js`).
+- Mutation icons: `<img data-mut-icon="Name">` (filled by `portal/public/mut-icons.js`
+  from one bundle); never one `<img src=".../<slug>.svg">` each — many at once
+  trip the proxy (503). After adding an icon: `node scripts/build-mutation-icons.mjs`.
+
+## Launcher
+- Inside Xóm Gáy Launcher (`window.isleLauncher`, `html.in-launcher`) nothing about
+  downloading the launcher shows: no download page, link, button, badge or promo.
+  Every such element carries class `web-only` (hidden in the launcher); `/tai.html`
+  opened there goes back home (`tai.js`). A new download link without `web-only`
+  is a bug.
+
 ## Test server
 - `scripts/test-server.sh` (on the VPS: /home/isle/bin/test-server.sh, run as
   `isle`): a copy of the live server at /home/isle/test, ports 7787 / 10001 / 8889.

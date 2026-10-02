@@ -30,16 +30,16 @@
   const SHOW = {
     voice: [['speakers', 'Người đang nói gần bạn'], ['direction', 'Hướng & khoảng cách (trái / phải, gần / xa)'], ['self', 'Mic của bạn (đang nói / im lặng / tắt)'],
       ['range', 'Tầm giọng hiện tại'], ['toasts', 'Thông báo khi đổi tầm giọng'], ['warnings', 'Cảnh báo (chưa vào game, mất kết nối)']],
-    map: [['target', 'Đường tới điểm đến (bấm vào tab Bản đồ để đặt)'], ['ai', 'AI đang sống quanh bạn'], ['trail', 'Vệt đường bạn vừa đi'], ['zones', 'Vùng di cư / sanctuary / tuần tra'], ['water', 'Nguồn nước'],
+    map: [['target', 'Đường tới điểm đến (bấm vào tab Bản đồ để đặt)'], ['ai', 'Quét AI trực tiếp quanh bạn (Heo, Hươu...)'], ['trail', 'Vệt đường bạn vừa đi'], ['zones', 'Vùng di cư / sanctuary / tuần tra'], ['water', 'Nguồn nước'],
       ['landmarks', 'Địa danh'], ['labels', 'Tên địa điểm'], ['coords', 'Toạ độ của bạn']],
     dino: [['species', 'Loài'], ['growth', 'Growth %'], ['health', 'Máu'], ['hpValue', 'Số máu cụ thể (980 / 1.300 · 75%)'],
       ['damage', 'Hiệu ứng khi mất máu (−120 bay lên, thanh máu nháy)'], ['stamina', 'Thể lực'], ['hunger', 'Đói'], ['thirst', 'Nước'],
-      ['blood', 'Huyết'], ['oxygen', 'Oxy'], ['prime', 'Huy hiệu Prime / Đời'], ['tierFx', 'Hiệu ứng khung theo đời dino (như gara)']],
+      ['blood', 'Huyết'], ['oxygen', 'Oxy'], ['prime', 'Huy hiệu cấp F0–F4'], ['tierFx', 'Hiệu ứng khung theo đời dino (như gara)']],
     quests: [['deadline', 'Thanh growth tới mốc chốt Prime (75%)'], ['passive', 'Cả điều kiện bị động (không bị vô sinh, loài nhỏ…)']],
   };
   const NOTE = {
     voice: 'Ai đang nói gần bạn, mic và tầm giọng của bạn. Hiện khi bạn đã vào kênh voice.',
-    map: 'Bản đồ nhỏ quanh dino của bạn: vị trí, hướng, vệt đường, AI và các vùng. Hiện khi bạn có dino trong game.',
+    map: 'Bản đồ nhỏ quanh dino: vị trí, hướng, vệt đường, radar quét AI TRỰC TIẾP (Heo rừng, Hươu...) và các vùng. Hiện khi bạn có dino trong game.',
     dino: 'Máu (cả số cụ thể), thể lực, đói, nước… của dino đang chơi, cập nhật mỗi giây. Mỗi lần mất máu hiện số máu bị trừ.',
     quests: 'Các điều kiện Prime Elder: đã xong ✓, chưa xong ○, chưa rõ ?. Cần xong 5 trước khi growth tới 75%.',
   };

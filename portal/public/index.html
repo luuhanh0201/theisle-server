@@ -1433,6 +1433,9 @@
     display: flex;
   }
 
+  /* Inside the launcher (rule: AGENTS.md "Launcher"): nothing about downloading it —
+     every download link / button / block carries class web-only. */
+  html.in-launcher .web-only, body.in-launcher .web-only { display: none !important; }
   /* When inside Launcher, hide redundant web blocks */
   html.in-launcher .launcher-promo,
   body.in-launcher .launcher-promo,
@@ -2393,6 +2396,85 @@
   .garage-where { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
   .garage-where select { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text); font: inherit; font-size: 13px; }
   .garage-hint { font-size: 12px; margin: 0; color: var(--text-muted); }
+  /* Túi đồ */
+  .bag-tabs { display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg-card); padding: 3px; border-radius: 8px; border: 1px solid var(--border); }
+  .bag-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 4px 0 10px; }
+  .bag-dino { font-size: 13px; margin: 0 0 10px; }
+  .bag-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .bag-item { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border); min-width: 0; overflow: hidden; isolation: isolate; }
+  .bag-item.off { opacity: .55; filter: saturate(.6); }
+  .bag-item .top { display: flex; gap: 12px; align-items: center; }
+  .bag-item .top .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .bag-item .top b { font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+  .bag-item .qty { font-size: 12px; font-weight: 800; color: var(--emerald-light); white-space: nowrap; align-self: flex-start; }
+  .bag-item .desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
+  .bag-item .meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11.5px; }
+  .bag-item .meta span { padding: 2px 8px; border-radius: 999px; background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-muted); }
+  .bag-item .why { font-size: 12px; color: #fbbf24; }
+  .bag-item .act { display: flex; gap: 8px; align-items: center; margin-top: auto; }
+  .bag-item .act .btn { flex: 1; padding: 8px 14px; }
+  .bag-item .sw { display: flex; gap: 4px; }
+  .bag-item .sw i { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,.18); display: inline-block; }
+  .mut-ico { width: 52px; height: 52px; flex: none; border-radius: 12px; display: block; background: var(--bg-card); }
+  .mut-ico.sm { width: 28px; height: 28px; border-radius: 7px; }
+  /* Rarity: each its own look (items.ts RARITIES; special = a quest mutation) */
+  .rar-label { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .rar-common .rar-label, .rar-label.rar-common { color: #94a3b8; }
+  .rar-rare .rar-label, .rar-label.rar-rare { color: #22d3ee; }
+  .rar-epic .rar-label, .rar-label.rar-epic { color: #c084fc; }
+  .rar-legendary .rar-label, .rar-label.rar-legendary { color: #fbbf24; }
+  .rar-special .rar-label, .rar-label.rar-special { background: linear-gradient(90deg, #f43f5e, #f59e0b, #22d3ee, #a855f7, #f43f5e); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: rarHue 4s linear infinite; }
+  .bag-item.rar-common { border-color: rgba(148, 163, 184, .22); }
+  .bag-item.rar-rare { border-color: rgba(34, 211, 238, .45); box-shadow: 0 0 18px -6px rgba(34, 211, 238, .45); }
+  .bag-item.rar-rare .mut-ico { box-shadow: 0 0 0 1px rgba(34, 211, 238, .5); }
+  .bag-item.rar-epic { border-color: rgba(192, 132, 252, .55); animation: rarPulse 3s ease-in-out infinite; }
+  .bag-item.rar-epic .mut-ico { box-shadow: 0 0 0 1px rgba(192, 132, 252, .6), 0 0 14px rgba(168, 85, 247, .45); }
+  .bag-item.rar-legendary { border-color: rgba(251, 191, 36, .65); box-shadow: 0 0 22px -6px rgba(245, 158, 11, .55); }
+  .bag-item.rar-legendary::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(115deg, transparent 35%, rgba(251, 191, 36, .14) 50%, transparent 65%); background-size: 250% 100%; animation: rarShine 3.2s ease-in-out infinite; }
+  .bag-item.rar-legendary .mut-ico { box-shadow: 0 0 0 1px rgba(251, 191, 36, .7), 0 0 16px rgba(245, 158, 11, .5); }
+  .bag-item.rar-special { border-color: transparent; background: linear-gradient(var(--bg-surface), var(--bg-surface)) padding-box,
+    conic-gradient(from var(--rar-a, 0deg), #f43f5e, #f59e0b, #22d3ee, #a855f7, #f43f5e) border-box; border: 1.5px solid transparent; animation: rarSpin 5s linear infinite; box-shadow: 0 0 26px -8px rgba(244, 63, 94, .55); }
+  .bag-item.rar-special .mut-ico { box-shadow: 0 0 0 1px rgba(244, 63, 94, .7), 0 0 18px rgba(168, 85, 247, .55); }
+  @property --rar-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+  @keyframes rarSpin { to { --rar-a: 360deg; } }
+  @keyframes rarHue { to { background-position: 200% 0; } }
+  @keyframes rarPulse { 0%, 100% { box-shadow: 0 0 14px -6px rgba(168, 85, 247, .45); } 50% { box-shadow: 0 0 26px -4px rgba(168, 85, 247, .7); } }
+  @keyframes rarShine { 0% { background-position: 150% 0; } 60%, 100% { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) { .bag-item, .bag-item::before, .rar-label { animation: none !important; } }
+  /* The use box */
+  .bag-dlg { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border-radius: 16px; border: 1px solid var(--border-light); background: var(--bg-card); color: var(--text); }
+  .bag-dlg::backdrop { background: rgba(2, 6, 23, .7); backdrop-filter: blur(4px); }
+  .bag-dlg .in { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .bag-dlg .hd { display: flex; gap: 12px; align-items: center; }
+  .bag-dlg .hd b { font-size: 16px; display: block; }
+  .bag-dlg .x { margin-left: auto; background: none; border: 0; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .bag-dlg h4 { margin: 0 0 6px; font-size: 13px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .bag-dlg .sec { padding: 12px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .bag-dlg table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .bag-dlg td { padding: 5px 4px; border-bottom: 1px solid var(--border-subtle); }
+  .bag-dlg td.v { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .bag-dlg .up { color: var(--emerald-light); font-weight: 800; }
+  .bag-dlg .mx { color: #fbbf24; font-size: 12px; }
+  .bag-dlg .slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .bag-dlg .slot { text-align: left; font: inherit; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); cursor: pointer; display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .bag-dlg .slot span { min-width: 0; font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; }
+  .bag-dlg .slot.on { border-color: var(--emerald); box-shadow: 0 0 0 1px var(--emerald) inset; }
+  .bag-dlg .slot:disabled { opacity: .45; cursor: not-allowed; }
+  .bag-dlg .cmp { font-size: 13px; line-height: 1.5; }
+  .bag-dlg .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .tk-ico { display: grid; place-items: center; font-size: 26px; }
+  .bag-dlg .hd .tk-ico { width: 52px; height: 52px; }
+  .tk-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+  .tk-pick { display: flex; gap: 8px; align-items: center; text-align: left; font: inherit; font-size: 12.5px; padding: 6px 8px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--text); cursor: pointer; min-width: 0; }
+  .tk-pick span { min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
+  .tk-pick small { color: var(--text-muted); }
+  .tk-pick:hover { border-color: var(--border-light); }
+  .tk-pick.on { border-color: var(--emerald); box-shadow: 0 0 0 1px var(--emerald) inset; }
+  .tk-pick.rar-epic { border-color: rgba(192, 132, 252, .45); } .tk-pick.rar-legendary { border-color: rgba(251, 191, 36, .5); }
+  .tk-pick.rar-special { border-color: rgba(244, 63, 94, .55); }
+  .bag-dlg .slot small { color: var(--text-muted); font-weight: 500; }
   .garage-status { font-size: 13px; line-height: 1.5; padding: 10px 14px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border); }
   .garage-status.ok { border-color: rgba(52, 211, 153, .5); }
   .garage-status.bad { border-color: rgba(248, 113, 113, .55); }
@@ -2508,6 +2590,33 @@
   }
 
   /* Lớp hiệu ứng thị giác (FX Layer) nằm dưới nội dung, không cản trở tương tác */
+  /* F0–F4: the dino's tier as a badge (app.js tierBadge), the text moving in the tier's colours */
+  .ftag { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; padding: 2px 9px; border-radius: 7px;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; font-size: 13px; font-weight: 900; letter-spacing: .06em; line-height: 1.35;
+    border: 1px solid; background-clip: padding-box; position: relative; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ftag.f0 { color: #94a3b8; border-color: rgba(100, 116, 139, .45); background: rgba(71, 85, 105, .2);
+    animation: fStone 4s ease-in-out infinite; }
+  .ftag.f1 { border-color: rgba(251, 191, 36, .6); background-color: rgba(245, 158, 11, .12);
+    background-image: linear-gradient(100deg, #b45309 20%, #fde68a 45%, #f59e0b 60%, #b45309 85%); background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: fShine 2.6s linear infinite;
+    box-shadow: 0 0 12px -2px rgba(245, 158, 11, .45); }
+  .ftag.f2 { border-color: rgba(16, 185, 129, .6);
+    background-image: linear-gradient(90deg, #10b981, #22d3ee, #a7f3d0, #10b981); background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: fShine 2.2s linear infinite, fPulse 1.6s ease-in-out infinite; }
+  .ftag.f3 { border-color: rgba(249, 115, 22, .75);
+    background-image: linear-gradient(0deg, #c2410c, #f97316 40%, #fde047 70%, #f97316); background-size: 100% 260%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: fFlame 1.4s ease-in-out infinite alternate;
+    box-shadow: 0 0 14px -3px rgba(249, 115, 22, .6); }
+  .ftag.f4 { border-color: rgba(239, 68, 68, .85);
+    background-image: linear-gradient(90deg, #7f1d1d, #ef4444, #fca5a5, #fff1f2, #ef4444, #7f1d1d); background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: fShine 1.6s linear infinite, fApex 1.2s ease-in-out infinite; }
+  @keyframes fStone { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
+  @keyframes fShine { to { background-position: -220% 0; } }
+  @keyframes fFlame { from { background-position: 0 100%; } to { background-position: 0 0; } }
+  @keyframes fPulse { 0%, 100% { box-shadow: 0 0 6px -2px rgba(16, 185, 129, .35); } 50% { box-shadow: 0 0 16px -2px rgba(34, 211, 238, .7); } }
+  @keyframes fApex { 0%, 100% { box-shadow: 0 0 10px -2px rgba(239, 68, 68, .5); transform: scale(1); } 50% { box-shadow: 0 0 22px 0 rgba(239, 68, 68, .85); transform: scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) { .ftag { animation: none !important; } }
   .slot-tier-fx {
     position: absolute;
     inset: 0;
@@ -2871,7 +2980,7 @@
     transition: var(--transition);
   }
   .map-tool-btn:hover { background: rgba(255, 255, 255, 0.18); }
-  .map-tool-btn.active { background: var(--emerald); color: #041f14; border-color: transparent; }
+  .map-tool-btn.active, .map-tool-btn.on { background: var(--emerald); color: #041f14; border-color: transparent; }
   .map-coords-badge {
     position: absolute; bottom: 14px; left: 14px;
     background: rgba(12, 18, 32, 0.85);
@@ -3205,11 +3314,6 @@
   /* ==========================================================================
      PAGE 6: SKIN STUDIO
      ========================================================================== */
-  .skin-side .regions-grid { display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; }
-  .skin-side .region-card { padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; justify-content: flex-start; gap: 10px; cursor: pointer; }
-  .skin-side .region-card:hover { background: rgba(255,255,255,.04); }
-  .skin-side .region-card .color-picker-input { width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; }
-  .skin-side .region-card .color-picker-input::-webkit-color-swatch { border-radius: 5px; }
   .region-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hex-input { width: 84px; flex-shrink: 0; background: rgba(2,6,23,.5); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); padding: 4px 7px; font: 12px ui-monospace, monospace; }
   .hex-input:focus { outline: none; border-color: rgba(52,211,153,.55); color: inherit; }
@@ -3226,28 +3330,16 @@
   .skin-controls > * { flex: 1 1 0; }
   .skin-controls > .skin-field:nth-child(1) { flex: 2 1 150px; }
   .skin-controls > .skin-field:nth-child(2) { flex: 1.4 1 128px; }
-  .skin-controls > label:nth-child(3), .skin-controls > label:nth-child(4) { flex: .7 1 64px; }
+  .skin-controls > label:nth-child(3), .skin-controls > label:nth-child(4) { flex: .9 0 104px; }
   .skin-controls > .skin-variation { flex: 2 1 150px; }
   .skin-field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; min-width: 0; }
-  .xsel { position: relative; }
-  .xsel-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(2,6,23,.5); border: 1px solid var(--border); border-radius: 8px; color: inherit; padding: 8px 10px; font: inherit; font-weight: 600; cursor: pointer; }
-  .xsel-btn:hover, .xsel.open .xsel-btn { border-color: rgba(52,211,153,.55); }
-  .xsel-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .xsel-caret { width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); opacity: .7; transition: transform .15s; flex-shrink: 0; }
-  .xsel.open .xsel-caret { transform: rotate(225deg) translateY(-2px); }
-  .xsel-menu { position: absolute; z-index: 30; left: 0; min-width: max(100%, 210px); top: calc(100% + 6px); margin: 0; padding: 6px; list-style: none; max-height: 280px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; scrollbar-width: thin; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.45); outline: none; }
-  .xsel-menu li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 7px; cursor: pointer; font-weight: 500; white-space: nowrap; }
-  .xsel-menu li:hover, .xsel-menu li.active { background: rgba(52,211,153,.14); }
-  .xsel-menu li[aria-selected="true"] { color: #34d399; font-weight: 700; }
-  .xsel-menu li[aria-selected="true"]::after { content: '✓'; }
-  .xsel-menu li .xsel-live { font-size: 10.5px; font-weight: 700; color: #0b1220; background: #34d399; border-radius: 999px; padding: 1px 7px; }
   .xseg { display: flex; background: rgba(2,6,23,.5); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 3px; }
   .xseg button { flex: 1; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 600; padding: 0 6px; border-radius: 6px; cursor: pointer; opacity: .7; white-space: nowrap; }
   .xseg button.on { background: rgba(52,211,153,.18); color: #34d399; opacity: 1; }
   .region-card.off { opacity: .45; }
   .skin-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; min-width: 0; }
   .skin-controls label > span, .skin-field > span { white-space: nowrap; line-height: 18px; }
-  .skin-controls input[type=number], .xsel-btn, .xseg { height: 38px; box-sizing: border-box; }
+  .skin-controls .nf, .skin-controls .cs-btn, .xseg { height: 38px; box-sizing: border-box; }
   .skin-controls input[type=range] { margin: 10px 0 0; width: 100%; accent-color: #34d399; }
   .skin-keep { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
   .skin-keep input { accent-color: #34d399; width: 16px; height: 16px; margin: 0; flex-shrink: 0; }
@@ -3267,14 +3359,13 @@
   .fx-item b { font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
   .fx-item input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: #34d399; }
   .skin-glow { display: grid; grid-template-columns: auto 1fr 44px; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12.5px; font-weight: 600; }
+  .skin-glow[hidden] { display: none; }
   .skin-glow span { white-space: nowrap; }
   .skin-glow em { font-style: normal; font-size: 10.5px; font-weight: 700; color: #fbbf24; border: 1px solid rgba(251,191,36,.45); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
   .skin-glow input { width: 100%; margin: 0; accent-color: #fbbf24; }
   .skin-glow b { text-align: right; }
   .skin-presets { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
   .skin-presets h4 { margin: 0 0 10px; font-size: 13px; color: var(--text-muted); }
-  .preset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  @media (max-width: 640px) { .preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .preset-tile { display: flex; flex-direction: column; gap: 6px; padding: 7px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg-surface); color: inherit; font: inherit; cursor: pointer; text-align: left; min-width: 0; transition: var(--transition); }
   .preset-tile:hover { border-color: rgba(52,211,153,.55); transform: translateY(-1px); }
   .preset-tile.on { border-color: #34d399; box-shadow: 0 0 0 1px #34d399 inset; }
@@ -3674,6 +3765,198 @@
     }
   }
 
+  /* ==========================================================================
+     INTERACTIVE TOUR STYLES
+     ========================================================================== */
+  .tour-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    pointer-events: auto;
+  }
+  .tour-spotlight {
+    position: fixed;
+    z-index: 10001;
+    pointer-events: none;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 9999px rgba(5, 8, 15, 0.78), 0 0 24px var(--emerald-glow), inset 0 0 14px rgba(16, 185, 129, 0.25);
+    border: 2px solid var(--emerald-light);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: tour-pulse-border 2.5s infinite ease-in-out;
+  }
+  @keyframes tour-pulse-border {
+    0%, 100% { box-shadow: 0 0 0 9999px rgba(5, 8, 15, 0.78), 0 0 24px rgba(16, 185, 129, 0.35); border-color: var(--emerald-light); }
+    50% { box-shadow: 0 0 0 9999px rgba(5, 8, 15, 0.78), 0 0 36px rgba(16, 185, 129, 0.65); border-color: #6ee7b7; }
+  }
+  .tour-popover {
+    position: fixed;
+    z-index: 10002;
+    background: var(--bg-card);
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    border-radius: var(--radius);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(16, 185, 129, 0.15);
+    max-width: 480px;
+    width: calc(100vw - 36px);
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: top 0.25s cubic-bezier(0.16, 1, 0.3, 1), left 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tour-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .tour-badge {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--emerald-light);
+    background: var(--emerald-soft);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    padding: 3px 10px;
+    border-radius: 99px;
+  }
+  .tour-skip-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: var(--transition);
+  }
+  .tour-skip-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .tour-title {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.01em;
+  }
+  .tour-body {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+  .tour-body p {
+    margin: 0 0 8px;
+  }
+  .tour-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--emerald-light);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .tour-ai-callout {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(249, 115, 22, 0.08) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tour-ai-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #fca5a5;
+    letter-spacing: 0.04em;
+  }
+  .tour-ai-tag-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+    animation: pulse-dot 1.8s infinite;
+  }
+  .tour-ai-desc {
+    font-size: 12.5px;
+    color: #fecaca;
+    line-height: 1.5;
+  }
+  .tour-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .tour-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tour-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    transition: var(--transition);
+  }
+  .tour-dot.active {
+    width: 22px;
+    border-radius: 99px;
+    background: var(--emerald-light);
+    box-shadow: 0 0 8px var(--emerald-glow);
+  }
+  .tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tour-actions .btn {
+    padding: 7px 14px;
+    font-size: 12.5px;
+  }
+  .tour-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+  .tour-trigger-btn:hover {
+    color: var(--emerald-light);
+    border-color: var(--border-hover);
+  }
+
+  @media (max-width: 640px) {
+    .tour-popover {
+      left: 12px !important;
+      right: 12px !important;
+      bottom: 16px !important;
+      top: auto !important;
+      transform: none !important;
+      width: auto;
+      max-width: none;
+      padding: 16px 18px;
+      gap: 12px;
+    }
+  }
+
   /* Accessibility & System overrides */
   [hidden] { display: none !important; }
   html.app-idle *, html.app-idle *::before, html.app-idle *::after { animation-play-state: paused !important; }
@@ -3741,6 +4024,12 @@
           <span class="nav-label">Skin Studio</span>
           <span class="nav-pill-new">MỚI</span>
         </button>
+        <!-- Túi đồ: shown when the bridge says the bag is open to this account (admins only for now) -->
+        <button type="button" class="nav-btn" data-nav="bag" id="nav-bag" hidden title="Túi đồ">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 6V5a4 4 0 0 1 8 0v1"/><path d="M8 14h8"/><path d="M12 14v3"/></svg></span>
+          <span class="nav-label">Túi đồ</span>
+          <span class="nav-badge" id="nav-bag-badge" hidden>0</span>
+        </button>
       </div>
 
       <!-- 3. CÔNG CỤ TIỆN ÍCH -->
@@ -3760,7 +4049,7 @@
       <!-- 4. HỆ THỐNG & CẨM NANG -->
       <div class="nav-group">
         <div class="nav-group-title">Hệ thống & Cẩm nang</div>
-        <a class="nav-btn" id="sidebar-launcher-link" href="/tai.html" title="Tải Xóm Gáy Launcher">
+        <a class="nav-btn web-only" id="sidebar-launcher-link" href="/tai.html" title="Tải Xóm Gáy Launcher">
           <span class="nav-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></span>
           <span class="nav-label">Tải Launcher</span>
           <span class="nav-badge" id="sidebar-lp-badge">v2.8</span>
@@ -3768,6 +4057,10 @@
         <button type="button" class="nav-btn" data-action="open-rules" title="Luật Server & Cẩm Nang">
           <span class="nav-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
           <span class="nav-label">Luật & Dinh Dưỡng</span>
+        </button>
+        <button type="button" class="nav-btn" id="sidebar-tour-btn" title="Xem hướng dẫn sử dụng tính năng và bản đồ AI">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></span>
+          <span class="nav-label">Tour Hướng Dẫn</span>
         </button>
       </div>
     </nav>
@@ -3817,12 +4110,16 @@
             <span class="luh-text" id="luh-text">Kiểm tra cập nhật</span>
           </button>
         </div>
+        <button type="button" class="btn btn-ghost tour-trigger-btn" id="tour-btn" title="Hướng dẫn sử dụng tính năng và bản đồ AI">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+          <span>Hướng dẫn</span>
+        </button>
         <button type="button" class="btn btn-ghost game-mode-btn" id="game-mode" aria-pressed="false" hidden title="Thu launcher xuống khay, chỉ giữ các khung overlay bạn chọn">🎮 Chế độ chơi game</button>
         <a class="btn btn-discord" id="srv-discord" href="#" target="_blank" rel="noopener" hidden>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
           <span>Discord</span>
         </a>
-        <a class="btn btn-ghost" id="get-launcher" href="/tai.html">
+        <a class="btn btn-ghost web-only" id="get-launcher" href="/tai.html">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
           <span>Tải launcher</span>
         </a>
@@ -4169,7 +4466,7 @@
         </div>
 
         <!-- Xóm Gáy Launcher: download promo -->
-        <div class="launcher-promo" id="launcher-promo">
+        <div class="launcher-promo web-only" id="launcher-promo">
           <div class="lp-info">
             <img class="lp-logo" src="/img/logo-96.webp" width="60" height="60" alt="Logo launcher">
             <div>
@@ -4277,7 +4574,7 @@
             <div>
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
                 <span class="tag info" id="game-live-tag">ĐANG ĐIỀU KHIỂN</span>
-                <span class="tag prime" id="game-dino-tier-badge" hidden>👑 Prime</span>
+                <span class="ftag f0" id="game-dino-tier-badge" hidden>F0</span>
               </div>
               <h2 class="dino-species" id="game-dino-species">Chưa vào game</h2>
               <p class="muted" id="game-dino-status" style="margin:4px 0 0;font-size:13px">Vào server để theo dõi chỉ số trực tiếp.</p>
@@ -4512,10 +4809,7 @@
               </div>
               <div class="skin-controls">
                 <div class="skin-field"><span>Loài</span>
-                  <div class="xsel" id="skin-species">
-                    <button type="button" class="xsel-btn" aria-haspopup="listbox" aria-expanded="false"><span class="xsel-val">Đang tải…</span><i class="xsel-caret"></i></button>
-                    <ul class="xsel-menu" role="listbox" tabindex="-1" hidden></ul>
-                  </div>
+                  <select id="skin-species" aria-label="Loài"><option value="">Đang tải…</option></select>
                 </div>
                 <div class="skin-field"><span>Giới tính</span>
                   <div class="xseg" id="skin-gender" role="radiogroup">
@@ -4534,7 +4828,7 @@
                   <span class="muted">bùn, máu… tự khô và phai dần như trong game</span>
                 </div>
                 <div class="skin-fx-grid" id="skin-fx-grid"></div>
-                <div class="skin-glow">
+                <div class="skin-glow" hidden>
                   <span>Phát sáng <em>thử nghiệm</em></span>
                   <input type="range" id="skin-glow" min="1" max="4" step="0.1" value="1">
                   <b id="skin-glow-val">1.0×</b>
@@ -4673,6 +4967,37 @@
       </section>
 
       <!-- ====================================================================
+           TÚI ĐỒ (items: mutation used on the dino you play, skins worn) — admins only for now
+           ==================================================================== -->
+      <section id="page-bag" class="page-content" hidden>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">🎒 Túi đồ</h3>
+              <span class="card-subtitle">Mutation và phiếu: dùng lên dino đang chơi (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75% tăng trưởng); dùng xong vật phẩm mất. Skin: mặc lên đúng loài.</span>
+            </div>
+            <span class="tag" id="bag-count">0 món</span>
+          </div>
+          <div class="bag-bar">
+            <div class="bag-tabs" id="bag-filter">
+              <button type="button" class="gara-filter-btn active" data-bag="all">Tất cả</button>
+              <button type="button" class="gara-filter-btn" data-bag="usable">Dùng được ngay</button>
+              <button type="button" class="gara-filter-btn" data-bag="mutation">Mutation</button>
+              <button type="button" class="gara-filter-btn" data-bag="skin">Skin</button>
+            </div>
+            <div class="gara-search-box">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="bag-q" placeholder="Tìm vật phẩm…">
+            </div>
+          </div>
+          <p class="muted bag-dino" id="bag-dino"></p>
+          <div class="garage-status" id="bag-status" role="status" aria-live="polite" hidden></div>
+          <ul class="bag-grid" id="bag-list"></ul>
+        </div>
+        <dialog class="bag-dlg" id="bag-dlg" aria-labelledby="bag-dlg-title"><div class="in" id="bag-dlg-in"></div></dialog>
+      </section>
+
+      <!-- ====================================================================
            PAGE 8: OVERLAY (overlay-settings.js; Xóm Gáy Launcher only)
            ==================================================================== -->
       <section id="page-overlay" class="page-content" hidden>
@@ -4757,10 +5082,40 @@
     </div>
   </div>
 
+  <!-- ========================================================================
+       INTERACTIVE ONBOARDING TOUR
+       ======================================================================== -->
+  <div class="tour-backdrop" id="tour-backdrop" hidden>
+    <div class="tour-spotlight" id="tour-spotlight"></div>
+    <div class="tour-popover" id="tour-popover" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+      <div class="tour-header">
+        <span class="tour-badge" id="tour-step-badge">BƯỚC 1 / 5</span>
+        <button type="button" class="tour-skip-btn" id="tour-skip-btn" aria-label="Bỏ qua hướng dẫn">
+          <span>✕ Bỏ qua</span>
+        </button>
+      </div>
+      <div class="tour-content">
+        <h3 class="tour-title" id="tour-title">Tiêu đề bước</h3>
+        <div class="tour-body" id="tour-body">Nội dung bước</div>
+      </div>
+      <div class="tour-footer">
+        <div class="tour-dots" id="tour-dots" aria-hidden="true"></div>
+        <div class="tour-actions">
+          <button type="button" class="btn btn-ghost tour-btn-prev" id="tour-btn-prev">◀ Quay lại</button>
+          <button type="button" class="btn btn-emerald tour-btn-next" id="tour-btn-next">Tiếp tục ▶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Global Toast -->
   <div class="portal-toast" id="global-toast" hidden></div>
 </div>
 
+<!-- The system's select box and number / date / time inputs (rule: AGENTS.md "UI") -->
+<script src="/ui-select.js"></script>
+<script src="/ui-inputs.js"></script>
+<script src="/mut-icons.js"></script>
 <script type="module" src="/app.js"></script>
 <script type="module" src="/skin3d.js"></script>
 <script src="/voice.js" defer></script>

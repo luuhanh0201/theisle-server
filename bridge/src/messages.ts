@@ -48,6 +48,7 @@ const REASONS: Array<[string, string, string]> = [
   ['capture_failed', 'không đọc được dino', 'không đọc được trạng thái dino'],
   ['save_failed', 'không lưu được', 'không lưu được vào gara'],
   ['kill_failed', 'không gỡ được dino', 'không gỡ được dino khỏi game'],
+  ['prison', 'bị bỏ tù lúc đang cất', 'bạn đang ở tù'],
 ];
 
 export const MESSAGES: readonly MessageDef[] = [
@@ -58,6 +59,8 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'server.stop.countdown', group: 'server', label: 'Đếm ngược tắt server (mỗi mốc)', default: 'Server sẽ tắt sau {left} / Server shutting down in {leftEn}. {reason}', vars: ['left', 'leftEn', 'reason'] },
   { key: 'server.stop.now', group: 'server', label: 'Bắt đầu tắt server', default: 'Server đang tắt / Server shutting down now.', vars: [] },
   { key: 'server.stop.cancelled', group: 'server', label: 'Huỷ tắt server', default: 'Đã huỷ tắt server / Shutdown cancelled.', vars: [] },
+  { key: 'growth.event.on', group: 'server', label: 'Sự kiện tốc độ lớn đang diễn ra (lúc server vừa lên)', default: 'Sự kiện tốc độ lớn x{multiplier} đang diễn ra tới {until}! {note}', vars: ['multiplier', 'until', 'note'] },
+  { key: 'growth.event.off', group: 'server', label: 'Sự kiện tốc độ lớn đã kết thúc (lúc server vừa lên)', default: 'Sự kiện tốc độ lớn x{multiplier} đã kết thúc, tốc độ lớn trở lại bình thường. {note}', vars: ['multiplier', 'note'] },
   { key: 'server.scheduledReason', group: 'server', label: 'Lý do của lần khởi động lại định kỳ ({reason} ở trên)', default: 'Khởi động lại định kỳ {time}', vars: ['time'] },
   // --- corpses (announcer.ts) ---
   { key: 'corpses.warning', group: 'corpses', label: 'Báo trước khi dọn xác', default: 'Dọn xác sau {left} / Clearing corpses in {leftEn}.', vars: ['left', 'leftEn'] },
@@ -86,6 +89,7 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'ptera.carry.inmate', group: 'ptera', label: 'Gắp tù nhân (bị chặn)', default: 'Không gắp được tù nhân.', vars: [], offByDefault: true },
   // --- prison: outsiders in the prison zone (mods/Prison) ---
   { key: 'prison.sting.warn', group: 'guard', label: 'Người ngoài vào khu nhà tù (cảnh báo)', default: 'Đây là khu nhà tù — rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['seconds'] },
+  { key: 'prison.noSleep', group: 'guard', label: 'Người ở tù cho dino ngủ (bị đánh thức)', default: 'Đang ở tù: không được ngủ.', vars: [] },
   { key: 'prison.sting', group: 'guard', label: 'Người ngoài bắt đầu bị ong đốt ở khu nhà tù', default: 'Bạn đang bị ong đốt ở khu nhà tù — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['pct', 'every'] },
   // --- garage: storing (mods/DinoGarage) ---
   { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
@@ -102,6 +106,7 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'garage.lowHealth', group: 'garage', label: 'Máu dưới mức tối thiểu để cất', default: 'Máu phải từ {minHealth}% trở lên mới cất được (đang {health}%).', vars: ['minHealth', 'health'] },
   { key: 'garage.lowGrowth', group: 'garage', label: 'Chưa đủ lớn để cất', default: 'Dino phải lớn từ {minGrowth}% trở lên mới cất được (đang {growth}%).', vars: ['minGrowth', 'growth'] },
   { key: 'garage.noLocation', group: 'garage', label: 'Không đọc được vị trí', default: 'Không đọc được vị trí dino. Thử lại.', vars: [] },
+  { key: 'garage.prison', group: 'garage', label: 'Đang ở tù: không cất / lấy được', default: 'Bạn đang ở tù: không dùng được gara.', vars: [] },
   { key: 'garage.useWeb', group: 'garage', label: 'Gõ !store / !redeem trong game', default: 'Gara giờ dùng trên trang web của server (mục Gara): cất và lấy dino ở đó.', vars: [] },
   // --- garage: taking out ---
   { key: 'redeem.restoring', group: 'redeem', label: 'Đang lấy ra (tại chỗ)', default: "Restoring '{slot}'. Hold still for a few seconds.", vars: ['slot'] },
@@ -136,8 +141,13 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'cmd.prime.noDino', group: 'commands', label: '!prime: chưa có dino', default: '!prime: bạn chưa điều khiển dino nào.', vars: [] },
   { key: 'cmd.status.noDino', group: 'commands', label: '!status: chưa có dino', default: '!status: bạn chưa điều khiển dino nào.', vars: [] },
   { key: 'cmd.disabled', group: 'commands', label: 'Lệnh đang bị tắt', default: '!{command} đang bị tắt trên server này.', vars: ['command'] },
-  { key: 'cmd.prison', group: 'commands', label: '!slay / !unstuck khi đang ở tù', default: '!{command} không dùng được khi đang ở tù.', vars: ['command'] },
+  { key: 'cmd.prison', group: 'commands', label: '!slay / !unstuck / !food khi đang ở tù', default: '!{command} không dùng được khi đang ở tù.', vars: ['command'] },
   // --- admin actions (mods/DinoGarage inbox) ---
+  { key: 'item.mutationClear', group: 'admin', label: 'Người chơi dùng Phiếu bỏ mutation', default: 'Đã bỏ mutation {mutation} khỏi ô {slot}.', vars: ['mutation', 'slot'] },
+  { key: 'item.prime', group: 'admin', label: 'Người chơi dùng Phiếu Prime', default: 'Dino của bạn đã lên prime — chỉ số prime được áp sau vài giây.', vars: [] },
+  { key: 'item.mutationUpgrade', group: 'admin', label: 'Người chơi nâng cấp mutation bằng vật phẩm trùng (+1 đời)', default: 'Dino của bạn đã lên đời {generation} nhờ {mutation} — mọi mutation mạnh hơn.', vars: ['generation', 'mutation'] },
+  { key: 'item.mutation', group: 'admin', label: 'Người chơi dùng vật phẩm mutation (từ túi đồ trên web)', default: 'Đã thêm mutation {mutation} vào dino của bạn (ô {slot}).', vars: ['mutation', 'slot'] },
+  { key: 'admin.action', group: 'admin', label: 'Admin thao tác lên dino (heal, chỉ số, tăng trưởng, dịch chuyển)', default: 'Admin đã {action} cho dino của bạn.', vars: ['action'] },
   { key: 'admin.kill', group: 'admin', label: 'Admin xoá dino (không lý do)', default: 'An admin removed your dino.', vars: [] },
   { key: 'admin.killReason', group: 'admin', label: 'Admin xoá dino (có lý do)', default: 'An admin removed your dino. Reason: {reason}', vars: ['reason'] },
   // --- skin from the web (mods/DinoGarage garage/skin.lua) ---

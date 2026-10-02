@@ -311,8 +311,9 @@ local function doStatus(ctrl)
 end
 
 local COMMANDS = { slay = doSlay, unstuck = doUnstuck, prime = doPrime, status = doStatus, food = doFood }
--- An inmate (mods/Prison) may not kill or move their dino out of the prison.
-local NOT_IN_PRISON = { slay = true, unstuck = true }
+-- An inmate (mods/Prison) may not kill, move or free their dino (!food) out of the prison.
+-- !prime / !status only read, and still answer.
+local NOT_IN_PRISON = { slay = true, unstuck = true, food = true }
 
 H.onChat(function(ctrl, steamId, msg)
     local cmd = H.parseCommand(msg)

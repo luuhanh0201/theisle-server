@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Photosynthetic Regeneration - The Isle Evrima Mutation</title>
+  <desc>Ban ngày hồi stamina nhanh hơn.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_photosynthetic-regeneration" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_photosynthetic-regeneration" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#15803d"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_photosynthetic-regeneration" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#052e16" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_photosynthetic-regeneration" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_photosynthetic-regeneration)"
+           stroke="url(#strokeGrad_photosynthetic-regeneration)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_photosynthetic-regeneration)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#22c55e"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_photosynthetic-regeneration)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Golden Sun Rays Powering a High-Voltage Stamina Lightning Bolt -->
+      <g transform="translate(128,128)">
+        <!-- Radiant Sun Crest on Top -->
+        <circle cx="0" cy="-24" r="16" fill="#facc15" stroke="#eab308" stroke-width="3"/>
+        <line x1="0" y1="-48" x2="0" y2="-42" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+        <line x1="-20" y1="-40" x2="-15" y2="-35" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+        <line x1="20" y1="-40" x2="15" y2="-35" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+        <line x1="-26" y1="-24" x2="-20" y2="-24" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+        <line x1="26" y1="-24" x2="20" y2="-24" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+        <!-- High-Power Stamina Lightning Bolt -->
+        <polygon points="6,-18 -16,6 -2,6 -10,48 18,16 4,16" fill="#22c55e" stroke="#86efac" stroke-width="3"/>
+        <polygon points="4,-10 -8,8 2,8 -4,34 10,18 2,18" fill="#fef08a"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

@@ -57,6 +57,10 @@ export const config = {
   prisonRoot: env('PRISON_ROOT', join(garageRoot, '..', '..', 'Prison', 'Saved')),
   /** Who is serving a sentence, for the other mods (mods/_shared/prison.lua). */
   prisonInmatesPath: env('PRISON_INMATES_PATH', join(garageRoot, '..', '..', 'shared', 'isle-prison.json')),
+  /** The portal's public files: the panel's skin page shows the same 3D models (skin3d.js, /dino3d, three.js). */
+  portalPublicDir: env('PORTAL_PUBLIC_DIR', '/opt/isle-portal/public'),
+  /** Admins switched off / on in game, for the AdminGuard mod (permissions.ts). */
+  adminGuardPath: env('ADMIN_GUARD_PATH', join(garageRoot, '..', '..', 'shared', 'isle-admins.json')),
 
   /** The players' texts as edited on the panel, read by every mod (mods/_shared/messages.lua). */
   messagesModPath: env('MESSAGES_MOD_PATH', join(garageRoot, '..', '..', 'shared', 'isle-messages.json')),
@@ -181,6 +185,8 @@ export const config = {
     baseUrl: (process.env['PANEL_BASE_URL'] || '').replace(/\/+$/, '') || null,
     /** Always admins of the panel, whatever the game's admin list says (the owner can never be locked out). */
     ownerIds: (process.env['ADMIN_STEAM_IDS'] ?? '').split(/[\s,]+/).filter((s) => /^\d{17}$/.test(s)),
+    /** The one admin who sets what every other admin may do (panel → Quản trị → Phân quyền; permissions.ts). Unset: nobody — every admin keeps everything. */
+    superAdminId: /^\d{17}$/.test(process.env['SUPER_ADMIN_STEAM_ID'] ?? '') ? process.env['SUPER_ADMIN_STEAM_ID'] as string : null,
     /** First allowed IPs, until the panel saves its own list (DATA_DIR/panel-access.json). */
     seedIps: (process.env['PANEL_ALLOWED_IPS'] ?? '').split(/[\s,]+/).filter((s) => s !== ''),
     /** How long a login lasts. */

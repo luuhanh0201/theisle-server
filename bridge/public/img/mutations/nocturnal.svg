@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Nocturnal - The Isle Evrima Mutation</title>
+  <desc>Ban đêm hồi máu và máu bị khoá (locked health) nhanh hơn.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_nocturnal" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_nocturnal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="50%" stop-color="#4338ca"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_nocturnal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#818cf8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_nocturnal" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_nocturnal)"
+           stroke="url(#strokeGrad_nocturnal)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_nocturnal)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#818cf8"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_nocturnal)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Crescent Moon & Radiant Predator Slit Eye -->
+      <g transform="translate(128,128)">
+        <!-- Glowing Crescent Moon -->
+        <path d="M10,-48 C-24,-46 -48,-18 -48,16 C-48,34 -38,48 -24,52 C-34,38 -34,14 -20,-8 C-10,-24 4,-38 24,-46 C20,-48 14,-48 10,-48 Z" fill="#facc15" filter="drop-shadow(0 0 6px #eab308)"/>
+        <!-- Nocturnal Reptilian Eye -->
+        <ellipse cx="6" cy="4" rx="36" ry="24" fill="#0f172a" stroke="#ca8a04" stroke-width="3.5"/>
+        <!-- Golden Iris -->
+        <circle cx="6" cy="4" r="20" fill="#eab308"/>
+        <!-- Slit Pupil -->
+        <path d="M6,-14 C3,-4 3,12 6,22 C9,12 9,-4 6,-14 Z" fill="#000000"/>
+        <ellipse cx="9" cy="0" rx="3" ry="5" fill="#fef08a"/>
+        <!-- Stars in Dark Sky -->
+        <polygon points="-8,-34 -6,-30 -2,-28 -6,-26 -8,-22 -10,-26 -14,-28 -10,-30" fill="#ffffff"/>
+        <polygon points="34,-20 35,-16 39,-15 35,-14 34,-10 33,-14 29,-15 33,-16" fill="#fef08a"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

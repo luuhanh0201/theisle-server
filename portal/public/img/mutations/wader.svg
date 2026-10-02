@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Wader - The Isle Evrima Mutation</title>
+  <desc>Ít bị cản hơn khi lội qua vùng nước nông.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_wader" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_wader" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="50%" stop-color="#0369a1"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_wader" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#083344" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_wader" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_wader)"
+           stroke="url(#strokeGrad_wader)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_wader)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#06b6d4"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_wader)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Dinosaur Leg Striding Gracefully Across Shallow Water Ripples -->
+      <g transform="translate(128,128)">
+        <!-- Shallow Water Wave Rings -->
+        <ellipse cx="0" cy="30" rx="44" ry="10" fill="none" stroke="#0284c7" stroke-width="3"/>
+        <ellipse cx="0" cy="30" rx="26" ry="6" fill="none" stroke="#38bdf8" stroke-width="2"/>
+        <!-- Swamp Reeds / Grass on sides -->
+        <path d="M-36,30 C-34,8 -42,-12 -44,-24 C-40,-12 -32,8 -32,30" fill="#15803d"/>
+        <path d="M36,30 C34,6 40,-14 44,-26 C40,-12 32,8 32,30" fill="#15803d"/>
+        <!-- Slender Long Dinosaur Wading Leg & Foot -->
+        <path d="M-6,-44 L-2,14 L-16,28 L-10,30 L0,22 L14,30 L18,28 L6,16 L2,-44 Z" fill="#cbd5e1" stroke="#475569" stroke-width="3"/>
+        <!-- Water Droplets flying off foot -->
+        <circle cx="-10" cy="18" r="2.5" fill="#38bdf8"/>
+        <circle cx="12" cy="18" r="2.5" fill="#38bdf8"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

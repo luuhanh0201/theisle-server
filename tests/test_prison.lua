@@ -99,6 +99,25 @@ step(5)
 check("a prime task gained in prison is taken back", con.__prime.bPrimeCondition1 == false)
 check("…the ones it had stay", con.__prime.bPrimeCondition3 == true)
 
+say("\n-- 2b. no sleeping: woken up, told why --")
+do
+  local wakes = 0
+  rawset(con, "WakeUp", function() wakes = wakes + 1; con.__props.bIsSleeping = false end)
+  con.__props.bIsSleeping = true
+  step(1)
+  check("asleep in prison: WakeUp called, awake again", wakes == 1 and con.__props.bIsSleeping == false)
+  local told = cc._messages
+  check("told: no sleeping in prison", told[#told] ~= nil and told[#told]:find("không được ngủ", 1, true) ~= nil, tostring(told[#told]))
+  -- A WakeUp that does nothing: the flag is cleared directly after a few seconds.
+  rawset(con, "WakeUp", function() wakes = wakes + 1 end)
+  con.__props.bIsSleeping = true
+  step(5)
+  check("still asleep after WakeUp: the flag is cleared", rawget(con, "bIsSleeping") == false)
+  rawset(con, "bIsSleeping", nil); con.__props.bIsSleeping = false; rawset(con, "WakeUp", nil)
+  step(4)                                     -- 10 s in all: the 5 s reload / save rhythm of the sections below is kept
+  check("awake: left alone", con.__props.bIsSleeping == false and rawget(con, "bIsSleeping") == nil)
+end
+
 say("\n-- 3. escape: one event, no time served, health not held --")
 step(10)
 con.__props.Loc = { X = 30000, Y = 30000, Z = 0 }

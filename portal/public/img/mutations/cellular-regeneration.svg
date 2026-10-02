@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Cellular Regeneration - The Isle Evrima Mutation</title>
+  <desc>Hồi máu nhanh hơn một chút.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_cellular-regeneration" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_cellular-regeneration" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="50%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_cellular-regeneration" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#022c22" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_cellular-regeneration" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_cellular-regeneration)"
+           stroke="url(#strokeGrad_cellular-regeneration)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_cellular-regeneration)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#10b981"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_cellular-regeneration)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- DNA Double Helix & Vital Cross -->
+      <g transform="translate(128,128)">
+        <circle cx="0" cy="0" r="48" fill="#10b981" opacity="0.12" filter="blur(6px)"/>
+        <!-- Central Cross -->
+        <rect x="-8" y="-36" width="16" height="72" rx="4" fill="#34d399"/>
+        <rect x="-36" y="-8" width="72" height="16" rx="4" fill="#34d399"/>
+        <!-- Cross Highlight -->
+        <rect x="-4" y="-32" width="8" height="64" rx="2" fill="#ecfdf5"/>
+        <rect x="-32" y="-4" width="64" height="8" rx="2" fill="#ecfdf5"/>
+        <!-- DNA Strands wrapping -->
+        <path d="M-38,-28 Q0,-14 38,-28" fill="none" stroke="#6ee7b7" stroke-width="4" stroke-linecap="round"/>
+        <path d="M-38,28 Q0,14 38,28" fill="none" stroke="#6ee7b7" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="-38" cy="-28" r="5" fill="#a7f3d0"/>
+        <circle cx="38" cy="-28" r="5" fill="#a7f3d0"/>
+        <circle cx="-38" cy="28" r="5" fill="#a7f3d0"/>
+        <circle cx="38" cy="28" r="5" fill="#a7f3d0"/>
+        <!-- Vitality Sparkles -->
+        <polygon points="0,-48 3,-40 11,-37 3,-34 0,-26 -3,-34 -11,-37 -3,-40" fill="#fef08a"/>
+        <polygon points="0,48 3,40 11,37 3,34 0,26 -3,34 -11,37 -3,40" fill="#fef08a"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

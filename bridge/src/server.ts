@@ -4,23 +4,26 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, normalize } from 'node:path';
 import { config } from './config.js';
 import type { Store } from './store.js';
-import { queueKill, queueLightTest } from './commands.js';
+import { queueAdminAction, queueKill, queueLightTest } from './commands.js';
 import { lastPrimeOf } from './prime-history.js';
 import { lifeDetails, restoreLife } from './life-history.js';
 import { readNotes, setNote } from './notes.js';
 import { actingAs, audit, describeChanges, readAuditPage } from './audit.js';
+import { auditKey, chatKey, deleteAuditLines, hideChat, isHiddenChat } from './deletions.js';
 import { currentLogin, panelGate } from './panel-gate.js';
-import { readAccess, ruleFor, saveAccess, sessionSecret, writeAllowed, writeToken } from './panel-auth.js';
+import { adminIds, readAccess, ruleFor, saveAccess, sessionSecret, writeAllowed, writeToken } from './panel-auth.js';
+import { DEFAULT_PERM, PERMS, ROLES, denied, isSuper, permsOf, readPermissions, savePermission, validatePerm } from './permissions.js';
 import type { Power } from './power.js';
 import { readSchedule, writeSchedule, validateSchedule, occurrences } from './power.js';
 import type { Rcon } from './rcon.js';
 import { RCON_COMMANDS } from './rcon.js';
-import { MANAGED, GROUPS, KNOWN_PLAYABLES, readLive, saveSettings, type ManagedKey } from './gameini.js';
+import { MANAGED, GROUPS, KNOWN_PLAYABLES, readLive, readSettings, saveSettings, type ManagedKey } from './gameini.js';
 import { readReadiness } from './readiness.js';
 import { readLiveState, livePlayer } from './live.js';
 import type { Metrics } from './metrics.js';
 import type { VoiceRoom } from './voice.js';
-import { handlePlayerApi, publicServerInfo } from './player-api.js';
+import { handlePlayerApi, publicServerInfo, startMutationUse } from './player-api.js';
+import { GROWTH_MAX, GROWTH_MIN, addGrowthEvent, firstDailyAt, readGrowthApplied, readGrowthEvents, removeGrowthEvent } from './growth-events.js';
 import { readCommandsSettings, saveCommandsSettings } from './commands-settings.js';
 import { readVoiceSettings, saveVoiceSettings } from './voice-settings.js';
 import { speciesOfClassPath } from './catalog.js';
@@ -69,6 +72,10 @@ import {
 } from './garage.js';
 import { addPrimeFix, listPrimeFixes } from './prime-fixes.js';
 import type { Prison } from './prison.js';
+import type { KillScenes } from './kill-scene.js';
+import { type Item, ITEM_TYPES, RARITIES, LIGHT_MAX, LIGHT_MIN, createItem, getItem, grantItem, listItems, ownerCounts, ownersOf, resolveSkin,
+  inventoryOf, revokeItem, speciesKey, updateItem } from './items.js';
+import { queueSkinRepaint } from './commands.js';
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
@@ -79,6 +86,8 @@ const contentTypes: Record<string, string> = {
   '.json': 'application/json; charset=utf-8',
   '.webp': 'image/webp',
   '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.glb': 'model/gltf-binary',
 };
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -90,10 +99,10 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(payload);
 }
 
-async function sendFile(res: ServerResponse, name: string): Promise<void> {
-  // Only ever serve out of publicDir, whatever the request path looked like.
-  const resolved = join(publicDir, normalize(name).replace(/^(\.\.[/\\])+/, ''));
-  if (!resolved.startsWith(publicDir)) {
+async function sendFile(res: ServerResponse, name: string, root = publicDir): Promise<void> {
+  // Only ever serve out of the root, whatever the request path looked like.
+  const resolved = join(root, normalize(name).replace(/^(\.\.[/\\])+/, ''));
+  if (!resolved.startsWith(root)) {
     sendJson(res, 403, { error: 'forbidden' });
     return;
   }
@@ -105,13 +114,20 @@ async function sendFile(res: ServerResponse, name: string): Promise<void> {
       // Revalidate every time: otherwise a browser keeps showing the old panel
       // after a deploy until someone thinks to hard-reload. The map (2.5 MB)
       // is the exception: the panel asks for it with ?v=<map version>.
-      'cache-control': name.startsWith('map/') ? 'public, max-age=604800' : 'no-cache',
+      'cache-control': name.startsWith('map/') || name.startsWith('dino3d/') ? 'public, max-age=604800' : 'no-cache',
     });
     res.end(body);
   } catch {
     sendJson(res, 404, { error: 'not found' });
   }
 }
+
+/**
+ * A teleport is dropped from this high above the spot (cm). A ground point's
+ * height is the centre of whatever stood there — a small AI's is lower than a
+ * big dino's: put there exactly, a Rex went under the landscape (2026-10-02).
+ */
+const TELEPORT_DROP_CM = 400;
 
 /** Read a JSON request body, capped so a bad client cannot exhaust memory. */
 async function readJsonBody(req: IncomingMessage, maxBytes = 64 * 1024): Promise<unknown> {
@@ -204,7 +220,12 @@ export interface Ctx {
   bans?: BanWatcher;
   ddos?: { watch: DdosWatch; settings: DdosSettings; iface: string | null };
   prison?: Prison;
+  killScenes?: KillScenes;
+  /** An admin's rights in the game were switched on / off: the AdminGuard mod's file is written again. */
+  onAdminsChanged?: () => Promise<void>;
 }
+
+const fmtTime = (s: number): string => new Date(s * 1000).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
 /** Everything the Server tab shows, in one call. */
 async function serverStatus(ctx: Ctx): Promise<unknown> {
@@ -298,7 +319,153 @@ async function handlePanel(
     sendJson(res, 200, {
       steamId: login.steamId, name, ip: login.ip, via: login.ip === null ? 'tunnel' : 'web',
       token: secret !== null && login.cookie !== undefined && login.steamId !== null ? writeToken(secret, login.cookie) : null,
+      // What this admin may do (permissions.ts): the panel hides the rest.
+      perms: [...await permsOf(login.steamId)], super: isSuper(login.steamId),
     });
+    return;
+  }
+  // Every other route: the admin's permission for it (permissions.ts), checked before anything runs.
+  const refused = await denied(login.steamId, req.method ?? 'GET', path);
+  if (refused !== null) {
+    sendJson(res, 403, { error: refused });
+    return;
+  }
+  // Panel → Quản trị → Phân quyền (the super admin only — "*" above).
+  if (path === '/api/permissions' && req.method === 'GET') {
+    const store = await readPermissions();
+    const live = await readLive();
+    const inIni = new Set(Array.isArray(live.effective['AdminsSteamIDs']) ? live.effective['AdminsSteamIDs'] as string[] : []);
+    const admins = [...await adminIds()].map((id) => ({
+      steamId: id, name: ctx.store.player(id)?.player.name ?? null,
+      super: id === config.panel.superAdminId, owner: config.panel.ownerIds.includes(id),
+      perm: store.admins[id] ?? DEFAULT_PERM, set: store.admins[id] !== undefined,
+      // In the Game.ini the game read at its last start (or will read at the next).
+      inGameNow: inIni.has(id),
+    }));
+    sendJson(res, 200, { perms: PERMS, roles: ROLES, admins, superAdmin: config.panel.superAdminId });
+    return;
+  }
+  // --- items (items.ts): the kinds an admin makes (skins for now), who has which, applying a skin ---
+  if (path === '/api/items' && req.method === 'GET') {
+    const counts = await ownerCounts();
+    sendJson(res, 200, {
+      items: (await listItems()).map((i) => ({ ...i, owners: counts[i.id] ?? 0, ...(i.type === 'skin' ? { resolved: resolveSkin(i.data) } : {}) })),
+      types: ITEM_TYPES, rarities: RARITIES, light: { min: LIGHT_MIN, max: LIGHT_MAX },
+      // What a mutation item may be (Vật phẩm → Mutation): every mutation still in the game.
+      mutations: MUTATION_REFERENCE.filter((m) => m.status !== 'removed').map((m) => ({
+        name: m.name, description: m.description, diet: m.diet, kind: m.kind, unlock: m.unlock ?? null,
+        stat: m.stat, tiers: m.tiers, status: m.status, femaleOnly: m.femaleOnly === true,
+      })),
+    });
+    return;
+  }
+  const itemOwners = /^\/api\/items\/([a-z0-9_]{4,20})\/owners$/.exec(path);
+  if (itemOwners && req.method === 'GET') {
+    const owners = await ownersOf(itemOwners[1] as string);
+    sendJson(res, 200, { owners: owners.map((o) => ({ ...o, name: ctx.store.player(o.steamId)?.player.name ?? null })) });
+    return;
+  }
+  const itemOne = /^\/api\/items\/([a-z0-9_]{4,20})$/.exec(path);
+  const itemAct = /^\/api\/items\/([a-z0-9_]{4,20})\/(grant|apply)$/.exec(path);
+  const itemRevoke = /^\/api\/items\/([a-z0-9_]{4,20})\/grant\/(\d{17})$/.exec(path);
+  if ((path === '/api/items' && req.method === 'POST') || (itemOne && req.method === 'PUT')
+    || (itemAct && req.method === 'POST') || (itemRevoke && req.method === 'DELETE')) {
+    const deniedWrite = authorizeWrite(req);
+    if (deniedWrite !== null) { sendJson(res, 403, { error: deniedWrite }); return; }
+    try {
+      const label = (i: Item): string => `${i.name} · ${i.type === 'skin' ? `skin ${i.data.species}` : i.type === 'mutation' ? `mutation ${i.data.mutation}`
+        : ITEM_TYPES.find((t) => t.key === i.type)?.label ?? i.type}`;
+      if (path === '/api/items') {
+        const item = await createItem(await readJsonBody(req), login.steamId);
+        await audit({ action: 'item created', detail: `${label(item)} · ${item.id}`, ok: true });
+        sendJson(res, 201, { item });
+        return;
+      }
+      if (itemOne) {
+        const { before, after } = await updateItem(itemOne[1] as string, await readJsonBody(req));
+        await audit({ action: 'item updated', detail: `${label(after)} · ${after.id}`
+          + (before.retired !== after.retired ? (after.retired ? ' · ngừng phát hành' : ' · phát hành lại') : ''), ok: true });
+        sendJson(res, 200, { item: after });
+        return;
+      }
+      if (itemRevoke) {
+        const [, itemId, steamId] = itemRevoke as unknown as [string, string, string];
+        if (!(await revokeItem(steamId, itemId))) { sendJson(res, 404, { error: 'người chơi không có vật phẩm này' }); return; }
+        const item = await getItem(itemId);
+        await audit({ action: 'item revoked', detail: `${item ? label(item) : itemId} ← ${ctx.store.player(steamId)?.player.name ?? '?'} (${steamId})`, ok: true });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+      const [, itemId, act] = itemAct as unknown as [string, string, 'grant' | 'apply'];
+      const body = (await readJsonBody(req)) as { steamId?: unknown; note?: unknown; slot?: unknown; upgrade?: unknown };
+      const steamId = typeof body.steamId === 'string' ? body.steamId.trim() : '';
+      if (!/^\d{17}$/.test(steamId)) throw new ValidationError('steamId must be a SteamID64');
+      const item = await getItem(itemId);
+      if (item === null) { sendJson(res, 404, { error: 'no such item' }); return; }
+      const who = ctx.store.player(steamId)?.player;
+      if (act === 'grant') {
+        await grantItem(steamId, itemId, 'admin', login.steamId, body.note);
+        await audit({ action: 'item granted', detail: `${label(item)} → ${who?.name ?? '?'} (${steamId})`, ok: true });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+      // A mutation: one copy of their inventory used on the dino they play, as the player would (player-api.ts).
+      if (item.type === 'mutation') {
+        const copy = (await inventoryOf(steamId)).find((o) => o.itemId === itemId);
+        if (!copy) { sendJson(res, 409, { error: 'người chơi chưa có mutation này trong kho — tặng trước rồi dùng' }); return; }
+        const upgrade = body.upgrade === true;
+        const r = await startMutationUse({ store: ctx.store, ...(ctx.prison ? { prison: ctx.prison } : {}) }, steamId, copy.uid, body.slot, upgrade);
+        if (r.status === 202) {
+          await audit({ action: 'mutation used', detail: `${label(item)} → ${who?.name ?? '?'} (${steamId}) · ${upgrade ? 'nâng cấp +1 đời' : `ô ${String(body.slot)}`}`, ok: true });
+        }
+        sendJson(res, r.status, r.body);
+        return;
+      }
+      // A ticket: chosen in the player's own bag (Túi đồ), not from here.
+      if (item.type !== 'skin') { sendJson(res, 400, { error: 'phiếu được dùng trong Túi đồ của người chơi' }); return; }
+      // Apply a skin now, on the dino they play (it must be the skin's species).
+      if (speciesKey(who?.species) !== speciesKey(item.data.species)) {
+        sendJson(res, 409, { error: `người chơi không đang chơi ${item.data.species}${who?.species ? ` (đang: ${String(who.species).replace(/^BP_/, '').replace(/_C$/, '')})` : ''}` });
+        return;
+      }
+      const cmd = await queueSkinRepaint(steamId, resolveSkin(item.data));
+      await audit({ action: 'skin applied', detail: `${label(item)} → ${who?.name ?? '?'} (${steamId})`, ok: true });
+      sendJson(res, 202, { id: cmd.id });
+    } catch (error) {
+      if (error instanceof ValidationError) { sendJson(res, 400, { error: error.message }); return; }
+      throw error;
+    }
+    return;
+  }
+
+  const permFor = /^\/api\/permissions\/(\d{17})$/.exec(path);
+  if (permFor && req.method === 'PUT') {
+    const deniedWrite = authorizeWrite(req);
+    if (deniedWrite !== null) { sendJson(res, 403, { error: deniedWrite }); return; }
+    try {
+      const steamId = permFor[1] as string;
+      if (!(await adminIds()).has(steamId)) throw new ValidationError('không phải admin của panel');
+      const perm = validatePerm(await readJsonBody(req));
+      const { before, after } = await savePermission(steamId, perm);
+      // In game on / off: the game's admin list is written again (the game reads it at its next start).
+      if (before.ingame !== after.ingame) {
+        const settings = await readSettings();
+        if (!Array.isArray(settings['AdminsSteamIDs'])) {
+          const live = await readLive();
+          settings['AdminsSteamIDs'] = Array.isArray(live.effective['AdminsSteamIDs']) ? live.effective['AdminsSteamIDs'] : [];
+        }
+        await saveSettings(settings);
+        await ctx.onAdminsChanged?.();
+      }
+      const who = ctx.store.player(steamId)?.player.name ?? steamId;
+      await audit({ action: 'admin permissions changed', detail: `${who} · ${ROLES[after.role].label}`
+        + (after.allow.length ? ` · thêm ${after.allow.join(', ')}` : '') + (after.deny.length ? ` · bỏ ${after.deny.join(', ')}` : '')
+        + ` · trong game ${after.ingame ? 'BẬT' : 'TẮT'}${before.ingame !== after.ingame ? ' (đổi, có hiệu lực hoàn toàn sau restart)' : ''}`, ok: true });
+      sendJson(res, 200, { ok: true, perm: after });
+    } catch (error) {
+      if (error instanceof ValidationError) { sendJson(res, 400, { error: error.message }); return; }
+      throw error;
+    }
     return;
   }
   if (path === '/api/prison' && req.method === 'GET') {
@@ -371,20 +538,27 @@ async function handlePanel(
   if (req.method === 'POST' || req.method === 'DELETE' || req.method === 'PUT') {
     const garage = /^\/api\/garage\/([^/]+)\/([^/]+)$/.exec(path);
     const kill = /^\/api\/player\/([^/]+)\/kill$/.exec(path);
+    const adminAct = /^\/api\/player\/(\d{17})\/admin$/.exec(path);
     const note = /^\/api\/mutations\/([^/]+)$/.exec(path);
     const power_ = /^\/api\/server\/(start|stop|restart|cancel)$/.exec(path);
     const rconCmd = /^\/api\/rcon\/([A-Za-z]+)$/.exec(path);
     const prisonAct = /^\/api\/prison\/sentence\/([a-f0-9]{10})\/(release|extend)$/.exec(path);
+    const growthDel = /^\/api\/server\/growth-events\/(ge_[0-9a-f]{8})$/.exec(path);
     const allowed =
       (prisonAct !== null && req.method === 'POST') ||
       (path === '/api/prison/jail' && req.method === 'POST') ||
       (path === '/api/prison/settings' && req.method === 'PUT') ||
       (garage !== null && req.method !== 'PUT') ||
       (kill !== null && req.method === 'POST') ||
+      (adminAct !== null && req.method === 'POST') ||
       (note !== null && req.method === 'PUT') ||
       (power_ !== null && req.method === 'POST') ||
       (rconCmd !== null && req.method === 'POST') ||
       (path === '/api/server/schedule' && req.method === 'PUT') ||
+      (path === '/api/chat/delete' && req.method === 'POST') ||
+      (path === '/api/server/audit/delete' && req.method === 'POST') ||
+      (path === '/api/server/growth-events' && req.method === 'POST') ||
+      (growthDel !== null && req.method === 'DELETE') ||
       (path === '/api/game-config' && req.method === 'PUT') ||
       (path === '/api/garage-settings' && req.method === 'PUT') ||
       (path === '/api/prime-fixes' && req.method === 'POST') ||
@@ -437,6 +611,32 @@ async function handlePanel(
       });
       await audit({ action: `server ${verb} requested`, detail: [`countdown ${Math.round((op.runAt - op.startedAt) / 1000)}s`, op.reason].filter(Boolean).join(' · '), ok: true });
       sendJson(res, 202, { operation: op });
+      return;
+    }
+
+    // The super admin deletes chat lines / admin log lines (deletions.ts): nothing written to the admin log.
+    if (path === '/api/chat/delete' || path === '/api/server/audit/delete') {
+      if (!isSuper(login.steamId)) { sendJson(res, 403, { error: 'chỉ admin tổng' }); return; }
+      const body = (await readJsonBody(req)) as { keys?: unknown };
+      const keys = Array.isArray(body.keys) ? body.keys.filter((k): k is string => typeof k === 'string').slice(0, 1000) : [];
+      if (keys.length === 0) { sendJson(res, 400, { error: 'keys required' }); return; }
+      const deleted = path === '/api/chat/delete' ? await hideChat(keys) : await deleteAuditLines(keys);
+      sendJson(res, 200, { deleted });
+      return;
+    }
+
+    // Sự kiện tốc độ lớn (growth-events.ts): applied at the next start of the game.
+    if (path === '/api/server/growth-events') {
+      const ev = addGrowthEvent(config.dataDir, await readJsonBody(req), login?.steamId ?? null);
+      await audit({ action: 'growth event added', detail: `×${ev.multiplier} · ${fmtTime(ev.start)} → ${fmtTime(ev.end)}${ev.note ? ` · ${ev.note}` : ''}`, ok: true });
+      sendJson(res, 201, { event: ev });
+      return;
+    }
+    if (growthDel !== null) {
+      const gone = removeGrowthEvent(config.dataDir, growthDel[1] as string);
+      if (gone === null) { sendJson(res, 404, { error: 'no such event' }); return; }
+      await audit({ action: 'growth event removed', detail: `×${gone.multiplier} · ${fmtTime(gone.start)} → ${fmtTime(gone.end)}`, ok: true });
+      sendJson(res, 200, { ok: true });
       return;
     }
 
@@ -874,6 +1074,46 @@ async function handlePanel(
       return;
     }
 
+    if (adminAct !== null) {
+      // The game's /adminpanel actions on a player's dino (commands.ts, mods/DinoGarage garage/admin.lua).
+      const steamId = adminAct[1] as string;
+      const body = (await readJsonBody(req)) as Record<string, unknown>;
+      const who = store.player(steamId)?.player;
+      if (!who?.online) { sendJson(res, 409, { error: 'người chơi không online' }); return; }
+      let action: Record<string, unknown> = body;
+      let where = '';
+      if (body['action'] === 'teleport') {
+        // To another player (next to them), or to a spot on the map: the ground
+        // point nearest to it within 50 m (somewhere a dino really stood — no
+        // height to guess, nothing under the landscape).
+        const toPlayer = typeof body['toPlayer'] === 'string' ? store.player(body['toPlayer'])?.player : undefined;
+        const to = body['to'] as { x?: unknown; y?: unknown } | undefined;
+        if (toPlayer) {
+          if (!toPlayer.loc || typeof toPlayer.loc.z !== 'number') { sendJson(res, 409, { error: 'chưa biết vị trí người chơi đích' }); return; }
+          action = { action: 'teleport', x: toPlayer.loc.x + 400, y: toPlayer.loc.y, z: toPlayer.loc.z + TELEPORT_DROP_CM / 2 };
+          where = `tới ${toPlayer.name ?? body['toPlayer']}`;
+        } else if (to && typeof to.x === 'number' && typeof to.y === 'number') {
+          const tx = to.x, ty = to.y;
+          const near = store.groundPoints.within(tx, ty, 5000, 400)
+            .sort((a, b) => ((a[0] - tx) ** 2 + (a[1] - ty) ** 2) - ((b[0] - tx) ** 2 + (b[1] - ty) ** 2))[0];
+          if (!near) { sendJson(res, 409, { error: 'không có điểm mặt đất nào trong 50 m quanh chỗ chọn (chỗ chưa ai đi qua) — chọn chỗ khác' }); return; }
+          action = { action: 'teleport', x: near[0], y: near[1], z: near[2] + TELEPORT_DROP_CM };
+          where = `tới ${near[0]}, ${near[1]} (cách chỗ chọn ${Math.round(Math.hypot(near[0] - tx, near[1] - ty) / 100)} m)`;
+        } else {
+          sendJson(res, 400, { error: 'teleport needs to: { x, y } or toPlayer' });
+          return;
+        }
+      }
+      const command = await queueAdminAction(steamId, action);
+      const detail = command.type === 'admin'
+        ? (command.action === 'vitals' ? Object.entries(command.values).map(([k, v]) => `${k} ${Math.round((v ?? 0) * 100)}%`).join(', ')
+          : command.action === 'grow' ? `${Math.round(command.growth * 100)}%${command.prime ? ' + prime' : ''}` : where)
+        : '';
+      await audit({ action: `admin action ${command.type === 'admin' ? command.action : ''}`, detail: `${who.name ?? steamId} (${steamId})${detail ? ' · ' + detail : ''} · command ${command.id}`, ok: true });
+      sendJson(res, 202, { command });
+      return;
+    }
+
     if (kill !== null) {
       const steamId = kill[1] as string;
       const body = (await readJsonBody(req)) as { reason?: unknown };
@@ -964,7 +1204,7 @@ async function handlePanel(
     sendJson(res, 200, {
       steamId,
       player: detail?.player ?? null,
-      timeline: detail?.timeline ?? [],
+      timeline: (detail?.timeline ?? []).filter((e) => !isHiddenChat(e)),
       lives: detail?.lives ?? [],
       garage,
     });
@@ -987,13 +1227,28 @@ async function handlePanel(
       sendJson(res, 200, { players: store.online() });
       return;
     case '/api/feed':
-      sendJson(res, 200, { events: store.feed(parseLimit(url, 100, 500), parseTypes(url)) });
+      sendJson(res, 200, { events: store.feed(parseLimit(url, 100, 500), parseTypes(url)).filter((e) => !isHiddenChat(e)) });
       return;
+    case '/api/kill-scene': {
+      // The scene of one death (kill-scene.ts): ?steamId=<who died>&t=<the death's unix time>.
+      const steamId = url.searchParams.get('steamId') ?? '';
+      const t = Number(url.searchParams.get('t'));
+      if (!/^\d{17}$/.test(steamId) || !Number.isInteger(t)) { sendJson(res, 400, { error: 'steamId and t are required' }); return; }
+      const scene = ctx.killScenes?.get(steamId, t) ?? null;
+      if (scene === null) { sendJson(res, 404, { error: 'no scene for this death' }); return; }
+      sendJson(res, 200, scene);
+      return;
+    }
     case '/api/killfeed':
       sendJson(res, 200, { events: store.killfeed(parseLimit(url, 100, 500)) });
       return;
-    case '/api/chat':
-      sendJson(res, 200, { events: store.chat(parseLimit(url, 200, 1000)) });
+    case '/api/chat': {
+      // Lines the super admin deleted are left out; they alone get each line's key (to delete).
+      const sup = isSuper(login.steamId);
+      sendJson(res, 200, { events: store.chat(parseLimit(url, 200, 1000)).filter((e) => !isHiddenChat(e))
+        .map((e) => (sup && e.type === 'chat' ? { ...e, key: chatKey(e) } : e)) });
+      return;
+    }
       return;
     case '/api/leaderboard':
       sendJson(res, 200, store.leaderboard());
@@ -1001,6 +1256,20 @@ async function handlePanel(
     case '/api/server/status':
       sendJson(res, 200, await serverStatus(ctx));
       return;
+    case '/api/server/growth-events': {
+      // Each event with the daily restarts that start / end it (it is applied at a start only).
+      const schedule = await readSchedule();
+      const nowS = Math.floor(Date.now() / 1000);
+      sendJson(res, 200, {
+        events: readGrowthEvents(config.dataDir).filter((e) => e.end > nowS - 86400).map((e) => ({
+          ...e, appliesAt: firstDailyAt(schedule.daily, Math.max(e.start, nowS)), endsAt: firstDailyAt(schedule.daily, e.end),
+        })),
+        applied: readGrowthApplied(config.dataDir),
+        daily: schedule.daily,
+        limits: { min: GROWTH_MIN, max: GROWTH_MAX },
+      });
+      return;
+    }
     case '/api/server/readiness': {
       const status = await power.status();
       const join = store.feed(1, new Set(['session_start']))[0];
@@ -1016,7 +1285,8 @@ async function handlePanel(
     case '/api/server/audit': {
       // Paged, newest first; ?q= filters. Lines older than 7 days are gone.
       const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
-      sendJson(res, 200, await readAuditPage(page, parseLimit(url, 30, 200), url.searchParams.get('q') ?? ''));
+      const data = await readAuditPage(page, parseLimit(url, 30, 200), url.searchParams.get('q') ?? '');
+      sendJson(res, 200, isSuper(login.steamId) ? { ...data, entries: data.entries.map((e) => ({ ...e, key: auditKey(e) })) } : data);
       return;
     }
     case '/api/rcon/commands':
@@ -1206,6 +1476,14 @@ async function handlePanel(
       await sendFile(res, 'index.html');
       return;
     default:
+      // The skin page's 3D: the portal's own viewer and models (config.portalPublicDir).
+      // …and the skin colour editor, shared with the players' Skin Studio (skin-editor.js).
+      // (/img/ — the mutation icons too — comes from bridge public/img, before this: panel-gate.ts.)
+      if (path === '/skin3d.js' || path === '/skin-editor.js' || path === '/ui-select.js' || path === '/ui-inputs.js' || path === '/mut-icons.js'
+        || path.startsWith('/dino3d/') || path.startsWith('/vendor/three-0.170.0/')) {
+        await sendFile(res, path.slice(1), config.portalPublicDir);
+        return;
+      }
       await sendFile(res, path.slice(1));
       return;
   }

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Xerocole Adaptation - The Isle Evrima Mutation</title>
+  <desc>Nhận thêm một ít nước khi ăn cây.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_xerocole-adaptation" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_xerocole-adaptation" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#15803d"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_xerocole-adaptation" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#052e16" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_xerocole-adaptation" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_xerocole-adaptation)"
+           stroke="url(#strokeGrad_xerocole-adaptation)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_xerocole-adaptation)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#22c55e"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_xerocole-adaptation)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Desert Succulent Cactus Pad Condensing Fresh Water Nectar -->
+      <g transform="translate(128,128)">
+        <!-- Arid Scorching Sun Wave -->
+        <path d="M-40,-32 Q0,-46 40,-32" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        <!-- Desert Prickly Succulent Pad -->
+        <path d="M0,-24 C28,-24 36,6 28,32 C20,44 -20,44 -28,32 C-36,6 -28,-24 0,-24 Z" fill="#15803d" stroke="#22c55e" stroke-width="3.5"/>
+        <!-- Spines on Succulent -->
+        <line x1="-24" y1="-8" x2="-34" y2="-12" stroke="#fef08a" stroke-width="2.5"/>
+        <line x1="-28" y1="12" x2="-38" y2="12" stroke="#fef08a" stroke-width="2.5"/>
+        <line x1="24" y1="-8" x2="34" y2="-12" stroke="#fef08a" stroke-width="2.5"/>
+        <line x1="28" y1="12" x2="38" y2="12" stroke="#fef08a" stroke-width="2.5"/>
+        <!-- Condensed Pure Sparkling Water Droplet -->
+        <path d="M0,6 C0,6 14,24 14,34 C14,42 8,48 0,48 C-8,48 -14,42 -14,34 C-14,24 0,6 0,6 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="2.5"/>
+        <circle cx="-4" cy="30" r="3" fill="#ffffff"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

@@ -31,6 +31,15 @@
                   (garage/skin.lua), same outcome event.
       "light"   — (admin test, panel API) { on } a light on / off the
                   player's dino (garage/light.lua).
+      "admin"   — (admin, panel) { action = heal | vitals | grow | teleport, … }
+                  the /adminpanel actions on the player's dino (garage/admin.lua).
+                  Outcome: a `portal_command` event (action "admin").
+      "mutation" — (the player, from their bag on the web) { mode "place", mutation, slot, unlock }
+                  or { mode "upgrade", mutation, fromStacks, maxStacks } (+1 đời, off)
+                  or { mode "clear", slot } (Phiếu bỏ mutation) or { mode "prime" } (Phiếu Prime)
+                  a mutation item into a slot of their dino (garage/mutation.lua).
+                  Outcome: a `portal_command` event (action "mutation"); the
+                  bridge uses the item up when it is ok.
     Anything else is refused.
 
     Threads: poll() runs ON THE GAME THREAD (H.every in main.lua): it reads
@@ -56,6 +65,8 @@ local handlers = {}
 function I.on(kind, fn) handlers[kind] = fn end
 
 local SLOT_OK  = function(v) return v == nil or (type(v) == "string" and #v <= 32 and v:match("^[%w_%-]+$") ~= nil) end
+-- A mutation item's slot is a number, 1–4 (garage slots above are names).
+local MUT_SLOT_OK = function(v) return v == nil or (type(v) == "number" and v >= 1 and v <= 4 and v == math.floor(v)) end
 local WHERE_OK = { stored = true, here = true }
 
 local function readJson(path)
@@ -163,11 +174,12 @@ end
 local function playerCommand(cmd)
     local function done(ok, fields)
         local event = { type = "portal_command", id = cmd.id, steamId = cmd.steamId,
-                        action = cmd.type, slot = cmd.slot, ok = ok, t = os.time() }
+                        action = cmd.type, slot = cmd.slot ~= nil and tostring(cmd.slot) or nil, ok = ok, t = os.time() }
         for k, v in pairs(fields or {}) do event[k] = v end
         pendingResults[#pendingResults + 1] = event
     end
-    if not SLOT_OK(cmd.slot) or (cmd.where ~= nil and not WHERE_OK[cmd.where]) then
+    local slotOk = cmd.type == "mutation" and MUT_SLOT_OK(cmd.slot) or (cmd.type ~= "mutation" and SLOT_OK(cmd.slot))
+    if not slotOk or (cmd.where ~= nil and not WHERE_OK[cmd.where]) then
         done(false, { error = "bad_arguments" })
         return
     end

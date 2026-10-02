@@ -34,6 +34,8 @@ local F = {
     maxThirst    = { "MaxThirst" },
     maxStamina   = { "MaxStamina" },
     maxHealth    = { "MaxHealth" },
+    maxBlood     = { "MaxBlood" },
+    maxOxygen    = { "MaxOxygen" },
 
     growth       = { "Growth", "GrowthPercent" },
     isFemale     = { "bIsFemale", "IsFemale" },
@@ -69,6 +71,7 @@ local GETTERS = {
     thirst = "GetThirst", oxygen = "GetOxygen", blood = "GetBlood",
     maxHunger = "GetMaxHunger", maxThirst = "GetMaxThirst",
     maxStamina = "GetMaxStamina", maxHealth = "GetMaxHealth", growth = "GetGrowth",
+    maxBlood = "GetMaxBlood", maxOxygen = "GetMaxOxygen",
 }
 
 local function num(pawn, key)
@@ -176,8 +179,11 @@ function C.capture(pawn)
         maxFoodValue = num(pawn, "maxFoodValue"),
         maxThirst    = num(pawn, "maxThirst"),
         maxStamina   = num(pawn, "maxStamina"),
-        -- Shown only (the web garage's health bar); restore does not set it.
+        -- Not set back (the game works the maxima out): restore puts health,
+        -- blood and oxygen back as the SHARE of these they had.
         maxHealth    = num(pawn, "maxHealth"),
+        maxBlood     = num(pawn, "maxBlood"),
+        maxOxygen    = num(pawn, "maxOxygen"),
 
         growth   = num(pawn, "growth"),
         isFemale = H.readField(pawn, F.isFemale, "isFemale") == true,

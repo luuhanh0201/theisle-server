@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Pit Organ - The Isle Evrima Mutation</title>
+  <desc>Nhìn thấy các nguồn phát ánh sáng hồng ngoại (IR).</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_pit-organ" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_pit-organ" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="50%" stop-color="#7e22ce"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_pit-organ" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c084fc" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#3b0764" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_pit-organ" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_pit-organ)"
+           stroke="url(#strokeGrad_pit-organ)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_pit-organ)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#c084fc"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_pit-organ)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Viper Loreal Pit Organ Sensing Thermal Infrared IR Radiation -->
+      <g transform="translate(128,128)">
+        <!-- Snake Snout Silhouette with Sensory Pit -->
+        <path d="M-40,16 C-32,6 -16,4 12,4 C34,4 42,-8 44,-24 C28,-22 10,-24 -8,-18 C-24,-12 -36,-2 -40,16 Z" fill="#3b0764" stroke="#a855f7" stroke-width="3.5"/>
+        <!-- Loreal Pit Depression -->
+        <ellipse cx="6" cy="-6" rx="8" ry="6" fill="#1e1b4b" stroke="#c084fc" stroke-width="2"/>
+        <!-- Infrared Thermal Radiation Wave Arcs -->
+        <path d="M18,-18 A16,16 0 0,1 28,-2" fill="none" stroke="#f43f5e" stroke-width="3" stroke-linecap="round"/>
+        <path d="M26,-24 A26,26 0 0,1 38,-4" fill="none" stroke="#fb7185" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M34,-30 A36,36 0 0,1 46,-6" fill="none" stroke="#fecdd3" stroke-width="3" stroke-linecap="round"/>
+        <!-- Thermal Target Cross -->
+        <circle cx="34" cy="-18" r="4" fill="#ef4444"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  <text x="128" y="215" font-family="system-ui,sans-serif" font-size="10" font-weight="bold" fill="#d8b4fe" text-anchor="middle" letter-spacing="1">TEST BUILD</text>
+</svg>

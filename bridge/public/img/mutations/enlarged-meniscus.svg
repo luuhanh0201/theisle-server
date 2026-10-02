@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Enlarged Meniscus - The Isle Evrima Mutation</title>
+  <desc>Sát thương do ngã trừ vào stamina trước, hết stamina mới trừ vào máu.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_enlarged-meniscus" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_enlarged-meniscus" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="50%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_enlarged-meniscus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_enlarged-meniscus" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_enlarged-meniscus)"
+           stroke="url(#strokeGrad_enlarged-meniscus)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_enlarged-meniscus)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#94a3b8"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_enlarged-meniscus)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Knee joint / Fibrocartilage Meniscus Spring Absorbing Fall Impact -->
+      <g transform="translate(128,128)">
+        <!-- Downward Impact Arrows -->
+        <path d="M-18,-46 L0,-32 L18,-46" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+        <path d="M-12,-38 L0,-24 L12,-38" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+        <!-- Upper Femur Condyle (Bone) -->
+        <path d="M-28,-22 C-28,-14 -16,-8 0,-8 C16,-8 28,-14 28,-22 L22,-30 L-22,-30 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+        <!-- Enlarged Cushioned Meniscus Pad -->
+        <path d="M-36,-4 C-36,6 -18,12 0,12 C18,12 36,6 36,-4 C36,-10 20,-6 0,-6 C-20,-6 -36,-10 -36,-4 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="3"/>
+        <!-- Shock Absorber Spring Rings -->
+        <path d="M-24,14 Q0,26 24,14 Q0,38 -24,26 Q0,50 24,38" fill="none" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+        <!-- Lower Tibia Bone -->
+        <path d="M-26,44 C-16,42 0,42 26,44 L20,54 L-20,54 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

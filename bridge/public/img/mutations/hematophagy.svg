@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Hematophagy - The Isle Evrima Mutation</title>
+  <desc>Hồi một phần thanh khát khi ăn xác.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_hematophagy" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_hematophagy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="50%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_hematophagy" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#450a0a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_hematophagy" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_hematophagy)"
+           stroke="url(#strokeGrad_hematophagy)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_hematophagy)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#ef4444"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_hematophagy)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Carcass Ribcage skull dripping blood into thirst water droplet -->
+      <g transform="translate(128,128)">
+        <!-- Carcass Ribcage Spine Bones -->
+        <line x1="0" y1="-42" x2="0" y2="0" stroke="#e2e8f0" stroke-width="5" stroke-linecap="round"/>
+        <!-- Rib Arcs -->
+        <path d="M-28,-32 C-20,-24 -6,-28 0,-28 C6,-28 20,-24 28,-32" fill="none" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+        <path d="M-34,-18 C-24,-10 -6,-14 0,-14 C6,-14 24,-10 34,-18" fill="none" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+        <path d="M-26,-4 C-18,2 -6,0 0,0 C6,0 18,2 26,-4" fill="none" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+        <!-- Blood Droplet falling -->
+        <path d="M0,4 C0,4 8,14 8,22 C8,28 4,32 0,32 C-4,32 -8,28 -8,22 C-8,14 0,4 0,4 Z" fill="#dc2626"/>
+        <!-- Thirst Quenching Water Transformation Pool -->
+        <path d="M0,16 C0,16 16,28 16,38 C16,46 8,50 0,50 C-8,50 -16,46 -16,38 C-16,28 0,16 0,16 Z" fill="#0284c7" stroke="#38bdf8" stroke-width="2.5"/>
+        <circle cx="-4" cy="36" r="2.5" fill="#ffffff"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

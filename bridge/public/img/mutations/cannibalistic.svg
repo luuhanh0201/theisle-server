@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Cannibalistic - The Isle Evrima Mutation</title>
+  <desc>Dành cho loài vốn không ăn đồng loại: thêm chính loài mình vào danh sách con mồi ưa thích để lấy dinh dưỡng.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_cannibalistic" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_cannibalistic" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="50%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_cannibalistic" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#450a0a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_cannibalistic" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_cannibalistic)"
+           stroke="url(#strokeGrad_cannibalistic)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_cannibalistic)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#ef4444"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_cannibalistic)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Two Identical Carnivore Skulls Biting in a Circle of Cannibalism -->
+      <g transform="translate(128,128)">
+        <!-- Circular Blood Ring -->
+        <circle cx="0" cy="0" r="42" fill="none" stroke="#dc2626" stroke-width="3.5" stroke-dasharray="10,6"/>
+        <!-- Left Skull -->
+        <g transform="translate(-14,-8) scale(0.75)">
+          <path d="M-24,-16 C-14,-28 10,-24 20,-10 C22,-2 14,12 4,16 L-8,14 L-22,6 Z" fill="#f1f5f9" stroke="#94a3b8" stroke-width="3"/>
+          <circle cx="4" cy="-6" r="4" fill="#000000"/>
+          <polygon points="-4,14 -2,22 2,14" fill="#ffffff"/>
+          <polygon points="6,14 8,22 12,14" fill="#ffffff"/>
+        </g>
+        <!-- Right Skull (Mirrored / Cannibalizing) -->
+        <g transform="translate(14,8) scale(-0.75)">
+          <path d="M-24,-16 C-14,-28 10,-24 20,-10 C22,-2 14,12 4,16 L-8,14 L-22,6 Z" fill="#f1f5f9" stroke="#94a3b8" stroke-width="3"/>
+          <circle cx="4" cy="-6" r="4" fill="#000000"/>
+          <polygon points="-4,14 -2,22 2,14" fill="#ffffff"/>
+          <polygon points="6,14 8,22 12,14" fill="#ffffff"/>
+        </g>
+        <!-- Dripping Blood Droplets in Center -->
+        <circle cx="0" cy="-14" r="3.5" fill="#ef4444"/>
+        <circle cx="0" cy="14" r="3.5" fill="#ef4444"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

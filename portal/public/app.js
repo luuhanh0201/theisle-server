@@ -2,6 +2,7 @@
 // Quản lý 6 trang: Home, Game, Gara, Bản đồ, Bảng xếp hạng, Skin.
 
 import { createMap, loadWaypoints } from './map.js';
+import { DEFAULT_COLORS, REGIONS, hex, linearOf, mountPresets, mountRegions } from './skin-editor.js';
 
 const $ = (id) => document.getElementById(id);
 // Launcher game mode (main.js): in the background the page does not draw at all.
@@ -44,7 +45,7 @@ async function getJson(url) {
 // ============================================================================
 // 1. Navigation / Tab Routing
 // ============================================================================
-const VALID_TABS = ['home', 'game', 'gara', 'map', 'ranking', 'skin', 'voice', 'overlay'];
+const VALID_TABS = ['home', 'game', 'gara', 'map', 'ranking', 'skin', 'bag', 'voice', 'overlay'];
 let currentTab = 'home';
 
 function switchTab(tabId, updateHash = true) {
@@ -108,8 +109,8 @@ if (window.isleLauncher) {
 
 // Inside Xóm Gáy Launcher (Electron preload): a play button instead of the download link.
 if (window.isleLauncher) {
-  document.getElementById('get-launcher').hidden = true;
-  document.getElementById('launcher-promo').hidden = true;
+  // Nothing about downloading the launcher, inside it (rule: AGENTS.md "Launcher"; CSS .web-only too).
+  for (const el of document.querySelectorAll('.web-only')) el.hidden = true;
   // The overlay is the launcher's: its tab only shows there.
   document.getElementById('nav-overlay').hidden = false;
   const play = document.getElementById('play-game');
@@ -334,6 +335,7 @@ const PALETTE_DATA = [
   { id: 'page-ranking', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Bảng Xếp Hạng & Chiến Tích', desc: 'Top hạ gục, kỷ lục sống lâu, lịch sử sinh tồn', badge: 'Trang', action: () => switchTab('ranking') },
   { id: 'page-skin', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Skin Studio', desc: 'Phối màu 10 phân vùng khủng long, xuất mã màu ingame', badge: 'Trang', action: () => switchTab('skin') },
   { id: 'page-voice', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Voice 3D', desc: 'Đàm thoại định hướng 3D theo khoảng cách trong game', badge: 'Trang', action: () => switchTab('voice') },
+  { id: 'action-tour', cat: 'pages', catName: 'Hành động nhanh', title: 'Tour Hướng Dẫn Tính Năng & Bản Đồ AI', desc: 'Bắt đầu chuyến tham quan các tính năng Gara, Bản đồ AI trực tiếp, Voice 3D và Overlay', badge: 'Tour', action: () => startTour(0) },
   { id: 'page-overlay', cat: 'pages', catName: 'Chuyển trang nhanh', title: 'Game Overlay HUD', desc: 'Cấu hình khung đè mini map, vitals lên màn hình', badge: 'Trang', action: () => switchTab('overlay') },
 
   // 2. Tra cứu loài khủng long
@@ -647,34 +649,17 @@ function renderPrimeBoard(pb) {
     </p>`;
 }
 
-// The 10 skin regions (pawn.CustomizerData <Region>Color), in the order players know them.
-const REGIONS = [
-  ['Body', 'Thân'],
-  ['Flank', 'Hông'],
-  ['Underbelly', 'Bụng'],
-  ['Markings', 'Hoa văn'],
-  ['MaleDisplay', 'Màu phô trương (đực)'],
-  ['Detail1', 'Chi tiết'],
-  ['Eyes', 'Mắt'],
-  ['Teeth', 'Răng'],
-  ['Mouth', 'Miệng'],
-  ['Claws', 'Móng'],
-];
+// The 10 skin regions, the palettes and the colour conversions: shared with the admin panel (skin-editor.js).
+
 
 // Skin effects a player may set (pawn.SkinEffects), 0–1; they dry / fade in game.
 const EFFECTS = [['Wet', 'Ướt'], ['Mud', 'Bùn'], ['Blood', 'Máu'], ['Dirt', 'Bẩn'], ['Dust', 'Bụi'], ['Duckweed', 'Bèo']];
-/** Glow multiplies every colour ("brighter than white"); the game keeps channels up to 4. */
-const GLOW_MAX = 4;
+/**
+ * Glow ("brighter than white") is made by admins only now (panel → Vật phẩm → Skin: a skin
+ * item a player is given, then wears): the bridge takes 0–1 from this editor. Kept at 1.
+ */
+const GLOW_MAX = 1;
 
-function hex(c) {
-  if (!c) return '#ffffff';
-  const ch = (v) => {
-    const x = Math.min(1, Math.max(0, Number(v) || 0));
-    const s = x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
-    return Math.round(s * 255).toString(16).padStart(2, '0');
-  };
-  return `#${ch(c.r)}${ch(c.g)}${ch(c.b)}`;
-}
 
 const skinStrip = (skin) => {
   if (!skin || !skin.colors) return '';
@@ -688,53 +673,14 @@ const skinStrip = (skin) => {
 // 3. Skin editor: colours per region, pattern / theme / variation, a preview,
 //    and "apply" onto the dino played now (POST /api/skin → the game).
 // ============================================================================
-// 20 themed palettes: the 10 regions in REGIONS order (Body, Flank, Underbelly,
-// Markings, MaleDisplay, Detail1, Eyes, Teeth, Mouth, Claws), sRGB hex.
-const PRESETS = [
-  ['Rừng rậm', '#3f5a36 #2c4027 #8a8f62 #1c2616 #c9a227 #26301f #d9a21b #e8dcc0 #9c5a55 #2a2a24'],
-  ['Sa mạc', '#c49a6c #a67c52 #e6cfa8 #7a5230 #d2691e #5c4033 #e0b03a #efe6cf #b56b62 #3b3128'],
-  ['Hắc ám', '#1d1f22 #121315 #3a3d42 #050505 #8b0000 #2b2b2b #ff3b30 #d8d2c4 #5a2323 #111111'],
-  ['Bạch tạng', '#ece8e1 #d9d2c7 #f7f4ef #c7bfb3 #f2a0a8 #b8aea0 #e5484d #fbf7ee #e08a8f #cfc6b8'],
-  ['Dung nham', '#2a1d1a #3d2620 #6b3a2a #120c0b #ff4500 #ff8c00 #ffb000 #e6d8c3 #7a2b1f #1a1414'],
-  ['Đầm lầy', '#4a5a3a #3a4a2e #7d7a52 #262e1d #9acd32 #2f3a24 #c8b400 #ddd4b8 #8a5a4a #2d2b22'],
-  ['Băng giá', '#b8d4e3 #8fb3c9 #e8f1f5 #4f7891 #3fa9f5 #6a8fa6 #7fdbff #f4f8fa #9bb7c9 #3c4f5c'],
-  ['Hoàng hôn', '#d9774a #b3533a #f2c38b #6e2c2a #ff2d55 #8c3b2e #ffcc33 #f1e3cc #c8615a #3a2420'],
-  ['Đại dương', '#2d5f7a #1f4459 #a9c7cf #0f2633 #00c2d1 #173848 #4de1ff #e6eef0 #7a9aa3 #14242c'],
-  ['Hổ vằn', '#d9822b #b8641a #f2e1c4 #1a1310 #ff6a00 #2b1d14 #ffcf3a #f0e6d2 #b8584f #231a15'],
-  ['Báo đốm', '#d8b26a #bf9550 #f3e6c4 #3a2a18 #e3a33c #5a4128 #c9d23a #f1e8d4 #b76a5f #2e241a'],
-  ['Ngựa vằn', '#efefef #d6d6d6 #fafafa #111111 #2f6fff #333333 #3a86ff #f5f2ea #c47d80 #1a1a1a'],
-  ['Rừng thu', '#8a4b24 #6d3a1c #d6a86b #3f2412 #e25822 #5a3a20 #f2a23c #eadcc2 #a4533f #2e1f14'],
-  ['Hoàng gia', '#3b2a6b #2a1e4f #a693c9 #150f2b #d4af37 #5b4a8a #e3c565 #f0e9d8 #8c5a8c #1d1830'],
-  ['Ngọc bích', '#2f7d5b #215c43 #a8d5bd #0f3325 #19e68c #1d4a37 #7dffb3 #e9f3ec #7aa693 #14261e'],
-  ['Bờ biển', '#d8cdb6 #bdb095 #f1ebdf #8a7d63 #43b0f1 #6f6550 #5fb4ff #f7f3ea #c99a8f #4a4234'],
-  ['Huyết long', '#6e1414 #4d0e0e #b85c5c #1f0505 #ff1a1a #3a0a0a #ffdd00 #e8d7c9 #9e2b2b #140606'],
-  ['Thép xám', '#5d6570 #454c55 #9aa3ad #262a30 #5ac8fa #3a4048 #a0e9ff #e3e6ea #8a8f99 #1e2126'],
-  ['Độc tố', '#2b2b2b #1c1c1c #7fff00 #0a0a0a #bfff00 #39ff14 #adff2f #e0e8d0 #4f7f2f #121212'],
-  ['Hoàng thổ', '#7a6248 #5f4c37 #b8a489 #3b2f22 #b5651d #4a3c2d #d19a2a #e8dcc6 #a0685c #2c241b'],
-].map(([name, list]) => {
-  const hexes = list.split(' ');
-  return { name, colors: Object.fromEntries(REGIONS.map(([id], i) => [id, hexes[i]])) };
-});
 
 // What the editor starts with: a real Carnotaurus skin from this server
 // (the game's linear colours), so the preview looks like a dino at once.
 const DEFAULT_SKIN = {
-  colors: {
-    Body: { r: 0.347, g: 0.22, b: 0.156 }, Flank: { r: 0.195, g: 0.109, b: 0.091 },
-    Underbelly: { r: 0.397, g: 0.314, b: 0.266 }, Markings: { r: 0.056, g: 0.045, b: 0.037 },
-    Detail1: { r: 0.02, g: 0.017, b: 0.015 }, Eyes: { r: 0.25, g: 0.12, b: 0.02 },
-    MaleDisplay: { r: 0.342, g: 0.1, b: 0.06 }, Teeth: { r: 0.62, g: 0.55, b: 0.42 },
-    Mouth: { r: 0.4, g: 0.223, b: 0.179 }, Claws: { r: 0.05, g: 0.041, b: 0.033 },
-  },
+  colors: DEFAULT_COLORS,
   patternIndex: 0, themeIndex: 0, variation: 0,
 };
 
-/** "#rrggbb" (sRGB, what the pickers show) → the game's linear colour. */
-function linearOf(hexText) {
-  const n = parseInt(String(hexText).replace('#', ''), 16);
-  const ch = (v) => { const x = v / 255; return Math.round((x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4) * 10000) / 10000; };
-  return { r: ch((n >> 16) & 255), g: ch((n >> 8) & 255), b: ch(n & 255) };
-}
 
 /** The editor's skin now: colours as "#rrggbb" per region, pattern, theme, variation. */
 function editorSkin() {
@@ -944,34 +890,8 @@ function renderKept(kept) {
 }
 
 function initSkinEditor() {
-  const grid = $('skin-regions-grid');
-  grid.innerHTML = REGIONS.map(([id, label]) => {
-    const col = hex(DEFAULT_SKIN.colors[id]);
-    return `
-    <label class="region-card" data-region="${id}">
-      <input type="color" class="color-picker-input" id="picker-${id}" value="${col}" aria-label="${label}">
-      <span class="region-name">${label}</span>
-      <input type="text" class="hex-input" id="hex-${id}" value="${col}" maxlength="7" spellcheck="false" aria-label="${label} (mã hex)">
-    </label>`;
-  }).join('');
-
-  for (const [id] of REGIONS) {
-    const input = $(`picker-${id}`);
-    const hexIn = $(`hex-${id}`);
-    input.addEventListener('input', () => {
-      hexIn.value = input.value;
-      hexIn.classList.remove('bad');
-      skinChanged();
-    });
-    // Typing a hex code: taken once it is a full colour.
-    hexIn.addEventListener('input', () => {
-      const v = hexIn.value.trim().toLowerCase();
-      const m = /^#?([0-9a-f]{6})$/.exec(v);
-      hexIn.classList.toggle('bad', !m && v.length >= 6);
-      if (m) { input.value = `#${m[1]}`; skinChanged(); }
-    });
-    hexIn.addEventListener('blur', () => { hexIn.value = input.value; hexIn.classList.remove('bad'); });
-  }
+  // The region list (picker-<Region> / hex-<Region>): the shared editor, as the panel's.
+  mountRegions($('skin-regions-grid'), { colors: Object.fromEntries(REGIONS.map(([id]) => [id, hex(DEFAULT_SKIN.colors[id])])), onChange: skinChanged });
   for (const id of ['skin-pattern', 'skin-theme']) $(id).addEventListener('input', skinChanged);
 
   // Skin effects: sliders, off until ticked (then sent with "Áp dụng").
@@ -994,21 +914,9 @@ function initSkinEditor() {
     skinChanged();
   });
 
-  // Presets: a whole palette per theme, a tile with its first five colours.
-  const presetsBar = $('skin-presets-bar');
-  presetsBar.innerHTML = PRESETS.map((p, i) => `
-    <button type="button" class="preset-tile" data-preset="${i}" title="${esc(p.name)}">
-      <div class="preset-stripe">${REGIONS.slice(0, 5).map(([id]) => `<i style="background:${p.colors[id]}"></i>`).join('')}</div>
-      <span>${esc(p.name)}</span>
-    </button>`).join('');
-  presetsBar.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-preset]');
-    if (!btn) return;
-    const p = PRESETS[Number(btn.dataset.preset)];
-    if (!p) return;
-    applySkin({ colors: p.colors });   // the preview shows it; "Áp dụng" puts it in game
-    for (const t of presetsBar.children) t.classList.toggle('on', t === btn);
-  });
+  // Presets: a whole palette per theme (the shared editor's): the preview shows it; "Áp dụng" puts it in game.
+  mountPresets($('skin-presets-bar'), (colors) => applySkin({ colors }));
+
 
   // Load from the dino played now.
   $('btn-load-my-skin').addEventListener('click', () => {
@@ -1173,15 +1081,10 @@ function updateHeroTierFx(dino) {
   fx.innerHTML = renderSlotFx(tier);
 
   if (badge) {
-    if (tier.level > 1) {
-      badge.textContent = `👑 Đời ${tier.level}`;
-      badge.hidden = false;
-    } else if (tier.level === 1) {
-      badge.textContent = '👑 Prime';
-      badge.hidden = false;
-    } else {
-      badge.hidden = true;
-    }
+    badge.className = `ftag f${tier.level}`;
+    badge.textContent = `F${tier.level}`;
+    badge.title = `F${tier.level} · ${TIER_NAME[tier.level] ?? ''}`;
+    badge.hidden = false;
   }
 
   const hubCard = $('hub-dino-card');
@@ -1216,7 +1119,7 @@ function renderGame(me) {
     navBadge.hidden = false;
     $('game-dino-species').textContent = me.dino.species ?? 'Dino Đang Chơi';
     $('game-dino-status').textContent = 'Đang trực tuyến trên server Gateway';
-    $('game-dino-growth').textContent = `Growth: ${pct(me.dino.growth)}`;
+    { const st = growthStage(me.dino.growth); $('game-dino-growth').textContent = `${st.icon} Growth: ${pct(me.dino.growth)}`; $('game-dino-growth').title = st.name; }
     $('game-growth-pct').textContent = pct(me.dino.growth);
     $('game-growth-fill').style.width = `${Math.min(100, Math.max(0, (me.dino.growth ?? 0) * 100))}%`;
 
@@ -1252,7 +1155,7 @@ function renderGame(me) {
       hubSp.textContent = me.dino.species ?? 'Dino Đang Chơi';
       if ($('hub-dino-badge')) { $('hub-dino-badge').textContent = '● ĐANG CHƠI'; $('hub-dino-badge').className = 'hub-chip-live online'; }
       if ($('hub-dino-status')) $('hub-dino-status').textContent = 'Đang trực tuyến trên server Gateway';
-      if ($('hub-dino-growth')) $('hub-dino-growth').textContent = `Growth: ${pct(me.dino.growth)}`;
+      if ($('hub-dino-growth')) { const st = growthStage(me.dino.growth); $('hub-dino-growth').textContent = `${st.icon} Growth: ${pct(me.dino.growth)}`; $('hub-dino-growth').title = st.name; }
       if ($('hub-growth-pct')) $('hub-growth-pct').textContent = pct(me.dino.growth);
       if ($('hub-growth-fill')) $('hub-growth-fill').style.width = `${Math.min(100, Math.max(0, (me.dino.growth ?? 0) * 100))}%`;
       const vit = me.dino.vitals ?? {};
@@ -1274,7 +1177,7 @@ function renderGame(me) {
     navBadge.hidden = true;
     $('game-dino-species').textContent = me.online ? 'Đang chọn loài' : 'Chưa vào server';
     $('game-dino-status').textContent = me.online ? 'Bạn đang ở sảnh chọn dino ingame.' : 'Vào game để hiển thị đầy đủ chỉ số và vị trí.';
-    $('game-dino-growth').textContent = 'Growth: 0%';
+    $('game-dino-growth').textContent = '🥚 Growth: 0%';
     $('game-growth-pct').textContent = '0%';
     $('game-growth-fill').style.width = '0%';
     $('game-vitals').innerHTML = '<p class="muted" style="grid-column:1/-1;padding:12px 0;margin:0">Chưa có chỉ số sinh tồn của dino.</p>';
@@ -1287,7 +1190,7 @@ function renderGame(me) {
       hubSp.textContent = me.online ? 'Đang chọn loài' : 'Chưa vào server';
       if ($('hub-dino-badge')) { $('hub-dino-badge').textContent = me.online ? '○ SẢNH CHỜ' : '○ CHƯA VÀO'; $('hub-dino-badge').className = 'hub-chip-live offline'; }
       if ($('hub-dino-status')) $('hub-dino-status').textContent = me.online ? 'Bạn đang ở sảnh chọn dino ingame.' : 'Bấm Chơi Ngay ở trên để kết nối vào máy chủ.';
-      if ($('hub-dino-growth')) $('hub-dino-growth').textContent = 'Growth: 0%';
+      if ($('hub-dino-growth')) $('hub-dino-growth').textContent = '🥚 Growth: 0%';
       if ($('hub-growth-pct')) $('hub-growth-pct').textContent = '0%';
       if ($('hub-growth-fill')) $('hub-growth-fill').style.width = '0%';
       for (const idVal of ['hub-val-health', 'hub-val-stamina', 'hub-val-hunger', 'hub-val-thirst']) {
@@ -1472,6 +1375,27 @@ const DINO_TIERS = {
   rex: { level: 3, key: 'rex', className: 'tier-rex' },
   apex: { level: 4, key: 'apex', className: 'tier-apex' },
 };
+
+/**
+ * The growth stage beside a growth %: the marks where the game opens the
+ * mutation slots (25 / 50 / 75 %, measured on this server) and the full grown.
+ * The launcher's overlay has the same table (overlay-page.js GROWTH_STAGES).
+ */
+const GROWTH_STAGES = [[1, '🦖', 'Trưởng thành'], [0.75, '🦕', 'Cận lớn'], [0.5, '🦎', 'Thiếu niên'], [0.25, '🐣', 'Con non'], [0, '🥚', 'Sơ sinh']];
+function growthStage(g) {
+  const v = typeof g === 'number' ? g : 0;
+  const [, icon, name] = GROWTH_STAGES.find(([min]) => v + 1e-6 >= min) ?? GROWTH_STAGES[GROWTH_STAGES.length - 1];
+  return { icon, name };
+}
+
+/**
+ * The tier as a badge: F0 (not prime) … F4 (đời 4), the text moving in the
+ * tier's own colours (index.html .ftag) — on the garage cards and the dino panel.
+ */
+const TIER_NAME = ['Cơ bản', 'Prime', 'Prime đời 2', 'Prime đời 3', 'Prime đời 4'];
+function tierBadge(tier, extra = '') {
+  return `<span class="ftag f${tier.level}${extra ? ` ${extra}` : ''}" title="F${tier.level} · ${TIER_NAME[tier.level] ?? ''}">F${tier.level}</span>`;
+}
 
 function getDinoTier(g) {
   if (g.tier === 'apex' || g.tier === 4) return DINO_TIERS.apex;
@@ -1704,8 +1628,8 @@ function renderGara(me) {
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
             <b style="font-size:15px">${esc(g.species ?? 'Dino')}</b>
-            <span class="tag">Growth ${pct(g.growth)}</span>
-            ${tier.level > 1 ? `<span class="tag prime">👑 Đời ${tier.level}</span>` : g.prime ? '<span class="tag prime">👑 Prime</span>' : ''}
+            <span class="tag" title="${growthStage(g.growth).name}">${growthStage(g.growth).icon} Growth ${pct(g.growth)}</span>
+            ${tierBadge(tier)}
             ${g.gift ? '<span class="tag purple">Quà Admin</span>' : ''}
           </div>
           ${skinStrip(g.skin)}
@@ -1946,6 +1870,246 @@ let lastDrawn = 0;
 const BACKGROUND_DRAW_MS = 5000;
 const inBackground = () => Boolean(window.isleLauncher) && (document.hidden || !document.hasFocus());
 
+// ============================================================================
+// Túi đồ (/me items; the bridge says whether the bag is open to this account —
+// admins only for now). A mutation: "Dùng" opens a box (GET /api/items/preview)
+// — into a slot, with what is there now and its value beside the new one; or,
+// the dino has it already, +1 đời with every mutation before → after, refused
+// at that mutation's max. Gone once the game confirms. A skin: worn on its species.
+// ============================================================================
+const BAG_DIET = { all: 'Mọi loài', carnivore: 'Ăn thịt', herbivore: 'Ăn cỏ', herbivore_omnivore: 'Ăn cỏ / ăn tạp' };
+const BAG_RARITY = { common: 'Thường', rare: 'Hiếm', epic: 'Sử thi', legendary: 'Huyền thoại', special: 'Đặc biệt' };
+const bag = { filter: 'all', busy: false, sig: '', open: null };
+/** The tickets (items.ts): what each card says. */
+const BAG_TICKET = {
+  mutation_ticket: { icon: '🎟️', desc: (g) => `Đổi ra một mutation tự chọn (đúng chế độ ăn của loài${g.maxRarity === 'special' ? ', <b>cả mutation nhiệm vụ</b>' : ''}) vào một ô đã mở.` },
+  mutation_clear: { icon: '🧹', desc: () => 'Bỏ mutation ở một ô để chọn lại trong game.' },
+  prime_ticket: { icon: '👑', desc: () => 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện).' },
+};
+const bagKey = (s) => String(s ?? '').replace(/^BP_/, '').replace(/_C$/, '').toLowerCase();
+/** The icon of a mutation (img/mutations/<slug>.svg, the owner's set). */
+const mutSlug = (name) => String(name ?? '').replace(/^MUT_/i, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// The icon is filled in by mut-icons.js (all icons in one request, kept in memory).
+const mutIcon = (name, cls = '') => `<img class="mut-ico ${cls}" data-mut-icon="${esc(mutSlug(name))}" alt="">`;
+const bagHex = (c) => {
+  // The skin's game colours are linear and may go above 1 (lighter than a picker): shown clamped, sRGB.
+  const ch = (v) => Math.round(255 * Math.min(1, Math.max(0, v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055)));
+  return `rgb(${ch(c.r)},${ch(c.g)},${ch(c.b)})`;
+};
+function bagStatus(kind, html) {
+  const el = $('bag-status');
+  el.hidden = !html;
+  el.className = `garage-status${kind ? ` ${kind}` : ''}`;
+  el.innerHTML = html ?? '';
+}
+/** One card a kind of item: copies of the same item grouped, with how many. */
+function bagGroups(items) {
+  const by = new Map();
+  for (const it of items) {
+    const g = by.get(it.id);
+    if (g) g.uids.push(it.uid); else by.set(it.id, { ...it, uids: [it.uid] });
+  }
+  return [...by.values()];
+}
+function renderBag(me) {
+  const open = Boolean(me?.bag);
+  $('nav-bag').hidden = !open;
+  if (!open) {
+    if (currentTab === 'bag') switchTab('home');
+    return;
+  }
+  const items = Array.isArray(me.items) ? me.items : [];
+  const groups = bagGroups(items);
+  const dino = me.dino?.species ?? null;
+  const usable = (g) => (g.type === 'mutation' ? dino !== null && !g.refusal && !me.prison
+    : g.type === 'skin' ? dino !== null && bagKey(g.species) === bagKey(dino) : dino !== null && !me.prison);
+  $('nav-bag-badge').hidden = items.length === 0;
+  $('nav-bag-badge').textContent = String(items.length);
+  $('bag-count').textContent = me.bagUnlimited ? `${groups.length} loại · ∞ (admin)` : `${items.length} món`;
+  $('bag-dino').innerHTML = me.prison ? '⛓️ Bạn đang ở tù: không dùng được vật phẩm.'
+    : dino ? `Đang chơi: <b>${esc(dino)}</b>${me.dino.growth != null ? ` · ${Math.round(me.dino.growth * 100)}%` : ''}`
+      : 'Vào game và điều khiển một con dino để dùng vật phẩm.';
+  const q = $('bag-q').value.trim().toLowerCase();
+  const shown = groups.filter((g) => (bag.filter === 'all' || (bag.filter === 'usable' ? usable(g) : g.type === bag.filter))
+    && (!q || `${g.name} ${g.mutation ?? ''} ${g.species ?? ''}`.toLowerCase().includes(q)));
+  // Redraw only when something changed (the page refreshes every second).
+  const sig = JSON.stringify([shown.map((g) => [g.id, g.uids.length, usable(g), g.rarity]), dino, Boolean(me.prison), bag.busy, Boolean(me.bagUnlimited)]);
+  if (sig === bag.sig) return;
+  bag.sig = sig;
+  // A card is dimmed only when it does not fit the dino played now (diet, species); out of
+  // the game (or in prison) it keeps its look — only its button is off and says why.
+  const mismatch = (g) => dino !== null && (g.type === 'mutation' ? Boolean(g.refusal) : g.type === 'skin' ? bagKey(g.species) !== bagKey(dino) : false);
+  const blocked = me.prison ? 'Đang ở tù' : dino === null ? 'Vào game để dùng' : null;
+  const button = (g, cls, attr, label) => {
+    const ok = usable(g) && !bag.busy;
+    const text = ok || mismatch(g) || !blocked ? label : blocked;
+    return `<button type="button" class="btn ${cls}" ${attr}="${esc(g.id)}" ${ok ? '' : `disabled title="${esc(blocked && !mismatch(g) ? `${blocked}: điều khiển một con dino trong game` : '')}"`}>${esc(text)}</button>`;
+  };
+  $('bag-list').innerHTML = shown.map((g) => {
+    const ok = !mismatch(g);
+    const rar = `<span class="rar-label rar-${esc(g.rarity)}">${esc(BAG_RARITY[g.rarity] ?? g.rarity)}</span>`;
+    const qty = me.bagUnlimited ? '<span class="qty" title="Túi admin: dùng không hết">∞</span>' : g.uids.length > 1 ? `<span class="qty">×${g.uids.length}</span>` : '';
+    if (g.type === 'mutation') {
+      return `<li class="bag-item rar-${esc(g.rarity)}${ok ? '' : ' off'}">
+        <div class="top">${mutIcon(g.mutation)}<div class="nm"><b>${esc(g.name)}</b>${rar}</div>${qty}</div>
+        <div class="meta">${g.mutation !== g.name ? `<span>🧬 ${esc(g.mutation)}</span>` : ''}<span>${esc(BAG_DIET[g.diet] ?? g.diet)}</span>${g.slot2 ? '<span>Chỉ ô 2 / 4</span>' : ''}${g.rarity === 'special' ? '<span>Mutation nhiệm vụ</span>' : ''}</div>
+        ${g.description ? `<div class="desc">${esc(g.description)}</div>` : ''}
+        ${g.refusal && dino ? `<div class="why">Không dùng được cho ${esc(dino)}: ${esc(g.refusal)}.</div>` : ''}
+        <div class="act">${button(g, 'btn-emerald', 'data-bag-use', 'Dùng')}</div>
+      </li>`;
+    }
+    if (BAG_TICKET[g.type]) {
+      const t = BAG_TICKET[g.type];
+      return `<li class="bag-item rar-${esc(g.rarity)}${ok ? '' : ' off'}">
+        <div class="top"><span class="mut-ico tk-ico" aria-hidden="true">${t.icon}</span><div class="nm"><b>${esc(g.name)}</b>${rar}</div>${qty}</div>
+        <div class="desc">${t.desc(g)}</div>
+        <div class="act">${button(g, 'btn-emerald', 'data-bag-use', 'Dùng')}</div>
+      </li>`;
+    }
+    const colors = g.skin?.colors ?? {};
+    return `<li class="bag-item rar-${esc(g.rarity)}${ok ? '' : ' off'}">
+      <div class="top"><div class="nm"><b>${esc(g.name)}</b>${rar}</div>${qty}</div>
+      <div class="meta"><span>🎨 Skin ${esc(g.species ?? '')}</span></div>
+      <div class="sw">${['Body', 'Flank', 'Underbelly', 'Markings', 'Eyes'].filter((k) => colors[k]).map((k) => `<i style="background:${bagHex(colors[k])}"></i>`).join('')}</div>
+      ${!ok && dino ? `<div class="why">Chỉ mặc được khi đang chơi ${esc(g.species ?? '')}.</div>` : ''}
+      <div class="act">${button(g, 'btn-ghost', 'data-bag-wear', 'Mặc')}</div>
+    </li>`;
+  }).join('') || `<li class="muted" style="padding:16px;text-align:center;grid-column:1/-1">${items.length ? 'Không có vật phẩm nào khớp.' : 'Túi đồ trống.'}</li>`;
+}
+
+// --- the use box ---------------------------------------------------------------
+const bagVal = (v) => (v == null ? '<span class="muted">chưa rõ số liệu</span>' : esc(v));
+function renderBagDialog() {
+  const o = bag.open;
+  if (!o) return;
+  const { g, pv, slot } = o;
+  const gen = pv.stacks == null ? '?' : pv.stacks + 1;
+  const head = `<div class="hd">${g.type === 'mutation' ? mutIcon(g.mutation) : `<span class="mut-ico tk-ico" aria-hidden="true">${BAG_TICKET[g.type]?.icon ?? ''}</span>`}<div><b id="bag-dlg-title">${esc(g.name)}</b>
+      <span class="rar-label rar-${esc(g.rarity)}">${esc(BAG_RARITY[g.rarity] ?? g.rarity)}</span>
+      <div class="muted" style="font-size:12.5px">${esc(pv.species ?? '')} · ${pv.growth != null ? `${Math.round(pv.growth * 100)}%` : '?'} · đời ${esc(gen)}${pv.prime ? ' · prime' : ''}${lastMeData?.bagUnlimited ? ' · ∞ (túi admin)' : g.uids.length > 1 ? ` · còn ${g.uids.length} cái` : ''}</div></div>
+      <button type="button" class="x" data-dlg="close" aria-label="Đóng">×</button></div>`;
+  const status = '<div class="garage-status" id="bag-dlg-status" role="status" aria-live="polite" hidden></div>';
+  if (g.type === 'prime_ticket') {
+    const grown = pv.growth != null && pv.growth >= 0.999;
+    const why = pv.prime ? 'Dino này đã là prime.' : !grown ? 'Cần dino 100% tăng trưởng.' : '';
+    $('bag-dlg-in').innerHTML = `${head}<div class="sec"><h4>Lên prime</h4>
+      <div class="cmp">Đánh dấu đủ 10 điều kiện prime và cho dino lên prime, như khi tự làm nhiệm vụ prime. Chỉ số prime có sau vài giây.</div>
+      ${why ? `<div class="why" style="color:#fbbf24;font-size:13px">⚠️ ${esc(why)}</div>` : ''}
+      <div class="row"><button type="button" class="btn btn-emerald" data-dlg="prime" ${why || bag.busy ? 'disabled' : ''}>Lên prime</button></div></div>${status}`;
+    return;
+  }
+  const isClear = g.type === 'mutation_clear';
+  const isTicket = g.type === 'mutation_ticket';
+  const incomingName = isTicket ? o.pick?.name ?? null : g.mutation ?? null;
+  const incoming = isTicket ? o.pick : null;
+  const slot2 = isTicket ? Boolean(incoming?.slot2) : Boolean(pv.slot2);
+  const has = incomingName ? pv.slots.find((x) => x.name && mutSlug(x.name) === mutSlug(incomingName)) : null;
+  let body = '';
+  if (isTicket) {
+    body += `<div class="sec"><h4>1. Chọn mutation</h4><div class="tk-pool">${(pv.pool ?? []).map((m) => `<button type="button" class="tk-pick rar-${esc(m.rarity)}${incomingName === m.name ? ' on' : ''}" data-dlg-pick="${esc(m.name)}" title="${esc(m.description ?? '')}">${mutIcon(m.name, 'sm')}<span>${esc(m.name)}${m.slot2 ? ' <small>(ô 2/4)</small>' : ''}</span></button>`).join('')
+      || '<div class="muted">Không có mutation nào hợp với loài này trong độ hiếm của phiếu.</div>'}</div></div>`;
+  }
+  const choosable = (x) => (isClear ? Boolean(x.name) : x.open && (!slot2 || x.slot === 2 || x.slot === 4));
+  const picked = pv.slots.find((x) => x.slot === slot) ?? null;
+  body += `<div class="sec"><h4>${isTicket ? '2. ' : ''}${isClear ? 'Chọn ô cần bỏ' : 'Chọn ô'}</h4>
+    ${has && !isClear ? `<div class="cmp muted">Dino đã có ${esc(incomingName)} ở ô ${has.slot}: dùng thêm không mạnh hơn.</div>` : ''}
+    <div class="slots">${pv.slots.map((x) => `<button type="button" class="slot${x.slot === slot ? ' on' : ''}" data-dlg-slot="${x.slot}" ${choosable(x) ? '' : 'disabled'}>
+      ${x.name ? mutIcon(x.name, 'sm') : ''}<span><b>Ô ${x.slot}</b>${x.open ? '' : ` <small>mở từ ${Math.round(x.minGrowth * 100)}%</small>`}<br>${x.name ? `${esc(x.name)} · ${bagVal(x.value)}` : '<span class="muted">trống</span>'}</span></button>`).join('')}</div>
+    ${picked && choosable(picked) ? `<div class="cmp">${isClear ? `Bỏ <b>${esc(picked.name)}</b> khỏi ô ${picked.slot}.`
+      : incomingName ? `${picked.name ? `Thay <b>${esc(picked.name)}</b> (${bagVal(picked.value)})` : `Ô ${picked.slot} đang trống`} → <b>${esc(incomingName)}</b> <span class="muted">· độ mạnh theo đời của dino (đời ${esc(gen)})</span>` : 'Chọn mutation trước.'}</div>`
+      : `<div class="cmp muted">${isClear ? 'Chọn một ô đang có mutation.' : 'Chọn một ô đã mở (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75% tăng trưởng).'}</div>`}
+    <div class="row"><button type="button" class="btn btn-emerald" data-dlg="${isClear ? 'clear' : 'place'}" ${picked && choosable(picked) && (isClear || (incomingName && !has)) && !bag.busy ? '' : 'disabled'}>${isClear ? (picked?.name ? `Bỏ khỏi ô ${picked.slot}` : 'Bỏ') : picked?.name ? `Thay vào ô ${picked.slot}` : picked ? `Thêm vào ô ${picked.slot}` : 'Thêm'}</button></div></div>`;
+  $('bag-dlg-in').innerHTML = head + body + status;
+}
+function bagDlgStatus(kind, html) {
+  const el = $('bag-dlg-status');
+  if (!el) return;
+  el.hidden = !html;
+  el.className = `garage-status${kind ? ` ${kind}` : ''}`;
+  el.innerHTML = html ?? '';
+}
+async function openBagDialog(g) {
+  const r = await getJson(`/api/items/preview/${encodeURIComponent(g.uids[0])}`).catch(() => null);
+  if (r?.status !== 200 || !r.body) { bagStatus('bad', `❌ ${esc(r?.body?.error ?? 'Không đọc được dino đang chơi.')}`); return; }
+  const slots = r.body.slots ?? [];
+  const first = g.type === 'mutation_clear' ? slots.find((x) => x.name)?.slot ?? null
+    : slots.find((x) => x.open && !x.name && (!g.slot2 || x.slot === 2 || x.slot === 4))?.slot ?? null;
+  bag.open = { g, pv: r.body, slot: first, pick: null };
+  renderBagDialog();
+  if (!$('bag-dlg').open) $('bag-dlg').showModal();
+}
+async function bagSend(url, body, what, inDialog = false) {
+  const say = inDialog ? bagDlgStatus : bagStatus;
+  bag.busy = true;
+  if (inDialog) renderBagDialog();
+  renderBag(lastMeData);
+  say('', `Đang gửi ${what}…`);
+  try {
+    const r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const b = await r.json().catch(() => null);
+    if (r.status === 429) { say('bad', 'Chậm lại chút: mỗi vài giây chỉ một lệnh.'); return; }
+    if (r.status !== 202 || typeof b?.id !== 'number') { say('bad', `❌ ${esc(b?.error ?? 'Không gửi được lệnh.')}`); return; }
+    say('', 'Đã gửi, chờ game xử lý…');
+    const done = await waitCommand(b.id, 20, (c) => c?.status === 'done');
+    if (done === null) { say('bad', 'Chưa thấy game trả lời. Vật phẩm vẫn còn trong túi — thử lại sau.'); return; }
+    const msgs = (done.messages ?? []).map((m) => esc(reply(m))).join('<br>');
+    if (!done.ok) { say('bad', `❌ ${msgs || esc(ERROR_VI[done.error] ?? done.error ?? 'Game từ chối.')} Vật phẩm vẫn còn trong túi.`); return; }
+    if (inDialog) { $('bag-dlg').close(); bag.open = null; }
+    bagStatus('ok', `✅ ${msgs || 'Xong.'}`);
+  } catch {
+    say('bad', 'Mất kết nối khi gửi lệnh. Thử lại.');
+  } finally {
+    bag.busy = false;
+    bag.sig = '';
+    if (bag.open) renderBagDialog();
+    // The used copy leaves the bag once the game confirmed: read /me again now.
+    const me = await getJson('/api/me').catch(() => null);
+    if (me?.status === 200) lastMeData = me.body;
+    renderBag(lastMeData);
+  }
+}
+$('bag-list').addEventListener('click', (e) => {
+  const u = e.target.closest('[data-bag-use]');
+  if (u && !u.disabled) {
+    const g = bagGroups(lastMeData?.items ?? []).find((x) => x.id === u.dataset.bagUse);
+    if (g) void openBagDialog(g);
+    return;
+  }
+  const w = e.target.closest('[data-bag-wear]');
+  if (w && !w.disabled) void bagSend('/api/skin', { item: w.dataset.bagWear }, 'skin');
+});
+$('bag-dlg').addEventListener('click', (e) => {
+  if (e.target === $('bag-dlg') || e.target.closest('[data-dlg="close"]')) { $('bag-dlg').close(); return; }
+  const o = bag.open;
+  if (!o || bag.busy) return;
+  const s = e.target.closest('[data-dlg-slot]');
+  if (s && !s.disabled) { o.slot = Number(s.dataset.dlgSlot); renderBagDialog(); return; }
+  const pk = e.target.closest('[data-dlg-pick]');
+  if (pk) {
+    o.pick = (o.pv.pool ?? []).find((m) => m.name === pk.dataset.dlgPick) ?? null;
+    // A slot-2 kind leaves a slot it cannot take.
+    if (o.pick?.slot2 && o.slot !== 2 && o.slot !== 4) o.slot = o.pv.slots.find((x) => x.open && (x.slot === 2 || x.slot === 4))?.slot ?? null;
+    renderBagDialog(); return;
+  }
+  if (e.target.closest('[data-dlg="prime"]')) { void bagSend('/api/items/use', { uid: o.g.uids[0] }, 'phiếu Prime', true); return; }
+  if (e.target.closest('[data-dlg="clear"]') && o.slot) { void bagSend('/api/items/use', { uid: o.g.uids[0], slot: o.slot }, `bỏ mutation ô ${o.slot}`, true); return; }
+  if (e.target.closest('[data-dlg="place"]') && o.slot && o.g.type === 'mutation_ticket' && o.pick) {
+    void bagSend('/api/items/use', { uid: o.g.uids[0], slot: o.slot, mutation: o.pick.name }, `mutation ${o.pick.name}`, true); return;
+  }
+  if (e.target.closest('[data-dlg="upgrade"]')) { void bagSend('/api/items/use', { uid: o.g.uids[0], upgrade: true }, `nâng cấp ${o.g.mutation}`, true); return; }
+  if (e.target.closest('[data-dlg="place"]') && o.slot) void bagSend('/api/items/use', { uid: o.g.uids[0], slot: o.slot }, `mutation ${o.g.mutation}`, true);
+});
+$('bag-dlg').addEventListener('close', () => { if (!bag.busy) bag.open = null; });
+$('bag-filter').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-bag]');
+  if (!b) return;
+  bag.filter = b.dataset.bag;
+  for (const x of $('bag-filter').querySelectorAll('[data-bag]')) x.classList.toggle('active', x === b);
+  bag.sig = '';
+  renderBag(lastMeData);
+});
+$('bag-q').addEventListener('input', () => { bag.sig = ''; renderBag(lastMeData); });
+
 async function refresh() {
   if (busy) return;
   busy = true;
@@ -1965,6 +2129,7 @@ async function refresh() {
       lastMeData = null;
       pushOverlayGame(null, null);
       renderAuth(null);
+      renderBag(null);
       // Disable guest restrictions gracefully
     } else if (me.status === 200) {
       lastMeData = me.body;
@@ -1975,6 +2140,7 @@ async function refresh() {
         renderGame(me.body);
         renderGara(me.body);
         renderMap(me.body);
+        renderBag(me.body);
       }
     }
 
@@ -2057,11 +2223,264 @@ async function loadAiZones() {
 }
 setInterval(() => { if (currentTab === 'map' && !document.hidden) loadAiZones(); }, 60_000);
 
+// ============================================================================
+// Interactive Onboarding Tour (Zero-dependency, skippable, live AI highlight)
+// ============================================================================
+const TOUR_STEPS = [
+  {
+    badge: 'Bước 1 / 5 · Tổng Quan',
+    title: '🦖 Chào mừng đến với Xóm Gáy Gateway',
+    target: () => document.querySelector('.brand') || document.querySelector('.top-header'),
+    tab: 'home',
+    body: `
+      <p>Cổng thông tin & Launcher tích hợp chuyên biệt cho The Isle Evrima Xóm Gáy.</p>
+      <p>Hệ thống hỗ trợ đầy đủ công cụ sinh tồn: Gara cất dino an toàn, Bản đồ Gateway Live với <b>Radar AI trực tiếp</b>, Voice 3D định hướng và Overlay HUD trong game.</p>
+      <p style="margin-bottom:0;color:var(--text-sub);font-size:12px">💡 <i>Bạn có thể bấm <b>✕ Bỏ qua</b> ở góc bất kỳ lúc nào hoặc bấm phím <b>ESC</b> để đóng.</i></p>
+    `,
+  },
+  {
+    badge: 'Bước 2 / 5 · Gara Khủng Long',
+    title: '🦕 Gara Khủng Long An Toàn',
+    target: () => document.querySelector('.nav-btn[data-nav="gara"]') || document.querySelector('.thumb-btn[data-nav="gara"]'),
+    tab: 'gara',
+    body: `
+      <p><b>Bảo lưu 100% chỉ số:</b> Cất dino trước khi rời game để bảo vệ chú khủng long của bạn an toàn khỏi nguy cơ đói khát hay bị tấn công khi offline.</p>
+      <p><b>Đa dạng chủng loài:</b> Lưu trữ nhiều con cùng lúc, chuyển đổi linh hoạt mà không sợ mất con cũ.</p>
+      <p style="margin-bottom:0"><b>Mở khoá Slot Prime:</b> Đạt đủ điều kiện tiến hoá để mở thêm slot khủng long cao cấp.</p>
+    `,
+  },
+  {
+    badge: 'Bước 3 / 5 · Bản Đồ Gateway Live',
+    title: '🗺️ Bản Đồ Live — Radar AI Trực Tiếp',
+    target: () => document.querySelector('.nav-btn[data-nav="map"]') || document.querySelector('.thumb-btn[data-nav="map"]'),
+    tab: 'map',
+    body: `
+      <div class="tour-ai-callout">
+        <span class="tour-ai-tag"><span class="tour-ai-tag-dot"></span>🌟 ĐẶC BIỆT: HIỂN THỊ AI TRỰC TIẾP</span>
+        <span class="tour-ai-desc">Bản đồ quét và hiển thị <b>vị trí chính xác của Heo Rừng (Boar), Hươu (Deer), Khủng long AI và Cá</b> đang sống trên máy chủ được cập nhật trực tiếp mỗi 2 giây! Bạn sẽ không còn lo bị đói hay lạc bầy.</span>
+      </div>
+      <p style="margin-top:10px"><b>🧭 Định vị GPS & Hướng nhìn:</b> Theo dõi toạ độ thực tế, góc xoay la bàn và vệt đường di chuyển của dino.</p>
+      <p style="margin-bottom:0"><b>💧 Nguồn nước & Vùng di cư:</b> Đánh dấu nguồn nước sạch, Sanctuary an toàn cho con non và các vùng di cư Mass Migration.</p>
+    `,
+  },
+  {
+    badge: 'Bước 4 / 5 · Voice 3D Không Gian',
+    title: '🎙️ Hệ Thống Voice 3D Không Gian',
+    target: () => document.querySelector('.nav-btn[data-nav="voice"]'),
+    tab: 'voice',
+    body: `
+      <p><b>Âm thanh định hướng 3D:</b> Nghe giọng nói của đồng đội và các loài khủng long khác theo đúng góc phương vị (trái/phải) và khoảng cách thực tế trong game.</p>
+      <p><b>3 Mức tầm giọng linh hoạt:</b>
+        <br>• <i>Thì thầm (8m):</i> Trao đổi kín đáo khi săn mồi hoặc trốn kẻ thù.
+        <br>• <i>Nói thường (30m):</i> Đàm thoại bầy đàn thông thường.
+        <br>• <i>Hét to (90m):</i> Gọi bầy đàn từ xa hoặc cảnh báo nguy hiểm.
+      </p>
+      <p style="margin-bottom:0"><b>Phím mặc định:</b> Giữ phím <code>V</code> để nói, nhấn phím <code>~</code> để chuyển đổi tầm giọng.</p>
+    `,
+  },
+  {
+    badge: 'Bước 5 / 5 · Overlay & Chế Độ Chơi Game',
+    title: '🎮 Game Overlay HUD & Phím Tắt',
+    target: () => document.getElementById('game-mode') || document.getElementById('nav-overlay') || document.querySelector('.top-header'),
+    tab: 'home',
+    body: `
+      <p><b>HUD nổi trong game:</b> Hiển thị Mini Map (kèm AI xung quanh), thanh Máu/Thể lực/Đói/Nước và mic Voice nổi ngay trên màn hình The Isle.</p>
+      <p><b>⌨️ Phím tắt tiện ích:</b>
+        <br>• <code>F1</code>: Bật / Tắt nhanh toàn bộ Overlay HUD.
+        <br>• <code>F2</code> (hoặc <code>F9</code>): Mở chế độ di chuyển & kéo mép để tuỳ chỉnh vị trí, kích thước từng khung.
+      </p>
+      <p style="margin-bottom:0"><b>⚡ Chế độ chơi game:</b> Bấm nút "Chế độ chơi game" trên góc để thu nhỏ Launcher xuống khay hệ thống, tối ưu 100% tài nguyên CPU/RAM cho máy tính!</p>
+    `,
+  },
+];
+
+let tourStepIndex = 0;
+let isTourActive = false;
+
+function startTour(fromStep = 0) {
+  const backdrop = $('tour-backdrop');
+  if (!backdrop) return;
+  isTourActive = true;
+  tourStepIndex = Math.max(0, Math.min(TOUR_STEPS.length - 1, fromStep));
+  backdrop.hidden = false;
+  renderTourStep();
+}
+
+function stopTour(completed = false) {
+  const backdrop = $('tour-backdrop');
+  if (!backdrop) return;
+  isTourActive = false;
+  backdrop.hidden = true;
+  try {
+    localStorage.setItem('isle_portal_tour_done', '1');
+  } catch {}
+  if (completed) {
+    showToast('✓ Bạn đã hoàn thành tour hướng dẫn! Có thể mở lại bất cứ lúc nào ở nút 💡 Hướng dẫn.');
+  }
+}
+
+function renderTourStep() {
+  if (!isTourActive) return;
+  const step = TOUR_STEPS[tourStepIndex];
+  if (!step) return;
+
+  if (step.tab && currentTab !== step.tab) {
+    switchTab(step.tab, false);
+  }
+
+  const badgeEl = $('tour-step-badge');
+  const titleEl = $('tour-title');
+  const bodyEl = $('tour-body');
+  const dotsEl = $('tour-dots');
+  const prevBtn = $('tour-btn-prev');
+  const nextBtn = $('tour-btn-next');
+
+  if (badgeEl) badgeEl.textContent = step.badge;
+  if (titleEl) titleEl.textContent = step.title;
+  if (bodyEl) bodyEl.innerHTML = step.body;
+
+  if (prevBtn) {
+    prevBtn.disabled = tourStepIndex === 0;
+  }
+  if (nextBtn) {
+    nextBtn.textContent = tourStepIndex === TOUR_STEPS.length - 1 ? '✓ Bắt đầu trải nghiệm' : 'Tiếp theo ▶';
+  }
+
+  if (dotsEl) {
+    dotsEl.innerHTML = TOUR_STEPS.map((_, idx) =>
+      `<span class="tour-dot${idx === tourStepIndex ? ' active' : ''}" title="Bước ${idx + 1}"></span>`
+    ).join('');
+  }
+
+  positionTourElements(step);
+}
+
+function positionTourElements(step) {
+  const spotlight = $('tour-spotlight');
+  const popover = $('tour-popover');
+  if (!spotlight || !popover) return;
+
+  const targetEl = typeof step.target === 'function' ? step.target() : step.target;
+  const isMobile = window.innerWidth <= 640;
+
+  if (!targetEl || isMobile) {
+    spotlight.style.display = 'none';
+    if (!isMobile) {
+      const popRect = popover.getBoundingClientRect();
+      const top = Math.max(20, (window.innerHeight - (popRect.height || 260)) / 2);
+      const left = Math.max(20, (window.innerWidth - (popRect.width || 440)) / 2);
+      popover.style.top = `${top}px`;
+      popover.style.left = `${left}px`;
+      popover.style.transform = 'none';
+    }
+    return;
+  }
+
+  const rect = targetEl.getBoundingClientRect();
+  const pad = 6;
+
+  spotlight.style.display = 'block';
+  spotlight.style.top = `${Math.max(0, rect.top - pad)}px`;
+  spotlight.style.left = `${Math.max(0, rect.left - pad)}px`;
+  spotlight.style.width = `${rect.width + pad * 2}px`;
+  spotlight.style.height = `${rect.height + pad * 2}px`;
+
+  requestAnimationFrame(() => {
+    const popRect = popover.getBoundingClientRect();
+    let top = rect.bottom + 14;
+    let left = rect.left;
+
+    if (top + popRect.height > window.innerHeight - 20) {
+      top = Math.max(20, rect.top - popRect.height - 14);
+    }
+    if (left + popRect.width > window.innerWidth - 20) {
+      left = Math.max(20, window.innerWidth - popRect.width - 20);
+    }
+    left = Math.max(20, left);
+
+    popover.style.top = `${top}px`;
+    popover.style.left = `${left}px`;
+    popover.style.transform = 'none';
+  });
+}
+
+function initTour() {
+  const backdrop = $('tour-backdrop');
+  if (!backdrop) return;
+
+  $('tour-skip-btn')?.addEventListener('click', () => stopTour(false));
+  $('tour-btn-prev')?.addEventListener('click', () => {
+    if (tourStepIndex > 0) {
+      tourStepIndex--;
+      renderTourStep();
+    }
+  });
+  $('tour-btn-next')?.addEventListener('click', () => {
+    if (tourStepIndex < TOUR_STEPS.length - 1) {
+      tourStepIndex++;
+      renderTourStep();
+    } else {
+      stopTour(true);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!isTourActive) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      stopTour(false);
+    } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+      e.preventDefault();
+      if (tourStepIndex < TOUR_STEPS.length - 1) {
+        tourStepIndex++;
+        renderTourStep();
+      } else {
+        stopTour(true);
+      }
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (tourStepIndex > 0) {
+        tourStepIndex--;
+        renderTourStep();
+      }
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (isTourActive) {
+      positionTourElements(TOUR_STEPS[tourStepIndex]);
+    }
+  });
+
+  $('tour-dots')?.addEventListener('click', (e) => {
+    const dot = e.target.closest('.tour-dot');
+    if (!dot) return;
+    const dots = Array.from($('tour-dots').children);
+    const idx = dots.indexOf(dot);
+    if (idx >= 0 && idx !== tourStepIndex) {
+      tourStepIndex = idx;
+      renderTourStep();
+    }
+  });
+
+  $('tour-btn')?.addEventListener('click', () => startTour(0));
+  $('sidebar-tour-btn')?.addEventListener('click', () => startTour(0));
+
+  try {
+    if (!localStorage.getItem('isle_portal_tour_done')) {
+      setTimeout(() => {
+        if (!isTourActive) startTour(0);
+      }, 1000);
+    }
+  } catch {}
+}
+
 // Initial setup
 initSidebar();
 initCommandPalette();
 initGarageFilter();
 initSkinEditor();
+initTour();
 
 // Route initial tab from URL hash
 const initialHash = location.hash.replace(/^#/, '');

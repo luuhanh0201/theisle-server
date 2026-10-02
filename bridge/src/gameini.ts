@@ -2,6 +2,7 @@ import { readFile, writeFile, rename, mkdir, copyFile, stat } from 'node:fs/prom
 import { join } from 'node:path';
 import { config } from './config.js';
 import { ValidationError } from './garage.js';
+import { inGameOff } from './permissions.js';
 
 /**
  * Game.ini settings the admin panel owns.
@@ -392,6 +393,19 @@ export interface LiveConfig {
   error?: string;
 }
 
+/**
+ * The settings as Game.ini gets them: AdminsSteamIDs without `off` (admins whose
+ * rights in the game are switched off). Never empty: `keep` (the super admin)
+ * stays, else the list is left as it was.
+ */
+export function withoutAdmins(settings: Settings, off: ReadonlySet<string>, keep: string | null): Settings {
+  const list = settings['AdminsSteamIDs'];
+  if (!Array.isArray(list) || off.size === 0) return settings;
+  const kept = list.filter((id) => !off.has(id));
+  if (kept.length === 0 && keep !== null) kept.push(keep);
+  return { ...settings, AdminsSteamIDs: kept.length > 0 ? kept : list };
+}
+
 export async function readLive(): Promise<LiveConfig> {
   const settings = await readSettings();
   try {
@@ -410,7 +424,10 @@ export async function readLive(): Promise<LiveConfig> {
 export async function saveSettings(raw: unknown): Promise<Settings> {
   const settings = validateSettings(raw);
   const current = await readFile(liveIniPath(), 'utf8');
-  const next = applySettings(current, settings);
+  // The game's admin list leaves out the admins switched off in game (permissions.ts);
+  // the saved settings keep them: they are still the panel's admins.
+  const off = await inGameOff();
+  const next = applySettings(current, withoutAdmins(settings, off, config.panel.superAdminId));
 
   await mkdir(join(config.dataDir, 'ini-backups'), { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');

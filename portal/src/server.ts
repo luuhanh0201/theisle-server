@@ -28,6 +28,8 @@ import { LauncherLogins, STATE_RE } from './launcher-login.js';
  *        few per minute per player — and the SteamID is the session's.
  *   POST /api/skin              { colors, effects?, pattern?, theme?, variation?, keep? } | { forget } (login, same-origin, JSON)
  *        the colours of the dino you play now, written in game (DinoGarage)
+ *   POST /api/items/use         { uid, slot?: 1–4, mutation?: name (a Phiếu đổi mutation) } use an item of your bag on the dino you play (login, same-origin, JSON)
+ *   GET  /api/items/preview/<uid>  what that would do: each slot's mutation and value, the +1 đời upgrade (login)
  *   GET  /api/command/<id>      the outcome of one of your commands      (login)
  *   POST /api/voice/token       join the proximity voice room (voice.html) (login, same-origin)
  *   GET  /api/voice             who you can hear now: volume + pan per voice user (login)
@@ -313,7 +315,28 @@ export function createPortal(opts: PortalOptions): Server {
         if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
         // Only these fields, and never a SteamID from the browser.
         const r = await opts.bridge.skin(me, { colors: body['colors'], effects: body['effects'], pattern: body['pattern'], theme: body['theme'],
-          variation: body['variation'], keep: body['keep'], forget: body['forget'] });
+          variation: body['variation'], keep: body['keep'], forget: body['forget'], item: body['item'] });
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/items/use') {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
+        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) { send(res, 415, { error: 'JSON only' }); return; }
+        if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
+        const body = await readSmallJson(req);
+        if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
+        // Only these fields, and never a SteamID from the browser.
+        const r = await opts.bridge.useItem(me, { uid: body['uid'], slot: body['slot'], upgrade: body['upgrade'], mutation: body['mutation'] });
+        send(res, r.status, r.body);
+        return;
+      }
+      const preview = /^\/api\/items\/preview\/([\w-]{1,40})$/.exec(path);
+      if (preview !== null) {
+        if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        const r = await opts.bridge.previewItem(me, preview[1] as string);
         send(res, r.status, r.body);
         return;
       }

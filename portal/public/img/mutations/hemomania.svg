@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Hemomania - The Isle Evrima Mutation</title>
+  <desc>Gây thêm sát thương lên mục tiêu đang chảy máu.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_hemomania" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_hemomania" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="50%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_hemomania" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#450a0a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_hemomania" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_hemomania)"
+           stroke="url(#strokeGrad_hemomania)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_hemomania)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#ef4444"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_hemomania)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Triple Serrated Raptor Claw Slashes Drenched in Frenzied Bleeding Blood -->
+      <g transform="translate(128,128)">
+        <!-- Three Savage Bleeding Claw Marks -->
+        <path d="M-32,-38 C-26,-12 -20,16 -24,42 L-16,40 C-12,14 -18,-14 -24,-40 Z" fill="#dc2626"/>
+        <path d="M-4,-44 C2,-16 6,18 2,46 L10,44 C14,16 10,-18 4,-46 Z" fill="#b91c1c"/>
+        <path d="M24,-40 C30,-14 36,14 32,40 L40,38 C44,12 38,-16 32,-38 Z" fill="#dc2626"/>
+        <!-- Blood Splatters & Droplets -->
+        <circle cx="-14" cy="-8" r="4.5" fill="#ef4444"/>
+        <circle cx="16" cy="6" r="5" fill="#ef4444"/>
+        <circle cx="-28" cy="24" r="3.5" fill="#f87171"/>
+        <circle cx="28" cy="-22" r="4" fill="#f87171"/>
+        <!-- Berserk Rage Flames -->
+        <polygon points="0,-48 6,-38 14,-42 10,-28 18,-24 8,-18" fill="#fca5a5"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

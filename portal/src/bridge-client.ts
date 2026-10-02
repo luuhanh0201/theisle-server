@@ -28,9 +28,13 @@ export class BridgeClient {
   garage(steamId: string, body: { action: unknown; slot: unknown; where: unknown }) {
     return this.post(`/player-api/garage/${steamId}`, body);
   }
-  skin(steamId: string, body: { colors: unknown; effects: unknown; pattern: unknown; theme: unknown; variation: unknown; keep: unknown; forget: unknown }) {
+  skin(steamId: string, body: { colors: unknown; effects: unknown; pattern: unknown; theme: unknown; variation: unknown; keep: unknown; forget: unknown; item: unknown }) {
     return this.post(`/player-api/skin/${steamId}`, body);
   }
+  useItem(steamId: string, body: { uid: unknown; slot: unknown; upgrade: unknown; mutation: unknown }) {
+    return this.post(`/player-api/items/${steamId}/use`, body);
+  }
+  previewItem(steamId: string, uid: string) { return this.get(`/player-api/items/${steamId}/preview/${encodeURIComponent(uid)}`); }
   command(steamId: string, id: number) { return this.get(`/player-api/command/${steamId}/${id}`); }
   leaderboard() { return this.get('/player-api/leaderboard'); }
   server() { return this.get('/player-api/server'); }

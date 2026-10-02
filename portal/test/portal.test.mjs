@@ -105,6 +105,8 @@ const bridge = {
   aiZones: async () => ({ status: 200, body: { zones: [{ name: 'Đồng cỏ', x: 1, y: 2, radiusM: 300, species: ['Heo rừng'], count: 3 }] } }),
   garage: async (id, body) => { bridgeCalls.push({ garage: id, body }); return { status: 202, body: { id: 5, action: body.action } }; },
   skin: async (id, body) => { bridgeCalls.push({ skin: id, body }); return { status: 202, body: { id: 6, action: 'skin' } }; },
+  useItem: async (id, body) => { bridgeCalls.push({ useItem: id, body }); return { status: 202, body: { id: 7, action: 'mutation' } }; },
+  previewItem: async (id, uid) => { bridgeCalls.push(`previewItem:${id}:${uid}`); return { status: 200, body: { stacks: 1 } }; },
   command: async (id, n) => { bridgeCalls.push(`command:${id}:${n}`); return { status: 200, body: { status: 'pending' } }; },
   voice: async (id) => { bridgeCalls.push(`voice:${id}`); return { status: 200, body: { inGame: true, peers: [] } }; },
   voiceRange: async (id, range) => { bridgeCalls.push({ voiceRange: id, range }); return { status: 200, body: { range } }; },
@@ -210,8 +212,28 @@ test('skin: login, same-origin, JSON only; the SteamID is the session\'s, only t
   const before = bridgeCalls.length;
   const r = await post({ ...json, cookie, origin }, JSON.stringify({ ...skin, steamId: '76561198000000002' }));
   assert.equal(r.status, 202);
-  assert.deepEqual(bridgeCalls.slice(before), [{ skin: ME, body: { ...skin, effects: undefined, keep: undefined, forget: undefined } }]);
+  assert.deepEqual(bridgeCalls.slice(before), [{ skin: ME, body: { ...skin, effects: undefined, keep: undefined, forget: undefined, item: undefined } }]);
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/skin`, { headers: { cookie } })).status, 405);
+});
+
+test('bag: use a mutation item — login, same-origin, JSON only; the SteamID is the session\'s, only uid / slot / mutation forwarded', async () => {
+  const cookie = `${COOKIE}=${sign(SECRET, ME, Math.floor(Date.now() / 1000) + 600)}`;
+  const origin = new URL(BASE).origin;
+  const post = (headers, body) => fetch(`http://127.0.0.1:${port}/api/items/use`, { method: 'POST', headers, body, redirect: 'manual' });
+  const json = { 'content-type': 'application/json' };
+  const use = JSON.stringify({ uid: 'own_1', slot: 3, steamId: '76561198000000002', mutation: 'Hax' });
+  assert.equal((await post({ ...json, origin }, use)).status, 401, 'no login');
+  assert.equal((await post({ ...json, cookie, origin: 'https://evil.example' }, use)).status, 403, 'another site');
+  assert.equal((await post({ cookie, origin, 'content-type': 'text/plain' }, use)).status, 415);
+  const before = bridgeCalls.length;
+  assert.equal((await post({ ...json, cookie, origin }, use)).status, 202);
+  assert.deepEqual(bridgeCalls.slice(before), [{ useItem: ME, body: { uid: 'own_1', slot: 3, upgrade: undefined, mutation: 'Hax' } }],
+    'the steamId sent is dropped; the picked mutation goes on, the bridge checks it against the ticket');
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/items/use`, { headers: { cookie } })).status, 405);
+  assert.equal((await get('/api/items/preview/own_1')).status, 401, 'the preview: login');
+  const pv = await get('/api/items/preview/own_1', { cookie });
+  assert.equal(pv.status, 200);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], `previewItem:${ME}:own_1`, 'for the session SteamID');
 });
 
 test('voice: login; the token only by POST from our own page; the CSP allows the voice server', async () => {

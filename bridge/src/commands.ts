@@ -27,13 +27,55 @@ export type InboxCommand =
   | CommandBase & { type: 'store'; slot: string }
   | CommandBase & { type: 'redeem'; slot?: string; where?: 'stored' | 'here' }
   | CommandBase & { type: 'skin'; skin: SkinRequest }
-  | CommandBase & { type: 'light'; on: boolean };
+  | CommandBase & { type: 'light'; on: boolean }
+  | CommandBase & { type: 'admin' } & AdminAction
+  | CommandBase & { type: 'mutation' } & MutationUse;
 type NewCommand =
   | { type: 'kill'; steamId: string; reason: string }
   | { type: 'store'; steamId: string; slot: string }
   | { type: 'redeem'; steamId: string; slot?: string; where?: 'stored' | 'here' }
   | { type: 'skin'; steamId: string; skin: SkinRequest }
-  | { type: 'light'; steamId: string; on: boolean };
+  | { type: 'light'; steamId: string; on: boolean }
+  | ({ type: 'admin'; steamId: string } & AdminAction)
+  | ({ type: 'mutation'; steamId: string } & MutationUse);
+
+/**
+ * A mutation item used on the dino a player plays now (items.ts; mods/DinoGarage
+ * garage/mutation.lua): into a slot, or — the dino has it already — +1 đời
+ * (ElderReplicationStacks) from `fromStacks`, refused by the mod at `maxStacks`
+ * or when the dino's stacks are no longer `fromStacks` (mutation-tiers.ts).
+ */
+export type MutationUse =
+  | { mode: 'place'; mutation: string; slot: 1 | 2 | 3 | 4; unlock: boolean; minGrowth: number }
+  | { mode: 'upgrade'; mutation: string; fromStacks: number; maxStacks: number }
+  // Phiếu bỏ mutation: the slot emptied. Phiếu Prime: a grown dino made prime (admin.lua grow + prime).
+  | { mode: 'clear'; slot: 1 | 2 | 3 | 4 }
+  | { mode: 'prime' };
+
+/** The growth at which the game opens each mutation slot (players' own picks on this server, 2026-10-02). */
+export const SLOT_MIN_GROWTH: Readonly<Record<1 | 2 | 3 | 4, number>> = { 1: 0.25, 2: 0.5, 3: 0.75, 4: 0.75 };
+
+/** What an admin does to a player's dino from the panel (the game's /adminpanel; garage/admin.lua). */
+export type AdminAction =
+  | { action: 'heal' }
+  | { action: 'vitals'; values: Partial<Record<(typeof ADMIN_VITALS)[number], number>> }
+  | { action: 'grow'; growth: number; prime?: true }
+  | { action: 'teleport'; x: number; y: number; z: number }
+  // Test (2026-10-02): a mutation name into any of the 16 slots (null = empty), to see whether
+  // where a mutation sits changes its strength; the mod reads the maxima before and after.
+  | { action: 'mutslots'; slots: Record<string, string | null> }
+  // Read only: the dino's state values (a dark screen after a relog, 2026-10-02).
+  | { action: 'probe' };
+
+/** The 16 mutation fields of ReplicatedMutationsData (mods/DinoGarage garage/admin.lua mutslots). */
+export const MUTATION_FIELDS = [
+  'MutationSlot1', 'MutationSlot2', 'MutationSlot3', 'MutationSlot4',
+  'ParentMutationSlot1', 'ParentMutationSlot2', 'ParentMutationSlot3', 'ParentMutationSlot4',
+  'ElderMutationSlot1A', 'ElderMutationSlot1B', 'ElderMutationSlot2A', 'ElderMutationSlot2B',
+  'ElderMutationSlot3A', 'ElderMutationSlot3B', 'ElderMutationSlot4A', 'ElderMutationSlot4B',
+] as const;
+/** Each a share of its max, 0–1 (nutrients: of the stomach, as the garage fills them). */
+export const ADMIN_VITALS = ['health', 'hunger', 'thirst', 'stamina', 'blood', 'oxygen', 'carb', 'protein', 'lipid'] as const;
 
 /** The skin regions of pawn.CustomizerData (<Region>Color), as the mods read and write them. */
 export const SKIN_REGIONS = ['Body', 'Flank', 'Underbelly', 'Markings', 'MaleDisplay', 'Detail1', 'Eyes', 'Teeth', 'Mouth', 'Claws'] as const;
@@ -44,6 +86,12 @@ export const SKIN_EFFECTS = ['Wet', 'Mud', 'Blood', 'Dirt', 'Dust', 'Duckweed'] 
  * server, 2026-09-27; how it LOOKS in game is to be seen). The mod takes up to 10.
  */
 export const SKIN_CHANNEL_MAX = 4;
+/**
+ * What a player may send from the web editor: 0–1, the colours any player can
+ * pick. Brighter or darker than that is the admins' skin items (items.ts),
+ * which players get from an admin and wear.
+ */
+export const PLAYER_CHANNEL_MAX = 1;
 /** Colours are the game's LINEAR values 0–SKIN_CHANNEL_MAX (the portal converts from the sRGB hex it shows). */
 export interface SkinRequest {
   colors: Partial<Record<(typeof SKIN_REGIONS)[number], { r: number; g: number; b: number }>>;
@@ -159,17 +207,17 @@ export async function queuePlayerCommand(
 /** What an exactly black colour is sent as (linear; hex 010101 is 0.0003). */
 export const NEAR_BLACK = 0.0005;
 
-export function validateSkin(raw: unknown): SkinRequest {
+export function validateSkin(raw: unknown, max = SKIN_CHANNEL_MAX): SkinRequest {
   if (typeof raw !== 'object' || raw === null) throw new ValidationError('skin must be an object');
   const r = raw as Record<string, unknown>;
   const colorsRaw = r['colors'];
   if (typeof colorsRaw !== 'object' || colorsRaw === null || Array.isArray(colorsRaw)) throw new ValidationError('colors must be an object');
   const colors: SkinRequest['colors'] = {};
-  const unit = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= SKIN_CHANNEL_MAX;
+  const unit = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max;
   for (const [k, v] of Object.entries(colorsRaw as Record<string, unknown>)) {
     if (!(SKIN_REGIONS as readonly string[]).includes(k)) throw new ValidationError(`unknown region "${k}"`);
     const c = v as Record<string, unknown> | null;
-    if (typeof c !== 'object' || c === null || !unit(c['r']) || !unit(c['g']) || !unit(c['b'])) throw new ValidationError(`${k}: r, g, b must be 0–${SKIN_CHANNEL_MAX}`);
+    if (typeof c !== 'object' || c === null || !unit(c['r']) || !unit(c['g']) || !unit(c['b'])) throw new ValidationError(`${k}: r, g, b must be 0–${max}`);
     const col = { r: Math.round(c['r'] * 10000) / 10000, g: Math.round(c['g'] * 10000) / 10000, b: Math.round(c['b'] * 10000) / 10000 };
     // Exactly black is how the game marks a region a species does not use: a
     // region set to (0, 0, 0) was not painted black on players' screens
@@ -205,9 +253,9 @@ export function validateSkin(raw: unknown): SkinRequest {
 }
 
 /** Queue a player's own skin onto the dino they play now (one command every few seconds, like the garage). */
-export async function queueSkin(steamId: string, raw: unknown, now = Date.now()): Promise<InboxCommand> {
+export async function queueSkin(steamId: string, raw: unknown, now = Date.now(), max = PLAYER_CHANNEL_MAX): Promise<InboxCommand> {
   assertSteamId(steamId);
-  const skin = validateSkin(raw);
+  const skin = validateSkin(raw, max);
   const last = lastPlayerCommand.get(steamId);
   if (last !== undefined && now - last < PLAYER_COMMAND_GAP_MS) throw new TooSoonError('one command every few seconds');
   lastPlayerCommand.set(steamId, now);
@@ -221,6 +269,81 @@ export async function queueSkin(steamId: string, raw: unknown, now = Date.now())
 export async function queueSkinRepaint(steamId: string, raw: unknown): Promise<InboxCommand> {
   assertSteamId(steamId);
   return enqueue({ type: 'skin', steamId, skin: validateSkin(raw) });
+}
+
+/** Check an admin action from the panel. Teleport takes a spot the bridge already picked (server.ts). */
+export function validateAdminAction(raw: unknown): AdminAction {
+  if (typeof raw !== 'object' || raw === null) throw new ValidationError('body must be an object');
+  const r = raw as Record<string, unknown>;
+  switch (r['action']) {
+    case 'heal':
+      return { action: 'heal' };
+    case 'vitals': {
+      const v = r['values'];
+      if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new ValidationError('values must be an object');
+      const values: Partial<Record<(typeof ADMIN_VITALS)[number], number>> = {};
+      for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+        if (!(ADMIN_VITALS as readonly string[]).includes(k)) throw new ValidationError(`unknown vital "${k}"`);
+        if (typeof x !== 'number' || !Number.isFinite(x) || x < 0 || x > 1) throw new ValidationError(`${k} must be 0–1`);
+        values[k as (typeof ADMIN_VITALS)[number]] = Math.round(x * 1000) / 1000;
+      }
+      if (Object.keys(values).length === 0) throw new ValidationError('at least one value');
+      return { action: 'vitals', values };
+    }
+    case 'grow': {
+      const g = r['growth'];
+      if (typeof g !== 'number' || !Number.isFinite(g) || g < 0.1 || g > 1) throw new ValidationError('growth must be 0.1–1');
+      const prime = r['prime'];
+      if (prime !== undefined && typeof prime !== 'boolean') throw new ValidationError('prime must be true or false');
+      // Prime is for a grown dino only (the game's own rule).
+      if (prime === true && g < 1) throw new ValidationError('prime chỉ đặt được ở tăng trưởng 100%');
+      return { action: 'grow', growth: Math.round(g * 10000) / 10000, ...(prime === true ? { prime: true as const } : {}) };
+    }
+    case 'teleport': {
+      const ok = (n: unknown, lim: number): n is number => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= lim;
+      if (!ok(r['x'], 2_000_000) || !ok(r['y'], 2_000_000) || !ok(r['z'], 500_000)) throw new ValidationError('x, y, z required');
+      return { action: 'teleport', x: Math.round(r['x']), y: Math.round(r['y']), z: Math.round(r['z']) };
+    }
+    case 'mutslots': {
+      const s = r['slots'];
+      if (typeof s !== 'object' || s === null || Array.isArray(s)) throw new ValidationError('slots must be an object');
+      const slots: Record<string, string | null> = {};
+      for (const [k, v] of Object.entries(s as Record<string, unknown>)) {
+        if (!(MUTATION_FIELDS as readonly string[]).includes(k)) throw new ValidationError(`unknown slot "${k}"`);
+        if (v !== null && (typeof v !== 'string' || !/^[A-Za-z][A-Za-z0-9 _'-]{1,59}$/.test(v))) throw new ValidationError(`${k}: a mutation name or null`);
+        slots[k] = v;
+      }
+      if (Object.keys(slots).length === 0) throw new ValidationError('at least one slot');
+      return { action: 'mutslots', slots };
+    }
+    case 'probe':
+      return { action: 'probe' };
+    default:
+      throw new ValidationError('action must be heal, vitals, grow, teleport, mutslots or probe');
+  }
+}
+
+export async function queueMutationUse(steamId: string, use: MutationUse): Promise<InboxCommand> {
+  assertSteamId(steamId);
+  if (use.mode === 'prime') return enqueue({ type: 'mutation', steamId, mode: 'prime' });
+  if (use.mode === 'clear') {
+    if (![1, 2, 3, 4].includes(use.slot)) throw new ValidationError('slot must be 1–4');
+    return enqueue({ type: 'mutation', steamId, mode: 'clear', slot: use.slot });
+  }
+  if (typeof use.mutation !== 'string' || use.mutation === '' || use.mutation.length > 60) throw new ValidationError('mutation required');
+  if (use.mode === 'upgrade') {
+    const whole = (n: unknown): n is number => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 10;
+    if (!whole(use.fromStacks) || !whole(use.maxStacks) || use.fromStacks >= use.maxStacks) throw new ValidationError('nothing to upgrade');
+    return enqueue({ type: 'mutation', steamId, mode: 'upgrade', mutation: use.mutation, fromStacks: use.fromStacks, maxStacks: use.maxStacks });
+  }
+  if (![1, 2, 3, 4].includes(use.slot)) throw new ValidationError('slot must be 1–4');
+  return enqueue({ type: 'mutation', steamId, mode: 'place', mutation: use.mutation, slot: use.slot, unlock: use.unlock === true,
+    minGrowth: SLOT_MIN_GROWTH[use.slot] });
+}
+
+export async function queueAdminAction(steamId: string, raw: unknown): Promise<InboxCommand> {
+  assertSteamId(steamId);
+  return enqueue({ type: 'admin', steamId, ...validateAdminAction(raw) });
 }
 
 /**

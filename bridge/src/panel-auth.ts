@@ -227,7 +227,9 @@ export async function adminIds(now = Date.now()): Promise<Set<string>> {
   const fromPanel = live.settings['AdminsSteamIDs'];
   const fromIni = live.effective['AdminsSteamIDs'];
   const list = Array.isArray(fromPanel) ? fromPanel : Array.isArray(fromIni) ? fromIni : [];
-  const ids = new Set<string>([...list.filter((s) => /^\d{17}$/.test(s)), ...config.panel.ownerIds]);
+  const ids = new Set<string>([...list.filter((s) => /^\d{17}$/.test(s)), ...config.panel.ownerIds,
+    // The super admin (permissions.ts) can never be locked out either.
+    ...(config.panel.superAdminId !== null ? [config.panel.superAdminId] : [])]);
   adminCache = { at: now, ids };
   return ids;
 }

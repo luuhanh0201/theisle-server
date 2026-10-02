@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Truculency - The Isle Evrima Mutation</title>
+  <desc>Khi hất lưng (buck) có tỉ lệ cao hơn làm rơi con đang bám trên người.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_truculency" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_truculency" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#15803d"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_truculency" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#052e16" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_truculency" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_truculency)"
+           stroke="url(#strokeGrad_truculency)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_truculency)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#22c55e"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_truculency)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Bucking Dinosaur Spine Forcefully Dismounting Raptor Claws -->
+      <g transform="translate(128,128)">
+        <!-- Kinetic Blast Shockwaves -->
+        <path d="M-34,-34 L-20,-20" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+        <path d="M0,-44 L0,-24" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
+        <path d="M34,-34 L20,-20" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+        <!-- Powerful Arching Herbivore Spine / Tail Buck -->
+        <path d="M-42,26 C-24,-14 24,-14 42,26" fill="none" stroke="#22c55e" stroke-width="8" stroke-linecap="round"/>
+        <path d="M-40,26 C-24,-10 24,-10 40,26" fill="none" stroke="#86efac" stroke-width="3" stroke-linecap="round"/>
+        <!-- Dorsal Thagomizer / Defensive Spines -->
+        <polygon points="-26,-4 -20,-18 -14,-4" fill="#cbd5e1" stroke="#475569" stroke-width="2"/>
+        <polygon points="-6,-10 0,-26 6,-10" fill="#cbd5e1" stroke="#475569" stroke-width="2"/>
+        <polygon points="14,-4 20,-18 26,-4" fill="#cbd5e1" stroke="#475569" stroke-width="2"/>
+        <!-- Raptor Claw Falling Away / Dismounted -->
+        <g transform="translate(22,-28) rotate(35)">
+          <path d="M-6,0 C-2,10 6,14 16,14 L12,8 C6,8 0,4 -6,0" fill="#ef4444"/>
+          <path d="M0,0 C4,10 12,14 22,14 L18,8 C12,8 6,4 0,0" fill="#ef4444"/>
+        </g>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

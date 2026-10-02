@@ -145,7 +145,7 @@ cmd("!food")
 check("allowed again after the cooldown", H.countCalls("ReleasePhysicsCharacter") == 2)
 
 say("")
-say("-- 10. an inmate (mods/Prison) cannot !slay or !unstuck; other commands work --")
+say("-- 10. an inmate (mods/Prison) cannot !slay, !unstuck or !food; the read-only ones work --")
 do
   os.execute('mkdir -p "' .. RUN .. '/Mods/shared"')
   local pf = assert(io.open("Mods/shared/isle-prison.json", "w"))
@@ -157,6 +157,9 @@ do
   check("!slay refused in prison: no SetHealth", H.countCalls("SetHealth") == 0 and lastMsg():find("ở tù", 1, true) ~= nil, lastMsg())
   cmd("!unstuck")
   check("!unstuck refused in prison: not moved", H.countCalls("K2_SetActorLocation") == 0 and lastMsg():find("ở tù", 1, true) ~= nil, lastMsg())
+  H.calls = {}
+  cmd("!food")
+  check("!food refused in prison: nothing released", H.countCalls("ReleasePhysicsCharacter") == 0 and lastMsg():find("ở tù", 1, true) ~= nil, lastMsg())
   cmd("!prime")
   check("!prime still answers", lastMsg():find("Nhiệm vụ prime", 1, true) ~= nil, lastMsg())
   os.remove("Mods/shared/isle-prison.json")

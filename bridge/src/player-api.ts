@@ -1,8 +1,11 @@
 import { timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
 import { isSteamId, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
-import { queuePlayerCommand, queueSkin, TooSoonError } from './commands.js';
+import { SLOT_MIN_GROWTH, queueMutationUse, queuePlayerCommand, type MutationUse, queueSkin, SKIN_CHANNEL_MAX, TooSoonError } from './commands.js';
+import { type Item, type Rarity, dietRefusal, getItem, inventoryOf, isPendingUse, listItems, markPendingUse, resolveSkin, speciesKey } from './items.js';
 import { keptSkinsOf, setKeptSkin } from './kept-skins.js';
 import type { LifeRecord, PlayerStats, Store, TrailPoint } from './store.js';
 import type { Skin } from './events.js';
@@ -14,6 +17,35 @@ import { livePlayer, type Live } from './live.js';
 import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoom } from './voice.js';
 import { readVoiceSettings, shownName } from './voice-settings.js';
 import type { Prison } from './prison.js';
+import { adminIds } from './panel-auth.js';
+import { MUTATION_REFERENCE, findReference } from './mutation-reference.js';
+import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from './mutation-tiers.js';
+
+/**
+ * The bag (Túi đồ on the portal: using a mutation item) is open to the server's
+ * admins only for now (2026-10-02, the owner's call); false opens it to everyone.
+ */
+const BAG_ADMINS_ONLY = true;
+/**
+ * Players the bag is open to besides the admins (data/bag-access.json
+ * { "players": ["7656…"] }, 2026-10-02: T-Rex Nổi Loạn). Their bag runs out
+ * as a player's does; only admins' is unlimited.
+ */
+async function bagPlayers(): Promise<Set<string>> {
+  try {
+    const d = JSON.parse(await readFile(join(config.dataDir, 'bag-access.json'), 'utf8')) as { players?: unknown };
+    return new Set(Array.isArray(d.players) ? d.players.filter((x): x is string => typeof x === 'string' && isSteamId(x)) : []);
+  } catch {
+    return new Set();
+  }
+}
+export async function bagOpen(steamId: string): Promise<boolean> {
+  return !BAG_ADMINS_ONLY || (await adminIds()).has(steamId) || (await bagPlayers()).has(steamId);
+}
+/** An admin's bag never runs out: a used item stays (items.ts settleUse). */
+export async function bagUnlimited(steamId: string): Promise<boolean> {
+  return (await adminIds()).has(steamId);
+}
 
 /**
  * The player portal's view of the bridge (portal/ — the public site players
@@ -29,7 +61,10 @@ import type { Prison } from './prison.js';
  *   GET /player-api/ai               the AI alive on the server now (species + position), fish apart
  *   GET /player-api/ai-zones         the AI zones admins drew (name, circle, AI kinds)
  *   POST /player-api/garage/<steamId>          { action: store|redeem, slot?, where? }
- *   POST /player-api/skin/<steamId>            { colors: { Body: {r,g,b}… (linear) }, effects?, pattern?, theme?, variation?, keep? }
+ *   POST /player-api/skin/<steamId>            { colors: { Body: {r,g,b}… (linear, 0–1) }, effects?, pattern?, theme?, variation?, keep? }
+ *          or { item: "<itemId>" }: wear a skin item of their inventory (items.ts) on the dino of that species they play now
+ *   POST /player-api/items/<steamId>/use       { uid, slot: 1–4 }: use a mutation item of their inventory on the
+ *          dino they play now (that slot; the copy is used up once the game has it)
  *          keep: true keeps these colours for the species played now (every new dino of it), false forgets them;
  *          { forget: "BP_X_C" } forgets one species' kept colours
  *        — that player's own store / redeem, run by DinoGarage exactly like
@@ -243,6 +278,134 @@ function send(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
+type UseCtx = { store: Store; prison?: Prison };
+type Answer = { status: number; body: Record<string, unknown> };
+/** The items used on the dino a player plays now (a skin is worn instead: /player-api/skin). */
+type DinoItem = Extract<Item, { type: 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket' }>;
+const isDinoItem = (i: Item): i is DinoItem => i.type !== 'skin';
+const pct = (g: number): string => `${Math.round(g * 100)}%`;
+
+/** The checks before a copy is used or previewed: theirs, usable on a dino, not in prison, in game with a dino (a mutation: its diet). */
+async function dinoItemCopy(ctx: UseCtx, who: string, uid: string): Promise<Answer | { item: DinoItem; p: PlayerStats }> {
+  const owned = (await inventoryOf(who)).find((o) => o.uid === uid);
+  if (!owned) return { status: 403, body: { error: 'Bạn không có vật phẩm này.' } };
+  const item = await getItem(owned.itemId);
+  if (item === null || !isDinoItem(item)) return { status: 400, body: { error: 'Vật phẩm này không dùng lên dino được.' } };
+  if (ctx.prison?.isInmate(who)) return { status: 400, body: { error: 'Bạn đang ở tù: không dùng được vật phẩm.' } };
+  const p = ctx.store.player(who)?.player;
+  if (!p?.online || !p.species) return { status: 409, body: { error: 'Vào game và điều khiển một con dino để dùng.' } };
+  if (item.type === 'mutation') {
+    const refused = dietRefusal(p.species, item.data.diet);
+    if (refused) return { status: 409, body: { error: `Không dùng được cho ${shortSpecies(p.species)}: ${refused}.` } };
+  }
+  return { item, p };
+}
+
+/**
+ * What a Phiếu đổi mutation may become on this species: every mutation still
+ * in the game (mutation-reference.ts) of a diet the species takes; a special
+ * ticket, the quest mutations too (2026-10-02: the Mutation page keeps only
+ * the special ones, a ticket replaces the others).
+ */
+async function ticketPool(maxRarity: Rarity, species: string): Promise<Array<{ name: string; diet: string; slot2: boolean; unlock: boolean; rarity: Rarity; description: string | null }>> {
+  const quest = maxRarity === 'special';
+  return MUTATION_REFERENCE
+    .filter((m) => m.status !== 'removed' && (quest || m.kind !== 'unlock') && dietRefusal(species, m.diet) === null)
+    .map((m) => ({ name: m.name, diet: m.diet, slot2: m.kind === 'slot2', unlock: m.kind === 'unlock', rarity: (m.kind === 'unlock' ? 'special' : 'common') as Rarity,
+      description: m.description }))
+    .sort((x, y) => x.name.localeCompare(y.name));
+}
+
+/** Why `name` may not go in `slot` of this dino now, or null (the game's rules: growth per slot, slot-2 kinds, not twice). */
+function placeRefusal(p: PlayerStats, name: string, slot: unknown, slot2: boolean): string | null {
+  if (slot !== 1 && slot !== 2 && slot !== 3 && slot !== 4) return 'Chọn ô mutation 1–4.';
+  if (slot2 && slot !== 2 && slot !== 4) return `${name} chỉ đặt được ở ô 2 hoặc 4.`;
+  const min = SLOT_MIN_GROWTH[slot];
+  if (typeof p.growth !== 'number' || p.growth + 1e-6 < min) {
+    return `Ô ${slot} mở từ ${pct(min)} tăng trưởng (dino đang ${typeof p.growth === 'number' ? pct(p.growth) : '?'}), như trong game.`;
+  }
+  const active = mutationPreview(name, p.mutations, null).has.find((k) => (ACTIVE_SLOTS as readonly string[]).includes(k));
+  if (active) return `Dino đã có ${name} ở ô ${active.slice(-1)} — dùng thêm không mạnh hơn. Vật phẩm vẫn còn.`;
+  return null;
+}
+
+/**
+ * What using a copy would do on the dino they play now (the bag's box): each
+ * slot's mutation, its value, whether the slot is open at this growth; a
+ * mutation: it against the slot's; a ticket: what it may become. From what the
+ * game reported last; the mod checks again.
+ */
+export async function previewMutationUse(ctx: UseCtx, who: string, uid: string): Promise<Answer> {
+  const got = await dinoItemCopy(ctx, who, uid);
+  if ('status' in got) return got;
+  const { item, p } = got;
+  const stacks = p.prime?.elderStacks ?? null;
+  const base = mutationPreview(item.type === 'mutation' ? item.data.mutation : '', p.mutations, stacks);
+  const slots = base.slots.map((x) => {
+    const min = SLOT_MIN_GROWTH[x.slot as 1 | 2 | 3 | 4];
+    return { ...x, minGrowth: min, open: typeof p.growth === 'number' && p.growth + 1e-6 >= min };
+  });
+  return { status: 200, body: {
+    type: item.type, species: shortSpecies(p.species), growth: p.growth, prime: p.prime?.prime ?? null,
+    ...base, slots,
+    ...(item.type === 'mutation' ? { slot2: item.data.slot2 } : {}),
+    ...(item.type === 'mutation_ticket' ? { pool: await ticketPool(item.data.maxRarity, p.species as string) } : {}),
+  } };
+}
+
+/**
+ * Use one copy (by its uid) of a player's inventory on the dino they play now:
+ *   mutation          into `slot` (1–4)
+ *   mutation_ticket   `pick` (one of its pool) into `slot`
+ *   mutation_clear    `slot` emptied
+ *   prime_ticket      a grown dino made prime
+ * (`upgrade`: the switched-off duplicate +1 đời, mutation-tiers.ts.) The
+ * player's own POST /player-api/items/…/use, and the panel's "Dùng lên dino"
+ * (server.ts): the same checks for both. 202 { id }: queued; the copy goes
+ * when the mod says it worked (items.ts settleUse).
+ */
+export async function startMutationUse(ctx: UseCtx, who: string, uid: string, slot: unknown, upgrade = false, pick: unknown = null): Promise<Answer> {
+  const got = await dinoItemCopy(ctx, who, uid);
+  if ('status' in got) return got;
+  const { item, p } = got;
+  if (isPendingUse(who, uid)) return { status: 409, body: { error: 'Vật phẩm này đang được dùng, chờ vài giây.' } };
+  let use: MutationUse;
+  if (item.type === 'prime_ticket') {
+    if (p.prime?.prime === true) return { status: 409, body: { error: 'Dino này đã là prime.' } };
+    if (typeof p.growth !== 'number' || p.growth < 0.999) return { status: 409, body: { error: `Phiếu Prime cần dino 100% (đang ${typeof p.growth === 'number' ? pct(p.growth) : '?'}).` } };
+    use = { mode: 'prime' };
+  } else if (item.type === 'mutation_clear') {
+    if (slot !== 1 && slot !== 2 && slot !== 3 && slot !== 4) return { status: 400, body: { error: 'Chọn ô mutation 1–4.' } };
+    if (!p.mutations?.[`Slot${slot}`]) return { status: 409, body: { error: `Ô ${slot} đang trống.` } };
+    use = { mode: 'clear', slot };
+  } else if (item.type === 'mutation_ticket') {
+    const pool = await ticketPool(item.data.maxRarity, p.species as string);
+    const chosen = typeof pick === 'string' ? pool.find((m) => m.name === pick) : undefined;
+    if (!chosen) return { status: 400, body: { error: 'Chọn một mutation trong danh sách của phiếu.' } };
+    const why = placeRefusal(p, chosen.name, slot, chosen.slot2);
+    if (why) return { status: why.startsWith('Chọn') || why.includes('chỉ đặt') ? 400 : 409, body: { error: why } };
+    use = { mode: 'place', mutation: chosen.name, slot: slot as 1 | 2 | 3 | 4, unlock: chosen.unlock, minGrowth: SLOT_MIN_GROWTH[slot as 1 | 2 | 3 | 4] };
+  } else if (upgrade) {
+    if (!DUPLICATE_UPGRADE) return { status: 409, body: { error: 'Nâng cấp mutation trùng đang tạm tắt (đang thử nghiệm). Vật phẩm vẫn còn.' } };
+    const preview = mutationPreview(item.data.mutation, p.mutations, p.prime?.elderStacks ?? null);
+    if (preview.upgrade === null) return { status: 409, body: { error: `Dino chưa có ${item.data.mutation}: chọn ô để thêm.` } };
+    if (!preview.upgrade.ok || preview.stacks === null) return { status: 409, body: { error: preview.upgrade.why ?? 'Không nâng cấp được.' } };
+    use = { mode: 'upgrade', mutation: item.data.mutation, fromStacks: preview.stacks, maxStacks: maxStacksOf(item.data.mutation) };
+  } else {
+    const why = placeRefusal(p, item.data.mutation, slot, item.data.slot2);
+    if (why) return { status: why.startsWith('Chọn') || why.includes('chỉ đặt') ? 400 : 409, body: { error: why } };
+    use = { mode: 'place', mutation: item.data.mutation, slot: slot as 1 | 2 | 3 | 4, unlock: item.data.unlock, minGrowth: SLOT_MIN_GROWTH[slot as 1 | 2 | 3 | 4] };
+  }
+  try {
+    const cmd = await queueMutationUse(who, use);
+    markPendingUse(cmd.id, who, uid);
+    return { status: 202, body: { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt } };
+  } catch (err) {
+    if (err instanceof ValidationError) return { status: 400, body: { error: err.message } };
+    throw err;
+  }
+}
+
 /** Returns false when the path is not a /player-api route (the caller carries on). */
 export async function handlePlayerApi(
   req: IncomingMessage, res: ServerResponse, path: string,
@@ -311,6 +474,24 @@ export async function handlePlayerApi(
     }
     return true;
   }
+  const previewCmd = /^\/player-api\/items\/(\d{17})\/preview\/([\w-]{1,40})$/.exec(path);
+  if (previewCmd !== null) {
+    if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
+    if (!(await bagOpen(previewCmd[1] as string))) { send(res, 403, { error: 'Túi đồ chưa mở.' }); return true; }
+    const r = await previewMutationUse(ctx, previewCmd[1] as string, previewCmd[2] as string);
+    send(res, r.status, r.body);
+    return true;
+  }
+  const useCmd = /^\/player-api\/items\/(\d{17})\/use$/.exec(path);
+  if (useCmd !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    if (!(await bagOpen(useCmd[1] as string))) { send(res, 403, { error: 'Túi đồ chưa mở.' }); return true; }
+    const r = await startMutationUse(ctx, useCmd[1] as string, typeof body['uid'] === 'string' ? body['uid'] : '', body['slot'], body['upgrade'] === true, body['mutation'] ?? null);
+    send(res, r.status, r.body);
+    return true;
+  }
   const skinCmd = /^\/player-api\/skin\/(\d{17})$/.exec(path);
   if (skinCmd !== null) {
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
@@ -321,6 +502,27 @@ export async function handlePlayerApi(
     if (typeof body['forget'] === 'string') {
       await setKeptSkin(who, body['forget'], null);
       send(res, 200, { forgotten: body['forget'] });
+      return true;
+    }
+    // A skin item of their own inventory, made by an admin (may be brighter / darker than a player can pick).
+    if (typeof body['item'] === 'string') {
+      try {
+        const itemId = body['item'];
+        if (!(await inventoryOf(who)).some((o) => o.itemId === itemId)) { send(res, 403, { error: 'Bạn chưa có skin này.' }); return true; }
+        const item = await getItem(itemId);
+        if (item === null || item.type !== 'skin') { send(res, 404, { error: 'Skin không còn tồn tại.' }); return true; }
+        const playing = ctx.store.player(who)?.player.species ?? null;
+        if (speciesKey(playing) !== speciesKey(item.data.species)) {
+          send(res, 409, { error: `Skin này dành cho ${item.data.species} — hãy chơi ${item.data.species} rồi mặc.` });
+          return true;
+        }
+        const cmd = await queueSkin(who, resolveSkin(item.data), Date.now(), SKIN_CHANNEL_MAX);
+        send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt, item: itemId });
+      } catch (err) {
+        if (err instanceof TooSoonError) send(res, 429, { error: 'too many requests' });
+        else if (err instanceof ValidationError) send(res, 400, { error: err.message });
+        else throw err;
+      }
       return true;
     }
     try {
@@ -373,6 +575,10 @@ export async function handlePlayerApi(
         minHealthPct: gs.minHealthPct, minGrowthPct: gs.minGrowthPct },
       // Colours kept for the next times, by species (kept-skins.ts).
       keptSkins: await keptSkinsOf(steamId),
+      // Their items (items.ts): what each is; a skin with the colours the game gets when they wear it.
+      items: await ownedView(steamId, detail?.player.online ? detail.player.species ?? null : null),
+      bag: await bagOpen(steamId),
+      bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
       prison: ctx.prison?.playerView(steamId) ?? null,
     });
@@ -429,4 +635,24 @@ export async function handlePlayerApi(
   }
   send(res, 404, { error: 'not found' });
   return true;
+}
+
+/**
+ * A player's items for the portal: what each is, how they got it; a skin, the
+ * colours it paints and its species; a mutation, what it does and, when they
+ * play a dino now, why that dino cannot take it (null: it can).
+ */
+async function ownedView(steamId: string, playing: string | null): Promise<unknown[]> {
+  const owned = await inventoryOf(steamId);
+  if (owned.length === 0) return [];
+  const byId = new Map((await listItems()).map((i) => [i.id, i]));
+  return owned.flatMap((o) => {
+    const i = byId.get(o.itemId);
+    if (i === undefined) return [];
+    return [{ uid: o.uid, id: i.id, type: i.type, name: i.name, rarity: i.rarity, source: o.source, grantedAt: o.grantedAt,
+      ...(i.type === 'skin' ? { species: i.data.species, skin: resolveSkin(i.data) }
+        : i.type === 'mutation' ? { mutation: i.data.mutation, diet: i.data.diet, slot2: i.data.slot2, description: findReference(i.data.mutation)?.description ?? null,
+          refusal: playing === null ? null : dietRefusal(playing, i.data.diet) }
+          : i.type === 'mutation_ticket' ? { maxRarity: i.data.maxRarity } : {}) }];
+  });
 }

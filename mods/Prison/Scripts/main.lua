@@ -23,6 +23,7 @@
 --     the sentence runs; outside it the sentence stops and health is not
 --     held — an "escape": one event when it walks out, one when it comes
 --     back (the bridge announces, shows it on the map, credits whoever kills it)
+--   * it may not sleep: a dino that falls asleep is woken up (and told why)
 --   * offline, dead or in the species screen: nothing runs
 --   * when the time is served (or the bridge says release) the dino is put
 --     back where it was arrested, if it is still in the prison
@@ -68,6 +69,8 @@ local PRIME_EVERY_S = 5
 local NUTRIENTS_EVERY_S = 10
 local FORGET_S = 300        -- a sentence the bridge no longer lists: its state kept this long
 local REENTER_S = 60        -- an outsider back in the zone within this keeps its sting clock
+local WAKE_FORCE_S = 3      -- still asleep this long after WakeUp: the flag is cleared directly
+local SLEEP_NOTIFY_S = 30   -- "no sleeping" told at most this often
 
 --------------------------------------------------------------------------
 -- Config (written by the bridge; decoded only when it changed)
@@ -314,6 +317,42 @@ local function freeze(pawn, run, now)
 end
 
 --------------------------------------------------------------------------
+-- No sleeping in prison
+--------------------------------------------------------------------------
+
+local sleepChecked = false
+
+--- pawn.bIsSleeping (the game's flag; AS_Sleeping is its action state), or nil when it cannot be read.
+local function isAsleep(pawn)
+    local ok, v = pcall(function() return pawn.bIsSleeping end)
+    if ok and type(v) == "boolean" then return v end
+    return nil
+end
+
+local function noSleep(ctrl, id, pawn, run, now)
+    local asleep = isAsleep(pawn)
+    if not sleepChecked then
+        -- Once per run, to see in the log that the flag reads on the live dinos.
+        sleepChecked = true
+        H.log(string.format("%s: sleep check — bIsSleeping on %s reads %s", MOD, tostring(speciesOf(pawn)), tostring(asleep)))
+    end
+    if asleep ~= true then run.asleepSince = nil; return end
+    local first = run.asleepSince == nil
+    run.asleepSince = run.asleepSince or now
+    local woke = pcall(function() pawn:WakeUp() end)
+    if not woke or now - run.asleepSince >= WAKE_FORCE_S then
+        pcall(function() pawn.bIsSleeping = false end)
+    end
+    if first then
+        H.log(string.format("%s: %s fell asleep in prison — WakeUp %s", MOD, id, woke and "called" or "failed"))
+    end
+    if ctrl and now - (run.sleepToldAt or 0) >= SLEEP_NOTIFY_S then
+        run.sleepToldAt = now
+        Msg.notify(ctrl, "prison.noSleep", "Đang ở tù: không được ngủ.")
+    end
+end
+
+--------------------------------------------------------------------------
 -- Inmates
 --------------------------------------------------------------------------
 
@@ -400,7 +439,7 @@ local function catchEscaper(id, pawn, sen, st, run, now, c, mx)
     H.log(string.format("%s: %s caught and put back in the prison", MOD, id))
 end
 
-local function handleInmate(id, pawn, sen, now, c)
+local function handleInmate(ctrl, id, pawn, sen, now, c)
     local st = stateOf(sen.id)
     if st.done then return end
     st.missingSince = nil
@@ -471,6 +510,7 @@ local function handleInmate(id, pawn, sen, now, c)
     st.inside = inside
     dirty = true
     freeze(pawn, run, now)
+    noSleep(ctrl, id, pawn, run, now)
 end
 
 --------------------------------------------------------------------------
@@ -526,7 +566,7 @@ local function tick()
             if not pawn then return end
             seen[id] = true
             local sen = c.sentences[id]
-            if sen then handleInmate(id, pawn, sen, now, c) else handleOutsider(ctrl, id, pawn, now, c) end
+            if sen then handleInmate(ctrl, id, pawn, sen, now, c) else handleOutsider(ctrl, id, pawn, now, c) end
         end)
         for id in pairs(stings) do if not seen[id] then stings[id] = nil end end
         -- Offline inmates: the clock stops (the next tick of theirs starts a fresh dt).

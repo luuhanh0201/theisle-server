@@ -1,8 +1,12 @@
 import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 import { SkinRelog } from './skin-relog.js';
-import { queueSkinRepaint } from './commands.js';
+import { queueAdminAction, queueSkinRepaint } from './commands.js';
 import { keptSkinsOf } from './kept-skins.js';
 import { config } from './config.js';
+import { readGrowthApplied, startNotice } from './growth-events.js';
+import { RelogShare } from './relog-share.js';
+import { hiddenChat } from './deletions.js';
 import { NdjsonTail } from './tail.js';
 import { Store } from './store.js';
 import { startServer } from './server.js';
@@ -36,7 +40,11 @@ import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
 import { auditListeners } from './audit.js';
 import { Prison } from './prison.js';
-import { shortSpecies } from './player-api.js';
+import { KillScenes } from './kill-scene.js';
+import { GameAdminLog } from './game-admin-log.js';
+import { settleUse } from './items.js';
+import { syncAdminGuard } from './permissions.js';
+import { bagUnlimited, shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
 
 const store = new Store();
@@ -84,6 +92,9 @@ const notifier = new Notifier(rcon, Math.floor(Date.now() / 1000));
 // "Completed: <task>" to the player, for each prime task that turns on (prime-notify.ts).
 const primeNotifier = new PrimeNotifier(rcon, Math.floor(Date.now() / 1000), (key, vars) => renderMessage(key, vars));
 // A dino's colours painted again when the player comes back on it (skin-relog.ts).
+const relogShare = new RelogShare(Math.floor(Date.now() / 1000));
+// Chat lines the super admin deleted: left out of every view (deletions.ts).
+await hiddenChat();
 const skinRelog = new SkinRelog(Math.floor(Date.now() / 1000),
   (steamId, skin) => queueSkinRepaint(steamId, skin),
   async (steamId, species) => (await keptSkinsOf(steamId))[species] !== undefined);
@@ -104,6 +115,9 @@ const prison = new Prison({
   startedAt: Math.floor(Date.now() / 1000),
 });
 await prison.load();
+// Where a death happened, who stood near, the fight it ended (panel → log → 📍; kill-scene.ts).
+const killScenes = new KillScenes(join(config.dataDir, 'kill-scenes.ndjson'), Math.floor(Date.now() / 1000));
+await killScenes.load();
 await prison.syncModFiles().catch((error: unknown) => console.error('[prison] cannot write the mod files:', error));
 const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {
@@ -112,6 +126,16 @@ const tails = [config.eventsPath, config.snapshotsPath].map(
     void primeNotifier.handle(event);
     void skinRelog.handle(event);
     prison.handle(event).catch((error: unknown) => console.error('[prison] event failed:', error));
+    killScenes.handle(event).catch((error: unknown) => console.error('[kill-scene] event failed:', error));
+    // A mutation item the mod put on a dino: used up (items.ts).
+    settleUse(event, bagUnlimited).catch((error: unknown) => console.error('[items] settle failed:', error));
+    // Max health jumped at a relog (a prime the mod set): the same share of health and blood as when they left.
+    const keep = relogShare.onEvent(event);
+    if (keep !== null) {
+      queueAdminAction(keep.steamId, { action: 'vitals', values: { health: keep.health, blood: keep.blood } })
+        .then(() => console.info(`[relog-share] ${keep.steamId}: max health ${keep.maxBefore} -> ${keep.maxNow}, kept health ${keep.health}, blood ${keep.blood}`))
+        .catch((error: unknown) => console.error('[relog-share] failed:', error));
+    }
   }),
 );
 
@@ -259,7 +283,33 @@ setInterval(() => {
 }, 10_000);
 void bans.tick();
 
-startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, ...(voice ? { voice } : {}) });
+// Admins switched off in game (panel → Phân quyền): the AdminGuard mod's list (permissions.ts).
+const writeAdminGuard = async (): Promise<void> => {
+  await syncAdminGuard(await adminIds()).catch((error: unknown) => console.error('[admin-guard] cannot write', config.adminGuardPath, error));
+};
+await writeAdminGuard();
+// What admins do in the game (TheIsle.log) → the panel's admin log (game-admin-log.ts).
+const gameAdminLog = new GameAdminLog();
+await gameAdminLog.load();
+setInterval(() => { gameAdminLog.poll().catch((error: unknown) => console.error('[game-admin-log] poll failed:', error)); }, 2000);
+
+// Sự kiện tốc độ lớn (growth-events.ts): once the game is up after a start,
+// the players hear the event that start applied (or the one that ended).
+// A bridge restart does not say it again: the start it knew of is the current one.
+let growthToldFor = store.modsLoadedAt();
+setInterval(() => {
+  const loaded = store.modsLoadedAt();
+  if (loaded === null || loaded === growthToldFor) return;
+  growthToldFor = loaded;
+  const n = startNotice(readGrowthApplied(config.dataDir), loaded);
+  const text = n === null ? null : renderMessage(n.key, n.vars);
+  if (text !== null && rcon.enabled) {
+    // A minute in: players joining right after the start hear it too.
+    setTimeout(() => { rcon.run('announce', text).catch((error: unknown) => console.error('[growth] announce failed:', error)); }, 60_000);
+  }
+}, 10_000);
+
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
 
 // The prison: the mod's state, finished sentences, escape reminders, the mod's files (prison.ts).
 setInterval(() => {

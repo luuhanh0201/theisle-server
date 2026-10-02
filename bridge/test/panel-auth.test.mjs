@@ -19,6 +19,7 @@ process.env.ADMIN_TOKEN = TOKEN;
 process.env.ADMIN_STEAM_IDS = OWNER;
 process.env.PANEL_ALLOWED_IPS = '42.114.212.207, 10.0.0.0/24';
 process.env.PANEL_BASE_URL = '';   // not the real .env's (deploy.sh runs the tests with it loaded)
+delete process.env.SUPER_ADMIN_STEAM_ID;   // no super admin here (panel-super.test.mjs has one); deploy.sh loads the real .env's
 delete process.env.PANEL_SESSION_HOURS;
 mkdirSync(process.env.GAME_CONFIG_DIR);
 writeFileSync(join(process.env.GAME_CONFIG_DIR, 'Game.ini'),

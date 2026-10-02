@@ -39,6 +39,20 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const unitsOf = (p) => [p.y / 1000, p.x / 1000];
 const hexA = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, '0');
 
+// --- your trail: shown or hidden, cleared from a time on (this browser) -------------------
+const TRAIL_KEY = 'isle-map-trail.v1';
+function loadTrail() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(TRAIL_KEY) ?? 'null');
+    return { on: raw?.on !== false, clearedAt: Number.isFinite(raw?.clearedAt) ? raw.clearedAt : 0 };
+  } catch {
+    return { on: true, clearedAt: 0 };
+  }
+}
+function saveTrail(t) {
+  try { localStorage.setItem(TRAIL_KEY, JSON.stringify(t)); } catch { /* not remembered */ }
+}
+
 // --- waypoints ("điểm đến") ------------------------------------------------------------
 // Tap the map to set where you are heading: a line from your dino points
 // straight at it, here and on the launcher's mini map. Points can be saved
@@ -74,9 +88,11 @@ export function createMap(root) {
   root.innerHTML = `<div class="map-wrap">
       <canvas></canvas>
       <div class="map-tools">
-        <button type="button" data-z="in" title="Phóng to">+</button>
-        <button type="button" data-z="out" title="Thu nhỏ">−</button>
-        <button type="button" data-z="follow" title="Bám theo dino" class="on">◎</button>
+        <button type="button" class="map-tool-btn" data-z="in" title="Phóng to">+</button>
+        <button type="button" class="map-tool-btn" data-z="out" title="Thu nhỏ">−</button>
+        <button type="button" class="map-tool-btn on" data-z="follow" title="Bám theo dino">◎</button>
+        <button type="button" class="map-tool-btn on" data-z="trail" title="Ẩn / hiện đường di chuyển" aria-pressed="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 3.2"><path d="M4 19c3-1 4-6 8-7s5-5 8-7"/></svg></button>
+        <button type="button" class="map-tool-btn" data-z="clear" title="Xoá đường di chuyển (đường mới vẫn vẽ tiếp)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
       </div>
       <div class="map-msg">Đang tải bản đồ…</div>
       <div class="map-target" hidden>
@@ -106,6 +122,7 @@ export function createMap(root) {
     zones: [],           // AI zones the admins drew, from /api/ai-zones (the prison flagged)
     escapees: [],        // escaped inmates, [{ name, s, x, y, since }] from /api/ai .escapees
     wp: loadWaypoints(), // { target, saved }
+    trail: loadTrail(),  // { on, clearedAt }: shown or not; points up to clearedAt (unix s) hidden
     onTarget: null,      // told when the target changes (the launcher's overlay)
   };
   try {
@@ -336,10 +353,10 @@ export function createMap(root) {
       if (tg.name && tg.name !== 'Điểm đến') text(ctx, tg.name, tx, ty - 36, '700 11.5px Inter, system-ui, sans-serif', '#fde68a');
     }
 
-    // Your trail, then your dino with its heading.
+    // Your trail (unless hidden, from where it was last cleared), then your dino with its heading.
     const me = st.me;
     if (me && pos) {
-      const trail = me.trail ?? [];
+      const trail = st.trail.on ? (me.trail ?? []).filter((pt) => !(pt.t <= st.trail.clearedAt)) : [];
       if (trail.length > 0) {
         ctx.beginPath();
         trail.forEach((pt, i) => { const [x, y] = scr(unitsOf(pt)); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
@@ -431,9 +448,31 @@ export function createMap(root) {
     const b = e.target.closest('button[data-z]');
     if (!b || !st.view) return;
     if (b.dataset.z === 'follow') { setFollow(!st.follow); return; }
+    if (b.dataset.z === 'trail') {
+      st.trail.on = !st.trail.on;
+      saveTrail(st.trail);
+      trailButtons();
+      draw();
+      return;
+    }
+    if (b.dataset.z === 'clear') {
+      // Hide what is drawn now; where the dino goes next is drawn again.
+      const pts = st.me?.trail ?? [];
+      st.trail.clearedAt = pts.length ? Math.max(...pts.map((p) => p.t ?? 0)) : Math.floor(Date.now() / 1000);
+      saveTrail(st.trail);
+      draw();
+      return;
+    }
     zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, b.dataset.z === 'in' ? 1.6 : 1 / 1.6);
   });
   window.addEventListener('resize', draw);
+  const trailButtons = () => {
+    const b = root.querySelector('[data-z="trail"]');
+    b.classList.toggle('on', st.trail.on);
+    b.setAttribute('aria-pressed', String(st.trail.on));
+    b.title = st.trail.on ? 'Ẩn đường di chuyển' : 'Hiện đường di chuyển';
+  };
+  trailButtons();
 
   // --- layers ---
   function chips() {

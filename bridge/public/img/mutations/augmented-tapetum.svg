@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Augmented Tapetum - The Isle Evrima Mutation</title>
+  <desc>Nhìn rõ hơn vào ban đêm.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_augmented-tapetum" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_augmented-tapetum" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_augmented-tapetum" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#451a03" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_augmented-tapetum" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_augmented-tapetum)"
+           stroke="url(#strokeGrad_augmented-tapetum)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_augmented-tapetum)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#f59e0b"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_augmented-tapetum)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Tapetum Lucidum Eye Reflecting Piercing Golden Light in Darkness -->
+      <g transform="translate(128,128)">
+        <!-- Pitch Black Night Aura -->
+        <circle cx="0" cy="0" r="46" fill="#090d16" stroke="#f59e0b" stroke-width="3.5"/>
+        <!-- Eye Outer Sclera -->
+        <path d="M-38,0 C-22,24 22,24 38,0 C22,-24 -22,-24 -38,0 Z" fill="#1e293b" stroke="#fbbf24" stroke-width="3"/>
+        <!-- Reflective Tapetum Lucidum Iris -->
+        <circle cx="0" cy="0" r="18" fill="#f59e0b" stroke="#fef08a" stroke-width="3"/>
+        <!-- Night Slit Pupil -->
+        <ellipse cx="0" cy="0" rx="4" ry="16" fill="#000000"/>
+        <!-- Brilliant Eye Light Reflection Beam -->
+        <polygon points="0,0 48,-32 42,-44 0,0" fill="#fef08a" opacity="0.65"/>
+        <polygon points="0,0 48,32 42,44 0,0" fill="#fef08a" opacity="0.65"/>
+        <circle cx="3" cy="-4" r="4" fill="#ffffff"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  <text x="128" y="215" font-family="system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fbbf24" text-anchor="middle" letter-spacing="1">QUEST UNLOCK</text>
+</svg>

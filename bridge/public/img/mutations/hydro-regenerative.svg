@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Hydro-regenerative - The Isle Evrima Mutation</title>
+  <desc>Hồi máu nhanh hơn khi trời mưa.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_hydro-regenerative" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_hydro-regenerative" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="50%" stop-color="#0369a1"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_hydro-regenerative" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#083344" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_hydro-regenerative" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_hydro-regenerative)"
+           stroke="url(#strokeGrad_hydro-regenerative)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_hydro-regenerative)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#06b6d4"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_hydro-regenerative)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Rain Cloud showering on Healing Vital Cross -->
+      <g transform="translate(128,128)">
+        <!-- Rain Cloud -->
+        <path d="M-30,-22 C-38,-22 -44,-16 -44,-8 C-44,0 -38,6 -30,6 L30,6 C38,6 44,0 44,-8 C44,-16 38,-22 30,-22 C28,-32 18,-40 6,-40 C-6,-40 -18,-32 -22,-22 Z" fill="#334155" stroke="#38bdf8" stroke-width="3"/>
+        <!-- Falling Rain Droplets -->
+        <line x1="-24" y1="12" x2="-28" y2="22" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+        <line x1="-10" y1="14" x2="-14" y2="26" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+        <line x1="6" y1="12" x2="2" y2="24" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+        <line x1="22" y1="14" x2="18" y2="26" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+        <!-- Glowing Healing Cross in Rain -->
+        <g transform="translate(0,34)">
+          <rect x="-6" y="-18" width="12" height="36" rx="3" fill="#22c55e" stroke="#86efac" stroke-width="2"/>
+          <rect x="-18" y="-6" width="36" height="12" rx="3" fill="#22c55e" stroke="#86efac" stroke-width="2"/>
+          <circle cx="0" cy="0" r="4" fill="#ffffff"/>
+        </g>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

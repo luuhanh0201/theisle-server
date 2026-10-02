@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Hypermetabolic Inanition - The Isle Evrima Mutation</title>
+  <desc>Thanh đói càng thấp (càng đói) thì gây sát thương càng cao.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_hypermetabolic-inanition" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_hypermetabolic-inanition" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="50%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_hypermetabolic-inanition" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#450a0a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_hypermetabolic-inanition" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_hypermetabolic-inanition)"
+           stroke="url(#strokeGrad_hypermetabolic-inanition)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_hypermetabolic-inanition)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#ef4444"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_hypermetabolic-inanition)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Empty Stomach Fuel Meter Blazing with Berserker Fury Fire -->
+      <g transform="translate(128,128)">
+        <!-- Blazing Berserk Rage Flames -->
+        <path d="M-36,-10 C-44,-30 -30,-48 -20,-48 C-16,-48 -18,-38 -12,-32 C-6,-46 14,-52 18,-34 C20,-24 16,-16 26,-22 C34,-30 42,-14 36,4 C46,16 34,44 0,52 C-34,44 -46,16 -36,-10 Z" fill="#dc2626"/>
+        <path d="M-24,2 C-30,-12 -20,-28 -14,-28 C-10,-28 -12,-20 -8,-16 C-4,-26 10,-30 12,-18 C14,-12 10,-6 18,-10 C24,-16 28,-4 24,8 C30,16 22,34 0,40 C-22,34 -30,16 -24,2 Z" fill="#f97316"/>
+        <circle cx="0" cy="16" r="16" fill="#facc15"/>
+        <!-- Empty Hunger Meter Bar in Core -->
+        <rect x="-24" y="-8" width="48" height="12" rx="3" fill="#1e293b" stroke="#f87171" stroke-width="2"/>
+        <rect x="-22" y="-6" width="8" height="8" rx="2" fill="#ef4444"/>
+        <!-- Warning Low Tick -->
+        <line x1="-12" y1="-8" x2="-12" y2="4" stroke="#ffffff" stroke-width="2"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

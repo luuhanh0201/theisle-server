@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Prolific Reproduction - The Isle Evrima Mutation</title>
+  <desc>Con non của bạn hồi máu và stamina nhanh hơn, cần ít thức ăn hơn và lớn nhanh hơn.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_prolific-reproduction" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_prolific-reproduction" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_prolific-reproduction" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#451a03" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_prolific-reproduction" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_prolific-reproduction)"
+           stroke="url(#strokeGrad_prolific-reproduction)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_prolific-reproduction)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#f59e0b"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_prolific-reproduction)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Clutch of Multiple Thriving Baby Dinosaur Heads in a Nest -->
+      <g transform="translate(128,128)">
+        <!-- Nest -->
+        <path d="M-42,16 C-30,42 30,42 42,16 C30,30 -30,30 -42,16 Z" fill="#78350f" stroke="#b45309" stroke-width="3.5"/>
+        <!-- Baby 1 (Left) -->
+        <path d="M-28,18 C-32,4 -22,-6 -14,-6 C-8,-6 -10,4 -16,18 Z" fill="#84cc16" stroke="#4d7c0f" stroke-width="2.5"/>
+        <circle cx="-18" cy="0" r="2.5" fill="#000000"/>
+        <!-- Baby 2 (Center, tallest) -->
+        <path d="M-12,14 C-16,-12 -4,-24 2,-24 C8,-24 12,-12 10,14 Z" fill="#a3e635" stroke="#4d7c0f" stroke-width="2.5"/>
+        <circle cx="0" cy="-14" r="3" fill="#000000"/>
+        <polygon points="-3,-6 3,-6 0,-1" fill="#facc15"/>
+        <!-- Baby 3 (Right) -->
+        <path d="M12,18 C10,4 20,-6 26,-6 C32,-6 30,4 24,18 Z" fill="#84cc16" stroke="#4d7c0f" stroke-width="2.5"/>
+        <circle cx="22" cy="0" r="2.5" fill="#000000"/>
+        <!-- Vital Health Sparkles -->
+        <polygon points="-24,-18 -22,-14 -18,-12 -22,-10 -24,-6 -26,-10 -30,-12 -26,-14" fill="#facc15"/>
+        <polygon points="24,-18 26,-14 30,-12 26,-10 24,-6 22,-10 18,-12 22,-14" fill="#facc15"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  <text x="128" y="215" font-family="system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fbbf24" text-anchor="middle" letter-spacing="1">QUEST UNLOCK</text>
+</svg>

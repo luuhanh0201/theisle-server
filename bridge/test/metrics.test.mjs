@@ -82,3 +82,10 @@ test('Metrics: history survives a restart; older than 7 days is dropped from the
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('UDP datagram counters from /proc/net/snmp (the game talks UDP)', async () => {
+  const { parseUdp } = await import('../dist/metrics.js');
+  const snmp = 'Ip: Forwarding DefaultTTL\nIp: 1 64\nUdp: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors\nUdp: 1000 5 0 900 0\nUdpLite: InDatagrams\nUdpLite: 0\n';
+  assert.deepEqual(parseUdp(snmp), { inDatagrams: 1000, outDatagrams: 900 });
+  assert.equal(parseUdp('Ip: x\nIp: 1\n'), null);
+});

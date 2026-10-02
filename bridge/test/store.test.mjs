@@ -123,13 +123,30 @@ test('chat and per-player timeline', () => {
   const t = now();
   feed(s, [
     { t, type: 'chat', steamId: A, name: 'Alpha', message: 'hi' },
-    { t: t + 1, type: 'damage', attacker: A, victim: 'ai', amount: 5 },
+    { t: t + 1, type: 'damage', attacker: A, victim: B, amount: 5 },
     { t: t + 2, type: 'growth', steamId: A, species: 'X', milestone: 0.5, growth: 0.5 },
   ]);
   assert.equal(s.chat(10)[0].message, 'hi');
   const tl = s.player(A).timeline.map((e) => e.type);
   assert.deepEqual(tl, ['growth', 'damage', 'chat'], 'newest first');
   assert.equal(s.player('ai'), null);
+});
+
+test('bites on or by AI are not logged, but still count in the stats', () => {
+  const s = new Store();
+  const t = now();
+  feed(s, [
+    { t, type: 'damage', attacker: A, victim: 'ai', amount: 5, bite: 'b1', tick: 1 },
+    { t, type: 'damage', attacker: A, victim: 'ai', amount: 4.8, bite: 'b1', tick: 2 },   // the hold bite's next tick
+    { t: t + 1, type: 'damage', attacker: 'ai', victim: A, amount: 7 },
+    { t: t + 2, type: 'damage', attacker: A, victim: B, amount: 9 },
+  ]);
+  assert.deepEqual(s.feed(10).map((e) => `${e.attacker}>${e.victim}`), [`${A}>${B}`], 'only the player-on-player bite');
+  assert.deepEqual(s.player(A).timeline.map((e) => e.victim), [B]);
+  const a = s.player(A).player;
+  assert.equal(a.damageDealt, 18.8, 'AI bites still count as damage dealt');
+  assert.equal(a.damageTaken, 7);
+  assert.equal(a.hits, 2, 'the hold bite on the AI is one hit, not two');
 });
 
 test('feed filter by type', () => {

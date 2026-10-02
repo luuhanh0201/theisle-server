@@ -276,7 +276,7 @@ export interface PortalCommandEvent extends BaseEvent {
   id: number;
   steamId: string;
   name?: string;
-  action: 'store' | 'redeem' | 'skin' | 'light';
+  action: 'store' | 'redeem' | 'skin' | 'light' | 'admin' | 'mutation';
   slot?: string;
   /** true = started (countdown running / restore scheduled); the final result is garage_store / garage_redeem. */
   ok: boolean;
@@ -366,7 +366,7 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   mutation: (e) => isString(e['steamId']) && isString(e['slot']),
   admin_kill: (e) => isString(e['steamId']) && typeof e['ok'] === 'boolean',
   portal_command: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean'
-    && (e['action'] === 'store' || e['action'] === 'redeem' || e['action'] === 'skin' || e['action'] === 'light'),
+    && ['store', 'redeem', 'skin', 'light', 'admin', 'mutation'].includes(e['action'] as string),
   garage_store_result: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean',
   garage_store: (e) => isString(e['steamId']) && isString(e['slot']),
   garage_redeem: (e) => isString(e['steamId']) && isString(e['slot']),

@@ -216,11 +216,12 @@ test('me: the garage rules the web garage shows', async () => {
 
 test('skin from the web: checked, queued to the inbox for the mod, one every few seconds', async () => {
   const PAINTER = '76561198000000099';
-  const skin = { colors: { Body: { r: 2.7, g: 0.3, b: 0.2 }, Eyes: { r: 0, g: 0, b: 0 } }, effects: { Mud: 0.8, Wet: 0.5 }, pattern: 2, theme: 1, variation: 5 };
+  const skin = { colors: { Body: { r: 0.7, g: 0.3, b: 0.2 }, Eyes: { r: 0, g: 0, b: 0 } }, effects: { Mud: 0.8, Wet: 0.5 }, pattern: 2, theme: 1, variation: 5 };
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'GET' })).status, 405, 'writes are POST only');
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: skin, token: null })).status, 403);
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { colors: { Tail: { r: 0, g: 0, b: 0 } } } })).status, 400, 'unknown region');
-  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { colors: { Body: { r: 5, g: 0, b: 0 } } } })).status, 400, 'glow up to 4 only');
+  assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { colors: { Body: { r: 1.2, g: 0, b: 0 } } } })).status, 400,
+    'a player picks 0–1 only: brighter (or darker) is the admins\' skin items (items.ts)');
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { colors: { Body: { r: 0, g: 0, b: 0 } }, effects: { Vomit: 1 } } })).status, 400, 'known effects only');
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { colors: { Body: { r: 0, g: 0, b: 0 } }, effects: { Mud: 1.5 } } })).status, 400, 'effects 0–1');
   assert.equal((await call(`/player-api/skin/${PAINTER}`, { method: 'POST', body: { ...skin, pattern: 1.5 } })).status, 400);

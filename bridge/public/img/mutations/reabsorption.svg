@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Reabsorption - The Isle Evrima Mutation</title>
+  <desc>Hồi một ít nước khi trời mưa hoặc khi đang bơi trong nước uống được.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_reabsorption" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_reabsorption" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="50%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_reabsorption" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#022c22" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_reabsorption" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_reabsorption)"
+           stroke="url(#strokeGrad_reabsorption)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_reabsorption)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#10b981"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_reabsorption)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Water Droplet Osmosis Permeating Skin Membrane with Inward Arrows -->
+      <g transform="translate(128,128)">
+        <!-- Cellular Membrane Line -->
+        <path d="M-46,18 C-20,18 20,18 46,18" stroke="#10b981" stroke-width="5" stroke-linecap="round"/>
+        <path d="M-46,28 C-20,28 20,28 46,28" stroke="#047857" stroke-width="4" stroke-linecap="round"/>
+        <!-- Membrane Pores -->
+        <circle cx="-28" cy="23" r="3" fill="#34d399"/>
+        <circle cx="0" cy="23" r="3" fill="#34d399"/>
+        <circle cx="28" cy="23" r="3" fill="#34d399"/>
+        <!-- Water Droplet sinking into membrane -->
+        <path d="M0,-38 C0,-38 24,-10 24,6 C24,18 12,28 0,28 C-12,28 -24,18 -24,6 C-24,-10 0,-38 0,-38 Z" fill="#0ea5e9" stroke="#38bdf8" stroke-width="3"/>
+        <ellipse cx="-8" cy="2" rx="4" ry="10" fill="#e0f2fe"/>
+        <!-- Inward Osmotic Flow Arrows -->
+        <path d="M0,32 L0,46" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+        <polygon points="0,52 -6,44 6,44" fill="#38bdf8"/>
+        <path d="M-18,32 L-24,44" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+        <path d="M18,32 L24,44" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

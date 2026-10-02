@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Efficient Digestion - The Isle Evrima Mutation</title>
+  <desc>Thanh đói (thức ăn) tụt chậm hơn.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_efficient-digestion" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_efficient-digestion" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="50%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_efficient-digestion" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#022c22" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_efficient-digestion" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_efficient-digestion)"
+           stroke="url(#strokeGrad_efficient-digestion)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_efficient-digestion)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#10b981"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_efficient-digestion)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Stomach & Nutrient Hourglass / Slow Metabolic Drain -->
+      <g transform="translate(128,128)">
+        <!-- Stomach Outline -->
+        <path d="M-10,-42 C14,-46 38,-30 40,-6 C42,20 20,44 -12,46 C-34,48 -44,30 -42,10 C-40,-12 -26,-38 -10,-42 Z" fill="#064e3b" stroke="#10b981" stroke-width="4"/>
+        <path d="M-8,-32 C10,-34 28,-22 30,-4 C32,16 16,34 -8,36 C-24,38 -32,24 -30,8 C-28,-8 -18,-28 -8,-32 Z" fill="#022c22"/>
+        <!-- Metabolic Leaf in Center -->
+        <path d="M-4,14 C-4,14 18,2 20,-18 C10,-18 -4,-2 -4,14 Z" fill="#34d399"/>
+        <path d="M-4,14 L12,-6" stroke="#065f46" stroke-width="2"/>
+        <!-- Slow Drain Hourglass symbol -->
+        <g transform="translate(-14,-4) scale(0.65)">
+          <polygon points="-16,-20 16,-20 0,-2 16,16 -16,16 0,-2" fill="#10b981" stroke="#a7f3d0" stroke-width="3"/>
+          <circle cx="0" cy="10" r="3" fill="#fef08a"/>
+        </g>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

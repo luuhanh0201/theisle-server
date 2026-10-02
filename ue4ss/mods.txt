@@ -41,6 +41,10 @@ ZoneGuard : 1
 ; serving time online and inside (bridge writes Saved/prison.json); off until
 ; the panel turns it on.
 Prison : 1
+; AdminGuard: an admin the super admin switched off in game (panel → Phân quyền)
+; has the game's admin flags cleared at once (bridge writes shared/isle-admins.json);
+; nothing to do while nobody is switched off.
+AdminGuard : 1
 ; One-off: guessed fish class paths (StaticFindObject only), flag-guarded.
 FishFind : 0
 ; Done 2026-09-26: a fish a mod spawns is removed by the game within 10 s (fishspawn7.txt).
@@ -65,6 +69,18 @@ StatLab : 0
 ; SpeciesLab: TEST SERVER ONLY (turned on by hand in the test copy): spawns each species
 ; (22 playable + 4 blueprints) and reads its maxima at every growth; kills it after
 SpeciesLab : 0
+; VitalLab: TEST SERVER ONLY (turned on by hand in the test copy): the stomach max after
+; the garage + ResetAttributes / Heal (Original* values), and the bad effects (fractures, sick, venom, glass bones)
+VitalLab : 0
+; WeatherLab: TEST SERVER ONLY (turned on by hand in the test copy): read-only census of the
+; weather / sky actors and which value changes when it rains (owner wants rain gone)
+WeatherLab : 0
+; MutTierLab: TEST SERVER ONLY (turned on by hand in the test copy): does where a mutation sits
+; (active / parent / elder slots), or holding it twice, change its strength (max oxygen)
+MutTierLab : 0
+; PrimeLab: TEST SERVER ONLY (turned on by hand in the test copy): why a prime set by the mod
+; sometimes gets no prime max health (garage, admin growth) and what makes the game add it
+PrimeLab : 0
 
 ; Diagnostics, strictly read-only: checks the property names, class paths,
 ; mutation names, hook parameters and UE4SS functions the mods above rely on,

@@ -131,7 +131,15 @@ function P.poll()
                 end
                 local primeAt = tonumber(fix.primeAt)
                 local askPrime = fix.prime == true or (primeAt ~= nil and g >= primeAt)
+                local okW, wasPrime = pcall(function() return pawn:IsPrimeElder() end)
                 local wrote, isPrime = Restore.applyPrime(pawn, give, askPrime)
+                -- Prime just now: its stats (restore.lua R.primeGrowth), vitals kept as shares.
+                if isPrime and not (okW and wasPrime == true) then
+                    local _, before = pcall(function() return pawn:GetMaxHealth() end)
+                    Restore.regrowKeep(pawn, g, true)
+                    local _, after = pcall(function() return pawn:GetMaxHealth() end)
+                    H.log(string.format("primefix: prime stats — max health %s -> %s", tostring(before), tostring(after)))
+                end
                 done[fix.id] = now
                 changed = true
                 H.log(string.format("primefix: %s for %s (%s %.2f) — %d conditions, prime %s",

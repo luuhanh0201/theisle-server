@@ -24,8 +24,11 @@
 // baked into the colour; the normal map gives the relief.
 // Effects (mud, blood, dirt, dust, duckweed) are a hint, not the game's look: a
 // tint over the whole body, stronger in the crevices; wet skin is glossier.
-// Glow ("brighter than white", sent as colour channels above 1) lights the
-// model with its own colours.
+// Light per region (skin.light = { Body: 0.3, Eyes: 3 … } × skin.brightness,
+// the panel's skins): below 1 the colour is darker (in linear, as the game
+// multiplies it); above 1 that region also glows with its own colour (an
+// emissive layer, up to × 4 = full). A skin with no light: the older single
+// glow ("brighter than white" for the whole dino).
 //
 // The editor's species and sex: our own picker (#skin-species, #skin-gender).
 // In game it follows the dino played now; a species the player picks stays
@@ -54,6 +57,24 @@ const FX_TINTS = [
 ];
 
 const srgb = (hex) => { const n = parseInt(String(hex).replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const toLinear = (v) => { const x = v / 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+const toSrgb = (l) => { const x = Math.min(1, Math.max(0, l)); return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055); };
+/** The game's own limit on a colour channel (bridge commands.ts SKIN_CHANNEL_MAX). */
+const CHANNEL_MAX = 4;
+/** `f` as the game gets it: the colour × f, each channel at most CHANNEL_MAX (× 16 on white is × 4). */
+const effective = (c, f) => {
+  if (f <= 1) return f;
+  const top = Math.max(...c.map(toLinear));
+  return top > 0 ? Math.min(f, CHANNEL_MAX / top) : f;
+};
+/**
+ * An sRGB colour made `f` times as bright in linear, as the game multiplies it: darker below 1;
+ * above 1 each channel grows and saturates (a red × 4 goes towards a hot pink-white, as in game),
+ * the rest is the glow layer.
+ */
+const dimmed = (c, f) => (f === 1 ? c : c.map((v) => toSrgb(toLinear(v) * effective(c, f))));
+/** How much a region glows at light `f` (already effective): 0 at × 1 or below, 1 at × 4. */
+const glowOf = (f) => Math.min(1, Math.max(0, (f - 1) / 3));
 
 // --- shared: the registry, the models, each species' pixel work -----------------
 THREE.Cache.enabled = true;
@@ -365,18 +386,38 @@ function create(host, opts = {}) {
 
   function paint() {
     if (!current || !lastSkin) return;
-    const cols = REGION_CODES.map(([id]) => srgb(lastSkin.colors?.[female && id === 'MaleDisplay' ? 'Body' : id] ?? '#808080'));
+    const lightOf = (id) => (lastSkin.light?.[id] ?? 1) * (lastSkin.brightness ?? 1);
+    const regionOf = (id) => (female && id === 'MaleDisplay' ? 'Body' : id);
+    const raw = REGION_CODES.map(([id]) => srgb(lastSkin.colors?.[regionOf(id)] ?? '#808080'));
+    const cols = REGION_CODES.map(([id], k) => dimmed(raw[k], lightOf(regionOf(id))));
+    const glows = REGION_CODES.map(([id], k) => glowOf(effective(raw[k], lightOf(regionOf(id)))));
     const { a, b, t } = current.shared.classes;
     const sh = current.shared.shade, pt = current.shared.parts;
     // Teeth, mouth, claws: their own colours (index = PART_*).
-    const partCols = [null, srgb(lastSkin.colors?.Teeth ?? '#e6dcc4'), srgb(lastSkin.colors?.Mouth ?? '#7a3b3b'), srgb(lastSkin.colors?.Claws ?? '#3a3a3a')];
+    const PART_IDS = [null, 'Teeth', 'Mouth', 'Claws'];
+    const partRaw = [null, srgb(lastSkin.colors?.Teeth ?? '#e6dcc4'), srgb(lastSkin.colors?.Mouth ?? '#7a3b3b'), srgb(lastSkin.colors?.Claws ?? '#3a3a3a')];
+    const partCols = partRaw.map((c, k) => (c ? dimmed(c, lightOf(PART_IDS[k])) : null));
+    const partGlows = PART_IDS.map((id, k) => (id ? glowOf(effective(partRaw[k], lightOf(id))) : 0));
+    const glowing = glows.some((g) => g > 0) || partGlows.some((g) => g > 0);
     const img = current.ctx.createImageData(SIZE, SIZE);
     const d = img.data;
+    // The glow layer: each region's colour × how much it glows (black where it does not).
+    if (glowing && !current.emCtx) {
+      const em = document.createElement('canvas');
+      em.width = SIZE; em.height = SIZE;
+      current.emCtx = em.getContext('2d');
+      current.emTexture = new THREE.CanvasTexture(em);
+      current.emTexture.colorSpace = THREE.SRGBColorSpace;
+      current.emTexture.flipY = false;
+    }
+    const emImg = glowing ? current.emCtx.createImageData(SIZE, SIZE) : null;
+    const e = emImg?.data;
     for (let i = 0, n = SIZE * SIZE; i < n; i++) {
       const s = sh[i] / 255;
       const pc = pt[i] ? partCols[pt[i]] : null;
       if (pc) {
         d[i * 4] = pc[0] * s; d[i * 4 + 1] = pc[1] * s; d[i * 4 + 2] = pc[2] * s; d[i * 4 + 3] = 255;
+        if (e) { const g = partGlows[pt[i]]; e[i * 4] = pc[0] * g; e[i * 4 + 1] = pc[1] * g; e[i * 4 + 2] = pc[2] * g; e[i * 4 + 3] = 255; }
         continue;
       }
       const c1 = cols[a[i]], c2 = cols[b[i]], w = t[i] / 255;
@@ -384,7 +425,12 @@ function create(host, opts = {}) {
       d[i * 4 + 1] = (c1[1] + (c2[1] - c1[1]) * w) * s;
       d[i * 4 + 2] = (c1[2] + (c2[2] - c1[2]) * w) * s;
       d[i * 4 + 3] = 255;
+      if (e) {
+        const g1 = glows[a[i]] * (1 - w), g2 = glows[b[i]] * w;
+        e[i * 4] = c1[0] * g1 + c2[0] * g2; e[i * 4 + 1] = c1[1] * g1 + c2[1] * g2; e[i * 4 + 2] = c1[2] * g1 + c2[2] * g2; e[i * 4 + 3] = 255;
+      }
     }
+    if (emImg) { current.emCtx.putImageData(emImg, 0, 0); current.emTexture.needsUpdate = true; }
     const fx = lastSkin.effects;
     const tints = fx ? FX_TINTS.filter(([id]) => (fx[id] ?? 0) > 0).map(([id, c, k]) => [c, fx[id] * k]) : [];
     if (tints.length > 0) {
@@ -403,15 +449,30 @@ function create(host, opts = {}) {
     const wet = fx?.Wet ?? 0, glow = Math.max(1, lastSkin.glow ?? 1);
     for (const m of current.bodyMats) {
       m.roughness = 0.82 - 0.62 * wet;
-      m.emissiveMap = glow > 1 ? current.texture : null;
-      m.emissive.setRGB(glow > 1 ? 1 : 0, glow > 1 ? 1 : 0, glow > 1 ? 1 : 0);
-      m.emissiveIntensity = (glow - 1) * 0.55;
+      if (glowing) {
+        m.emissiveMap = current.emTexture;
+        m.emissive.setRGB(1, 1, 1);
+        m.emissiveIntensity = 2.2;
+      } else {
+        m.emissiveMap = glow > 1 ? current.texture : null;
+        m.emissive.setRGB(glow > 1 ? 1 : 0, glow > 1 ? 1 : 0, glow > 1 ? 1 : 0);
+        m.emissiveIntensity = (glow - 1) * 0.55;
+      }
       m.needsUpdate = true;
     }
-    const eye = srgb(lastSkin.colors?.Eyes ?? '#806020');
-    for (const m of current.eyeMats) m.color.setRGB(eye[0] / 255, eye[1] / 255, eye[2] / 255, THREE.SRGBColorSpace);
-    const tooth = srgb(lastSkin.colors?.Teeth ?? '#e6dcc4');
-    for (const m of current.teethMats) m.color.setRGB(tooth[0] / 255, tooth[1] / 255, tooth[2] / 255, THREE.SRGBColorSpace);
+    // Eyes and teeth have their own materials: their colour, darker or glowing as their light says.
+    const solid = (mats, id, fallback) => {
+      const c0 = srgb(lastSkin.colors?.[id] ?? fallback);
+      const c = dimmed(c0, lightOf(id));
+      const g = glowOf(effective(c0, lightOf(id)));
+      for (const m of mats) {
+        m.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
+        m.emissive.setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
+        m.emissiveIntensity = g * 2.2;
+      }
+    };
+    solid(current.eyeMats, 'Eyes', '#806020');
+    solid(current.teethMats, 'Teeth', '#e6dcc4');
   }
 
   let paintQueued = false;
@@ -431,7 +492,7 @@ function create(host, opts = {}) {
       const shared = await loadSpecies(name);
       if (my !== loading) return false;          // another species was asked for meanwhile
       ensureRenderer();
-      if (current) { scene.remove(current.root); current.texture.dispose(); }
+      if (current) { scene.remove(current.root); current.texture.dispose(); current.emTexture?.dispose(); }
       mixer?.stopAllAction();
       const canvas = document.createElement('canvas');
       canvas.width = SIZE; canvas.height = SIZE;
@@ -514,21 +575,18 @@ function create(host, opts = {}) {
  */
 function fromGame(skin) {
   if (!skin?.colors) return null;
-  let top = 1;
-  for (const c of Object.values(skin.colors)) top = Math.max(top, c.r ?? 0, c.g ?? 0, c.b ?? 0);
-  const ch = (v) => {
-    const x = Math.min(1, Math.max(0, (Number(v) || 0) / top));
-    const s = x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
-    return Math.round(s * 255).toString(16).padStart(2, '0');
-  };
-  const colors = {};
+  const colors = {}, light = {};
   for (const [k, c] of Object.entries(skin.colors)) {
     // Exactly black: a region this species does not use (the game leaves it 0, 0, 0), not painted black.
     if (!c || (c.r === 0 && c.g === 0 && c.b === 0)) continue;
+    // A channel above 1 (a skin made brighter than a player can pick): that region glows.
+    const top = Math.max(1, c.r ?? 0, c.g ?? 0, c.b ?? 0);
+    if (top > 1) light[k] = top;
+    const ch = (v) => Math.round(toSrgb((Number(v) || 0) / top)).toString(16).padStart(2, '0');
     colors[k] = `#${ch(c.r)}${ch(c.g)}${ch(c.b)}`;
   }
   for (const [k, stand] of Object.entries(STAND_IN)) if (!colors[k]) colors[k] = typeof stand === 'function' ? stand(colors) : stand;
-  return { colors, female: skin.female === true, glow: top };
+  return { colors, female: skin.female === true, light };
 }
 
 /** What an unused (black) region is shown as. Detail1 follows the markings. */
@@ -536,66 +594,34 @@ const STAND_IN = {
   Detail1: (c) => c.Markings ?? '#3a3530', Eyes: '#b08a2a', Teeth: '#e6dcc4', Mouth: '#8a4a45', Claws: '#3a3632',
 };
 
-window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speciesOf(raw), ready: registryReady };
+window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speciesOf(raw), ready: registryReady,
+  /** The species that have a 3D model (registry names). */
+  species: () => Object.keys(registry?.species ?? {}).sort() };
 
 // --- the skin editor (tab Skin) ---------------------------------------------------
 (() => {
   const $ = (id) => document.getElementById(id);
+  // The species: a <select> (the system's select box, ui-select.js).
   const picker = $('skin-species');
   if (!picker) return;
-  const pickerBtn = picker.querySelector('.xsel-btn');
-  const pickerVal = picker.querySelector('.xsel-val');
-  const menu = picker.querySelector('.xsel-menu');
   const genderBox = $('skin-gender');
   const viewer = create($('skin-3d'), { note: $('skin-preview-note') });
-  let chosen = null, liveKey = null, liveName = null, activeIdx = -1, lastSkin = null, started = false;
+  let chosen = null, liveKey = null, liveName = null, lastSkin = null, started = false;
 
   function renderMenu() {
     const names = Object.keys(registry?.species ?? {}).sort();
-    menu.innerHTML = names.map((n, i) => `<li role="option" data-name="${n}" id="xsel-opt-${i}" aria-selected="${n === chosen}">
-      <span>${n}</span>${n === liveName ? '<span class="xsel-live">đang chơi</span>' : ''}</li>`).join('');
-    pickerVal.textContent = chosen ?? '';
+    picker.innerHTML = names.map((n) => `<option value="${n}">${n}${n === liveName ? ' · đang chơi' : ''}</option>`).join('');
+    picker.value = chosen ?? '';
   }
-  function openMenu(open) {
-    picker.classList.toggle('open', open);
-    menu.hidden = !open;
-    pickerBtn.setAttribute('aria-expanded', String(open));
-    if (open) {
-      activeIdx = Math.max(0, [...menu.children].findIndex((li) => li.dataset.name === chosen));
-      markActive();
-      menu.focus();
-    }
-  }
-  function markActive() {
-    [...menu.children].forEach((li, i) => li.classList.toggle('active', i === activeIdx));
-    menu.children[activeIdx]?.scrollIntoView({ block: 'nearest' });
-  }
-  async function pick(name, byUser) {
+  async function pick(name) {
     if (!registry?.species?.[name]) return;
     chosen = name;
     renderMenu();
-    if (byUser) openMenu(false);
     const shown = await viewer.show(name, lastSkin);
     $('skin-3d').hidden = !shown;
     $('skin-flat').hidden = shown;
   }
-  pickerBtn.addEventListener('click', () => openMenu(menu.hidden));
-  menu.addEventListener('click', (e) => { const li = e.target.closest('li[data-name]'); if (li) { void pick(li.dataset.name, true); pickerBtn.focus(); } });
-  menu.addEventListener('keydown', (e) => {
-    const n = menu.children.length;
-    if (e.key === 'ArrowDown') { activeIdx = (activeIdx + 1) % n; markActive(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { activeIdx = (activeIdx - 1 + n) % n; markActive(); e.preventDefault(); }
-    else if (e.key === 'Enter' || e.key === ' ') { const li = menu.children[activeIdx]; if (li) void pick(li.dataset.name, true); pickerBtn.focus(); e.preventDefault(); }
-    else if (e.key === 'Escape' || e.key === 'Tab') { openMenu(false); if (e.key === 'Escape') pickerBtn.focus(); }
-    else if (e.key.length === 1) {   // a letter: the next species starting with it
-      const k = e.key.toLowerCase();
-      const items = [...menu.children];
-      const next = items.findIndex((li, i) => i > activeIdx && li.dataset.name.toLowerCase().startsWith(k));
-      const idx = next >= 0 ? next : items.findIndex((li) => li.dataset.name.toLowerCase().startsWith(k));
-      if (idx >= 0) { activeIdx = idx; markActive(); }
-    }
-  });
-  document.addEventListener('click', (e) => { if (!picker.contains(e.target)) openMenu(false); });
+  picker.addEventListener('change', () => { void pick(picker.value); });
 
   function setFemale(f) {
     for (const b of genderBox.querySelectorAll('button')) {
@@ -604,7 +630,7 @@ window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speci
       b.setAttribute('aria-checked', String(on));
     }
     // The display colour means nothing on a female: dim its picker.
-    document.querySelector('.region-card[data-region="MaleDisplay"]')?.classList.toggle('off', f);
+    document.querySelector('#skin-regions-grid [data-region="MaleDisplay"]')?.classList.toggle('off', f);
     viewer.setFemale(f);
   }
   genderBox.addEventListener('click', (e) => { const b = e.target.closest('button[data-g]'); if (b) setFemale(b.dataset.g === 'f'); });
@@ -631,7 +657,7 @@ window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speci
   const start = () => {
     if (!preview.offsetParent) { setTimeout(start, 400); return; }
     registryReady.then(() => {
-      if (!registry) { pickerVal.textContent = ''; $('skin-preview-note').textContent = 'Chưa có mô hình 3D trên server, xem màu theo từng ô.'; return; }
+      if (!registry) { picker.innerHTML = '<option value="">—</option>'; $('skin-preview-note').textContent = 'Chưa có mô hình 3D trên server, xem màu theo từng ô.'; return; }
       lastSkin = lastSkin ?? window.skin3dLastSkin ?? null;
       started = true;
       const live = window.skin3dLive;

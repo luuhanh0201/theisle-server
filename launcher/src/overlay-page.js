@@ -332,6 +332,9 @@
   // portal's garage cards: fossil = plain, amber = prime, dna = đời 2,
   // rex = đời 3, apex = đời 4. The layers are the portal's, without its shake.
   const TIERS = ['fossil', 'amber', 'dna', 'rex', 'apex'];
+  // The growth stage beside the growth %, as the portal shows it (portal app.js growthStage):
+  // the marks where the game opens the mutation slots (25 / 50 / 75 %) and the full grown.
+  const GROWTH_STAGES = [[1, '🦖', 'Trưởng thành'], [0.75, '🦕', 'Cận lớn'], [0.5, '🦎', 'Thiếu niên'], [0.25, '🐣', 'Con non'], [0, '🥚', 'Sơ sinh']];
   function tierOf(prime) {
     const stacks = prime && typeof prime.elderStacks === 'number' ? prime.elderStacks : 0;
     if (stacks >= 3) return 4;
@@ -413,13 +416,18 @@
     dinoEl.species.hidden = !show.species;
     setText(dinoEl.species, d.species || 'Dino');
     dinoEl.growth.hidden = !(show.growth && typeof d.growth === 'number');
-    if (typeof d.growth === 'number') setText(dinoEl.growth, `🌱 ${(d.growth * 100).toFixed(1)}%`);
-    const primeOn = show.prime && d.prime && (d.prime.isPrime || d.prime.eligible || tierLevel > 1);
+    if (typeof d.growth === 'number') {
+      const st = GROWTH_STAGES.find(([min]) => d.growth + 1e-6 >= min) ?? GROWTH_STAGES[GROWTH_STAGES.length - 1];
+      setText(dinoEl.growth, `${st[1]} ${(d.growth * 100).toFixed(1)}%`);
+      if (dinoEl.growth.title !== st[2]) dinoEl.growth.title = st[2];
+    }
+    // The tier as the portal shows it (portal app.js tierBadge): F0 (not prime) … F4 (đời 4).
+    const primeOn = Boolean(show.prime);
     dinoEl.prime.hidden = !primeOn;
-    // 👑 prime; faded 👑 eligible (five tasks done, not prime yet); "👑 Đời N" from đời 2 on.
     if (primeOn) {
-      setText(dinoEl.prime, tierLevel > 1 ? `👑 Đời ${tierLevel}` : '👑');
-      dinoEl.prime.classList.toggle('dim', tierLevel <= 1 && !d.prime.isPrime);
+      const cls = `prime ftag f${tierLevel}`;
+      if (dinoEl.prime.className !== cls) dinoEl.prime.className = cls;
+      setText(dinoEl.prime, `F${tierLevel}`);
     }
     for (const [k] of VITALS) {
       const r = dinoEl.rows[k];
@@ -524,6 +532,15 @@
     el.replaceChildren(...parts);
   }
 
+  // --- overlay guide modal -------------------------------------------------------------
+  const guideModal = $('ov-guide-modal');
+  let guideAutoPrompted = false;
+  const showGuide = () => { if (guideModal) guideModal.hidden = false; };
+  const hideGuide = () => {
+    if (guideModal) guideModal.hidden = true;
+    try { localStorage.setItem('isle_overlay_tour_done', '1'); } catch {}
+  };
+
   // --- all -----------------------------------------------------------------------------------------
   function render() {
     if (!settings) return;
@@ -531,6 +548,14 @@
     document.documentElement.style.setProperty('--bg', `rgba(7, 9, 14, ${settings.bg / 100})`);
     $(`w-${W}`).hidden = false;
     $('edit').hidden = !settings.editing;
+    if (settings.editing && !guideAutoPrompted) {
+      guideAutoPrompted = true;
+      try {
+        if (localStorage.getItem('isle_overlay_tour_done') !== '1') {
+          showGuide();
+        }
+      } catch {}
+    }
     setText($('size'), `${settings.scale}%`);
     // Edit mode shows the widgets that are off too, dimmed, with a switch.
     const off = !settings.enabled || !settings.overlayOn;
@@ -584,6 +609,9 @@
   window.addEventListener('resize', render);
   $('done').addEventListener('click', () => window.overlay.doneEditing());
   $('toggle').addEventListener('click', () => window.overlay.toggleWidget(W));
+  $('guide-btn')?.addEventListener('click', showGuide);
+  $('ov-guide-close')?.addEventListener('click', hideGuide);
+  $('ov-guide-ok')?.addEventListener('click', hideGuide);
   // Move by dragging the frame: not the window manager's drag region (some
   // Linux desktops ignore it) — the launcher moves the window to follow the
   // real pointer, so it can be dropped anywhere, on any screen.
@@ -630,5 +658,13 @@
     h.addEventListener('pointerup', end);
     h.addEventListener('pointercancel', end);
   }
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && settings && settings.editing) window.overlay.doneEditing(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (guideModal && !guideModal.hidden) {
+        hideGuide();
+        return;
+      }
+      if (settings && settings.editing) window.overlay.doneEditing();
+    }
+  });
 })();

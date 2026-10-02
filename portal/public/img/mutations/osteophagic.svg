@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Osteophagic - The Isle Evrima Mutation</title>
+  <desc>Ăn được xương để lành gãy xương nhanh hơn.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_osteophagic" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_osteophagic" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_osteophagic" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#451a03" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_osteophagic" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_osteophagic)"
+           stroke="url(#strokeGrad_osteophagic)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_osteophagic)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#f59e0b"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_osteophagic)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Carnivore Jaws Crunching Bone to Mend Fractures -->
+      <g transform="translate(128,128)">
+        <!-- Fractured Femur Bone -->
+        <path d="M-36,-8 L36,-8 L36,8 L-36,8 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+        <circle cx="-36" cy="-8" r="8" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+        <circle cx="-36" cy="8" r="8" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+        <circle cx="36" cy="-8" r="8" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+        <circle cx="36" cy="8" r="8" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+        <!-- Bone Fracture Crack in Center -->
+        <path d="M-4,-8 L2,-2 L-2,4 L4,8" stroke="#ef4444" stroke-width="3" fill="none"/>
+        <!-- Upper Fangs Chomp -->
+        <polygon points="-16,-34 -6,-34 -11,-12" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+        <polygon points="6,-34 16,-34 11,-12" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+        <!-- Lower Fangs Chomp -->
+        <polygon points="-16,34 -6,34 -11,12" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+        <polygon points="6,34 16,34 11,12" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+        <!-- Mending Suture / Healing Glow -->
+        <path d="M-10,0 L10,0" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+        <line x1="-6" y1="-5" x2="-6" y2="5" stroke="#22c55e" stroke-width="2.5"/>
+        <line x1="6" y1="-5" x2="6" y2="5" stroke="#22c55e" stroke-width="2.5"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  <text x="128" y="215" font-family="system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fbbf24" text-anchor="middle" letter-spacing="1">QUEST UNLOCK</text>
+</svg>

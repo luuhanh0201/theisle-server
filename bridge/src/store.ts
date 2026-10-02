@@ -1,4 +1,4 @@
-import type { GameEvent, DeathEvent, GarageStoreResultEvent, Loc, PortalCommandEvent, PrisonEvent, SnapshotEvent, Skin, VitalName } from './events.js';
+import type { GameEvent, DeathEvent, GarageStoreResultEvent, Loc, MutationSlots, PortalCommandEvent, PrisonEvent, SnapshotEvent, Skin, VitalName } from './events.js';
 import { config } from './config.js';
 import { Catalog } from './catalog.js';
 import { SpeciesStats } from './species-stats.js';
@@ -100,6 +100,11 @@ export interface PlayerStats {
   ping: number | null;
   /** Vital maxima from the last snapshot that had them. */
   max: Partial<Record<VitalName, number>> | null;
+  /**
+   * The mutation slots of the dino they play now (Slot1…, ParentSlot1…, ElderSlot1A…):
+   * the spawn's, then each "mutation" event; null before a spawn was seen.
+   */
+  mutations: MutationSlots | null;
   /** Prime / elder status of the dino they play now (last "prime" event). */
   prime: {
     elder: boolean | null; prime: boolean | null; eligible: boolean | null; elderStacks: number | null;
@@ -312,7 +317,11 @@ export class Store {
           if (life !== null) life.damageTaken += amount;
         }
         if (kind === 'bite') {
-          const entry = this.#push({ ...event, ticks: 1 }, [event.attacker, event.victim]) as FeedEntry & DamageBite;
+          // A bite on or by AI counts in the stats above but is not logged (most
+          // of the hits, and nothing an admin looks for): kept off the feed and the
+          // timelines, still tracked so its hold ticks merge into one bite.
+          const withAi = event.attacker === 'ai' || event.victim === 'ai';
+          const entry = (withAi ? { ...event, ticks: 1, id: 0 } : this.#push({ ...event, ticks: 1 }, [event.attacker, event.victim])) as FeedEntry & DamageBite;
           this.#lastBite.set(`${event.attacker}>${event.victim}`, { t: event.t, last: amount, bite: event.bite, entry });
         }
         break;
@@ -329,6 +338,7 @@ export class Store {
         p.spawns += 1;
         p.species = event.species;
         p.growth = event.growth;
+        p.mutations = event.mutations ? { ...event.mutations } : null;
         // A new life starts a new trail; joining the old one draws a line
         // across the map from the corpse to the spawn point.
         this.#trails.delete(event.steamId);
@@ -375,7 +385,12 @@ export class Store {
 
       case 'mutation':
         this.catalog.addMutation(event.species, event.slot, event.to, { t: event.t, steamId: event.steamId });
-        this.#player(event.steamId, event.t, event.name);
+        {
+          const p = this.#player(event.steamId, event.t, event.name);
+          const now = { ...(p.mutations ?? {}) };
+          if (event.to) now[event.slot] = event.to; else delete now[event.slot];
+          p.mutations = now;
+        }
         this.#push(event, [event.steamId]);
         break;
 
@@ -801,6 +816,7 @@ export class Store {
         biggestKill: null,
         skin: null,
         ping: null,
+        mutations: null,
         max: null,
         prime: null,
         online: false,

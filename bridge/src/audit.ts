@@ -45,11 +45,12 @@ let lastPrune = 0;
 export const actorLabel = (a: Actor): string => (a.steamId === null ? 'ADMIN_TOKEN' : `${a.name ?? '?'} (${a.steamId})`);
 
 /** Record an action. `as`: who, when not the request's admin (a login, before there is one). */
-export async function audit(entry: Omit<AuditEntry, 't' | 'by' | 'byId' | 'byName'>, as?: Actor): Promise<void> {
+export async function audit(entry: Omit<AuditEntry, 't' | 'by' | 'byId' | 'byName'>, as?: Actor, at?: number): Promise<void> {
   const actor = as ?? actingAs.getStore();
   const now = Math.floor(Date.now() / 1000);
   const line: AuditEntry = {
-    t: now, ...entry,
+    // `at`: when it happened, for a line logged later (an admin's command read from the game's log).
+    t: at ?? now, ...entry,
     ...(actor ? { by: actorLabel(actor), byId: actor.steamId, byName: actor.name } : {}),
   };
   try {

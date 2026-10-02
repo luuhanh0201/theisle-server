@@ -1,6 +1,7 @@
 import { appendFile, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
+import { defaultIface, parseNetDev } from './ddos.js';
 
 /**
  * Server performance over time, for the panel's "Hiệu năng" page: how many
@@ -34,6 +35,27 @@ export interface MetricSample {
   memUsed: number | null;
   memTotal: number | null;
   swapUsed: number | null;
+  /**
+   * UDP datagrams a second into / out of the machine (/proc/net/snmp; the game
+   * talks UDP, port 7777 — LiveKit voice too, when someone uses it). Absent
+   * before 2026-10-02 16:00.
+   */
+  udpIn?: number | null;
+  udpOut?: number | null;
+  /** The main interface's traffic, kbit/s (every service). Absent before 2026-10-02 16:00. */
+  netInKbps?: number | null;
+  netOutKbps?: number | null;
+}
+
+/** The machine's UDP datagram counters from /proc/net/snmp, or null. */
+export function parseUdp(snmp: string): { inDatagrams: number; outDatagrams: number } | null {
+  const lines = snmp.split('\n').filter((l) => l.startsWith('Udp:'));
+  if (lines.length < 2) return null;
+  const keys = (lines[0] as string).split(/\s+/).slice(1);
+  const vals = (lines[1] as string).split(/\s+/).slice(1).map(Number);
+  const get = (k: string): number | null => { const i = keys.indexOf(k); return i >= 0 && Number.isFinite(vals[i]) ? vals[i] as number : null; };
+  const inD = get('InDatagrams'); const outD = get('OutDatagrams');
+  return inD === null || outD === null ? null : { inDatagrams: inD, outDatagrams: outD };
 }
 
 export const SAMPLE_MS = 10_000;
@@ -181,6 +203,7 @@ export class Metrics {
   readonly #samples: MetricSample[] = [];
   #prevCpu: { idle: number; total: number } | null = null;
   #game: { pid: number; ticks: number; at: number } | null = null;
+  #net: { at: number; udpIn: number; udpOut: number; rxBytes: number | null; txBytes: number | null } | null = null;
   readonly #file: string;
 
   constructor(dataDir: string, readonly live: () => Promise<LiveNumbers>) {
@@ -212,11 +235,32 @@ export class Metrics {
 
   /** One sample now (the first one has no CPU yet: it needs a previous reading). */
   async sample(now = Math.floor(Date.now() / 1000)): Promise<MetricSample> {
-    const [stat, mem, liveNums] = await Promise.all([
+    const [stat, mem, liveNums, snmp, netDev, route] = await Promise.all([
       readFile('/proc/stat', 'utf8').catch(() => ''),
       readFile('/proc/meminfo', 'utf8').catch(() => ''),
       this.live().catch((): LiveNumbers => ({ online: null, fps: null, ai: null, fish: null })),
+      readFile('/proc/net/snmp', 'utf8').catch(() => ''),
+      readFile('/proc/net/dev', 'utf8').catch(() => ''),
+      readFile('/proc/net/route', 'utf8').catch(() => ''),
     ]);
+    // Network: rates since the last sample.
+    const udp = parseUdp(snmp);
+    const iface = defaultIface(route);
+    const dev = iface ? parseNetDev(netDev, iface) : null;
+    let udpIn: number | null = null, udpOut: number | null = null, netInKbps: number | null = null, netOutKbps: number | null = null;
+    if (udp && this.#net && now > this.#net.at) {
+      const dt = now - this.#net.at;
+      udpIn = r1((udp.inDatagrams - this.#net.udpIn) / dt);
+      udpOut = r1((udp.outDatagrams - this.#net.udpOut) / dt);
+      if (dev && this.#net.rxBytes !== null && this.#net.txBytes !== null) {
+        netInKbps = r1(((dev.rxBytes - this.#net.rxBytes) * 8) / dt / 1000);
+        netOutKbps = r1(((dev.txBytes - this.#net.txBytes) * 8) / dt / 1000);
+      }
+      // A counter that went back (reboot, wrap): no rate this time.
+      if (udpIn < 0 || udpOut < 0) { udpIn = null; udpOut = null; }
+      if ((netInKbps ?? 0) < 0 || (netOutKbps ?? 0) < 0) { netInKbps = null; netOutKbps = null; }
+    }
+    if (udp) this.#net = { at: now, udpIn: udp.inDatagrams, udpOut: udp.outDatagrams, rxBytes: dev?.rxBytes ?? null, txBytes: dev?.txBytes ?? null };
     const cur = parseCpuTotals(stat);
     const cpu = cur && this.#prevCpu ? cpuPercent(this.#prevCpu, cur) : null;
     if (cur) this.#prevCpu = cur;
@@ -242,6 +286,7 @@ export class Metrics {
       t: now, online: liveNums.online, fps: liveNums.fps, ai: liveNums.ai, fish: liveNums.fish ?? null, cpu,
       gameCpu: gameCpu !== null && gameCpu >= 0 ? gameCpu : null, gameRss,
       memUsed: m ? m.totalMb - m.availableMb : null, memTotal: m?.totalMb ?? null, swapUsed: m?.swapUsedMb ?? null,
+      udpIn, udpOut, netInKbps, netOutKbps,
     };
     this.#samples.push(s);
     while (this.#samples.length > 0 && now - (this.#samples[0] as MetricSample).t > KEEP_S) this.#samples.shift();

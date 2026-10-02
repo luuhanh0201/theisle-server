@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Featherweight - The Isle Evrima Mutation</title>
+  <desc>Dấu chân của bạn biến mất nhanh hơn nhiều.</desc>
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad_featherweight" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#242c38"/>
+      <stop offset="60%" stop-color="#141922"/>
+      <stop offset="100%" stop-color="#0a0d12"/>
+    </radialGradient>
+    <!-- Outer Hex Border Gradient -->
+    <linearGradient id="strokeGrad_featherweight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="50%" stop-color="#4338ca"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <!-- Inner Accent Glow Gradient -->
+    <radialGradient id="innerGlow_featherweight" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#818cf8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow_featherweight" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagon Shadow & Base -->
+  <polygon points="128,13 228,70 228,186 128,243 28,186 28,70"
+           fill="url(#bgGrad_featherweight)"
+           stroke="url(#strokeGrad_featherweight)"
+           stroke-width="5"
+           stroke-linejoin="round"
+           filter="url(#shadow_featherweight)"/>
+
+  <!-- Inner Hexagon Frame Accent -->
+  <polygon points="128,25 217,76 217,180 128,231 39,180 39,76"
+           fill="none"
+           stroke="#818cf8"
+           stroke-width="1.5"
+           stroke-opacity="0.35"
+           stroke-linejoin="round"/>
+
+  <!-- Center Ambient Radial Glow -->
+  <circle cx="128" cy="128" r="68" fill="url(#innerGlow_featherweight)"/>
+
+  <!-- Custom Thematic Mutation Artwork -->
+  
+      <!-- Dinosaur Footprint Dissolving into Floating Wind & Feathers -->
+      <g transform="translate(128,128)">
+        <!-- 3-toed Footprint (Tridactyl) -->
+        <path d="M0,18 C8,18 14,24 12,34 C10,40 -10,40 -12,34 C-14,24 -8,18 0,18 Z" fill="#818cf8" opacity="0.6"/>
+        <!-- Middle Toe -->
+        <path d="M-6,18 L-4,-24 C-4,-30 0,-34 0,-34 C0,-34 4,-30 4,-24 L6,18 Z" fill="#818cf8" opacity="0.5"/>
+        <!-- Left Toe -->
+        <path d="M-8,20 L-32,-4 C-36,-8 -38,-14 -38,-14 C-38,-14 -32,-12 -28,-8 L-4,22 Z" fill="#818cf8" opacity="0.4"/>
+        <!-- Right Toe (Fading) -->
+        <path d="M8,20 L32,-4 C36,-8 38,-14 38,-14 C38,-14 32,-12 28,-8 L4,22 Z" fill="#818cf8" opacity="0.3"/>
+        <!-- Floating Light Feather Plume -->
+        <path d="M12,-36 C28,-40 38,-24 36,-10 C34,4 18,12 8,14 C12,6 20,-4 18,-20 C16,-28 14,-34 12,-36 Z" fill="#c7d2fe"/>
+        <path d="M10,-38 Q22,-8 6,16" stroke="#4338ca" stroke-width="2" fill="none"/>
+        <!-- Wind speed lines -->
+        <path d="M-40,28 L-18,28" stroke="#a5b4fc" stroke-width="2.5" stroke-dasharray="3,3"/>
+        <path d="M-36,36 L-10,36" stroke="#a5b4fc" stroke-width="2.5" stroke-dasharray="4,2"/>
+        <path d="M20,32 L40,32" stroke="#a5b4fc" stroke-width="2.5" stroke-dasharray="3,3"/>
+      </g>
+    
+
+  <!-- Status / Category Badge (if applicable) -->
+  
+</svg>

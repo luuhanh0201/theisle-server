@@ -32,6 +32,7 @@ end
 local H       = require("shared.isle.helpers")
 local Events  = require("shared.isle.events")
 local Msg     = require("shared.isle.messages")
+local Prison  = require("shared.isle.prison")   -- who is serving time (mods/Prison)
 local Storage = require("garage.storage")
 local Capture = require("garage.capture")
 local Restore = require("garage.restore")
@@ -42,6 +43,8 @@ local Skin    = require("garage.skin")
 local KeepSkin = require("garage.keepskin")
 local UnlockHeal = require("garage.unlockheal")
 local Light   = require("garage.light")
+local Admin   = require("garage.admin")
+local MutationItem = require("garage.mutation")
 
 local MOD = "DinoGarage"
 
@@ -106,6 +109,7 @@ local REASON_VI = {
     capture_failed = "không đọc được trạng thái dino",
     save_failed    = "không lưu được vào gara",
     kill_failed    = "không gỡ được dino khỏi game",
+    prison         = "bạn đang ở tù",
 }
 
 local function addressOf(pawn)
@@ -232,6 +236,11 @@ end
 --- Returns true once the countdown has started.
 local function doStore(ctrl, steamId, say, cmdId)
     say = say or function(m) H.safeNotify(ctrl, m) end
+    -- In prison: storing the dino would take it out of the prison.
+    if Prison.isInmate(steamId) then
+        Msg.say(say, "garage.prison", "Bạn đang ở tù: không dùng được gara.")
+        return false
+    end
     if pendingStore[steamId] then
         Msg.say(say, "garage.busy", "Đang có một lần cất đang đếm ngược.")
         return false
@@ -315,7 +324,9 @@ local function guardStores()
     for steamId, pending in pairs(pendingStore) do
         local c = findCtrl(steamId)
         local pawn = c and H.livePawnFromCtrl(c)
-        if pawn then   -- gone: the countdown's own onGone handles it
+        if Prison.isInmate(steamId) then   -- jailed during the countdown
+            failStore(steamId, "prison", c)
+        elseif pawn then   -- gone: the countdown's own onGone handles it
             if addressOf(pawn) ~= pending.address then
                 failStore(steamId, "not_same_dino", c)
             else
@@ -375,6 +386,10 @@ end
 --- taken out and the restore scheduled.
 local function doRedeem(ctrl, steamId, slot, where, say)
     say = say or function(m) H.safeNotify(ctrl, m) end
+    if Prison.isInmate(steamId) then
+        Msg.say(say, "garage.prison", "Bạn đang ở tù: không dùng được gara.")
+        return false
+    end
     -- "!redeem cu" = most recent slot, at the stored spot.
     if where == nil and slot ~= nil and (WHERE_STORED[slot] or WHERE_HERE[slot]) then
         slot, where = nil, slot
@@ -513,6 +528,69 @@ Inbox.on("light", function(c, cmd, say)
     Light.off(cmd.steamId)
     say("light: off")
     return true
+end)
+
+-- An admin's /adminpanel action from the web panel (garage/admin.lua): heal,
+-- vitals, growth, teleport — on the dino the player plays now.
+Inbox.on("admin", function(c, cmd, say)
+    local pawn = H.livePawnFromCtrl(c)
+    local okH, hp = pcall(function() return pawn and pawn:GetHealth() end)
+    if pawn == nil or not okH or type(hp) ~= "number" or hp <= 0 then
+        say("admin: the player has no living dino")
+        return false
+    end
+    local ok, line, words = Admin.run(pawn, cmd)
+    H.log("admin: " .. cmd.steamId .. " " .. tostring(line))
+    say(tostring(line))
+    if ok and words then Msg.notify(c, "admin.action", "Admin đã {action} cho dino của bạn.", { action = words }) end
+    return ok == true
+end)
+
+-- A mutation item from the player's bag on the web (garage/mutation.lua): into the slot they chose.
+Inbox.on("mutation", function(c, cmd, say)
+    local pawn = H.livePawnFromCtrl(c)
+    local okH, hp = pcall(function() return pawn and pawn:GetHealth() end)
+    if pawn == nil or not okH or type(hp) ~= "number" or hp <= 0 then
+        say("Bạn cần đang điều khiển một con dino còn sống để dùng mutation.")
+        return false
+    end
+    if cmd.mode == "clear" then
+        local ok, line, was = MutationItem.clear(pawn, cmd.slot)
+        H.log("mutation item: " .. cmd.steamId .. " clear slot " .. tostring(cmd.slot) .. " — " .. tostring(line))
+        say(tostring(line))
+        if ok then Msg.notify(c, "item.mutationClear", "Đã bỏ mutation {mutation} khỏi ô {slot}.", { mutation = was, slot = cmd.slot }) end
+        return ok == true
+    end
+    if cmd.mode == "prime" then
+        -- Phiếu Prime: a grown dino only (the bridge checked; the game's growth now decides).
+        local okG, g = pcall(function() return pawn:GetGrowth() end)
+        if not (okG and type(g) == "number" and g >= 0.999) then
+            say("Phiếu Prime cần dino 100% — vật phẩm vẫn còn.")
+            return false
+        end
+        local okP, already = pcall(function() return pawn:IsPrimeElder() end)
+        if okP and already == true then say("Dino này đã là prime — vật phẩm vẫn còn."); return false end
+        local ok, line = Admin.grow(pawn, 1, true)
+        H.log("mutation item: " .. cmd.steamId .. " prime — " .. tostring(line))
+        say(ok and "Đã lên prime — chỉ số prime được áp sau vài giây." or tostring(line))
+        if ok then Msg.notify(c, "item.prime", "Dino của bạn đã lên prime — chỉ số prime được áp sau vài giây.", {}) end
+        return ok == true
+    end
+    if cmd.mode == "upgrade" then
+        local ok, line, _, now = MutationItem.upgrade(pawn, cmd.mutation, cmd.fromStacks, cmd.maxStacks)
+        H.log("mutation item: " .. cmd.steamId .. " upgrade " .. tostring(cmd.mutation) .. " — " .. tostring(line))
+        say(tostring(line))
+        if ok then
+            Msg.notify(c, "item.mutationUpgrade", "Dino của bạn đã lên đời {generation} nhờ {mutation} — mọi mutation mạnh hơn.",
+                { mutation = cmd.mutation, generation = (now or 0) + 1 })
+        end
+        return ok == true
+    end
+    local ok, line = MutationItem.apply(pawn, cmd.mutation, cmd.slot, cmd.unlock, cmd.minGrowth)
+    H.log("mutation item: " .. cmd.steamId .. " " .. tostring(cmd.mutation) .. " slot " .. tostring(cmd.slot) .. " — " .. tostring(line))
+    say(tostring(line))
+    if ok then Msg.notify(c, "item.mutation", "Đã thêm mutation {mutation} vào dino của bạn (ô {slot}).", { mutation = cmd.mutation, slot = cmd.slot }) end
+    return ok == true
 end)
 
 -- The player's own skin from the web (garage/skin.lua): onto the dino they play now.

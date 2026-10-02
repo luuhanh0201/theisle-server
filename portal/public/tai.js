@@ -1,5 +1,7 @@
 'use strict';
 // tai.html: the launcher downloads, from /tai/version.json (scripts/release-launcher.sh).
+// Inside the launcher there is nothing to download (rule: AGENTS.md "Launcher"): back home.
+if (window.isleLauncher) location.replace('/');
 (async () => {
   const $ = (id) => document.getElementById(id);
   const mine = /Windows/i.test(navigator.userAgent) ? 'win' : /Linux|X11/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent) ? 'linux' : null;

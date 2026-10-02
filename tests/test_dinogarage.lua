@@ -266,6 +266,37 @@ for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
 clock = clock + 61
 writeSettings('{"storeCountdown":30,"cooldown":0}')
 
+print("\n-- 6f. prison (mods/Prison): an inmate cannot store or redeem; jailed mid-countdown fails it --")
+do
+  local Prison = require("shared.isle.prison")
+  os.execute('mkdir -p "' .. RUN .. '/Mods/shared"')
+  local function jailed(on)
+    if on then
+      local pf = assert(io.open(Prison.PATH, "w")); pf:write('{"inmates":["' .. STEAM .. '"]}'); pf:close()
+    else os.remove(Prison.PATH) end
+    Prison.reset()
+  end
+  clock = clock + 61
+  jailed(true)
+  local _, _, idS = storing()
+  check("an inmate's store is refused, no countdown", started(idS) and started(idS).ok == false
+    and (started(idS).messages[1] or ""):find("ở tù", 1, true) ~= nil, started(idS) and json.encode(started(idS)))
+  local idR = send("redeem", { slot = "1" })
+  check("an inmate's redeem is refused", started(idR) and started(idR).ok == false
+    and (started(idR).messages[1] or ""):find("ở tù", 1, true) ~= nil, started(idR) and json.encode(started(idR)))
+  jailed(false)
+  local _, cJ, idJ = storing()
+  check("not an inmate: the store starts", started(idJ) and started(idJ).ok == true)
+  jailed(true)
+  guard.fn()
+  check("jailed during the countdown: failed, reason 'prison'", final(idJ) and final(idJ).ok == false and final(idJ).reason == "prison",
+    final(idJ) and json.encode(final(idJ)))
+  check("…and told why", lastMsg(cJ):find("ở tù", 1, true) ~= nil, lastMsg(cJ))
+  H.advance(31000)
+  check("nothing stored, dino not removed", H.countCalls("SetHealth") == 0)
+  jailed(false)
+end
+
 print("\n-- 7. slots are numbered; a slot name sent along is ignored; bad names never reach a redeem --")
 Storage.put(STEAM, "1", { classPath = "X", growth = 1 })
 local c7 = H.makeCtrl(STEAM, H.makePawn({ growth = 0.7 }))
@@ -524,8 +555,14 @@ do
     if n == "SetGrowth" then growths = growths + 1; lastGrowth = i end
     if n == "SetMaxHunger" then lastHealth = i end   -- the stomach, recomputed from the new max health
   end
-  check("a prime dino: the growth set again after prime, the stomach / vitals after that", growths == 2
-        and lastGrowth > lastPrime and lastHealth > lastGrowth, growths .. " / " .. lastPrime .. " / " .. lastGrowth .. " / " .. lastHealth)
+  -- This fake's max health never moves, so the same growth again "did nothing": down to 0.5
+  -- and back too (restore.lua R.primeGrowth, 19b3) — 4 growth writes, the last one 1.
+  local growthArgs = {}
+  for _, c in ipairs(H.calls) do if c.what == "SetGrowth" then growthArgs[#growthArgs + 1] = tostring(c.args[1]) end end
+  check("a prime dino: the growth set again after prime, the stomach / vitals after that", growths == 4
+        and table.concat(growthArgs, " ") == "1 1 0.5 1"
+        and lastGrowth > lastPrime and lastHealth > lastGrowth,
+        growths .. " / " .. lastPrime .. " / " .. lastGrowth .. " / " .. lastHealth .. " / " .. table.concat(growthArgs, " "))
   local logged = false
   for _, l in ipairs(H.log) do if l:find("prime stats — max health", 1, true) then logged = true end end
   check("…and logged", logged)
@@ -595,12 +632,165 @@ check("health full as stored, on the new max — not 12,274 above a 10,860 max",
 local vitalsLine = false
 for _, l in ipairs(H.log) do if l:find("restore: vitals now", 1, true) then vitalsLine = true end end
 check("every vital against its max logged once the restore is done", vitalsLine)
+print("\n-- 19b2. blood and oxygen come back as shares too (stored plain, out prime: no 76 % blood) --")
+-- Quang Tèo 2026-10-02 20:23: stored with a plain max 9,350 (blood 9,350), came out prime
+-- (12,274): health 12,274/12,274 but blood written as 9,350 → bleeding, dark screen.
+for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
+Storage.put(STEAM, "plainmax", { classPath = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C", growth = 1,
+  health = 9350, maxHealth = 9350, blood = 9350, oxygen = 450, maxOxygen = 900, hunger = 100, maxHunger = 200 })
+local fresh19b2 = H.makePawn({ growth = 0.05, mutation = "None" })
+fresh19b2.__props.MaxHealth, fresh19b2.__props.MaxBlood, fresh19b2.__props.MaxOxygen = 12274, 12274, 1000
+useCtrl(H.makeCtrl(STEAM, fresh19b2))
+H.calls = {}
+send("redeem", { slot = "plainmax" })
+H.advance(3100); H.advance(600)
+local lastBlood, lastOxygen
+for _, cl in ipairs(H.calls) do
+  if cl.what == "SetBlood" then lastBlood = cl.args[1] end
+  if cl.what == "SetOxygen" then lastOxygen = cl.args[1] end
+end
+check("blood full as stored (no maxBlood: health's max), on the new max — not 9,350 of 12,274",
+      lastBlood and math.abs(lastBlood - 12274) < 0.01, tostring(lastBlood))
+check("oxygen the same share as stored (50 %) of the new max", lastOxygen and math.abs(lastOxygen - 500) < 0.01, tostring(lastOxygen))
+print("\n-- 19b3. a prime out of the garage onto a dino spawned a while before: down below the prime mark and back --")
+-- Quang Tèo 2026-10-02 20:14: the spawned T-Rex had been played 8 min; the same growth again after
+-- prime kept the plain max (9,350). PrimeLab: only a growth below 75 % and back adds prime's (12,274).
+for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
+Storage.put(STEAM, "aged", { classPath = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C", growth = 0.89, prime = true,
+  health = 6137, maxHealth = 12274, blood = 12274, maxBlood = 12274, hunger = 2025, maxHunger = 4050 })
+local aged = H.makePawn({ growth = 0.25, mutation = "None", prime = true, eligible = true })
+local agedMax, wentLow = 50, false
+rawset(aged, "GetMaxHealth", function() return agedMax end)
+rawset(aged, "GetMaxBlood", function() return agedMax end)
+rawset(aged, "SetGrowth", function(_, v)
+  H.record("SetGrowth", v)
+  if v < 0.75 then wentLow = true; agedMax = 2800
+  elseif wentLow then agedMax = 12274          -- back above the mark from below: prime's stats
+  else agedMax = 9350 end                       -- the same growth again: the plain max stays
+end)
+useCtrl(H.makeCtrl(STEAM, aged))
+H.calls = {}
+H.log = {}
+send("redeem", { slot = "aged" })
+H.advance(3100); H.advance(600)
+local agedGrowths = {}
+for _, cl in ipairs(H.calls) do if cl.what == "SetGrowth" then agedGrowths[#agedGrowths + 1] = tostring(cl.args[1]) end end
+check("growth: as stored, again (no effect), down to 0.5, as stored", table.concat(agedGrowths, " ") == "0.89 0.89 0.5 0.89",
+      table.concat(agedGrowths, " "))
+check("prime's max health now (12,274)", agedMax == 12274, tostring(agedMax))
+local agedHp, agedBlood
+for _, cl in ipairs(H.calls) do
+  if cl.what == "SetHealth" then agedHp = cl.args[1] end
+  if cl.what == "SetBlood" then agedBlood = cl.args[1] end
+end
+check("health the share it was stored with (50 %) of prime's max", agedHp and math.abs(agedHp - 6137) < 0.01, tostring(agedHp))
+check("blood full of prime's max", agedBlood and math.abs(agedBlood - 12274) < 0.01, tostring(agedBlood))
+local dipLine = false
+for _, l in ipairs(H.log) do if l:find("9350 -> 12274 (growth down to 0.5 and back)", 1, true) then dipLine = true end end
+check("logged: the dip was needed", dipLine)
+
+do
+  local Capture = require("garage.capture")
+  local p = H.makePawn({ growth = 1 })
+  local st = Capture.capture(p)
+  check("max blood and max oxygen captured", st and st.maxBlood == 100 and st.maxOxygen == 100,
+        st and (tostring(st.maxBlood) .. "/" .. tostring(st.maxOxygen)) or "nil")
+end
+
 do
   local Restore = require("garage.restore")
   check("scaled: a share of the stored max on the new max", Restore.scaled(50, 200, 80) == 20)
   check("scaled: no stored max — capped at the new max", Restore.scaled(500, nil, 80) == 80 and Restore.scaled(30, nil, 80) == 30)
   check("scaled: new max unreadable — the value as stored", Restore.scaled(500, 600, nil) == 500)
   check("scaled: never above full", Restore.scaled(700, 600, 80) == 80)
+end
+
+print("\n-- 19c. the originals a Heal resets to are this dino's maxima, not the hatchling's --")
+-- The game puts the maxima back to OriginalMaxHunger / Thirst / Stamina (the attribute set)
+-- on an admin's Heal; a garage dino spawned as a hatchling kept a 2.0 stomach there and went
+-- from 5,154 to 34 on a Heal (2026-10-01). Written after the restore, on its own set only.
+do
+  for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
+  writeSettings('{"cooldown":0}')
+  Storage.put(STEAM, "trike", { classPath = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C", growth = 0.78,
+    health = 7390, maxHealth = 10307, hunger = 5035, maxHunger = 5154, thirst = 996, maxThirst = 1000, maxStamina = 1000 })
+  local fresh = H.makePawn({ growth = 0.05, mutation = "None", gasVitals = true })
+  fresh.__props.MaxHunger = 2
+  for _, v in ipairs({ "MaxHunger", "MaxThirst", "MaxStamina" }) do
+    rawset(fresh, "Set" .. v, function(_, x) H.record("Set" .. v, x); fresh.__props[v] = x end)
+  end
+  -- As the game: growth raises the max health (and refills it), not the stomach max.
+  rawset(fresh, "SetGrowth", function(_, g) H.record("SetGrowth", g); fresh.__props.Growth = g; fresh.__props.MaxHealth = 10307; fresh.__props.Health = 10307 end)
+  local attr = function(v) return { BaseValue = v, CurrentValue = v } end
+  local mine = { OriginalMaxHunger = attr(2), OriginalMaxThirst = attr(1000), OriginalMaxStamina = attr(100),
+    GetOuter = function() return fresh end }
+  local other = { OriginalMaxHunger = attr(7), OriginalMaxThirst = attr(7), OriginalMaxStamina = attr(7),
+    GetOuter = function() return H.makePawn({}) end }
+  useCtrl(H.makeCtrl(STEAM, fresh))
+  local base = _G.FindAllOf
+  _G.FindAllOf = function(cls) if cls == "TIAttributeSetDinosaur" then return { other, mine } end; return base(cls) end
+  H.log = {}
+  send("redeem", { slot = "trike" })
+  H.advance(3100); H.advance(600)
+  local maxHunger = fresh.__props.MaxHunger
+  check("the stomach max was set for the grown dino (not the hatchling's 2)", maxHunger > 100, tostring(maxHunger))
+  check("OriginalMaxHunger = that stomach max (base and current)",
+    mine.OriginalMaxHunger.BaseValue == maxHunger and mine.OriginalMaxHunger.CurrentValue == maxHunger, tostring(mine.OriginalMaxHunger.BaseValue))
+  check("OriginalMaxThirst and OriginalMaxStamina = the maxima now",
+    mine.OriginalMaxThirst.BaseValue == fresh.__props.MaxThirst and mine.OriginalMaxStamina.BaseValue == fresh.__props.MaxStamina,
+    tostring(mine.OriginalMaxThirst.BaseValue) .. " / " .. tostring(mine.OriginalMaxStamina.BaseValue))
+  check("another dino's attribute set is left alone", other.OriginalMaxHunger.BaseValue == 7 and other.OriginalMaxThirst.BaseValue == 7)
+  local logged = false
+  for _, l in ipairs(H.log) do if l:find("restore: originals OriginalMaxHunger=", 1, true) then logged = true end end
+  check("logged: the originals written", logged)
+  _G.FindAllOf = base
+end
+
+print("\n-- 19d. a prime the game turns prime a few seconds late: its stats worked out once more --")
+-- A Carnotaurus came out with a plain max health (1,300) and got prime's (1,800) only at the
+-- next login: IsPrimeElder said no right after the restore, prime a few seconds later (2026-10-01).
+do
+  for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
+  writeSettings('{"cooldown":0}')
+  Storage.put(STEAM, "lateprime", { classPath = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C", growth = 0.95, prime = true,
+    health = 1800, maxHealth = 1800, hunger = 300, maxHunger = 600, primeData = { eligible = true } })
+  local fresh = H.makePawn({ growth = 0.05, mutation = "None", gasVitals = true })
+  local primeNow = false
+  rawset(fresh, "IsPrimeElder", function() return primeNow end)
+  local growthWrites = 0
+  rawset(fresh, "SetGrowth", function(_, g)
+    H.record("SetGrowth", g); growthWrites = growthWrites + 1
+    fresh.__props.Growth = g; fresh.__props.MaxHealth = primeNow and 1800 or 1300; fresh.__props.Health = fresh.__props.MaxHealth
+  end)
+  for _, v in ipairs({ "MaxHunger", "Hunger" }) do rawset(fresh, "Set" .. v, function(_, x) H.record("Set" .. v, x); fresh.__props[v] = x end) end
+  useCtrl(H.makeCtrl(STEAM, fresh))
+  H.log = {}
+  send("redeem", { slot = "lateprime" })
+  H.advance(3100); H.advance(600)
+  check("not prime yet at the restore: a plain max health (1,300), one growth write", fresh.__props.MaxHealth == 1300 and growthWrites == 1,
+    fresh.__props.MaxHealth .. " / " .. growthWrites)
+  fresh.__props.Health = 1300 * 0.9                      -- the player took a hit meanwhile: 90 %
+  primeNow = true                                        -- the game turns it prime
+  H.advance(5100)
+  check("prime now: the growth written once more → prime's max health (1,800)", growthWrites == 2 and fresh.__props.MaxHealth == 1800,
+    growthWrites .. " / " .. fresh.__props.MaxHealth)
+  check("health kept at the share it had (90 %), not refilled", math.abs(fresh.__props.Health - 1620) < 0.01, tostring(fresh.__props.Health))
+  local said = false
+  for _, l in ipairs(H.log) do if l:find("prime came late", 1, true) then said = true end end
+  check("logged: prime came late", said)
+  -- Already prime at the restore: no second look.
+  H.log = {}
+  Storage.put(STEAM, "lateprime2", { classPath = "BlueprintGeneratedClass /Game/BP_Dilo.BP_Dilo_C", growth = 0.95, prime = true,
+    health = 1800, maxHealth = 1800, hunger = 300, maxHunger = 600, primeData = { eligible = true } })
+  growthWrites = 0
+  clock = clock + 1
+  send("redeem", { slot = "lateprime2" })
+  H.advance(3100); H.advance(600); H.advance(5100)
+  local late = false
+  for _, l in ipairs(H.log) do if l:find("prime came late", 1, true) or l:find("still not prime", 1, true) then late = true end end
+  -- Prime from the start in this fake: the max is prime's after the first write already, the same
+  -- growth again does not move it, so down to 0.5 and back as well (4 writes) — never the late look.
+  check("prime at once: the usual regrow, no late look", growthWrites == 4 and not late, growthWrites .. " / " .. tostring(late))
 end
 
 print("\n-- 20. prime fixes: applied once, on the right dino only --")
@@ -786,6 +976,29 @@ local loff = sendLight(false)
 seq = table.concat(events, ", ")
 check("off: dimmed, detached, destroyed", started(loff) and started(loff).ok == true and seq == "intensity 0, detach, destroy", seq)
 _G.StaticFindObject, _G.FindAllOf = savedSFO, savedFAO
+
+say("\n-- a mutation item's slot is a number (1–4), not a garage slot name --")
+do
+  -- 2026-10-02: the garage's name check refused every mutation item ("bad_arguments").
+  local mp = H.makePawn({ growth = 0.8, mutation = "MUT_Life" })
+  local mc = H.makeCtrl(STEAM, mp)
+  useCtrl(mc)
+  local function sendMut(slot)
+    nextId = nextId + 1
+    local c = { id = nextId, type = "mutation", mode = "place", steamId = STEAM, createdAt = clock, expiresAt = clock + 600,
+                mutation = "Hydrodynamic", slot = slot, unlock = false }
+    local fm = assert(io.open("Mods/DinoGarage/Saved/inbox.json", "w"))
+    fm:write(json.encode({ commands = { c } })); fm:close()
+    poll.fn()
+    return nextId
+  end
+  local m1 = sendMut(3)
+  check("slot 3 runs, put in slot 3", started(m1) and started(m1).ok == true
+        and mp.ReplicatedMutationsData.MutationSlot3:ToString() == "Hydrodynamic", started(m1) and json.encode(started(m1)))
+  check("the result's slot is a string (the bridge reads it so)", started(m1) and started(m1).slot == "3")
+  local m2 = sendMut(7)
+  check("slot 7 refused before anything runs", started(m2) and started(m2).error == "bad_arguments")
+end
 
 say("\n-- the admin's minimums: health and growth needed to store --")
 do
