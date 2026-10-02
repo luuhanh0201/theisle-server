@@ -1666,7 +1666,12 @@ function placeSlot3d(slots) {
     }
     if (spot) spot.replaceWith(v.box);
     const key = JSON.stringify([g.species, g.skin]);
-    if (v.key !== key) { v.key = key; void v.viewer.show(g.species, window.Dino3D.fromGame(g.skin) ?? { colors: {} }); }
+    if (v.key !== key) {
+      v.key = key;
+      // Not shown (the files did not come, even after skin3d's retries): tried again a little later.
+      void v.viewer.show(g.species, window.Dino3D.fromGame(g.skin) ?? { colors: {} })
+        .then((ok) => { if (!ok) setTimeout(() => { if (v.key === key) v.key = null; }, 20000); });
+    }
   }
   for (const slot of [...slotViewers.keys()]) if (!keep.has(slot)) slotViewers.delete(slot);
 }

@@ -192,7 +192,7 @@ class Overlay {
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     // Only to look at, unless editing: clicks go through to the game.
-    win.setIgnoreMouseEvents(!this.editing);
+    this.#passThrough(win);
     win.setFocusable(this.editing);
     win.webContents.on('will-navigate', (e) => e.preventDefault());
     win.on('moved', () => {
@@ -212,6 +212,18 @@ class Overlay {
     win.loadFile(this.file, { query: { w: id } });
     this.wins[id] = win;
     this.last[id] = {};
+  }
+
+  /**
+   * Clicks through to the game unless editing. Set again after every show, move
+   * and opacity change: on Windows the window lost it when shown again (the
+   * voice widget hides when nobody talks) and took the game's clicks — "the
+   * overlay must let clicks through" (2026-10-03).
+   */
+  #passThrough(win) {
+    if (win.isDestroyed()) return;
+    if (this.editing) win.setIgnoreMouseEvents(false);
+    else win.setIgnoreMouseEvents(true, { forward: false });
   }
 
   #display(w) {
@@ -293,10 +305,10 @@ class Overlay {
       if (!this.editing || !win.isVisible()) {
         const b = this.#bounds(id);
         const key = `${b.x},${b.y},${b.width},${b.height}`;
-        if (last.bounds !== key) { win.setBounds(b); last.bounds = key; }
+        if (last.bounds !== key) { win.setBounds(b); last.bounds = key; this.#passThrough(win); }
       }
-      if (last.opacity !== w.opacity) { win.setOpacity(w.opacity / 100); last.opacity = w.opacity; }
-      if (wanted && !win.isVisible()) win.showInactive();
+      if (last.opacity !== w.opacity) { win.setOpacity(w.opacity / 100); last.opacity = w.opacity; this.#passThrough(win); }
+      if (wanted && !win.isVisible()) { win.showInactive(); this.#passThrough(win); }
       if (!wanted && win.isVisible()) win.hide();
     }
   }
@@ -369,7 +381,7 @@ class Overlay {
     for (const id of WIDGETS) {
       const win = this.wins[id];
       if (!win || win.isDestroyed()) continue;
-      win.setIgnoreMouseEvents(!this.editing);
+      this.#passThrough(win);
       win.setFocusable(this.editing);
       this.#sendSettings(id);
     }
@@ -394,6 +406,7 @@ class Overlay {
     if (win && !win.isDestroyed()) {
       const b = this.#bounds(id);
       win.setBounds(b);
+      this.#passThrough(win);
       if (this.last[id]) this.last[id].bounds = `${b.x},${b.y},${b.width},${b.height}`;
     }
     this.apply();

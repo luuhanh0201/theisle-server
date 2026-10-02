@@ -3432,6 +3432,9 @@
   :is(#page-voice, #page-overlay) .v-meter { position: relative; height: 12px; border-radius: 6px; background: var(--bg-surface); border: 1px solid var(--border); overflow: hidden; margin-top: 16px; }
   :is(#page-voice, #page-overlay) .v-meter .lvl { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--text-sub); transition: width .06s linear; }
   :is(#page-voice, #page-overlay) .v-meter .lvl.open { background: var(--emerald); }
+  #page-voice .v-test { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  #page-voice .v-test-ok { color: var(--emerald); }
+  #page-voice .v-test-bad { color: var(--rose, #f43f5e); }
   :is(#page-voice, #page-overlay) .v-meter .thr { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--amber); }
   :is(#page-voice, #page-overlay) .v-talk { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
   :is(#page-voice, #page-overlay) .v-talk .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-sub); }
@@ -4920,6 +4923,29 @@
           <p class="v-note" id="v-range-note">Càng gần bạn càng nghe to; ra tới mép tầm thì nhỏ dần rồi tắt.</p>
         </div>
 
+        <!-- The devices by name, and a test of both: shown before joining too (voice.js listDevices / testMic) -->
+        <div class="card" id="v-dev-card">
+          <div class="card-header">
+            <h2 class="card-title">Thiết bị âm thanh</h2>
+            <span class="card-subtitle">micro và loa dùng cho voice</span>
+          </div>
+          <div class="v-grid" style="margin-top:4px">
+            <label class="v-field">Micro
+              <select id="v-mic-dev"></select>
+            </label>
+            <label class="v-field" id="v-out-field">Loa / tai nghe
+              <select id="v-out-dev"></select>
+            </label>
+          </div>
+          <p class="v-note" id="v-dev-note" hidden>Chưa đọc được tên thiết bị: bấm <b>Test mic</b> (hoặc Vào kênh voice) và cho phép dùng micro.</p>
+          <div class="v-test">
+            <button type="button" class="btn btn-ghost" id="v-test-mic">🎙️ Test mic</button>
+            <button type="button" class="btn btn-ghost" id="v-test-out">🔊 Thử loa</button>
+          </div>
+          <div class="v-meter" id="v-test-meter" aria-hidden="true" hidden><div class="lvl" id="v-test-lvl"></div></div>
+          <p class="v-note" id="v-test-note">Test mic: bật để nghe trực tiếp giọng mình qua loa / tai nghe đã chọn, bấm lần nữa để tắt. Nên dùng tai nghe.</p>
+        </div>
+
         <div class="card" id="v-mic-card" hidden>
           <div class="card-header">
             <h2 class="card-title">Micro</h2>
@@ -4948,12 +4974,6 @@
             </div>
             <label class="v-field">Âm lượng nghe
               <input type="range" id="v-master" min="0" max="150" step="5" value="100">
-            </label>
-            <label class="v-field">Micro
-              <select id="v-mic-dev"></select>
-            </label>
-            <label class="v-field" id="v-out-field">Loa / tai nghe
-              <select id="v-out-dev"></select>
             </label>
           </div>
         </div>

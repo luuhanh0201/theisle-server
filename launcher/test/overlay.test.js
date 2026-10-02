@@ -121,3 +121,34 @@ test('dino widget: the tier effect ("đời" of the dino) is on by default and c
   assert.equal(normaliseWidget('dino', { show: { tierFx: false } }).show.tierFx, false);
   assert.equal(normaliseWidget('dino', { show: { tierFx: 'yes' } }).show.tierFx, true, 'only a boolean changes it');
 });
+
+test('clicks go through the widgets to the game: set again after every show, move and opacity change', () => {
+  const { Overlay } = require('../src/overlay.js');
+  // Like Windows: showing the window again, moving it or changing its opacity drops click-through.
+  class FakeWindow {
+    constructor() { this.visible = false; this.destroyed = false; this.ignore = false; this.webContents = { on() {}, send() {} }; }
+    setAlwaysOnTop() {} setVisibleOnAllWorkspaces() {} setFocusable() {} on() {} loadFile() {}
+    setIgnoreMouseEvents(on) { this.ignore = on === true; }
+    isDestroyed() { return this.destroyed; } destroy() { this.destroyed = true; }
+    isVisible() { return this.visible; } showInactive() { this.visible = true; this.ignore = false; } hide() { this.visible = false; }
+    setBounds() { this.ignore = false; } setOpacity() { this.ignore = false; } blur() {} getPosition() { return [0, 0]; }
+  }
+  const disp = { id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, size: { width: 1920, height: 1080 } };
+  const screen = { getPrimaryDisplay: () => disp, getAllDisplays: () => [disp], getDisplayNearestPoint: () => disp };
+  const o = new Overlay({ electron: { BrowserWindow: FakeWindow, screen }, preload: '', file: '', load: () => ({ enabled: true, widgets: { dino: { enabled: true } } }), save: () => {} });
+  o.create();
+  o.setGame({ dino: { species: 'Rex' } });
+  const dino = () => o.wins.dino;
+  assert.equal(dino().isVisible() && dino().ignore, true, 'shown: clicks go through');
+  o.toggle(); o.toggle();
+  assert.equal(dino().isVisible() && dino().ignore, true, 'hidden and shown again (F8): still through');
+  o.setSettings({ widget: 'dino', opacity: 60 });
+  assert.equal(dino().ignore, true, 'opacity changed: still through');
+  o.place('dino', { x: 300, y: 200, scale: 120 });
+  assert.equal(dino().ignore, true, 'moved: still through');
+  o.edit(true);
+  assert.equal(dino().ignore, false, 'editing: the widget takes the mouse');
+  o.edit(false);
+  assert.equal(dino().ignore, true, 'editing done: through again');
+  clearTimeout(o.graceTimer);
+});

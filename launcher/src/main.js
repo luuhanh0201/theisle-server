@@ -747,8 +747,11 @@ function start() {
     }
     callback(ours && (permission === 'notifications' || permission === 'clipboard-sanitized-write'));
   });
+  // The origin comes as a URL (Electron hands the origin's URL, "https://xomgay.online/"):
+  // compared as an origin, as the request handler does. Compared as a string it could never
+  // match: the page may not read the devices' names and the lists said "Micro 1", "Loa 1" (2026-10-03).
   session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) =>
-    origin === ORIGIN && (permission === 'media' || permission === 'notifications'));
+    isOurs(origin) && (permission === 'media' || permission === 'notifications'));
   app.on('web-contents-created', (_e, wc) => {
     wc.on('will-attach-webview', (e) => e.preventDefault());
   });

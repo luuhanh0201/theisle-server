@@ -84,8 +84,44 @@ let registry = null;
 registryReady.then((r) => { registry = r; });
 const versioned = (path) => { const f = registry?.files?.[path]; return f?.sha256 ? `${path}?v=${f.sha256.slice(0, 12)}` : path; };
 
+// Every model and texture through one queue: at most FETCH_AT_ONCE at a time, a
+// 503 / 429 / network error tried again a little later. Five garage slots
+// asked for 20 files at once and the proxy in front of the site answered 503
+// to most (2026-10-03): no slot showed its dino, the 503 page fed to the image
+// decoder ("source image could not be decoded"). As the mutation icons (mut-icons.js).
+// After a refusal, one at a time for a while (the proxy is busy), then two again.
+const FETCH_AT_ONCE = 2;
+const FETCH_TRIES = 8;
+const CALM_MS = 10000;
+let fetching = 0, refusedAt = 0;
+const waiting = [];
+const atOnce = () => (Date.now() - refusedAt < CALM_MS ? 1 : FETCH_AT_ONCE);
+async function slot() {
+  if (fetching < atOnce()) { fetching++; return; }
+  await new Promise((go) => waiting.push(go));   // the slot is handed over by done()
+}
+function done() {
+  fetching--;
+  while (waiting.length && fetching < atOnce()) { fetching++; waiting.shift()(); }
+}
+async function fetchAsset(url) {
+  for (let i = 1; ; i++) {
+    await slot();
+    let res = null, err = null;
+    try { res = await fetch(url); } catch (e) { err = e; }
+    if (res?.ok) {
+      try { return await res.blob(); } finally { done(); }
+    }
+    done();
+    const retry = res === null || res.status === 503 || res.status === 429 || res.status === 502;
+    if (!retry || i >= FETCH_TRIES) throw err ?? new Error(`${url}: ${res.status}`);
+    refusedAt = Date.now();
+    await new Promise((r) => setTimeout(r, Math.min(8000, 300 * 2 ** i) + Math.random() * 400));
+  }
+}
+
 async function imageData(url) {
-  const bmp = await createImageBitmap(await (await fetch(versioned(url))).blob());
+  const bmp = await createImageBitmap(await fetchAsset(versioned(url)));
   const c = document.createElement('canvas');
   c.width = SIZE; c.height = SIZE;
   const x = c.getContext('2d', { willReadFrequently: true });
@@ -308,11 +344,16 @@ function loadSpecies(name) {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
       const patternUrl = sp.patterns?.['1'] ?? Object.values(sp.patterns ?? {})[0];
+      const glbPath = sp.glbModel.slice(0, sp.glbModel.lastIndexOf('/') + 1);
       const [gltf, pattern, rac, normal] = await Promise.all([
-        loader.loadAsync(versioned(sp.glbModel)),
+        fetchAsset(versioned(sp.glbModel)).then((b) => b.arrayBuffer()).then((buf) => loader.parseAsync(buf, glbPath)),
         imageData(patternUrl),
         sp.racMap ? imageData(sp.racMap) : null,
-        sp.normalMap ? new THREE.TextureLoader().loadAsync(versioned(sp.normalMap)) : null,
+        sp.normalMap ? fetchAsset(versioned(sp.normalMap)).then((b) => createImageBitmap(b, { imageOrientation: 'none' })).then((bmp) => {
+          const t = new THREE.Texture(bmp);
+          t.needsUpdate = true;
+          return t;
+        }) : null,
       ]);
       if (normal) { normal.flipY = false; normal.colorSpace = THREE.NoColorSpace; }
       return { gltf, classes: classify(pattern), shade: rac ? shading(rac) : new Uint8Array(SIZE * SIZE).fill(230), normal,

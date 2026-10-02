@@ -453,7 +453,7 @@
       let want = false;
       if (settings.mode === 'vad') want = now - lastLoud < HANGOVER_MS;
       else if (settings.mode === 'ptt') want = pttHeld || externalPtt;
-      if (inGame === false) want = false;
+      if (inGame === false || testing) want = false;
       setSending(want);
       const pct = Math.max(0, Math.min(100, ((db + 80) / 60) * 100));
       $('lvl').style.width = `${pct}%`;
@@ -516,24 +516,130 @@
   }
 
   // --- devices ---------------------------------------------------------------------------
+  // Listed by name, before joining too (the browser gives names once the page may use the
+  // micro: after Test mic or joining; before, "Micro 1"… and a note saying so). Windows'
+  // own entries read "Default - …" / "Communications - …": said in Vietnamese.
+  const deviceName = (d, i) => {
+    const label = (d.label || '').replace(/^Default - /, 'Mặc định — ').replace(/^Communications - /, 'Liên lạc — ');
+    return label || `${d.kind === 'audioinput' ? 'Micro' : 'Loa'} ${i + 1}`;
+  };
   async function listDevices() {
-    const fill = async (sel, kind, current) => {
-      const list = await LK.Room.getLocalDevices(kind).catch(() => []);
+    const all = navigator.mediaDevices?.enumerateDevices ? await navigator.mediaDevices.enumerateDevices().catch(() => []) : [];
+    // Before the permission the browser lists the devices with no id and no name: one
+    // "default" entry then (the system's own), and the note.
+    let unnamed = false;
+    const fill = (sel, kind, current) => {
+      const found = all.filter((d) => d.kind === kind);
+      let list = found.filter((d) => d.deviceId);
+      if (list.length === 0 && found.length > 0) {
+        unnamed = true;
+        list = [{ kind, deviceId: '', label: kind === 'audioinput' ? 'Micro mặc định của máy' : 'Loa mặc định của máy' }];
+      }
+      if (list.some((d) => !d.label)) unnamed = true;
       sel.replaceChildren(...list.map((d, i) => {
         const o = document.createElement('option');
         o.value = d.deviceId;
-        o.textContent = d.label || `${kind === 'audioinput' ? 'Micro' : 'Loa'} ${i + 1}`;
-        o.selected = d.deviceId === current;
+        o.textContent = deviceName(d, i);
+        o.selected = d.deviceId === (current || '');
         return o;
       }));
-      return list.length;
+      return found.length;
     };
-    await fill($('mic-dev'), 'audioinput', settings.mic || (room && room.getActiveDevice('audioinput')));
+    const mics = fill($('mic-dev'), 'audioinput', settings.mic || (room && room.getActiveDevice('audioinput')));
     // Choosing the output needs setSinkId (Chrome/Edge, the launcher); hide it elsewhere.
     const canPickOut = typeof AudioContext.prototype.setSinkId === 'function';
-    $('out-field').hidden = !canPickOut || (await fill($('out-dev'), 'audiooutput', settings.out)) === 0;
+    const outs = fill($('out-dev'), 'audiooutput', settings.out);
+    $('out-field').hidden = !canPickOut || outs === 0;
+    const note = $('dev-note');
+    if (mics === 0) { note.hidden = false; note.textContent = 'Không thấy micro nào trên máy.'; }
+    else if (unnamed) { note.hidden = false; note.innerHTML = 'Chưa đọc được tên thiết bị: bấm <b>Test mic</b> (hoặc Vào kênh voice) và cho phép dùng micro.'; }
+    else note.hidden = true;
   }
-  if (navigator.mediaDevices) navigator.mediaDevices.addEventListener('devicechange', () => { if (room) listDevices(); });
+  if (navigator.mediaDevices) navigator.mediaDevices.addEventListener('devicechange', () => { void listDevices(); });
+  void listDevices();
+
+  // --- test: the micro heard live on the chosen output (on until pressed again), and the output ----
+  // "Bật test xong nghe trực tiếp giọng lúc đó" (2026-10-03): the micro's sound straight to
+  // the output, with a level meter. Headphones: on speakers it whistles back (the page says so).
+  let testing = false;          // the voice meter sends nothing meanwhile (setSending(false))
+  let monitor = null;           // { stream, ctx, timer }
+  const pickedName = (sel) => sel.selectedOptions[0]?.textContent || 'mặc định';
+  function testNote(text, cls = '') { const n = $('test-note'); n.textContent = text; n.className = `v-note ${cls}`; }
+  function stopMonitor(text) {
+    if (monitor) {
+      clearInterval(monitor.timer);
+      for (const t of monitor.stream.getTracks()) t.stop();
+      monitor.ctx.close().catch(() => {});
+      monitor = null;
+    }
+    testing = false;
+    $('test-meter').hidden = true;
+    $('test-lvl').style.width = '0%';
+    $('test-mic').textContent = '🎙️ Test mic';
+    $('test-mic').classList.remove('btn-emerald');
+    $('test-out').disabled = false;
+    if (text) testNote(text);
+  }
+  async function startMonitor() {
+    testing = true;
+    $('test-mic').disabled = true; $('test-out').disabled = true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { ...captureOptions(), ...(settings.mic ? { deviceId: { exact: settings.mic } } : {}) } });
+      const ctx = new AudioContext({ latencyHint: 'interactive' });
+      monitor = { stream, ctx, timer: null };
+      await listDevices();      // the names come with the permission
+      if (settings.out && typeof ctx.setSinkId === 'function') await ctx.setSinkId(settings.out).catch(() => {});
+      await ctx.resume().catch(() => {});
+      const src = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      src.connect(analyser);
+      src.connect(ctx.destination);
+      const buf = new Float32Array(analyser.fftSize);
+      $('test-meter').hidden = false;
+      monitor.timer = setInterval(() => {
+        analyser.getFloatTimeDomainData(buf);
+        let sum = 0;
+        for (const v of buf) sum += v * v;
+        const db = 20 * Math.log10(Math.sqrt(sum / buf.length) + 1e-9);
+        $('test-lvl').style.width = `${Math.max(0, Math.min(100, ((db + 80) / 60) * 100))}%`;
+        $('test-lvl').classList.toggle('open', db > -50);
+      }, 50);
+      const name = stream.getAudioTracks()[0]?.label || pickedName($('mic-dev'));
+      $('test-mic').textContent = '⏹ Tắt test mic';
+      $('test-mic').classList.add('btn-emerald');
+      testNote(`Đang nghe trực tiếp "${name}" qua "${pickedName($('out-dev'))}". Nói thử: bạn nghe thấy giọng mình và thanh mức âm nhảy. Dùng tai nghe (loa ngoài sẽ hú). Không ai khác nghe thấy lúc này.`, 'v-test-ok');
+    } catch (err) {
+      stopMonitor();
+      testNote(micError(err), 'v-test-bad');
+    } finally {
+      $('test-mic').disabled = false;
+    }
+  }
+  // Another micro / output picked while testing: test that one.
+  async function restartMonitor() { if (monitor) { stopMonitor(); await startMonitor(); } }
+  async function testOut() {
+    const ctx = new AudioContext();
+    try {
+      if (settings.out && typeof ctx.setSinkId === 'function') await ctx.setSinkId(settings.out).catch(() => {});
+      const name = pickedName($('out-dev'));
+      testNote(`Đang phát tiếng thử ra "${name}"…`);
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      const t = ctx.currentTime;
+      for (const [i, f] of [523, 659, 784].entries()) {
+        const o = ctx.createOscillator();
+        o.frequency.value = f;
+        o.connect(gain);
+        o.start(t + i * 0.22); o.stop(t + i * 0.22 + 0.2);
+      }
+      gain.gain.setValueAtTime(0.18, t);
+      await new Promise((r) => setTimeout(r, 800));
+      testNote(`Đã phát 3 tiếng "ting" ra "${name}". Không nghe thấy: chọn loa / tai nghe khác.`, 'v-test-ok');
+    } finally { ctx.close().catch(() => {}); }
+  }
+  $('test-mic').addEventListener('click', () => { if (monitor) stopMonitor('Đã tắt test mic.'); else if (!testing) void startMonitor(); });
+  $('test-out').addEventListener('click', () => { void testOut(); });
 
   // --- rendering ---------------------------------------------------------------------------
   function setConn(kind, text) {
@@ -658,12 +764,14 @@
   $('range-key').addEventListener('click', () => captureKey('range'));
   $('mic-dev').addEventListener('change', async (e) => {
     settings.mic = e.target.value; save();
+    void restartMonitor();
     if (!room) return;
     await room.switchActiveDevice('audioinput', settings.mic).catch(() => {});
     stopMeter(); startMeter();
   });
   $('out-dev').addEventListener('change', async (e) => {
     settings.out = e.target.value; save();
+    void restartMonitor();
     if (room) await room.switchActiveDevice('audiooutput', settings.out).catch(() => {});
   });
 
