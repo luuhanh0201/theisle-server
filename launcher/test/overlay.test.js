@@ -122,33 +122,42 @@ test('dino widget: the tier effect ("đời" of the dino) is on by default and c
   assert.equal(normaliseWidget('dino', { show: { tierFx: 'yes' } }).show.tierFx, true, 'only a boolean changes it');
 });
 
-test('clicks go through the widgets to the game: set again after every show, move and opacity change', () => {
+test('clicks go through the widgets to the game: set again after every show, move and opacity change', async () => {
   const { Overlay } = require('../src/overlay.js');
-  // Like Windows: showing the window again, moving it or changing its opacity drops click-through.
+  // Like X11 (measured, 2026-10-03): showing or resizing the window puts its input area back to the
+  // whole window a moment LATER (here 10 ms), undoing a click-through set right then.
   class FakeWindow {
     constructor() { this.visible = false; this.destroyed = false; this.ignore = false; this.webContents = { on() {}, send() {} }; }
     setAlwaysOnTop() {} setVisibleOnAllWorkspaces() {} setFocusable() {} on() {} loadFile() {}
     setIgnoreMouseEvents(on) { this.ignore = on === true; }
     isDestroyed() { return this.destroyed; } destroy() { this.destroyed = true; }
-    isVisible() { return this.visible; } showInactive() { this.visible = true; this.ignore = false; } hide() { this.visible = false; }
-    setBounds() { this.ignore = false; } setOpacity() { this.ignore = false; } blur() {} getPosition() { return [0, 0]; }
+    #later() { setTimeout(() => { this.ignore = false; }, 10); }
+    isVisible() { return this.visible; } showInactive() { this.visible = true; this.#later(); } hide() { this.visible = false; }
+    setBounds() { this.#later(); } setOpacity() {} blur() {} getPosition() { return [0, 0]; }
   }
+  const settle = () => new Promise((r) => setTimeout(r, 650));
   const disp = { id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, size: { width: 1920, height: 1080 } };
   const screen = { getPrimaryDisplay: () => disp, getAllDisplays: () => [disp], getDisplayNearestPoint: () => disp };
   const o = new Overlay({ electron: { BrowserWindow: FakeWindow, screen }, preload: '', file: '', load: () => ({ enabled: true, widgets: { dino: { enabled: true } } }), save: () => {} });
   o.create();
   o.setGame({ dino: { species: 'Rex' } });
   const dino = () => o.wins.dino;
-  assert.equal(dino().isVisible() && dino().ignore, true, 'shown: clicks go through');
+  await settle();
+  assert.equal(dino().isVisible() && dino().ignore, true, 'shown: clicks go through (after the window settled)');
   o.toggle(); o.toggle();
+  await settle();
   assert.equal(dino().isVisible() && dino().ignore, true, 'hidden and shown again (F8): still through');
   o.setSettings({ widget: 'dino', opacity: 60 });
+  await settle();
   assert.equal(dino().ignore, true, 'opacity changed: still through');
   o.place('dino', { x: 300, y: 200, scale: 120 });
-  assert.equal(dino().ignore, true, 'moved: still through');
+  await settle();
+  assert.equal(dino().ignore, true, 'moved / resized: still through');
   o.edit(true);
+  await settle();
   assert.equal(dino().ignore, false, 'editing: the widget takes the mouse');
   o.edit(false);
+  await settle();
   assert.equal(dino().ignore, true, 'editing done: through again');
   clearTimeout(o.graceTimer);
 });

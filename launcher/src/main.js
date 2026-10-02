@@ -143,8 +143,14 @@ function writeSettings(patch) {
 // a black frame around each widget. Without GPU acceleration it draws them in
 // software, transparent everywhere. Only before the app is ready: changing it
 // restarts the launcher.
+// Without the GPU this Electron has no WebGL at all ("NO WEBGL" in a test window,
+// 2026-10-03): the 3D dinos (garage, Skin, Game, Home) stayed empty. WebGL in
+// software (SwiftShader) then: the same test window had WebGL 2 again.
 const overlayCompat = !needsX11 && readSettings().overlayCompat === true;
-if (overlayCompat) app.disableHardwareAcceleration();
+if (overlayCompat) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+}
 
 /** Start the launcher again (the same way as the Wayland relaunch above), then quit this one. */
 function relaunch() {
@@ -729,6 +735,10 @@ function start() {
   app.userAgentFallback = app.userAgentFallback.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
   console.info(`[launcher] user agent: ${app.userAgentFallback}`);
   if (overlayCompat) console.info('[launcher] overlay compatibility: GPU acceleration off');
+  // Whether the 3D dinos can draw at all ("enabled" / "unavailable_software" = yes; "disabled_off" = no WebGL).
+  app.once('browser-window-created', () => setTimeout(() => {
+    console.info(`[launcher] webgl: ${app.getGPUFeatureStatus().webgl}`);
+  }, 3000));
   // Why it stopped, in the log a player can send.
   process.on('uncaughtException', (err) => console.error('[launcher] uncaught:', err));
   app.on('before-quit', () => console.info(`[launcher] quitting${quitting ? '' : ' (not from the tray / gate)'}`, new Error('quit from').stack.split('\n').slice(1, 6).join(' | ')));

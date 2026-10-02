@@ -26,6 +26,9 @@ function normaliseKeep(raw) {
 }
 const POSITIONS = ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right', 'custom'];
 
+/** Click-through set again this long after a show / move / resize (#passThrough). */
+const PASS_THROUGH_AGAIN_MS = [30, 150, 500];
+
 /** Size of each widget's window at 100 %; content hugs the corner it sits in. */
 const BASE = { voice: [340, 420], map: [260, 260], dino: [270, 250], quests: [320, 340] };
 
@@ -215,15 +218,22 @@ class Overlay {
   }
 
   /**
-   * Clicks through to the game unless editing. Set again after every show, move
-   * and opacity change: on Windows the window lost it when shown again (the
-   * voice widget hides when nobody talks) and took the game's clicks — "the
-   * overlay must let clicks through" (2026-10-03).
+   * Clicks through to the game unless editing. On X11 (Linux, XWayland too) the
+   * window's input area is put back to the whole window when it is mapped or
+   * resized — a moment AFTER show / setBounds return, so a call right then is
+   * undone (the live overlay took the clicks on all of it, 2026-10-03). Measured
+   * with a test window (input shape read back): set at once, or on the window's
+   * show / resize / move events, it is lost after the first show and every
+   * resize; set again 30 / 150 / 500 ms later it held in every case.
    */
   #passThrough(win) {
-    if (win.isDestroyed()) return;
-    if (this.editing) win.setIgnoreMouseEvents(false);
-    else win.setIgnoreMouseEvents(true, { forward: false });
+    const set = () => {
+      if (win.isDestroyed()) return;
+      if (this.editing) win.setIgnoreMouseEvents(false);
+      else win.setIgnoreMouseEvents(true, { forward: false });
+    };
+    set();
+    for (const ms of PASS_THROUGH_AGAIN_MS) setTimeout(set, ms);
   }
 
   #display(w) {
