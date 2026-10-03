@@ -190,7 +190,11 @@ export const COLORS: Record<DiscordKind, number> = {
 export interface LogLine { kind: DiscordKind; text: string; t: number }
 
 /** A feed entry as a log line, or null when it is not one (damage, prime…). */
-export function lineOf(e: FeedEntry): LogLine | null {
+/**
+ * `isAdmin`: an admin's deaths and kills, either side, go to no channel (the
+ * players read them there; the owner, 2026-10-04 — as on the site, store.ts). The panel keeps them.
+ */
+export function lineOf(e: FeedEntry, isAdmin: (steamId: string | undefined) => boolean = () => false): LogLine | null {
   const t = e.t;
   switch (e.type) {
     case 'session_start':
@@ -202,7 +206,8 @@ export function lineOf(e: FeedEntry): LogLine | null {
     case 'chat':
       return { kind: 'chat', t, text: `💬 ${who(e.name, e.steamId)}: ${plain(e.message)}` };
     case 'death': {
-      if (e.cause !== undefined) return null;          // stored in the garage / removed by an admin: not a death
+      if (e.cause !== undefined) return null;          // stored in the garage / removed by an admin / reborn: not a death
+      if (isAdmin(e.steamId) || isAdmin(e.killer)) return null;
       const victim = `${who(e.name, e.steamId)} (${species(e.species)}${pct(e.growth)})`;
       const life = duration(e.lifeSeconds);
       if (e.killer !== undefined && e.killer !== 'ai') {

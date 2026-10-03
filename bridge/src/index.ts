@@ -195,7 +195,7 @@ const aiReset = new AiReset({
 // announcements and the server's state, sent out by webhook (discord.ts).
 const discord = new DiscordLog({ startedAt: Math.floor(Date.now() / 1000) });
 await discord.load();
-store.onFeed = (entry) => discord.post(lineOf(entry));
+store.onFeed = (entry) => discord.post(lineOf(entry, (id) => store.isAdmin(id)));
 prisonDiscord.post = (text) => discord.post({ kind: 'prison', t: Math.floor(Date.now() / 1000), text });
 auditListeners.push((entry) => discord.post(auditLine(entry)));
 rcon.onRun = (name, args) => {

@@ -153,3 +153,14 @@ test('the queue is on disk: a restart does not lose what was not sent', async ()
   const settings = JSON.parse(readFileSync(join(root, 'discord.json'), 'utf8'));
   assert.equal(settings.channels[0].url, URL1);
 });
+
+test('an admin\'s deaths and kills, either side, go to no channel (the players read them there)', () => {
+  const ADMIN = '76561199248426579', P = '76561198000000001';
+  const isAdmin = (id) => id === ADMIN;
+  const death = (steamId, killer) => ({ id: 1, t: 100, type: 'death', steamId, name: 'X', species: 'BP_Deinosuchus_C', growth: 1, attributed: killer !== undefined, ...(killer ? { killer, killerName: 'K' } : {}) });
+  assert.equal(lineOf(death(ADMIN), isAdmin), null, 'an admin dying');
+  assert.equal(lineOf(death(P, ADMIN), isAdmin), null, 'killed by an admin');
+  assert.equal(lineOf(death(ADMIN, P), isAdmin), null, 'a player killing an admin');
+  assert.equal(lineOf(death(P, '76561198000000002'), isAdmin).kind, 'kill', 'player on player: posted');
+  assert.equal(lineOf(death(P), isAdmin).kind, 'death');
+});
