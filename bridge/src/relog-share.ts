@@ -18,7 +18,14 @@ interface Left { t: number; species: string; health: number; maxHealth: number; 
 
 export class RelogShare {
   #last = new Map<string, Left>();
-  #left = new Map<string, Left>();
+  /**
+   * A session that ended: when, and the last snapshot before it. The two files are read
+   * apart when the bridge starts, so the session's end may come before its snapshots
+   * (T-Rex Nổi Loạn, 2026-10-04: left on 02/10, the bridge restarted several times, the
+   * end was read first and the relog went unseen — 76 % blood, dark screen). The
+   * snapshots up to the end still fill it in when they come after.
+   */
+  #left = new Map<string, { end: number; snap: Left | null }>();
 
   /** Events older than this (read again when the bridge starts) are only remembered, never acted on. */
   constructor(readonly startedAt: number) {}
@@ -30,12 +37,17 @@ export class RelogShare {
       if (typeof e.health !== 'number' || typeof max.health !== 'number' || max.health <= 0) return null;
       const now: Left = { t: e.t, species: e.species, health: e.health, maxHealth: max.health,
         blood: typeof e.blood === 'number' ? e.blood : null, maxBlood: typeof max.blood === 'number' ? max.blood : null };
-      const left = this.#left.get(e.steamId);
+      const ended = this.#left.get(e.steamId);
+      // A snapshot from before the end (read late): it may be the last one before they left.
+      if (ended !== undefined && e.t <= ended.end) {
+        if (ended.snap === null || e.t >= ended.snap.t) ended.snap = now;
+        return null;
+      }
       this.#last.set(e.steamId, now);
-      // The snapshots and the sessions are two files read apart: one from before the relog may come late.
-      if (left === undefined || e.t <= left.t) return null;
+      if (ended === undefined) return null;
       this.#left.delete(e.steamId);
-      if (e.t < this.startedAt) return null;
+      const left = ended.snap;
+      if (left === null || e.t < this.startedAt) return null;
       if (left.species !== now.species || now.maxHealth < left.maxHealth * JUMP) return null;
       // Only when the health is still the number it was (the game kept it), not after a fight.
       if (Math.abs(now.health - left.health) > left.maxHealth * 0.05) return null;
@@ -45,7 +57,7 @@ export class RelogShare {
     }
     if (e.type === 'session_end') {
       const last = this.#last.get(e.steamId);
-      if (last !== undefined) this.#left.set(e.steamId, { ...last, t: Math.max(last.t, e.t) });
+      this.#left.set(e.steamId, { end: e.t, snap: last !== undefined && last.t <= e.t ? last : null });
       return null;
     }
     if (e.type === 'death') this.#left.delete(e.steamId);

@@ -29,3 +29,14 @@ test('nothing to do: no jump, another species, a fight since, or an old event re
   old.onEvent(snap(200, 9350, 9350)); old.onEvent({ type: 'session_end', t: 210, steamId: ME });
   assert.equal(old.onEvent(snap(260, 9350, 12274)), null, 'read again when the bridge starts: not acted on');
 });
+
+test('the session\'s end read before its snapshots (the two files read apart at a bridge start): the relog is still seen', () => {
+  // T-Rex Nổi Loạn, 2026-10-04: left 02/10 at full health (9,350), the bridge restarted since and read
+  // the end before the snapshots; back 31 h later at 9,354 / 12,274 (76 %, dark screen) — nothing was done.
+  const r = new RelogShare(5000);
+  assert.equal(r.onEvent({ type: 'session_end', t: 1000, steamId: ME }), null);
+  assert.equal(r.onEvent(snap(900, 6000, 9350)), null);
+  assert.equal(r.onEvent(snap(995, 9350, 9350)), null, 'the last one before the end, read after it');
+  assert.equal(r.onEvent(snap(990, 9000, 9350)), null, 'an older one does not replace it');
+  assert.deepEqual(r.onEvent(snap(6000, 9354, 12274, 9355, 12274)), { steamId: ME, health: 1, blood: 1, maxBefore: 9350, maxNow: 12274 });
+});
