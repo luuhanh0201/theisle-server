@@ -33,7 +33,7 @@ test('every panel route needs a permission; unknown ones are the super admin\'s'
     ['POST', '/api/restore-life', 'garage.edit'], ['PUT', '/api/garage-settings', 'garage.settings'], ['PUT', '/api/mutations/Hydro', 'garage.edit'],
     ['PUT', '/api/messages', 'mods.edit'], ['GET', '/api/messages', 'mods.view'],
     ['POST', '/api/server/restart', 'server.power'], ['PUT', '/api/server/schedule', 'server.schedule'],
-    ['GET', '/api/game-config', 'config.view'], ['PUT', '/api/game-config', 'config.edit'],
+    ['GET', '/api/game-config', 'config.view'], ['GET', '/api/members', 'config.view'], ['GET', '/api/svip', 'svip.edit'], ['PUT', '/api/svip', 'svip.edit'], ['PUT', '/api/game-config', 'config.edit'],
     ['POST', '/api/rcon/announce', 'rcon.announce'], ['POST', '/api/rcon/toggleAi', 'rcon.run'],
     ['POST', '/api/backups/restore', 'backups.restore'], ['POST', '/api/backups/wipe', 'backups.restore'], ['POST', '/api/backups', 'backups.edit'],
     ['GET', '/api/backups/file/x.tar.gz', 'backups.view'], ['DELETE', '/api/backups/file/x.tar.gz', 'backups.edit'],

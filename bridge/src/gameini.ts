@@ -422,7 +422,9 @@ export async function readLive(): Promise<LiveConfig> {
  * Validation happens BEFORE anything is written.
  */
 export async function saveSettings(raw: unknown): Promise<Settings> {
-  const settings = validateSettings(raw);
+  // What is not sent stays as it was saved: a page that saves only some keys (Thành viên: the
+  // admins, whitelist, VIP) must not drop the others, nor the config page those it no longer shows.
+  const settings = { ...(await readSettings()), ...validateSettings(raw) };
   const current = await readFile(liveIniPath(), 'utf8');
   // The game's admin list leaves out the admins switched off in game (permissions.ts);
   // the saved settings keep them: they are still the panel's admins.

@@ -2979,6 +2979,89 @@
     </div>
 
     <!-- Quản trị -->
+    <!-- Thành viên: admin, phân quyền, whitelist, VIP, SVip — one page (owner, 2026-10-04) -->
+    <div data-view="members" hidden>
+      <div class="page-head"><div><h1>Thành viên</h1><p>Ai là admin, quyền của từng admin, whitelist, VIP và SVip.</p></div></div>
+      <nav class="subtabs" data-subnav="members" aria-label="Mục của Thành viên"></nav>
+      <div class="banner" id="mb-pending" hidden style="margin-bottom:12px">Danh sách đã lưu vào Game.ini — game áp dụng từ <b>lần khởi động lại tới</b>.</div>
+      <div data-sub="members:admins" hidden>
+        <section class="card">
+          <div class="card-head"><h2>Admin</h2><span class="sub">admin trong game và trên panel</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="step-hint">Có hiệu lực trên panel ngay; trong game từ lần khởi động lại tới. Quyền chi tiết của từng admin: mục <b>Phân quyền</b>. Admin cố định (ADMIN_STEAM_IDS trên VPS) không bỏ được ở đây.</div>
+            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="cfg-field" style="flex:1 1 240px"><label for="mb-admins-id">SteamID</label>
+                <input id="mb-admins-id" type="text" inputmode="numeric" maxlength="17" placeholder="7656119…" class="mono" autocomplete="off"></div>
+              <button type="button" class="btn" data-mb-add="admins">Thêm</button>
+            </div>
+            <div id="mb-admins-list"></div>
+          </div>
+        </section>
+      </div>
+
+      <div data-sub="members:whitelist" hidden>
+        <section class="card">
+          <div class="card-head"><h2>Whitelist</h2><span class="sub">chỉ những SteamID này mới vào được server khi bật</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="dc-route"><span><b>Chỉ cho whitelist vào</b> — tắt: ai cũng vào được</span>
+              <select id="mb-wl-on" aria-label="Chỉ cho whitelist vào"><option value="false">Tắt</option><option value="true">Bật</option></select></div>
+            <div class="step-hint">Thêm / bỏ có hiệu lực ngay (gửi lệnh RCON cho game) và được lưu vào Game.ini; bật / tắt whitelist có hiệu lực từ lần khởi động lại tới.</div>
+            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="cfg-field" style="flex:1 1 240px"><label for="mb-whitelist-id">SteamID</label>
+                <input id="mb-whitelist-id" type="text" inputmode="numeric" maxlength="17" placeholder="7656119…" class="mono" autocomplete="off"></div>
+              <button type="button" class="btn" data-mb-add="whitelist">Thêm</button>
+            </div>
+            <div id="mb-whitelist-list"></div>
+          </div>
+        </section>
+      </div>
+      <div data-sub="members:vips" hidden>
+        <section class="card">
+          <div class="card-head"><h2>VIP</h2><span class="sub">được ưu tiên vào khi server đầy</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="step-hint">Lưu vào Game.ini — có hiệu lực từ lần khởi động lại tới.</div>
+            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="cfg-field" style="flex:1 1 240px"><label for="mb-vips-id">SteamID</label>
+                <input id="mb-vips-id" type="text" inputmode="numeric" maxlength="17" placeholder="7656119…" class="mono" autocomplete="off"></div>
+              <button type="button" class="btn" data-mb-add="vips">Thêm</button>
+            </div>
+            <div id="mb-vips-list"></div>
+          </div>
+        </section>
+      </div>
+      <div data-sub="members:perms" hidden>
+        <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🛡️</span>
+          <h2>Phân quyền admin</h2><span class="sub">chỉ admin tổng thấy trang này · quyền trên panel có hiệu lực ngay</span></div>
+        <div class="step-hint" style="margin-bottom:14px">Chọn <b>vai trò</b> để gán nhanh, rồi bật / tắt từng quyền nếu cần.
+          <b>Admin trong game</b> (/adminpanel, bay, kéo / dịch chuyển, hồi máu, growth, thời tiết…): tắt thì người đó bị bỏ khỏi danh sách admin của game —
+          có hiệu lực hoàn toàn từ <b>lần khởi động lại tới</b>; trước đó mod cố gỡ quyền ngay, và mọi lệnh admin họ còn dùng được ghi đỏ trong Nhật ký admin.
+          Mọi lệnh admin trong game của mọi người đều được ghi vào Nhật ký admin.</div>
+        <div class="perm-list" id="perm-list"></div>
+      </div>
+
+      <!-- SVip: players who try the features being tested (bridge svip.ts) -->
+      <div data-sub="members:svip" hidden>
+        <section class="card">
+          <div class="card-head"><h2>SVip</h2><span class="sub">dùng trước các chức năng đang thử nghiệm (cùng admin) — có hiệu lực ngay</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="cfg-field" style="flex:1 1 220px"><label for="sv-id">SteamID</label>
+                <input id="sv-id" type="text" inputmode="numeric" maxlength="17" placeholder="7656119…" class="mono" autocomplete="off"></div>
+              <div class="cfg-field" style="flex:2 1 260px"><label for="sv-note">Ghi chú (không bắt buộc)</label>
+                <input id="sv-note" type="text" maxlength="80" placeholder="vd. tester túi đồ" autocomplete="off"></div>
+              <button type="button" class="btn" id="sv-add">Thêm SVip</button>
+            </div>
+            <div id="sv-list"></div>
+          </div>
+        </section>
+        <section class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Chức năng thử nghiệm</h2><span class="sub">"Mở cho tất cả" khi đã ổn</span></div>
+          <div class="card-body" id="sv-features"></div>
+        </section>
+      </div>
+
+    </div>
+
     <!-- Truy cập: site / launcher traffic (bridge traffic.ts, counted by the portal) -->
     <div data-view="traffic" hidden>
       <div class="page-head"><div><h1>Truy cập</h1><p>Lượt mở web, tải và dùng launcher, đăng nhập (giờ server). Không lưu IP: người xem là mã băm theo ngày.</p></div></div>
@@ -3018,37 +3101,6 @@
           <button type="button" class="btn" id="pa-save">Lưu danh sách</button>
         </div>
       </div></section>
-      </div>
-
-      <div data-sub="admin:perms" hidden>
-        <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🛡️</span>
-          <h2>Phân quyền admin</h2><span class="sub">chỉ admin tổng thấy trang này · quyền trên panel có hiệu lực ngay</span></div>
-        <div class="step-hint" style="margin-bottom:14px">Chọn <b>vai trò</b> để gán nhanh, rồi bật / tắt từng quyền nếu cần.
-          <b>Admin trong game</b> (/adminpanel, bay, kéo / dịch chuyển, hồi máu, growth, thời tiết…): tắt thì người đó bị bỏ khỏi danh sách admin của game —
-          có hiệu lực hoàn toàn từ <b>lần khởi động lại tới</b>; trước đó mod cố gỡ quyền ngay, và mọi lệnh admin họ còn dùng được ghi đỏ trong Nhật ký admin.
-          Mọi lệnh admin trong game của mọi người đều được ghi vào Nhật ký admin.</div>
-        <div class="perm-list" id="perm-list"></div>
-      </div>
-
-      <!-- SVip: players who try the features being tested (bridge svip.ts) -->
-      <div data-sub="admin:svip" hidden>
-        <section class="card">
-          <div class="card-head"><h2>SVip</h2><span class="sub">dùng trước các chức năng đang thử nghiệm (cùng admin) — có hiệu lực ngay</span></div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
-              <div class="cfg-field" style="flex:1 1 220px"><label for="sv-id">SteamID</label>
-                <input id="sv-id" type="text" inputmode="numeric" maxlength="17" placeholder="7656119…" class="mono" autocomplete="off"></div>
-              <div class="cfg-field" style="flex:2 1 260px"><label for="sv-note">Ghi chú (không bắt buộc)</label>
-                <input id="sv-note" type="text" maxlength="80" placeholder="vd. tester túi đồ" autocomplete="off"></div>
-              <button type="button" class="btn" id="sv-add">Thêm SVip</button>
-            </div>
-            <div id="sv-list"></div>
-          </div>
-        </section>
-        <section class="card" style="margin-top:16px">
-          <div class="card-head"><h2>Chức năng thử nghiệm</h2><span class="sub">"Mở cho tất cả" khi đã ổn</span></div>
-          <div class="card-body" id="sv-features"></div>
-        </section>
       </div>
 
       <div data-sub="admin:audit" hidden>
@@ -3241,6 +3293,7 @@ PATHS.world = '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1
 PATHS.mods = '<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3h7z"/>';
 PATHS.admin = '<path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>';
 PATHS.server = '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>';
+PATHS.members = '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.4 3-5.4 6-5.4s5.4 2 6 5.4"/><path d="M16 4.5a3 3 0 0 1 0 6M18 14.8c1.8.7 2.8 2.4 3 5.2"/>';
 PATHS.traffic = '<path d="M3 20h18"/><rect x="5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="6" width="3" height="12" rx="1"/><rect x="16" y="13" width="3" height="5" rx="1"/>';
 PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>';
 
@@ -3263,7 +3316,8 @@ const SUB_NEED = {
   garage: { stored: 'garage.view', settings: 'garage.view' },
   items: { skins: 'items.view', mutations: 'items.view', tickets: 'items.view' },
   mods: { commands: 'mods.view', ptera: 'mods.view', voice: 'mods.view', messages: 'mods.view' },
-  admin: { access: 'access.edit', audit: 'audit.view', discord: 'discord.view', svip: 'svip.edit', perms: '*' },
+  admin: { access: 'access.edit', audit: 'audit.view', discord: 'discord.view' },
+  members: { admins: 'config.view', perms: '*', whitelist: 'config.view', vips: 'config.view', svip: 'svip.edit' },
 };
 const SRV_NEED = { ops: 'server.view', cfg: 'config.view', data: 'backups.view' };
 function subAllowed(view, id) {
@@ -4651,7 +4705,7 @@ $('padm-tp-xy').addEventListener('click', () => {
 // One block per job. Inside a block, sub-pages (SUBS) at #<block>/<sub>.
 const TABS = [
   ['overview', 'Tổng quan'], ['players', 'Người chơi'], ['map', 'Bản đồ'], ['world', 'Thế giới'],
-  ['garage', 'Gara'], ['items', 'Vật phẩm'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['traffic', 'Truy cập'], ['admin', 'Quản trị'],
+  ['garage', 'Gara'], ['items', 'Vật phẩm'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['members', 'Thành viên'], ['traffic', 'Truy cập'], ['admin', 'Quản trị'],
 ];
 function renderTabsNav() {
   $('tabs').innerHTML = TABS.filter(([id]) => tabAllowed(id)).map(([id, label]) =>
@@ -8968,7 +9022,71 @@ $('audit-pick-all').addEventListener('change', (e) => {
   renderAuditDelBar();
 });
 $('audit-del-go').addEventListener('click', () => { if (audits.picked.size) deleteAudit([...audits.picked]); });
-// --- Quản trị → SVip (bridge/src/svip.ts) ---
+// --- Thành viên → Admin / Whitelist / VIP (Game.ini lists: /api/members, saved through /api/game-config) ---
+// The bridge keeps the settings not sent (gameini.ts saveSettings), so only the list changed goes.
+const MB_KEY = { admins: 'AdminsSteamIDs', whitelist: 'WhitelistIDs', vips: 'VIPs' };
+const mb = { data: null, at: 0 };
+async function loadMembers(force = false) {
+  if (!force && mb.data && Date.now() - mb.at < 15_000) return;
+  mb.at = Date.now();
+  mb.data = await getJson('/api/members');
+  renderMembers();
+}
+function renderMembers() {
+  const d = mb.data;
+  if (!d) return;
+  $('mb-pending').hidden = !d.pendingRestart;
+  const fixed = new Set([...(d.owners ?? []), ...(d.superAdmin ? [d.superAdmin] : [])]);
+  for (const key of Object.keys(MB_KEY)) {
+    const list = d[key] ?? [];
+    $(`mb-${key}-list`).innerHTML = list.length === 0 ? '<p class="step-hint">Chưa có ai.</p>'
+      : `<table class="audit-table"><thead><tr><th>Người chơi</th><th>SteamID</th><th></th></tr></thead><tbody>${list.map((id) => `
+        <tr><td>${d.names[id] ? who(id, d.names[id]) : '<span class="muted">chưa vào game</span>'}</td><td class="mono">${esc(id)}</td>
+          <td style="text-align:right">${key === 'admins' && fixed.has(id) ? '<span class="muted" title="ADMIN_STEAM_IDS / admin tổng trên VPS">cố định</span>'
+            : can('config.edit') ? `<button type="button" class="btn-ghost sm" data-mb-del="${key}" data-id="${esc(id)}" style="color:var(--kill,#ef4444)">Bỏ</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
+  }
+  $('mb-wl-on').value = d.whitelistOn ? 'true' : 'false';
+  $('mb-wl-on').dispatchEvent(new Event('change', { bubbles: false }));
+}
+/** Save one list (and the whitelist switch); the whitelist also goes to the game at once by RCON. */
+function saveMembers(key, ids, label, rcon) {
+  return withToken(label, async (token) => {
+    await adminFetch('/api/game-config', 'PUT', token, { settings: { [MB_KEY[key]]: ids } });
+    if (rcon && can('rcon.run')) await rconCall(rcon.cmd, rcon.arg, token).catch(() => toast('Đã lưu, nhưng RCON không gửi được: có hiệu lực từ lần khởi động lại tới.', 'err'));
+    await loadMembers(true);
+    toast('Đã lưu.');
+  });
+}
+document.querySelector('[data-view="members"]').addEventListener('click', (e) => {
+  const add = e.target.closest('[data-mb-add]');
+  if (add) {
+    const key = add.dataset.mbAdd;
+    const id = $(`mb-${key}-id`).value.trim();
+    if (!/^7656\d{13}$/.test(id)) { toast('SteamID: 17 chữ số, bắt đầu bằng 7656…', 'err'); return; }
+    const list = mb.data?.[key] ?? [];
+    if (list.includes(id)) { toast('Đã có trong danh sách', 'err'); return; }
+    saveMembers(key, [...list, id], `thêm ${key}`, key === 'whitelist' ? { cmd: 'addWhitelistIds', arg: id } : null)
+      .then(() => { $(`mb-${key}-id`).value = ''; });
+    return;
+  }
+  const del = e.target.closest('[data-mb-del]');
+  if (del) {
+    const key = del.dataset.mbDel;
+    saveMembers(key, (mb.data?.[key] ?? []).filter((x) => x !== del.dataset.id), `bỏ ${key}`,
+      key === 'whitelist' ? { cmd: 'removeWhitelistIds', arg: del.dataset.id } : null);
+  }
+});
+$('mb-wl-on').addEventListener('change', (e) => {
+  if (!e.isTrusted || !mb.data) return;
+  const on = $('mb-wl-on').value === 'true';
+  withToken(on ? 'bật whitelist' : 'tắt whitelist', async (token) => {
+    await adminFetch('/api/game-config', 'PUT', token, { settings: { bServerWhitelist: on } });
+    await loadMembers(true);
+    toast(on ? 'Đã bật whitelist — có hiệu lực từ lần khởi động lại tới.' : 'Đã tắt whitelist — có hiệu lực từ lần khởi động lại tới.');
+  });
+});
+
+// --- Thành viên → SVip (bridge/src/svip.ts) ---
 // Every change saves at once (the whole list + the features' modes).
 const sv = { data: null, at: 0 };
 async function loadSvip(force = false) {
@@ -9748,6 +9866,7 @@ function scrollToOpsPart() {
 }
 
 const STEAM_LIST = new Set(['AdminsSteamIDs', 'WhitelistIDs', 'VIPs']);
+const MEMBER_KEYS = new Set(['AdminsSteamIDs', 'WhitelistIDs', 'VIPs', 'bServerWhitelist']);
 function cfgFieldHtml(key, spec, value, known) {
   const id = `cfg-f-${key}`;
   const badge = spec.verified === false ? ' <span class="cfg-unverified" title="Game đọc key này theo tên (có trong file game) nhưng chưa đọc ngược được giá trị để kiểm chứng">chưa xác minh</span>' : '';
@@ -9793,7 +9912,8 @@ function renderConfig(data) {
   const schema = data.schema ?? {};
   const eff = { ...data.effective, ...data.settings };
   $('cfg-fields').innerHTML = Object.entries(data.groups ?? {}).map(([group, title]) => {
-    const keys = Object.keys(schema).filter((k) => schema[k].group === group);
+    // The admin / whitelist / VIP lists live on Thành viên now (one page for who is who).
+    const keys = Object.keys(schema).filter((k) => schema[k].group === group && !MEMBER_KEYS.has(k));
     if (keys.length === 0) return '';
     // A key missing from Game.ini runs on the game's default: show that value,
     // or nothing for a key whose default is unknown ("theo mặc định của game").
@@ -10740,12 +10860,14 @@ const SUBS = {
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
   items: [['skins', 'Skin dino'], ['mutations', 'Mutation'], ['tickets', 'Phiếu']],
   mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['voice', 'Voice gần'], ['messages', 'Thông báo']],
-  admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin'], ['discord', 'Discord'], ['svip', 'SVip'], ['perms', 'Phân quyền']],
+  admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin'], ['discord', 'Discord']],
+  members: [['admins', 'Admin'], ['perms', 'Phân quyền'], ['whitelist', 'Whitelist'], ['vips', 'VIP'], ['svip', 'SVip']],
 };
 // Where the pages of the old layout went: bookmarks and old links still land.
 const MOVED = {
   killfeed: 'players/killfeed', leaderboard: 'players/leaderboard', chat: 'players/chat', messages: 'mods/messages',
   'server/perf': 'overview', 'server/audit': 'admin/audit', 'server/panel-access': 'admin/access',
+  'admin/perms': 'members/perms', 'admin/svip': 'members/svip',
   'server/garage-settings': 'garage/settings', 'server/commands-settings': 'mods/commands', 'server/ptera-carry': 'mods/ptera',
   'server/voice-settings': 'mods/voice', 'server/flora-settings': 'world/flora', 'server/fish-settings': 'world/fish',
 };
@@ -10871,9 +10993,15 @@ async function refreshTab(tab) {
     case 'admin':
       await Promise.all([can('audit.view') ? loadAudit() : null, can('access.edit') ? getJson('/api/panel-access').then(renderPanelAccess) : null,
         currentSubOf('admin') === 'discord' && can('discord.view') ? loadDiscord() : null,
-        currentSubOf('admin') === 'svip' && can('svip.edit') ? loadSvip() : null,
-        currentSubOf('admin') === 'perms' && ME.super && !pm.dirty && Date.now() - pm.at > 30_000 ? loadPerms() : null]);
+      ]);
       break;
+    case 'members': {
+      const sub = currentSubOf('members');
+      if (sub === 'svip') { if (can('svip.edit')) await loadSvip(); }
+      else if (sub === 'perms') { if (ME.super && !pm.dirty && Date.now() - pm.at > 30_000) await loadPerms(); }
+      else if (can('config.view')) await loadMembers();
+      break;
+    }
     case 'items':
       await loadItemsPage();
       break;

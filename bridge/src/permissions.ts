@@ -214,7 +214,7 @@ export function permissionFor(method: string, path: string): string | null {
       || /^\/api\/garage\/[^/]+(\/[^/]+)?$/.test(path)) return 'garage.view';
     if (['/api/commands-settings', '/api/ptera-carry', '/api/voice-settings', '/api/messages'].includes(path)) return 'mods.view';
     if (['/api/server/status', '/api/server/readiness', '/api/metrics', '/api/ddos', '/api/rcon/commands', '/api/server/growth-events'].includes(path)) return 'server.view';
-    if (path === '/api/game-config') return 'config.view';
+    if (path === '/api/game-config' || path === '/api/members') return 'config.view';
     if (path === '/api/backups' || /^\/api\/backups\/file\/[^/]+$/.test(path)) return 'backups.view';
     if (path === '/api/server/audit') return 'audit.view';
     if (path === '/api/items' || /^\/api\/items\/[^/]+\/owners$/.test(path)) return 'items.view';

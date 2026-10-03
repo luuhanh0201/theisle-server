@@ -137,6 +137,12 @@ test('live save: validates first, backs up, writes settings and Game.ini', async
   assert.equal(state.effective.bEnableHumans, true);
   assert.equal(readdirSync(join(process.env.DATA_DIR, 'ini-backups')).length, 1);
   assert.match(readFileSync(live, 'utf8'), /RconPassword=\$\{RCON_PASSWORD\}|RconPassword=/, 'rest of the file preserved');
+
+  // A save of some keys only (Thành viên: one list) keeps the others as saved.
+  await saveSettings({ VIPs: ['76561198000000001'] });
+  const after = await readLive();
+  assert.deepEqual(after.settings, { MaxPlayerCount: 70, bEnableHumans: true, VIPs: ['76561198000000001'] });
+  assert.equal(after.effective.MaxPlayerCount, 70, 'Game.ini keeps them too');
 });
 
 test('the known roster is valid AllowedClasses input and renders one line each', async () => {

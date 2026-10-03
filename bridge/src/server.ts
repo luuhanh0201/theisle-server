@@ -532,6 +532,23 @@ async function handlePanel(
     sendJson(res, 200, { ...(publicView(ctx.discord.settings) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
     return;
   }
+  if (path === '/api/members' && req.method === 'GET') {
+    // Thành viên: the game's admin, whitelist and VIP lists (Game.ini, saved through /api/game-config),
+    // with the names seen in game; the owners (ADMIN_STEAM_IDS) cannot be taken off here.
+    const live = await readLive();
+    const listOf = (k: string): string[] => {
+      const v = live.settings[k] ?? live.effective[k];
+      return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+    };
+    const lists = { admins: listOf('AdminsSteamIDs'), whitelist: listOf('WhitelistIDs'), vips: listOf('VIPs') };
+    const ids = new Set([...lists.admins, ...lists.whitelist, ...lists.vips]);
+    const names = Object.fromEntries([...ids].map((id) => [id, store.player(id)?.player.name ?? null]));
+    const on = live.settings['bServerWhitelist'] ?? live.effective['bServerWhitelist'];
+    sendJson(res, 200, { ...lists, whitelistOn: on === true, names, owners: config.panel.ownerIds, superAdmin: config.panel.superAdminId,
+      // Saved since the game started: the game itself has the lists from its next start.
+      pendingRestart: await power.status().then((st) => live.iniWrittenAt !== null && st.unit?.since != null && live.iniWrittenAt > st.unit.since) });
+    return;
+  }
   if (path === '/api/svip' && req.method === 'GET') {
     sendJson(res, 200, svipView(await readSvip()));
     return;
