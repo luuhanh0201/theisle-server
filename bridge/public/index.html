@@ -3042,7 +3042,11 @@
           <div class="card-head"><h2>Loại log → kênh · tag</h2>
             <span class="row" style="margin-left:auto;gap:8px;flex:none;align-items:center"><span class="muted" style="font-size:12.5px">Tất cả vào</span>
               <select id="dc-all" style="width:180px"></select></span></div>
-          <div class="card-body"><div class="dc-routes" id="dc-routes"></div>
+          <div class="card-body">
+            <!-- One message kept up to date in this channel (bridge discord-board.ts) -->
+            <div class="dc-route" style="margin-bottom:10px"><span><b>Bảng trạng thái server</b> — một tin tự sửa mỗi phút: Online, người chơi,
+              lần khởi động lại tới / trước</span><select id="dc-board" aria-label="Kênh của bảng trạng thái"></select></div>
+            <div class="dc-routes" id="dc-routes"></div>
             <div class="step-hint" style="margin-top:10px">Tag: tin loại đó được gửi riêng kèm <b>@everyone</b> / <b>@here</b> / role. ID role: trong Discord bật
               <b>Cài đặt người dùng → Nâng cao → Chế độ nhà phát triển</b>, rồi <b>Cài đặt máy chủ → Vai trò</b> → chuột phải role → <b>Sao chép ID</b>.
               Chữ người chơi gõ (chat, tên) không bao giờ tag được ai.</div></div>
@@ -8924,7 +8928,7 @@ async function loadDiscord(rebuild = false) {
   dc.data = d;
   if (!dc.draft || (rebuild && !dc.dirty)) {
     dc.draft = { enabled: d.enabled, routes: { ...d.routes }, mentions: { ...(d.mentions ?? {}) }, channels: d.channels.map((c) => ({ id: c.id, name: c.name, hint: c.hint, url: '' })),
-      relay: { url: d.relay?.url ?? '', secret: '', hasSecret: d.relay?.hasSecret === true } };
+      relay: { url: d.relay?.url ?? '', secret: '', hasSecret: d.relay?.hasSecret === true }, board: d.board ?? null };
     renderDiscord();
   } else {
     renderDiscordStatus();
@@ -8979,6 +8983,7 @@ function renderDiscord() {
       <button type="button" class="btn-ghost sm" data-f="del" style="color:var(--kill,#ef4444)">Xoá</button>
       <div class="st"></div></div>`).join('') || '<p class="step-hint">Chưa có kênh. Bấm <b>+ Thêm kênh</b>.</p>';
   const opts = (cur) => `<option value="">— không gửi —</option>${d.channels.map((c) => `<option value="${esc(c.id)}"${c.id === cur ? ' selected' : ''}>${esc(c.name || '(chưa đặt tên)')}</option>`).join('')}`;
+  $('dc-board').innerHTML = opts(d.board).replace('— không gửi —', '— không có bảng —');
   $('dc-all').innerHTML = `<option value="">Chọn kênh…</option>${d.channels.map((c) => `<option value="${esc(c.id)}">${esc(c.name || '(chưa đặt tên)')}</option>`).join('')}`;
   let group = null;
   $('dc-routes').innerHTML = dc.data.kinds.map((k) => {
@@ -8996,6 +9001,7 @@ function renderDiscord() {
 function markDc() { dc.dirty = true; }
 $('dc-enabled').addEventListener('change', () => { dc.draft.enabled = $('dc-enabled').checked; markDc(); renderDiscordStatus(); });
 $('dc-relay-url').addEventListener('input', () => { dc.draft.relay.url = $('dc-relay-url').value.trim(); markDc(); });
+$('dc-board').addEventListener('change', () => { dc.draft.board = $('dc-board').value || null; markDc(); });
 $('dc-relay-secret').addEventListener('input', () => { dc.draft.relay.secret = $('dc-relay-secret').value.trim(); markDc(); });
 for (const b of document.querySelectorAll('[data-eye]')) {
   b.addEventListener('click', () => {
@@ -9049,6 +9055,7 @@ $('dc-channels').addEventListener('click', (e) => {
   if (f === 'del') {
     dc.draft.channels = dc.draft.channels.filter((c) => c.id !== id);
     for (const k of Object.keys(dc.draft.routes)) if (dc.draft.routes[k] === id) delete dc.draft.routes[k];
+    if (dc.draft.board === id) dc.draft.board = null;
     markDc();
     renderDiscord();
     return;
@@ -9095,7 +9102,7 @@ $('dc-save').addEventListener('click', () => withToken('lưu Discord', async (to
   const r = dc.draft.relay;
   const body = { enabled: dc.draft.enabled, routes: dc.draft.routes, mentions: dc.draft.mentions,
     channels: dc.draft.channels.map((c) => ({ id: c.id, name: c.name, ...(c.url ? { url: c.url } : {}) })),
-    relay: r.url ? { url: r.url, ...(r.secret ? { secret: r.secret } : {}) } : null };
+    relay: r.url ? { url: r.url, ...(r.secret ? { secret: r.secret } : {}) } : null, board: dc.draft.board ?? null };
   await adminFetch('/api/discord', 'PUT', token, body);
   dc.dirty = false;
   $('dc-relay-secret').value = '';

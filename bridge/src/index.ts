@@ -11,7 +11,9 @@ import { NdjsonTail } from './tail.js';
 import { Store } from './store.js';
 import { startServer } from './server.js';
 import { Rcon } from './rcon.js';
-import { Power, scheduleTick } from './power.js';
+import { Power, scheduleTick, readSchedule, occurrences } from './power.js';
+import { StatusBoard, boardEmbed, boardPath, firedAt, SCHEDULED_START_WINDOW } from './discord-board.js';
+import { writeFile as writeFileAsync } from 'node:fs/promises';
 import { createDataBackup, defaultRoots, prune, readBackupSettings } from './backup.js';
 import { systemdService } from './service.js';
 import { Notifier } from './notify.js';
@@ -44,7 +46,7 @@ import { KillScenes } from './kill-scene.js';
 import { GameAdminLog } from './game-admin-log.js';
 import { settleUse } from './items.js';
 import { syncAdminGuard } from './permissions.js';
-import { bagUnlimited, shortSpecies } from './player-api.js';
+import { bagUnlimited, publicServerInfo, shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
 
 const store = new Store();
@@ -201,6 +203,27 @@ setInterval(() => {
 setInterval(() => {
   discord.tick().catch((error: unknown) => console.error('[discord] send failed:', error));
 }, 2_000);
+
+// The status board on Discord (discord-board.ts): one message, edited every minute.
+const statusBoard = new StatusBoard({ save: (v) => writeFileAsync(boardPath(), JSON.stringify(v), 'utf8') });
+async function updateBoard(): Promise<void> {
+  const s = discord.settings;
+  const channel = s.enabled && s.board !== null ? s.channels.find((c) => c.id === s.board) : undefined;
+  if (channel === undefined) return;
+  const nowMs = Date.now();
+  const [st, info, schedule] = await Promise.all([power.status(), readLive().then((l) => publicServerInfo(l.effective)), readSchedule()]);
+  const next = occurrences(schedule, nowMs).find((d) => d.getTime() > nowMs);
+  const started = store.modsLoadedAt();
+  const fired = firedAt(schedule.lastFired);
+  await statusBoard.update(channel.url, boardEmbed({
+    name: info.name, phase: st.phase, online: store.online().length, maxPlayers: info.maxPlayers,
+    next: next ? Math.floor(next.getTime() / 1000) : null,
+    last: started === null ? null : { t: started, scheduled: fired !== null && started >= fired && started - fired <= SCHEDULED_START_WINDOW },
+    now: Math.floor(nowMs / 1000),
+  }), nowMs);
+  if (statusBoard.lastError !== null) console.error('[discord-board]', statusBoard.lastError);
+}
+setInterval(() => { updateBoard().catch((error: unknown) => console.error('[discord-board] update failed:', error)); }, 60_000);
 
 // DDoS watch (ddos.ts): the traffic into the VPS every SAMPLE_S; an attack and
 // its end told on Discord (log kind "ddos"). The settings are re-read on save.

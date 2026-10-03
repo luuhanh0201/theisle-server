@@ -57,8 +57,10 @@ export interface DiscordSettings {
   mentions: Partial<Record<DiscordKind, string>>;
   /** The relay off the VPS (relay/, a Cloudflare Worker): heartbeat, outage alerts, /status. */
   relay: { url: string; secret: string } | null;
+  /** The channel holding the status board (discord-board.ts), edited every minute; null = none. */
+  board: string | null;
 }
-export const DISCORD_DEFAULTS: DiscordSettings = { enabled: false, channels: [], routes: {}, mentions: {}, relay: null };
+export const DISCORD_DEFAULTS: DiscordSettings = { enabled: false, channels: [], routes: {}, mentions: {}, relay: null, board: null };
 
 const WEBHOOK_RE = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/(\d{15,22})\/([\w-]{20,100})$/;
 const MAX_CHANNELS = 10;
@@ -135,7 +137,10 @@ export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_
     if (typeof v !== 'string' || !/^(everyone|here|\d{15,22})$/.test(v)) throw new ValidationError(`${k}: tag everyone, here or a role ID (số)`);
     mentions[k as DiscordKind] = v;
   }
-  return { enabled: r['enabled'], channels, routes, mentions, relay };
+  const boardRaw = r['board'] ?? null;
+  if (boardRaw !== null && boardRaw !== '' && (typeof boardRaw !== 'string' || !ids.has(boardRaw))) throw new ValidationError('bảng trạng thái: kênh không tồn tại');
+  const board = typeof boardRaw === 'string' && boardRaw !== '' ? boardRaw : null;
+  return { enabled: r['enabled'], channels, routes, mentions, relay, board };
 }
 
 export async function readDiscord(): Promise<DiscordSettings> {
@@ -151,6 +156,7 @@ export function publicView(s: DiscordSettings): unknown {
   return {
     enabled: s.enabled, routes: s.routes, mentions: s.mentions, channels: s.channels.map((c) => ({ id: c.id, name: c.name, hint: maskUrl(c.url) })),
     relay: s.relay ? { url: s.relay.url, hasSecret: true } : null,
+    board: s.board,
   };
 }
 
