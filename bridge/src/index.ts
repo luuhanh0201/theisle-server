@@ -139,9 +139,20 @@ const tails = [config.eventsPath, config.snapshotsPath].map(
     // Max health jumped at a relog (a prime the mod set): the same share of health and blood as when they left.
     const keep = relogShare.onEvent(event);
     if (keep !== null) {
+      // The dark screen these relogs brought is not explained yet (2026-10-04: 76 % blood alone does
+      // not darken it in combat). Every state the dino has (venom, sick, malnutrition, prime flags,
+      // nutrients — admin.lua probe, read only) before the fix and 30 s after it: UE4SS.log
+      // "admin: probe", and the portal_command result in the events.
+      const probe = (when: string): void => {
+        queueAdminAction(keep.steamId, { action: 'probe' })
+          .then((c) => console.info(`[relog-share] ${keep.steamId}: probe ${when} queued (command ${c.id})`))
+          .catch((error: unknown) => console.error('[relog-share] probe failed:', error));
+      };
+      probe('before');
       queueAdminAction(keep.steamId, { action: 'vitals', values: { health: keep.health, blood: keep.blood } })
         .then(() => console.info(`[relog-share] ${keep.steamId}: max health ${keep.maxBefore} -> ${keep.maxNow}, kept health ${keep.health}, blood ${keep.blood}`))
         .catch((error: unknown) => console.error('[relog-share] failed:', error));
+      setTimeout(() => probe('after'), 30_000);
     }
   }),
 );
