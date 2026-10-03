@@ -22,11 +22,13 @@ export interface LifeRecord {
   /** Last time we saw it alive (or when it ended). */
   lastAt: number;
   endedAt: number | null;
-  /** null while alive, or when the player left and the life is unresolved. */
-  end: 'death' | 'garage' | 'admin' | null;
+  /** null while alive, or when the player left and the life is unresolved. 'rebirth': chuyển sinh (a prime at 100 % reborn, +1 đời). */
+  end: 'death' | 'garage' | 'admin' | 'rebirth' | null;
   growthStart: number | null;
   growth: number | null;
   kills: number;
+  /** Its kills the players see (#killCounts). */
+  countedKills: number;
   damageDealt: number;
   damageTaken: number;
   killer: string | null;
@@ -62,6 +64,9 @@ export interface PlayerStats {
   kills: number;
   /** Real deaths. A dino removed by !store is excluded — see GARAGE_KILL_WINDOW. */
   deaths: number;
+  /** What the players see (their leaderboard, their own stats): kills by #killCounts, deaths not by an admin. The panel keeps the raw ones. */
+  countedKills: number;
+  countedDeaths: number;
   spawns: number;
   stored: number;
   redeemed: number;
@@ -116,7 +121,13 @@ export interface PlayerStats {
 export type FeedInput =
   // The Prison mod's events are prison.ts's business, not the feed's.
   | Exclude<GameEvent, SnapshotEvent | DeathEvent | PrisonEvent | { type: 'mod_loaded' }>
-  | (DeathEvent & { cause?: 'garage' | 'admin' });
+  | (DeathEvent & {
+    /** Not a death: stored, removed by an admin, or a rebirth (chuyển sinh, told a few seconds later). */
+    cause?: 'garage' | 'admin' | 'rebirth';
+    /** A kill: whether the players' boards count it; why not ('admin' on either side, 'small' prey for a grown killer). */
+    counted?: boolean;
+    uncounted?: 'admin' | 'small';
+  });
 
 export type FeedEntry = FeedInput & { id: number };
 /** A "damage" feed entry is one bite: `ticks` > 1 for a hold bite (its amount is their sum). */
@@ -167,6 +178,20 @@ const BOARD_SIZE = 20;
 /** K/D over fewer kills than this is noise, not skill. */
 const KD_MIN_KILLS = 3;
 
+/**
+ * Whether a kill counts on the players' boards (owner's rule, 2026-10-03): a
+ * young killer (50 % or less) counts every kill; a grown one only prey above
+ * 40 %. Growth unknown: counted. Admins are left out before this (#death).
+ */
+export const KILL_YOUNG_MAX = 0.5;
+export const KILL_PREY_MIN = 0.4;
+export function killCounts(killerGrowth: number | null | undefined, victimGrowth: number | null | undefined): boolean {
+  if (typeof killerGrowth !== 'number' || killerGrowth <= KILL_YOUNG_MAX) return true;
+  return typeof victimGrowth !== 'number' || victimGrowth > KILL_PREY_MIN;
+}
+/** A rebirth's spawn comes this soon after the death that started it (seen: 5–12 s). */
+const REBIRTH_WINDOW = 120;
+
 /** Far enough from the last point to count as movement (horizontal distance). */
 function moved(points: readonly TrailPoint[], next: TrailPoint): boolean {
   const last = points[points.length - 1];
@@ -211,6 +236,16 @@ export class Store {
   readonly groundPoints = new GroundPoints();
   /** steamId -> when and why their dino was just removed on purpose. */
   readonly #recentRemoval = new Map<string, { t: number; cause: 'garage' | 'admin'; slot?: string }>();
+  /** Each player's last death and what it added up, undone if it turns out a rebirth (#rebirth). */
+  readonly #lastDeath = new Map<string, {
+    t: number; life: LifeRecord | null; entry: FeedEntry; deathCounted: boolean;
+    killer: string | null; killCounted: boolean; killerLife: LifeRecord | null;
+    record: KillRecord | null; prevBiggestKill: KillRecord | null; prevBiggestPrey: KillRecord | undefined;
+  }>();
+  /** Admins (panel-auth adminIds, index.ts): nothing they do or suffer counts for the players. */
+  #admins: ReadonlySet<string> = new Set();
+  setAdmins(ids: Iterable<string>): void { this.#admins = new Set(ids); }
+  isAdmin(steamId: string | null | undefined): boolean { return steamId != null && this.#admins.has(steamId); }
   #nextId = 1;
   #lastEventAt: number | null = null;
   /** Told of every feed entry as it is added (the Discord log: discord.ts). Replays included — the listener filters. */
@@ -251,6 +286,7 @@ export class Store {
             if (life.elderStacks === null && stacks !== null && before !== undefined
               && stacks > (before.elderStacks ?? 0) && (before.maxGrowth ?? 0) >= 0.99) {
               life.chain = before.chain;
+              this.#rebirth(event.steamId, before, life);
             }
             if (stacks !== null) life.elderStacks = stacks;
             if (typeof event.growth === 'number') life.maxGrowth = Math.max(life.maxGrowth ?? 0, event.growth);
@@ -516,22 +552,29 @@ export class Store {
     return this.#chat.slice(-limit).reverse();
   }
 
-  leaderboard(): Leaderboard {
-    const all = this.players();
+  /**
+   * 'panel': everything as it happened. 'players' (the portal): admins left out of
+   * every board, kills and deaths as counted (#killCounts, nothing with an admin).
+   */
+  leaderboard(view: 'panel' | 'players' = 'panel'): Leaderboard {
+    const forPlayers = view === 'players';
+    const all = forPlayers ? this.players().filter((p) => !this.isAdmin(p.steamId)) : this.players();
+    const kills = (p: PlayerStats): number => (forPlayers ? p.countedKills : p.kills);
+    const deaths = (p: PlayerStats): number => (forPlayers ? p.countedDeaths : p.deaths);
     const top = (score: (p: PlayerStats) => number): PlayerStats[] =>
       all.filter((p) => score(p) > 0).sort((a, b) => score(b) - score(a)).slice(0, BOARD_SIZE);
 
     return {
-      kills: top((p) => p.kills),
+      kills: top(kills),
       kd: all
-        .filter((p) => p.kills >= KD_MIN_KILLS)
-        .map((p) => ({ ...p, kd: p.kills / Math.max(1, p.deaths) }))
+        .filter((p) => kills(p) >= KD_MIN_KILLS)
+        .map((p) => ({ ...p, kd: kills(p) / Math.max(1, deaths(p)) }))
         .sort((a, b) => b.kd - a.kd)
         .slice(0, BOARD_SIZE),
       damage: top((p) => p.damageDealt),
       playtime: top((p) => p.playtime),
       longestLife: top((p) => p.longestLife),
-      biggestPrey: [...this.#biggestPrey.values()].sort(
+      biggestPrey: [...this.#biggestPrey.values()].filter((k) => !forPlayers || (!this.isAdmin(k.killer) && !this.isAdmin(k.victim))).sort(
         (a, b) => (b.growth ?? 0) - (a.growth ?? 0) || a.species.localeCompare(b.species),
       ),
     };
@@ -595,27 +638,44 @@ export class Store {
       return;
     }
 
+    const killerId = event.killer !== undefined && event.killer !== 'ai' ? event.killer : null;
+    // An admin on either side: logged for the panel as ever, counted for nobody on the players' side.
+    const adminInvolved = this.isAdmin(event.steamId) || this.isAdmin(killerId);
     victim.deaths += 1;
+    const deathCounted = !adminInvolved;
+    if (deathCounted) victim.countedDeaths += 1;
     if (event.lifeSeconds !== undefined && event.lifeSeconds > victim.longestLife) {
       victim.longestLife = event.lifeSeconds;
     }
 
     const involved = [event.steamId];
-    if (event.killer !== undefined && event.killer !== 'ai') {
-      const killer = this.#player(event.killer, event.t, event.killerName);
+    let killCounted = false;
+    let killerLife: LifeRecord | null = null;
+    let record: KillRecord | null = null;
+    let prevBiggestKill: KillRecord | null = null;
+    let prevBiggestPrey: KillRecord | undefined;
+    let mark: { counted?: boolean; uncounted?: 'admin' | 'small' } = {};
+    if (killerId !== null) {
+      const killer = this.#player(killerId, event.t, event.killerName);
       killer.kills += 1;
-      involved.push(event.killer);
-      const killerLife = this.#openLife(event.killer);
+      involved.push(killerId);
+      killerLife = this.#openLife(killerId);
       if (killerLife !== null) killerLife.kills += 1;
+      killCounted = !adminInvolved && killCounts(event.killerGrowth ?? killer.growth, event.growth);
+      mark = killCounted ? { counted: true } : { counted: false, uncounted: adminInvolved ? 'admin' : 'small' };
+      if (killCounted) {
+        killer.countedKills += 1;
+        if (killerLife !== null) killerLife.countedKills += 1;
+      }
       if (life !== null) {
-        life.killer = event.killer;
+        life.killer = killerId;
         life.killerName = killer.name;
         life.killerSpecies = event.killerSpecies ?? null;
       }
 
-      const record: KillRecord = {
+      record = {
         t: event.t,
-        killer: event.killer,
+        killer: killerId,
         killerName: killer.name,
         killerSpecies: event.killerSpecies ?? null,
         victim: event.steamId,
@@ -623,6 +683,8 @@ export class Store {
         species: event.species,
         growth: event.growth,
       };
+      prevBiggestKill = killer.biggestKill;
+      prevBiggestPrey = this.#biggestPrey.get(event.species);
       if ((record.growth ?? 0) > (killer.biggestKill?.growth ?? -1)) {
         killer.biggestKill = record;
       }
@@ -632,8 +694,46 @@ export class Store {
       }
     }
 
-    const entry = this.#push(event, involved);
+    const entry = this.#push({ ...event, ...mark }, involved);
     pushBounded(this.#kills, entry, config.killfeedSize);
+    this.#lastDeath.set(event.steamId, {
+      t: event.t, life, entry, deathCounted, killer: killerId, killCounted, killerLife, record, prevBiggestKill, prevBiggestPrey,
+    });
+  }
+
+  /**
+   * Chuyển sinh: the prime at 100 % that "died" a few seconds before this new
+   * life came back young with one more elder stack. Not a death, and not a
+   * kill for whoever bit it last (Quang Tèo's rebirth, 02/10 20:43, went down
+   * as a kill): everything its death added is taken back, its feed line says
+   * so. Its survival time goes on (the chain, set by the caller).
+   */
+  #rebirth(steamId: string, before: LifeRecord, now: LifeRecord): void {
+    const d = this.#lastDeath.get(steamId);
+    if (d === undefined || d.life !== before || before.end !== 'death' || now.spawnedAt - d.t > REBIRTH_WINDOW) return;
+    this.#lastDeath.delete(steamId);
+    before.end = 'rebirth';
+    const victim = this.#player(steamId, d.t);
+    victim.deaths = Math.max(0, victim.deaths - 1);
+    if (d.deathCounted) victim.countedDeaths = Math.max(0, victim.countedDeaths - 1);
+    if (d.killer !== null) {
+      const killer = this.#player(d.killer, d.t);
+      killer.kills = Math.max(0, killer.kills - 1);
+      if (d.killerLife !== null) d.killerLife.kills = Math.max(0, d.killerLife.kills - 1);
+      if (d.killCounted) {
+        killer.countedKills = Math.max(0, killer.countedKills - 1);
+        if (d.killerLife !== null) d.killerLife.countedKills = Math.max(0, d.killerLife.countedKills - 1);
+      }
+      if (d.record !== null && killer.biggestKill === d.record) killer.biggestKill = d.prevBiggestKill;
+      if (d.record !== null && this.#biggestPrey.get(d.record.species) === d.record) {
+        if (d.prevBiggestPrey === undefined) this.#biggestPrey.delete(d.record.species);
+        else this.#biggestPrey.set(d.record.species, d.prevBiggestPrey);
+      }
+      before.killer = null; before.killerName = null; before.killerSpecies = null;
+    }
+    const e = d.entry as FeedEntry & { cause?: string; counted?: boolean; uncounted?: string };
+    e.cause = 'rebirth';
+    delete e.counted; delete e.uncounted;
   }
 
   /** The path one life took, or null (unknown life, or too old to be kept). */
@@ -743,6 +843,7 @@ export class Store {
       growthStart: growth,
       growth,
       kills: 0,
+      countedKills: 0,
       damageDealt: 0,
       damageTaken: 0,
       killer: null,
@@ -793,6 +894,8 @@ export class Store {
         hits: 0,
         kills: 0,
         deaths: 0,
+        countedKills: 0,
+        countedDeaths: 0,
         spawns: 0,
         stored: 0,
         redeemed: 0,

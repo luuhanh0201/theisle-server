@@ -1787,7 +1787,7 @@ function renderRanking() {
       container.innerHTML = '<li class="muted" style="padding:24px;text-align:center">Chưa có lịch sử đời dino nào.</li>';
       return;
     }
-    const END = { death: 'Tử vong', garage: 'Cất vào gara', admin: 'Admin can thiệp' };
+    const END = { death: 'Tử vong', garage: 'Cất vào gara', admin: 'Admin can thiệp', rebirth: 'Chuyển sinh' };
     container.innerHTML = lives.map((l, i) => {
       const tier = getDinoTier(l);
       const isTop = i < 3;

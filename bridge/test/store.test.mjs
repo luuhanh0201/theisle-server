@@ -1,7 +1,7 @@
 // Store aggregation tests. Runs against the compiled output: npm test.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Store } from '../dist/store.js';
+import { Store, killCounts } from '../dist/store.js';
 import { parseEvent } from '../dist/events.js';
 
 const A = '76561198000000001';
@@ -442,4 +442,106 @@ test('longest life: an admin gift with elder stacks is not a rebirth; the dino a
   const p = s.player(B).player;
   assert.ok(p.longestLife >= 2880 && p.longestLife <= 2900, `the gift alive ~2,890 s, not +100: ${p.longestLife}`);
   assert.equal(p.longestLifeAlive, true);
+});
+
+// --- the players' side (2026-10-03): admins count for nothing, small prey of a grown killer
+// does not count, a rebirth (chuyển sinh) is not a death -------------------------------------
+
+test('killCounts: a young killer (≤ 50 %) counts every kill; a grown one only prey above 40 %', () => {
+  assert.equal(killCounts(0.3, 0.1), true, 'young on young');
+  assert.equal(killCounts(0.5, 0.2), true, 'at 50 % still young');
+  assert.equal(killCounts(0.9, 0.4), false, 'grown on 40 %');
+  assert.equal(killCounts(0.9, 0.41), true, 'grown on 41 %');
+  assert.equal(killCounts(undefined, 0.1), true, 'killer growth unknown: counted');
+  assert.equal(killCounts(0.9, null), true, 'prey growth unknown: counted');
+});
+
+test('players\' side: kills and deaths with an admin are kept for the panel, counted for nobody', () => {
+  const s = new Store();
+  s.setAdmins([B]);
+  const t = now();
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'session_start', steamId: B, name: 'Admin' },
+    { t: t + 1, type: 'death', steamId: B, species: 'BP_Tyrannosaurus_C', growth: 0.9, killer: A, killerGrowth: 0.9, attributed: true },
+    { t: t + 2, type: 'death', steamId: A, species: 'BP_Tyrannosaurus_C', growth: 0.9, killer: B, killerGrowth: 0.9, attributed: true },
+  ]);
+  const a = s.player(A).player;
+  const b = s.player(B).player;
+  assert.equal(a.kills, 1, 'raw (panel): A killed the admin');
+  assert.equal(a.countedKills, 0, 'players: not counted');
+  assert.equal(a.deaths, 1);
+  assert.equal(a.countedDeaths, 0, 'killed by an admin: not a death for the players');
+  assert.equal(b.countedDeaths, 0);
+  const lines = s.killfeed(10);
+  assert.ok(lines.every((e) => e.counted === false && e.uncounted === 'admin'), JSON.stringify(lines));
+  const lb = s.leaderboard('players');
+  assert.ok(![...lb.kills, ...lb.playtime, ...lb.longestLife].some((p) => p.steamId === B), 'no admin on the players\' boards');
+  assert.equal(s.leaderboard().kills.length, 2, 'the panel board as it happened');
+});
+
+test('players\' side: a grown killer\'s small prey shows but does not count; a young killer\'s does', () => {
+  const s = new Store();
+  const t = now();
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'session_start', steamId: B, name: 'Bravo' },
+    { t: t + 1, type: 'death', steamId: B, species: 'BP_Dryosaurus_C', growth: 0.3, killer: A, killerGrowth: 0.9, attributed: true },
+    { t: t + 2, type: 'death', steamId: B, species: 'BP_Dryosaurus_C', growth: 0.3, killer: A, killerGrowth: 0.4, attributed: true },
+  ]);
+  const a = s.player(A).player;
+  assert.equal(a.kills, 2);
+  assert.equal(a.countedKills, 1, 'only the young one\'s kill');
+  assert.equal(s.player(B).player.countedDeaths, 2, 'the deaths are real deaths');
+  const [young, grown] = s.killfeed(10);
+  assert.equal(grown.uncounted, 'small');
+  assert.equal(young.counted, true);
+  assert.deepEqual(s.leaderboard('players').kills.map((p) => [p.steamId, p.countedKills]), [[A, 1]]);
+});
+
+test('chuyển sinh: a prime at 100 % reborn is not a death nor a kill; its life goes on', () => {
+  const s = new Store();
+  const t = now() - 10_000;
+  const REX = 'BP_Tyrannosaurus_C';
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'session_start', steamId: B, name: 'Bravo' },
+    { t, type: 'spawn', steamId: A, species: REX, growth: 0.25 },
+    { t: t + 10, type: 'prime', steamId: A, growth: 0.3, prime: false, elderStacks: 2 },
+    { t: t + 4000, type: 'prime', steamId: A, growth: 1, prime: true, elderStacks: 2 },
+    // B bit it just before: the game's last hit makes the "death" look like B's kill (Quang Tèo, 02/10 20:43).
+    { t: t + 5000, type: 'death', steamId: A, species: REX, growth: 1, killer: B, killerGrowth: 1, attributed: true, lifeSeconds: 5000 },
+    { t: t + 5005, type: 'spawn', steamId: A, species: REX, growth: 0.25 },
+    { t: t + 5005, type: 'prime', steamId: A, growth: 0.25, prime: false, elderStacks: 3 },
+  ]);
+  const a = s.player(A).player;
+  const b = s.player(B).player;
+  assert.equal(a.deaths, 0, 'not a death');
+  assert.equal(a.countedDeaths, 0);
+  assert.equal(b.kills, 0, 'not B\'s kill');
+  assert.equal(b.countedKills, 0);
+  assert.equal(b.biggestKill, null);
+  const line = s.killfeed(10)[0];
+  assert.equal(line.cause, 'rebirth');
+  const lives = s.player(A).lives;
+  assert.equal(lives.find((l) => l.spawnedAt === t).end, 'rebirth');
+  assert.ok(a.longestLife >= 5000, `the time goes on: ${a.longestLife}`);
+  assert.equal(a.longestLifeAlive, true);
+});
+
+test('a real death of a prime (no young one with one more stack after it) stays a death', () => {
+  const s = new Store();
+  const t = now() - 10_000;
+  const REX = 'BP_Tyrannosaurus_C';
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'spawn', steamId: A, species: REX, growth: 0.25 },
+    { t: t + 4000, type: 'prime', steamId: A, growth: 1, prime: true, elderStacks: 2 },
+    { t: t + 5000, type: 'death', steamId: A, species: REX, growth: 1, attributed: false },
+    { t: t + 5030, type: 'spawn', steamId: A, species: REX, growth: 0.25 },
+    { t: t + 5030, type: 'prime', steamId: A, growth: 0.25, prime: false, elderStacks: 0 },
+  ]);
+  assert.equal(s.player(A).player.deaths, 1);
+  assert.equal(s.player(A).player.countedDeaths, 1);
+  assert.equal(s.player(A).lives.find((l) => l.spawnedAt === t).end, 'death');
 });

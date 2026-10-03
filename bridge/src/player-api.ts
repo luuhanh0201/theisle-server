@@ -162,7 +162,7 @@ export interface PlayerView {
 
 export function playerView(
   steamId: string, p: PlayerStats | null, lives: LifeRecord[], garage: StoredDino[], live: Live | null = null,
-  trail: readonly TrailPoint[] = [],
+  trail: readonly TrailPoint[] = [], isAdmin: (steamId: string | null) => boolean = () => false,
 ): PlayerView {
   // Vitals and growth from the live file (1 s) when it has this player; the
   // snapshot (5 s) otherwise. Positions are never sent to the portal.
@@ -190,14 +190,16 @@ export function playerView(
       trail: trail.slice(-180).map((pt) => ({ x: pt.x, y: pt.y, t: pt.t })),
     } : null,
     stats: {
-      kills: p?.kills ?? 0, deaths: p?.deaths ?? 0, spawns: p?.spawns ?? 0,
+      // As the players' boards count them (store.ts): no kill or death with an admin, small prey of a grown killer not.
+      kills: p?.countedKills ?? 0, deaths: p?.countedDeaths ?? 0, spawns: p?.spawns ?? 0,
       playtime: p?.playtime ?? 0, longestLife: p?.longestLife ?? 0, sessions: p?.sessions ?? 0,
     },
     lives: lives.slice(0, 20).map((l) => ({
       species: shortSpecies(l.species), spawnedAt: l.spawnedAt, endedAt: l.endedAt, end: l.end,
-      growth: num(l.growth), kills: l.kills,
+      growth: num(l.growth), kills: l.countedKills,
       // A killer's NAME is what the game showed the victim anyway; never their SteamID.
-      killedBy: l.killerName, killedBySpecies: shortSpecies(l.killerSpecies),
+      // Killed by an admin: not shown on the players' side (only the panel logs it).
+      killedBy: isAdmin(l.killer) ? null : l.killerName, killedBySpecies: isAdmin(l.killer) ? null : shortSpecies(l.killerSpecies),
       elderStacks: num(l.elderStacks),
     })),
     garage: garage.map((g) => ({
@@ -569,7 +571,8 @@ export async function handlePlayerApi(
     const trail = ctx.store.map().find((m) => m.steamId === steamId)?.trail ?? [];
     const gs = await readGarageSettings();
     send(res, 200, {
-      ...playerView(steamId, detail?.player ?? null, detail?.lives ?? [], await readPlayerGarage(steamId), live, trail),
+      ...playerView(steamId, detail?.player ?? null, detail?.lives ?? [], await readPlayerGarage(steamId), live, trail,
+        (id) => ctx.store.isAdmin(id)),
       // The garage rules the web garage shows (and the mod enforces).
       garageRules: { maxSlots: gs.maxSlots, redeemAt: gs.redeemAt, storeCountdown: gs.storeCountdown, cooldown: gs.cooldown,
         minHealthPct: gs.minHealthPct, minGrowthPct: gs.minGrowthPct },
@@ -585,9 +588,10 @@ export async function handlePlayerApi(
     return true;
   }
   if (path === '/player-api/leaderboard') {
-    const lb = ctx.store.leaderboard();
+    // The players' view: admins on no board; kills as counted (store.ts killCounts).
+    const lb = ctx.store.leaderboard('players');
     send(res, 200, {
-      kills: rank(lb.kills, (p) => p.kills),
+      kills: rank(lb.kills, (p) => p.countedKills),
       playtime: rank(lb.playtime, (p) => p.playtime),
       longestLife: rank(lb.longestLife, (p) => p.longestLife),
       // Who brought escaped inmates down (prison.ts).

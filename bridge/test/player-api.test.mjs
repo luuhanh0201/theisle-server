@@ -261,3 +261,18 @@ test('kept skins: "keep" saves the colours for the species played now; forget re
   assert.equal(f.status, 200);
   assert.equal(JSON.parse(readFileSync(join(root, 'skins.json'), 'utf8')).players[KEEPER], undefined);
 });
+
+test('players\' side: an admin\'s name never shows as a killer, nor the admin on the boards', async () => {
+  store.setAdmins([OTHER]);
+  try {
+    const me = (await call(`/player-api/me/${ME}`)).body;
+    assert.equal(me.lives.find((l) => l.end === 'death').killedBy, null, 'killed by an admin: no name');
+    assert.equal(me.lives.find((l) => l.end === 'death').killedBySpecies, null);
+    const lb = (await call('/player-api/leaderboard')).body;
+    assert.ok(![...lb.kills, ...lb.playtime, ...lb.longestLife].some((r) => r.name === 'Other'), JSON.stringify(lb));
+  } finally {
+    store.setAdmins([]);
+  }
+  const me = (await call(`/player-api/me/${ME}`)).body;
+  assert.equal(me.lives.find((l) => l.end === 'death').killedBy, 'Other', 'a player killer is named as before');
+});

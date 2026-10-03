@@ -48,6 +48,10 @@ import { bagUnlimited, shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
 
 const store = new Store();
+// Admins count for nothing on the players' side (kills, deaths, boards: store.ts):
+// known before the event files are read back, kept up to date after.
+store.setAdmins(await adminIds());
+setInterval(() => { adminIds().then((ids) => store.setAdmins(ids)).catch(() => undefined); }, 60_000);
 const rcon = new Rcon(config.rcon);
 const power = new Power({
   service: systemdService(),

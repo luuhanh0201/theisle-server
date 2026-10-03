@@ -23,7 +23,8 @@ export interface LifeDetail {
   classPath: string | null;
   growth: number | null;
   endedAt: number | null;
-  end: 'death' | 'garage' | 'admin' | null;
+  /** 'rebirth': chuyển sinh — the prime at 100 % came back young with one more elder stack (store.ts #rebirth). */
+  end: 'death' | 'garage' | 'admin' | 'rebirth' | null;
   mutations: Record<string, string>;
   /** Ten 0/1, condition 1 first, and what it adds up to. Null: never read. */
   prime: { code: string; done: number; eligible: boolean; prime: boolean; elderStacks: number | null } | null;
@@ -34,6 +35,9 @@ export interface LifeDetail {
   /** Put back already: the garage slot it went into. */
   restoredTo: string | null;
 }
+
+/** A rebirth's spawn comes this soon after the "death" that started it (store.ts). */
+const REBIRTH_WINDOW = 120;
 
 /** A list of mutation names from an event (Lua writes an empty list as {}), or null. */
 function names(v: unknown): string[] | null {
@@ -76,6 +80,16 @@ export async function lifeDetails(steamId: string, limit = 40): Promise<LifeDeta
       lives.push(cur);
       continue;
     }
+    // Chuyển sinh: the first prime reading of a new life, one stack above a prime
+    // at 100 % that "died" moments before (as the bridge's store tells it).
+    if (type === 'prime' && cur && cur.prime === null && lives.length >= 2) {
+      const before = lives[lives.length - 2] as LifeDetail;
+      const stacks = typeof e['elderStacks'] === 'number' ? e['elderStacks'] : null;
+      if (before.end === 'death' && before.prime?.prime === true && (before.growth ?? 0) >= 0.99 && stacks !== null
+        && stacks > (before.prime.elderStacks ?? 0) && before.endedAt !== null && cur.spawnedAt - before.endedAt <= REBIRTH_WINDOW) {
+        before.end = 'rebirth';
+      }
+    }
     if (!cur || cur.endedAt !== null || (species !== null && species !== cur.species)) continue;
     if (typeof e['growth'] === 'number' && type !== 'growth') cur.growth = e['growth'];
     if (type === 'growth_set' && typeof e['to'] === 'number') cur.growth = e['to'];
@@ -113,6 +127,7 @@ export async function restoreLife(steamId: string, spawnedAt: number, slot: stri
   if (life.restoredTo !== null) throw new ConflictError(`already restored into slot "${life.restoredTo}"`);
   if (life.end === null) throw new ValidationError('this dino is still alive (or its end was not seen)');
   if (life.end === 'garage') throw new ValidationError('this dino went into the garage: it is there already');
+  if (life.end === 'rebirth') throw new ValidationError('this dino was reborn (chuyển sinh): it lives on as the next one');
   if (!life.classPath || life.growth === null) throw new ValidationError('not enough known about this dino to restore it');
   const isPrime = life.prime?.prime === true && life.growth >= PRIME_DEADLINE;
   await createSlot(steamId, slot, {
