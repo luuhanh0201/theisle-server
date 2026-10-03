@@ -340,6 +340,9 @@ function Harness.ftext(text)
     { __tostring = function() return "FText: 0000733DB33B7B08" end })
 end
 
+--- UE4SS's FText constructor: an FText holding `text`.
+_G.FText = function(text) return Harness.ftext(text) end
+
 --- Fire GetChatMessage the way the game does: on the RECEIVING controller
 --- (self), with (NewText, ChatPlayerController = sender, ChatMode, NoFilterMsg).
 function Harness.chat(hook, receiver, sender, text)

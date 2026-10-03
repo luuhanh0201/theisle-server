@@ -169,6 +169,34 @@ do
 end
 
 say("")
+say("-- 12. chat commands kept out of the chat others see --")
+do
+  H.advance(16000)                                     -- the hiding hook comes after every mod's own
+  local hooks = H.hooks[CHAT]
+  check("a second chat hook, registered after the commands' one", #hooks == 2, tostring(#hooks))
+  local FLAG = "Mods/PlayerCommands/Saved/hide-chat.trying"
+  local function settable(text)
+    local p = { value = H.ftext(text) }
+    p.get = function() return p.value end
+    p.set = function(_, v) p.value = v end
+    return p
+  end
+  local word = function(p) return p.value:ToString() end
+  local text, raw = settable("!unstuck"), settable("!unstuck")
+  hooks[2](H.param(ctrl), text, H.param(ctrl), H.param(0), raw)
+  check("a command's two texts blanked for this receiver", word(text) == "" and word(raw) == "", word(text) .. "|" .. word(raw))
+  check("the first blanking leaves the safety flag", io.open(FLAG, "r") ~= nil)
+  H.advance(21000)
+  check("…removed once the server went on", io.open(FLAG, "r") == nil)
+  local chatLine, chatRaw = settable("ai đi săn không"), settable("ai đi săn không")
+  hooks[2](H.param(ctrl), chatLine, H.param(ctrl), H.param(0), chatRaw)
+  check("ordinary chat untouched", word(chatLine) == "ai đi săn không" and word(chatRaw) == "ai đi săn không")
+  local bang = settable("!!! cứu")
+  hooks[2](H.param(ctrl), bang, H.param(ctrl), H.param(0), settable("!!! cứu"))
+  check("'!!!' (no command word) is chat, untouched", word(bang) == "!!! cứu")
+end
+
+say("")
 say("-- threads --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))
 

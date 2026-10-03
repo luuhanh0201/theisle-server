@@ -335,4 +335,64 @@ end)
 -- the async thread each tick (lost callbacks, 2026-09-24).
 H.every(TRACK_MS, MOD .. ": ground spots", recordSpots)
 
+-- Chat commands kept out of the chat others see (owner, 2026-10-04: "!unstuck"
+-- showed in everyone's chat box). GetChatMessage fires once per RECEIVING
+-- controller before the game sends the line down to that player: its two
+-- texts (NewText, NoFilterMsg) blanked there, the line carries nothing.
+-- Registered HIDE_AFTER_MS after load, so that it runs after every other mod's
+-- chat hook (StatsLogger's chat log, DinoGarage, PteraCarry's commands…):
+-- hooks run in the order they were registered, and those read the words first.
+-- New on the live server and not documented upstream: a flag first (as the
+-- garage's first prime writes): written before the first blanking of a run,
+-- removed HIDE_SETTLE_MS later. Found at load (the server went down right
+-- after one) and the hiding stays off; the commands themselves still work.
+local CHAT_HOOK_NAME = "/Script/TheIsle.TIPlayerController:GetChatMessage"
+local HIDE_AFTER_MS = 15000
+local HIDE_SETTLE_MS = 20000
+local HIDE_FLAG = "Mods/PlayerCommands/Saved/hide-chat.trying"
+local hideOn = type(FText) == "function"
+do
+    local f = io.open(HIDE_FLAG, "r")
+    if f then
+        f:close()
+        hideOn = false
+        H.logError(MOD .. ": the last run stopped right after hiding a chat command — hiding is off. Delete "
+            .. HIDE_FLAG .. " to try again.")
+    end
+end
+local hideArmed = false
+
+--- A player's chat command ("!unstuck", " !prime"): kept out of the chat.
+local function isChatCommand(text)
+    return type(text) == "string" and text:match("^%s*!%a") ~= nil
+end
+
+local function blank(param)
+    if param == nil then return end
+    pcall(function() param:set(FText("")) end)
+end
+
+if hideOn then
+    H.defer(HIDE_AFTER_MS, function()
+        H.try(MOD .. ": hide chat commands hook", function()
+            RegisterHook(CHAT_HOOK_NAME, function(_self, textParam, _sender, _mode, rawParam)
+                local ok, text = pcall(function() return H.textOf(textParam:get()) end)
+                if not (ok and isChatCommand(text)) then return end
+                if not hideArmed then
+                    hideArmed = true
+                    local f = io.open(HIDE_FLAG, "w")
+                    if f then f:write(tostring(os.time())); f:close() end
+                    H.defer(HIDE_SETTLE_MS, function()
+                        os.remove(HIDE_FLAG)
+                        H.log(MOD .. ": hiding chat commands works (first one went through)")
+                    end)
+                end
+                blank(textParam)
+                blank(rawParam)
+            end)
+            H.log(MOD .. ": chat commands hidden from the chat (hook after the other mods')")
+        end)
+    end)
+end
+
 H.log(MOD .. ": loaded")
