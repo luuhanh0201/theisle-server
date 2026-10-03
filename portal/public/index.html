@@ -3311,6 +3311,163 @@
     .leaderboard-player-name { max-width: 140px; }
   }
 
+  /* ---- Danh sách các đời dino của bạn (Gọn gàng, ưu tiên mật độ hiển thị cao, không animation) ---- */
+  .leaderboard-list.lives-mode {
+    gap: 6px;
+  }
+  .dino-life-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    transition: background 0.15s ease, border-color 0.15s ease;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .dino-life-item:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  /* Hạn chế animation trên toàn bộ thẻ đời dino */
+  .dino-life-item,
+  .dino-life-item * {
+    animation: none !important;
+  }
+  .dli-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+  .dli-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    opacity: 0.6;
+    min-width: 26px;
+    text-align: center;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .dli-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+    flex-wrap: wrap;
+  }
+  .dli-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .dli-name {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .dli-sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+  .dli-sub .tag {
+    font-size: 11px;
+    padding: 1px 7px;
+  }
+  .dli-dot {
+    opacity: 0.4;
+  }
+  .dli-kills {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--emerald-light);
+    white-space: nowrap;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .dli-kills b {
+    font-size: 14px;
+  }
+
+  /* Đời thường (F0): Tối giản, thanh thoát */
+  .dino-life-item.fossil-tier {
+    opacity: 0.88;
+  }
+
+  /* Đời cao (F1 - F4): Highlight tinh tế bằng viền màu và dải nền tĩnh, không animation */
+  .dino-life-item.high-tier {
+    border-left-width: 3.5px !important;
+  }
+  .dino-life-item.high-tier .dli-num {
+    opacity: 0.95;
+    font-weight: 800;
+  }
+
+  .dino-life-item.tier-amber {
+    border-left-color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.015) 70%, transparent 100%), var(--bg-surface);
+  }
+  .dino-life-item.tier-amber .dli-name { color: #fef3c7; }
+  .dino-life-item.tier-amber .dli-num { color: #f59e0b; }
+
+  .dino-life-item.tier-dna {
+    border-left-color: #10b981;
+    border-color: rgba(16, 185, 129, 0.32);
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.015) 70%, transparent 100%), var(--bg-surface);
+  }
+  .dino-life-item.tier-dna .dli-name { color: #d1fae5; }
+  .dino-life-item.tier-dna .dli-num { color: #10b981; }
+
+  .dino-life-item.tier-rex {
+    border-left-color: #f97316;
+    border-color: rgba(249, 115, 22, 0.38);
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.09) 0%, rgba(249, 115, 22, 0.015) 70%, transparent 100%), var(--bg-surface);
+  }
+  .dino-life-item.tier-rex .dli-name { color: #ffedd5; }
+  .dino-life-item.tier-rex .dli-num { color: #f97316; }
+
+  .dino-life-item.tier-apex {
+    border-left-color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.42);
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.015) 70%, transparent 100%), var(--bg-surface);
+  }
+  .dino-life-item.tier-apex .dli-name { color: #fee2e2; }
+  .dino-life-item.tier-apex .dli-num { color: #ef4444; }
+
+  @media (max-width: 640px) {
+    .dino-life-item {
+      padding: 8px 10px;
+      gap: 8px;
+    }
+    .dli-info {
+      gap: 4px;
+    }
+    .dli-title {
+      width: 100%;
+    }
+    .dli-kills-unit {
+      display: none;
+    }
+    .hide-xs {
+      display: none !important;
+    }
+  }
+
   /* ==========================================================================
      PAGE 6: SKIN STUDIO
      ========================================================================== */
