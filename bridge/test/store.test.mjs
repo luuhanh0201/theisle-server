@@ -545,3 +545,17 @@ test('a real death of a prime (no young one with one more stack after it) stays 
   assert.equal(s.player(A).player.countedDeaths, 1);
   assert.equal(s.player(A).lives.find((l) => l.spawnedAt === t).end, 'death');
 });
+
+test('a dino stored in the garage keeps the growth it went in at, not the store\'s shrink', () => {
+  const s = new Store();
+  const t = now() - 1000;
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t, type: 'spawn', steamId: A, species: 'BP_Triceratops_C', growth: 0.25 },
+    { t: t + 500, type: 'garage_store', steamId: A, slot: '1', growth: 0.58 },
+    { t: t + 502, type: 'death', steamId: A, species: 'BP_Triceratops_C', growth: 0.25 },
+  ]);
+  const life = s.player(A).lives[0];
+  assert.equal(life.end, 'garage');
+  assert.equal(life.growth, 0.58);
+});

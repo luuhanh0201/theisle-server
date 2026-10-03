@@ -142,8 +142,17 @@ export interface PlayerView {
     trail: Array<{ x: number; y: number; t: number }>;
   } | null;
   stats: { kills: number; deaths: number; spawns: number; playtime: number; longestLife: number; sessions: number };
+  /** One entry per DINO (newest first): its stretches — relogs, the garage, rebirths — together (dinoRows). */
   lives: Array<{
     species: string | null; spawnedAt: number; endedAt: number | null; end: string | null;
+    /** alive (played now), garage (in the garage), left (logged out on it / switched: no death seen), death, admin, rebirth. */
+    status: 'alive' | 'garage' | 'left' | 'death' | 'admin' | 'rebirth';
+    /** Seconds it lived, online, all its stretches added up. */
+    seconds: number;
+    /** When it was last seen. */
+    lastAt: number;
+    /** Times it was reborn (chuyển sinh) along the way. */
+    rebirths: number;
     growth: number | null; kills: number; killedBy: string | null; killedBySpecies: string | null;
     /** Elder stacks (the dino's "đời": a rebirth at 100 % adds one); null when never read. */
     elderStacks: number | null;
@@ -158,6 +167,47 @@ export interface PlayerView {
     vitals: { health: number | null; stamina: number | null; thirst: number | null };
     max: { health: number | null; stamina: number | null; thirst: number | null };
   }>;
+}
+
+/**
+ * The player's dinos, one row each (newest first). The store keeps a life per
+ * stretch — every relog, garage store / redeem and rebirth starts one — and the
+ * page listed those: one Rex at 100 % came out as five rows, four of them
+ * "Đang sống" (stretches the player logged out of), plus the admin camera
+ * ("AdminPawn"). The owner did not understand it (2026-10-03). A dino is a
+ * chain (store.ts): its time added up, its state from its last stretch.
+ */
+export function dinoRows(lives: readonly LifeRecord[], isAdmin: (steamId: string | null) => boolean, now: number): PlayerView['lives'] {
+  const byChain = new Map<number, LifeRecord[]>();
+  const order: number[] = [];
+  for (const l of lives) {
+    if (/AdminPawn/i.test(l.species)) continue;
+    const list = byChain.get(l.chain);
+    if (list === undefined) { byChain.set(l.chain, [l]); order.push(l.chain); } else list.push(l);
+  }
+  // `lives` comes newest first: each chain's first entry is its last stretch.
+  return order.map((chain) => {
+    const stretches = byChain.get(chain) as LifeRecord[];
+    const last = stretches[0] as LifeRecord;
+    const first = stretches[stretches.length - 1] as LifeRecord;
+    const seconds = stretches.reduce((sum, l) => sum + Math.max(0, (l.endedAt ?? (l.pausedAt ?? Math.max(now, l.lastAt))) - l.spawnedAt), 0);
+    const status: PlayerView['lives'][number]['status'] =
+      last.end === 'death' || last.end === 'admin' || last.end === 'garage' || last.end === 'rebirth' ? last.end
+        : last.endedAt === null && last.pausedAt === null ? 'alive' : 'left';
+    const killedHidden = isAdmin(last.killer);
+    const stacks = stretches.map((l) => l.elderStacks).find((v) => v !== null) ?? null;
+    return {
+      species: shortSpecies(last.species), spawnedAt: first.spawnedAt, endedAt: last.endedAt, end: last.end, status,
+      seconds, lastAt: last.endedAt ?? last.lastAt,
+      rebirths: stretches.filter((l) => l.end === 'rebirth').length,
+      growth: num(last.growth), kills: stretches.reduce((sum, l) => sum + l.countedKills, 0),
+      // A killer's NAME is what the game showed the victim anyway; never their SteamID.
+      // Killed by an admin: not shown on the players' side (only the panel logs it).
+      killedBy: status === 'death' && !killedHidden ? last.killerName : null,
+      killedBySpecies: status === 'death' && !killedHidden ? shortSpecies(last.killerSpecies) : null,
+      elderStacks: num(stacks),
+    };
+  });
 }
 
 export function playerView(
@@ -194,14 +244,7 @@ export function playerView(
       kills: p?.countedKills ?? 0, deaths: p?.countedDeaths ?? 0, spawns: p?.spawns ?? 0,
       playtime: p?.playtime ?? 0, longestLife: p?.longestLife ?? 0, sessions: p?.sessions ?? 0,
     },
-    lives: lives.slice(0, 20).map((l) => ({
-      species: shortSpecies(l.species), spawnedAt: l.spawnedAt, endedAt: l.endedAt, end: l.end,
-      growth: num(l.growth), kills: l.countedKills,
-      // A killer's NAME is what the game showed the victim anyway; never their SteamID.
-      // Killed by an admin: not shown on the players' side (only the panel logs it).
-      killedBy: isAdmin(l.killer) ? null : l.killerName, killedBySpecies: isAdmin(l.killer) ? null : shortSpecies(l.killerSpecies),
-      elderStacks: num(l.elderStacks),
-    })),
+    lives: dinoRows(lives, isAdmin, Math.floor(Date.now() / 1000)).slice(0, 20),
     garage: garage.map((g) => ({
       slot: g.slot,
       species: shortSpecies(g.meta.classPath ?? g.state?.['classPath']),

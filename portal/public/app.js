@@ -1787,10 +1787,17 @@ function renderRanking() {
       container.innerHTML = '<li class="muted" style="padding:24px;text-align:center">Chưa có lịch sử đời dino nào.</li>';
       return;
     }
-    const END = { death: 'Tử vong', garage: 'Cất vào gara', admin: 'Admin can thiệp', rebirth: 'Chuyển sinh' };
+    // One row per dino (bridge dinoRows): its relogs, garage trips and rebirths together.
+    const STATUS = {
+      alive: ['Đang sống', 'info'], garage: ['Đang trong gara', ''], left: ['Đã thoát game (chưa chết)', ''],
+      death: ['Đã chết', 'kill'], admin: ['Admin xoá', 'kill'], rebirth: ['Chuyển sinh', 'prime'],
+    };
     container.innerHTML = lives.map((l, i) => {
       const tier = getDinoTier(l);
       const isTop = i < 3;
+      const [label, tone] = STATUS[l.status] ?? [l.end ?? 'Không rõ', ''];
+      const by = l.status === 'death' && l.killedBy ? ` bởi ${esc(l.killedBy)}${l.killedBySpecies ? ` (${esc(l.killedBySpecies)})` : ''}` : '';
+      const reborn = l.rebirths > 0 ? ` · chuyển sinh ${l.rebirths} lần` : '';
       return `
       <li class="leaderboard-item ${tier.key === 'amber' ? 'tier-amber' : tier.className}">
         ${renderSlotFx(tier)}
@@ -1799,13 +1806,14 @@ function renderRanking() {
           <div class="leaderboard-item-details">
             <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
               <b class="leaderboard-player-name">${esc(l.species ?? 'Dino')}</b>
-              <span class="tag" style="font-size:11px">Growth ${pct(l.growth)}</span>
-              ${tier.level > 1 ? `<span class="tag prime" style="font-size:11px">👑 Đời ${tier.level}</span>` : tier.level === 1 ? '<span class="tag prime" style="font-size:11px">👑 Prime</span>' : ''}
+              ${tierBadge(tier)}
+              <span class="tag" style="font-size:11px">${growthStage(l.growth).icon} ${pct(l.growth)}</span>
             </div>
             <div class="muted" style="font-size:11.5px;margin-top:2px">
-              ${l.end ? `<span class="tag ${l.end === 'death' ? 'kill' : ''}">${END[l.end] ?? esc(l.end)}${l.killedBy ? ` bởi ${esc(l.killedBy)}` : ''}</span>` : '<span class="tag">Đang sống</span>'}
-              · Sinh ra: ${when(l.spawnedAt)}
+              <span class="tag ${tone}">${esc(label)}${by}</span>
+              · sống ${dur(l.seconds)}${reborn}
             </div>
+            <div class="muted" style="font-size:11px;margin-top:2px">Sinh ra ${when(l.spawnedAt)}${l.status === 'alive' ? '' : ` · lần cuối ${when(l.lastAt)}`}</div>
           </div>
         </div>
         <b class="leaderboard-val-num">⚔️ ${l.kills} kills</b>

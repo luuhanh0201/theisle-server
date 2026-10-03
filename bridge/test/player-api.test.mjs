@@ -22,7 +22,7 @@ writeFileSync(join(root, 'storage.json'), JSON.stringify({ schema: 1, players: {
 } } }));
 
 const { parseEvent } = await import('../dist/events.js');
-const { handlePlayerApi, shortSpecies, discordLink, publicServerInfo } = await import('../dist/player-api.js');
+const { handlePlayerApi, shortSpecies, discordLink, publicServerInfo, dinoRows } = await import('../dist/player-api.js');
 const { Store } = await import('../dist/store.js');
 after(() => rmSync(root, { recursive: true, force: true }));
 
@@ -275,4 +275,25 @@ test('players\' side: an admin\'s name never shows as a killer, nor the admin on
   }
   const me = (await call(`/player-api/me/${ME}`)).body;
   assert.equal(me.lives.find((l) => l.end === 'death').killedBy, 'Other', 'a player killer is named as before');
+});
+
+test('the dinos list: one row per dino, its relogs together; logged out of is not "alive"; no admin camera', () => {
+  const st = new Store();
+  const P = '76561198000000077';
+  const t0 = 1_800_000_000;
+  for (const e of [
+    { type: 'session_start', t: t0, steamId: P, name: 'P' },
+    { type: 'spawn', t: t0, steamId: P, species: 'BP_Tyrannosaurus_C', growth: 1 },
+    { type: 'session_end', t: t0 + 600, steamId: P, duration: 600 },
+    { type: 'session_start', t: t0 + 1000, steamId: P, name: 'P' },
+    { type: 'spawn', t: t0 + 1000, steamId: P, species: 'AdminPawn', growth: null },
+    { type: 'spawn', t: t0 + 1010, steamId: P, species: 'BP_Tyrannosaurus_C', growth: 1 },       // the same Rex again
+    { type: 'session_end', t: t0 + 1310, steamId: P, duration: 310 },
+    { type: 'session_start', t: t0 + 2000, steamId: P, name: 'P' },
+    { type: 'spawn', t: t0 + 2000, steamId: P, species: 'BP_Triceratops_C', growth: 0.25 },     // another dino, played now
+  ]) st.apply(parseEvent(e));
+  const rows = dinoRows(st.player(P).lives, () => false, t0 + 2100);
+  assert.deepEqual(rows.map((r) => [r.species, r.status]), [['Triceratops', 'alive'], ['Tyrannosaurus', 'left']], JSON.stringify(rows));
+  assert.equal(rows[1].seconds, 600 + 300, 'its two stretches added up');
+  assert.equal(rows[1].spawnedAt, t0, 'born at its first spawn');
 });

@@ -441,6 +441,9 @@ export class Store {
         const p = this.#player(event.steamId, event.t);
         p.stored += 1;
         this.#recentRemoval.set(event.steamId, { t: event.t, cause: 'garage', slot: event.slot });
+        // The growth it went into the garage at (the store's own reading, before it shrinks the dino).
+        const storing = this.#openLife(event.steamId);
+        if (storing !== null && typeof event.growth === 'number') storing.growth = event.growth;
         this.#push(p.name === null ? event : { ...event, name: p.name }, [event.steamId]);
         break;
       }
@@ -625,8 +628,10 @@ export class Store {
     const life = this.#openLife(event.steamId);
     if (life !== null) {
       life.lastAt = event.t;
-      life.growth = event.growth ?? life.growth;
-      if (typeof event.growth === 'number') life.maxGrowth = Math.max(life.maxGrowth ?? 0, event.growth);
+      // The garage store shrinks the dino before removing it: its "death" reads ~25 %,
+      // not what went into the garage (the dinos list said 25 % for a grown one).
+      if (deliberate !== 'garage') life.growth = event.growth ?? life.growth;
+      if (typeof event.growth === 'number' && deliberate !== 'garage') life.maxGrowth = Math.max(life.maxGrowth ?? 0, event.growth);
       life.end = deliberate ?? 'death';
       if (deliberate === 'garage' && removal?.slot !== undefined) life.storedTo = removal.slot;
       this.#closeLife(event.steamId, life, event.t);
@@ -828,8 +833,9 @@ export class Store {
     const open = this.#openLife(steamId);
     if (open !== null) this.#closeLife(steamId, open, open.pausedAt ?? open.lastAt);
     // The same dino again (a relog: same species, growth going on, no death
-    // or store seen): the same chain.
-    const prev = lives[lives.length - 1];
+    // or store seen): the same chain. The admin camera ("AdminPawn", an admin
+    // spectating between two stretches) is not a dino: looked past.
+    const prev = [...lives].reverse().find((l) => !/AdminPawn/i.test(l.species));
     const same = prev !== undefined && prev.end === null && prev.species === species
       && growth !== null && (prev.maxGrowth ?? prev.growth) !== null && growth >= (prev.maxGrowth ?? prev.growth ?? 0) - 0.02;
     const chain = same ? (prev as LifeRecord).chain : ++this.#chainSeq;
