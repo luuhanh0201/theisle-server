@@ -1,4 +1,4 @@
-import type { GameEvent, DeathEvent, GarageStoreResultEvent, Loc, MutationSlots, PortalCommandEvent, PrisonEvent, SnapshotEvent, Skin, VitalName } from './events.js';
+import type { GameEvent, DeathEvent, GarageStoreResultEvent, GrowthSetEvent, MutationEvent, Loc, MutationSlots, PortalCommandEvent, PrisonEvent, SnapshotEvent, Skin, VitalName } from './events.js';
 import { config } from './config.js';
 import { Catalog } from './catalog.js';
 import { SpeciesStats } from './species-stats.js';
@@ -121,6 +121,8 @@ export interface PlayerStats {
 export type FeedInput =
   // The Prison mod's events are prison.ts's business, not the feed's.
   | Exclude<GameEvent, SnapshotEvent | DeathEvent | PrisonEvent | { type: 'mod_loaded' }>
+  /** A mutation / growth change the garage (a redeem), an admin or an item made — not the player (#writtenBy). */
+  | ((MutationEvent | GrowthSetEvent) & { via?: 'garage' | 'admin' | 'item' })
   | (DeathEvent & {
     /** Not a death: stored, removed by an admin, or a rebirth (chuyển sinh, told a few seconds later). */
     cause?: 'garage' | 'admin' | 'rebirth';
@@ -189,6 +191,10 @@ export function killCounts(killerGrowth: number | null | undefined, victimGrowth
   if (typeof killerGrowth !== 'number' || killerGrowth <= KILL_YOUNG_MAX) return true;
   return typeof victimGrowth !== 'number' || victimGrowth > KILL_PREY_MIN;
 }
+/** Mutation / growth changes this soon after a redeem, an admin action or an item are theirs (seen: ~4 s). */
+const WRITE_WINDOW = 20;
+/** A redeem takes off the log the spawn and the web command this soon before it (#prep). */
+const PREP_WINDOW = 600;
 /** A rebirth's spawn comes this soon after the death that started it (seen: 5–12 s). */
 const REBIRTH_WINDOW = 120;
 
@@ -236,6 +242,36 @@ export class Store {
   readonly groundPoints = new GroundPoints();
   /** steamId -> when and why their dino was just removed on purpose. */
   readonly #recentRemoval = new Map<string, { t: number; cause: 'garage' | 'admin'; slot?: string }>();
+  /**
+   * The last time the garage (a redeem), an admin or an item wrote on a player's dino:
+   * the mutation and growth changes the game reports right after are that write, not
+   * the player picking — the panel said "chọn mutation" four times for one redeem (2026-10-03).
+   */
+  readonly #recentWrite = new Map<string, { t: number; via: 'garage' | 'admin' | 'item' }>();
+  #writtenBy(steamId: string, t: number): 'garage' | 'admin' | 'item' | null {
+    const w = this.#recentWrite.get(steamId);
+    return w !== undefined && t >= w.t && t - w.t <= WRITE_WINDOW ? w.via : null;
+  }
+  #pushVia(event: MutationEvent | GrowthSetEvent): void {
+    const via = this.#writtenBy(event.steamId, event.t);
+    // The redeem's own growth and mutations: part of "lấy gara", no lines of their own (the owner: "log thừa").
+    if (via === 'garage') return;
+    this.#push(via === null ? event : { ...event, via }, [event.steamId]);
+  }
+  /**
+   * A redeem's preparation: the young dino spawned to be the one taken out, and the
+   * web command — one "lấy gara" line says it all (2026-10-03). Kept until a redeem
+   * takes them off the log, or the next spawn / command replaces them.
+   */
+  readonly #prep = new Map<string, { spawn?: FeedEntry & { t: number }; cmd?: FeedEntry & { t: number } }>();
+  /** Takes a line back off the log (and the player's timeline). */
+  #unlog(entry: FeedEntry, steamId: string): void {
+    for (const list of [this.#feed, this.#timelines.get(steamId)]) {
+      if (list === undefined) continue;
+      const i = list.lastIndexOf(entry);
+      if (i >= 0) list.splice(i, 1);
+    }
+  }
   /** Each player's last death and what it added up, undone if it turns out a rebirth (#rebirth). */
   readonly #lastDeath = new Map<string, {
     t: number; life: LifeRecord | null; entry: FeedEntry; deathCounted: boolean;
@@ -383,7 +419,10 @@ export class Store {
         this.#startLife(event.steamId, event.species, event.growth, event.t);
         this.catalog.addSpecies(event.species, event.classPath);
         this.catalog.addMutations(event.species, event.mutations, { t: event.t, steamId: event.steamId });
-        this.#push(event, [event.steamId]);
+        {
+          const entry = this.#push(event, [event.steamId]);
+          this.#prep.set(event.steamId, { spawn: entry as FeedEntry & { t: number } });
+        }
         break;
       }
 
@@ -420,20 +459,26 @@ export class Store {
       }
 
       case 'mutation':
-        this.catalog.addMutation(event.species, event.slot, event.to, { t: event.t, steamId: event.steamId });
+        // Written by the garage / an admin / an item just before: not the player's pick (not in the catalog either).
+        if (this.#writtenBy(event.steamId, event.t) === null) {
+          this.catalog.addMutation(event.species, event.slot, event.to, { t: event.t, steamId: event.steamId });
+        }
         {
           const p = this.#player(event.steamId, event.t, event.name);
           const now = { ...(p.mutations ?? {}) };
           if (event.to) now[event.slot] = event.to; else delete now[event.slot];
           p.mutations = now;
         }
-        this.#push(event, [event.steamId]);
+        this.#pushVia(event);
         break;
 
       case 'growth':
-      case 'growth_set':
         this.#player(event.steamId, event.t, event.name);
         this.#push(event, [event.steamId]);
+        break;
+      case 'growth_set':
+        this.#player(event.steamId, event.t, event.name);
+        this.#pushVia(event);
         break;
 
       // DinoGarage does not know display names; fill in the one we have.
@@ -452,6 +497,12 @@ export class Store {
         const p = this.#player(event.steamId, event.t);
         if (event.ok) {
           p.redeemed += 1;
+          this.#recentWrite.set(event.steamId, { t: event.t, via: 'garage' });
+          const prep = this.#prep.get(event.steamId);
+          this.#prep.delete(event.steamId);
+          // The young one spawned for it (a few minutes at most before) and the web command.
+          if (prep?.spawn !== undefined && event.t - prep.spawn.t <= PREP_WINDOW) this.#unlog(prep.spawn, event.steamId);
+          if (prep?.cmd !== undefined && event.t - prep.cmd.t <= PREP_WINDOW) this.#unlog(prep.cmd, event.steamId);
           const life = this.#openLife(event.steamId);
           if (life !== null) {
             life.redeemedFrom = event.slot;
@@ -471,6 +522,10 @@ export class Store {
 
       case 'portal_command': {
         this.#commandResults.set(event.id, event);
+        // An admin's action (grow, mutation slots…) or a mutation item: what the dino shows next is theirs.
+        if (event.ok && (event.action === 'admin' || event.action === 'mutation')) {
+          this.#recentWrite.set(event.steamId, { t: event.t, via: event.action === 'admin' ? 'admin' : 'item' });
+        }
         if (this.#commandResults.size > 500) {
           const oldest = this.#commandResults.keys().next().value;
           if (oldest !== undefined) this.#commandResults.delete(oldest);
@@ -479,7 +534,13 @@ export class Store {
         // logged-in players, but an offline one may never have joined) must
         // not create a player out of thin air.
         const known = this.#players.get(event.steamId);
-        if (known !== undefined) this.#push(known.name === null ? event : { ...event, name: known.name }, [event.steamId]);
+        if (known !== undefined) {
+          const entry = this.#push(known.name === null ? event : { ...event, name: known.name }, [event.steamId]);
+          if (event.action === 'redeem' && event.ok) {
+            const prep = this.#prep.get(event.steamId) ?? {};
+            this.#prep.set(event.steamId, { ...prep, cmd: entry as FeedEntry & { t: number } });
+          }
+        }
         break;
       }
 

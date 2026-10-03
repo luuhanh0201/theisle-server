@@ -3450,9 +3450,14 @@ function describe(e) {
     case 'growth':
       return [`${who(e.steamId, e.name)} đạt <b>${pct(e.milestone)}</b> growth`,
         `${esc(dino(e.species))}${e.lifeSeconds !== undefined ? ' · sau ' + dur(e.lifeSeconds) : ''}`];
-    case 'growth_set':
-      return [`${who(e.steamId, e.name)} growth nhảy ${pct(e.from)} → <b>${pct(e.to)}</b>`,
-        `${esc(dino(e.species))} · redeem, admin hoặc bất thường`];
+    case 'growth_set': {
+      // `via` (bridge store.ts): the redeem / admin action / item just before made it.
+      const why = { garage: 'lấy từ gara', admin: 'admin đặt', item: 'dùng vật phẩm' }[e.via];
+      return why
+        ? [`${who(e.steamId, e.name)} growth ${pct(e.from)} → <b>${pct(e.to)}</b> (${why})`, `${esc(dino(e.species))}`]
+        : [`${who(e.steamId, e.name)} growth nhảy ${pct(e.from)} → <b>${pct(e.to)}</b>`,
+          `${esc(dino(e.species))} · không rõ lý do (không có lấy gara / lệnh admin ngay trước)`];
+    }
     case 'admin_kill':
       return e.ok
         ? [`Admin xoá dino của ${who(e.steamId, e.name)}${e.species ? ` <b>${esc(dino(e.species))}</b>` : ''}`,
@@ -3481,6 +3486,14 @@ function describe(e) {
            `${esc(WEB_CMD_ERRORS[e.error] ?? (e.error || 'theo luật gara'))}${reply}`];
     }
     case 'mutation':
+      if (e.via) {
+        // Written by the garage / an admin / an item (store.ts #writtenBy), not picked by the player.
+        const by = { garage: 'Gara khôi phục', admin: 'Admin đặt', item: 'Vật phẩm đặt' }[e.via] ?? 'Đặt';
+        return e.to
+          ? [`${by} mutation <b>${mutIco(e.to)}${esc(mutName(e.to))}</b> cho ${who(e.steamId, e.name)}`,
+             `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}${e.growth !== undefined ? ` · growth ${pct(e.growth)}` : ''}`]
+          : [`${by}: bỏ mutation <b>${esc(mutName(e.from ?? ''))}</b> của ${who(e.steamId, e.name)}`, `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}`];
+      }
       return e.to
         ? [`${who(e.steamId, e.name)} chọn mutation <b>${mutIco(e.to)}${esc(mutName(e.to))}</b>`,
            `${esc(dino(e.species))} · ${esc(SLOT_LABEL(e.slot))}${e.from ? ` · thay ${esc(mutName(e.from))}` : ''}${e.growth !== undefined ? ` · growth ${pct(e.growth)}` : ''}`]
@@ -3488,8 +3501,10 @@ function describe(e) {
     case 'garage_store':
       return [`${who(e.steamId, e.name)} cất <b>${esc(dino(e.species))}</b>`, `slot ${esc(e.slot)} · growth ${pct(e.growth)}`];
     case 'garage_redeem':
-      return [`${who(e.steamId, e.name)} lấy <b>${esc(dino(e.species))}</b>${e.ok ? '' : ' <span class="kill">thất bại</span>'}`,
-        `slot ${esc(e.slot)}`];
+      // The one line for a redeem: its young dino's spawn, the web command, the growth and
+      // mutations it put back are not logged apart (bridge store.ts #prep / #pushVia).
+      return [`${who(e.steamId, e.name)} lấy <b>${esc(dino(e.species))}</b> từ gara${e.ok ? '' : ' <span class="kill">thất bại</span>'}`,
+        `slot ${esc(e.slot)}${e.ok && isNum(e.growth) ? ` · growth ${pct(e.growth)}` : ''}`];
     default:
       return [esc(e.type), ''];
   }

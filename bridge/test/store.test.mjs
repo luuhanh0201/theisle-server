@@ -559,3 +559,39 @@ test('a dino stored in the garage keeps the growth it went in at, not the store\
   assert.equal(life.end, 'garage');
   assert.equal(life.growth, 0.58);
 });
+
+test('a redeem is one log line: its young dino\'s spawn, the web command, its growth and mutations are not logged', () => {
+  const s = new Store();
+  const t = now() - 1000;
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t: t + 1, type: 'spawn', steamId: A, species: 'BP_Tyrannosaurus_C', growth: 0.25 },
+    { t: t + 8, type: 'portal_command', id: 1, steamId: A, action: 'redeem', slot: '2', ok: true },
+    { t: t + 12, type: 'garage_redeem', steamId: A, slot: '2', ok: true, growth: 0.853 },
+    { t: t + 16, type: 'growth_set', steamId: A, species: 'BP_Tyrannosaurus_C', from: 0.25, to: 0.853 },
+    { t: t + 16, type: 'mutation', steamId: A, species: 'BP_Tyrannosaurus_C', slot: 'Slot1', to: 'Hemomania' },
+    { t: t + 16, type: 'mutation', steamId: A, species: 'BP_Tyrannosaurus_C', slot: 'Slot4', to: 'Cannibalistic' },
+    // Picked by the player a while later: logged.
+    { t: t + 300, type: 'mutation', steamId: A, species: 'BP_Tyrannosaurus_C', slot: 'Slot4', from: 'Cannibalistic', to: 'Nocturnal' },
+    // An admin's growth: logged, said so.
+    { t: t + 400, type: 'portal_command', id: 2, steamId: A, action: 'admin', ok: true },
+    { t: t + 404, type: 'growth_set', steamId: A, species: 'BP_Tyrannosaurus_C', from: 0.853, to: 1 },
+  ]);
+  const lines = s.feed(50).reverse().map((e) => [e.type, e.via ?? e.to ?? e.action ?? '']);
+  assert.deepEqual(lines, [
+    ['session_start', ''], ['garage_redeem', ''], ['mutation', 'Nocturnal'], ['portal_command', 'admin'], ['growth_set', 'admin'],
+  ]);
+  assert.deepEqual(s.player(A).timeline.map((e) => e.type).includes('spawn'), false, 'nor on the player\'s timeline');
+  assert.deepEqual(s.player(A).player.mutations, { Slot1: 'Hemomania', Slot4: 'Nocturnal' }, 'the dino\'s slots follow all of them');
+});
+
+test('a spawn not followed by a redeem stays on the log', () => {
+  const s = new Store();
+  const t = now() - 1000;
+  feed(s, [
+    { t, type: 'session_start', steamId: A, name: 'Alpha' },
+    { t: t + 1, type: 'spawn', steamId: A, species: 'BP_Tyrannosaurus_C', growth: 0.25 },
+    { t: t + 8, type: 'portal_command', id: 1, steamId: A, action: 'redeem', slot: '2', ok: false, error: 'failed' },
+  ]);
+  assert.deepEqual(s.feed(50).map((e) => e.type).sort(), ['portal_command', 'session_start', 'spawn']);
+});

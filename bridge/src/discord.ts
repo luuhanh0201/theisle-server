@@ -210,6 +210,8 @@ export function lineOf(e: FeedEntry): LogLine | null {
     case 'growth':
       return { kind: 'growth', t, text: `📈 ${who(e.name, e.steamId)} — ${species(e.species)} lên ${Math.round(e.milestone * 100)}%` };
     case 'mutation':
+      // Written back by the garage / an admin / an item (store.ts `via`): not the player's pick.
+      if ('via' in e && e.via !== undefined) return null;
       return e.to ? { kind: 'mutation', t, text: `🧬 ${who(e.name, e.steamId)} — ${species(e.species)} có mutation **${plain(e.to)}**` } : null;
     case 'garage_store':
       return { kind: 'garage', t, text: `📦 ${who(e.name, e.steamId)} cất ${species(e.species)}${pct(e.growth)} vào gara (${plain(e.slot)})` };
