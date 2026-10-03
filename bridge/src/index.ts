@@ -48,6 +48,7 @@ import { settleUse } from './items.js';
 import { syncAdminGuard } from './permissions.js';
 import { bagUnlimited, publicServerInfo, shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
+import { Traffic } from './traffic.js';
 
 const store = new Store();
 // Admins count for nothing on the players' side (kills, deaths, boards: store.ts):
@@ -336,7 +337,10 @@ setInterval(() => {
   }
 }, 10_000);
 
-startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
+// Site / launcher traffic (traffic.ts), counted by the portal: the panel's "Truy cập".
+const traffic = new Traffic();
+await traffic.load();
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, traffic, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
 
 // The prison: the mod's state, finished sentences, escape reminders, the mod's files (prison.ts).
 setInterval(() => {
@@ -411,7 +415,8 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     console.info(`[bridge] ${signal} — shutting down`);
     stopping = true;
-    process.exit(0);
+    // The traffic counted in the last few seconds (saved every 5 s otherwise).
+    traffic.flush().catch(() => undefined).finally(() => process.exit(0));
   });
 }
 

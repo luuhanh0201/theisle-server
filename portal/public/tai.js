@@ -21,5 +21,7 @@ if (window.isleLauncher) location.replace('/');
     b.href = `/tai/${encodeURIComponent(f.file)}`;
     b.classList.remove('off');
     b.textContent = `Tải cho ${os === 'win' ? 'Windows' : 'Linux'}${f.size ? ` (${mb(f.size)})` : ''}`;
+    // Counted for the panel's "Truy cập" (the installers themselves are cached by the proxy, never seen).
+    b.addEventListener('click', () => { navigator.sendBeacon?.('/api/track/download', JSON.stringify({ os })); });
   }
 })();

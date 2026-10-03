@@ -1776,6 +1776,7 @@ function renderRankFx(rank) {
 
 function renderRanking() {
   const container = $('ranking-list');
+  if (container) container.classList.toggle('lives-mode', currentRankingTab === 'lives');
   if (!lastBoardData && currentRankingTab !== 'lives') {
     container.innerHTML = '<li class="muted" style="padding:16px;text-align:center">Đang tải bảng xếp hạng…</li>';
     return;
@@ -1794,29 +1795,36 @@ function renderRanking() {
     };
     container.innerHTML = lives.map((l, i) => {
       const tier = getDinoTier(l);
-      const isTop = i < 3;
+      const isHighTier = tier.level > 0;
       const [label, tone] = STATUS[l.status] ?? [l.end ?? 'Không rõ', ''];
       const by = l.status === 'death' && l.killedBy ? ` bởi ${esc(l.killedBy)}${l.killedBySpecies ? ` (${esc(l.killedBySpecies)})` : ''}` : '';
-      const reborn = l.rebirths > 0 ? ` · chuyển sinh ${l.rebirths} lần` : '';
+      const reborn = l.rebirths > 0 ? ` · CS x${l.rebirths}` : '';
+      const tierCls = isHighTier ? `high-tier tier-${tier.key}` : 'fossil-tier';
+      const spawnDate = when(l.spawnedAt);
+      const lastDate = l.status === 'alive' ? '' : ` · lần cuối ${when(l.lastAt)}`;
       return `
-      <li class="leaderboard-item ${tier.key === 'amber' ? 'tier-amber' : tier.className}">
-        ${renderSlotFx(tier)}
-        <div class="leaderboard-item-left">
-          <span class="leaderboard-rank ${isTop ? (i === 0 ? 'top-1' : i === 1 ? 'top-2' : 'top-3') : ''}">#${i + 1}</span>
-          <div class="leaderboard-item-details">
-            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
-              <b class="leaderboard-player-name">${esc(l.species ?? 'Dino')}</b>
-              ${tierBadge(tier)}
-              <span class="tag" style="font-size:11px">${growthStage(l.growth).icon} ${pct(l.growth)}</span>
+      <li class="dino-life-item ${tierCls}">
+        <div class="dli-main">
+          <span class="dli-num">#${i + 1}</span>
+          <div class="dli-info">
+            <div class="dli-title">
+              <b class="dli-name">${esc(l.species ?? 'Dino')}</b>
+              ${isHighTier ? tierBadge(tier) : ''}
+              <span class="tag" style="font-size:11px" title="${growthStage(l.growth).name}">${growthStage(l.growth).icon} ${pct(l.growth)}</span>
+              ${l.rebirths > 0 ? `<span class="tag prime" style="font-size:11px" title="Đã chuyển sinh ${l.rebirths} lần">CS x${l.rebirths}</span>` : ''}
             </div>
-            <div class="muted" style="font-size:11.5px;margin-top:2px">
+            <div class="dli-sub muted">
               <span class="tag ${tone}">${esc(label)}${by}</span>
-              · sống ${dur(l.seconds)}${reborn}
+              <span class="dli-dot">·</span>
+              <span>sống ${dur(l.seconds)}${reborn}</span>
+              <span class="dli-dot hide-xs">·</span>
+              <span class="hide-xs" title="Sinh ra: ${esc(spawnDate)}${esc(lastDate)}">${esc(spawnDate)}</span>
             </div>
-            <div class="muted" style="font-size:11px;margin-top:2px">Sinh ra ${when(l.spawnedAt)}${l.status === 'alive' ? '' : ` · lần cuối ${when(l.lastAt)}`}</div>
           </div>
         </div>
-        <b class="leaderboard-val-num">⚔️ ${l.kills} kills</b>
+        <div class="dli-kills" title="${l.kills} hạ gục">
+          ⚔️ <b>${l.kills}</b><span class="dli-kills-unit"> kills</span>
+        </div>
       </li>`;
     }).join('');
     return;
@@ -2487,6 +2495,9 @@ function initTour() {
     }
   } catch {}
 }
+
+// One page load, for the panel's "Truy cập" (web or inside the launcher: told by the portal from the user agent).
+try { navigator.sendBeacon?.('/api/track/view', '{}'); } catch { /* not counted */ }
 
 // Initial setup
 initSidebar();

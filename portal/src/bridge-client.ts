@@ -25,6 +25,8 @@ export class BridgeClient {
   }
 
   me(steamId: string) { return this.get(`/player-api/me/${steamId}`); }
+  /** A traffic event for the panel's "Truy cập" (bridge traffic.ts). */
+  track(event: Record<string, unknown>) { return this.post('/player-api/track', event); }
   garage(steamId: string, body: { action: unknown; slot: unknown; where: unknown }) {
     return this.post(`/player-api/garage/${steamId}`, body);
   }

@@ -1441,6 +1441,10 @@
   .perf-tip b { font-variant-numeric: tabular-nums; }
   .perf-tip .row { display: flex; justify-content: space-between; gap: 14px; }
   .perf-empty { padding: 28px 0; text-align: center; color: var(--muted); font-size: 13px; }
+  /* Truy cập: daily bars (2 series stacked, 2px surface gap, rounded top), legend squares */
+  .tr-charts { display: grid; gap: 6px 24px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+  .tr-charts { position: relative; }
+  .tr-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .cap-table td, .cap-table th { font-variant-numeric: tabular-nums; }
 
   /* ---- chat ----------------------------------------------------------- */
@@ -2975,6 +2979,29 @@
     </div>
 
     <!-- Quản trị -->
+    <!-- Truy cập: site / launcher traffic (bridge traffic.ts, counted by the portal) -->
+    <div data-view="traffic" hidden>
+      <div class="page-head"><div><h1>Truy cập</h1><p>Lượt mở web, tải và dùng launcher, đăng nhập (giờ server). Không lưu IP: người xem là mã băm theo ngày.</p></div></div>
+      <section class="card">
+        <div class="card-head" style="flex-wrap:wrap;gap:10px"><h2>Khoảng thời gian</h2>
+          <div class="seg" id="tr-range" role="group" aria-label="Khoảng thời gian">
+            <button type="button" data-range="day" class="on">Hôm nay</button><button type="button" data-range="week">7 ngày</button>
+            <button type="button" data-range="month">30 ngày</button><button type="button" data-range="custom">Khoảng ngày</button>
+          </div>
+          <span class="row" id="tr-custom" style="gap:8px;align-items:center" hidden>
+            <input type="date" id="tr-from" aria-label="Từ ngày"><span class="muted">→</span><input type="date" id="tr-to" aria-label="Đến ngày">
+          </span>
+          <span class="sub" id="tr-range-label" style="margin-left:auto"></span></div>
+        <div class="card-body"><div class="perf-tiles" id="tr-tiles"></div>
+          <p class="tr-note">Tải file cài đặt: proxy trước web lưu cache file cài nên phần lớn lượt tải không tới server — số "từ server" luôn thấp hơn thật;
+            xem <b>Bấm tải</b> (nút trên trang tải) và <b>Cài mới</b> (launcher mở lần đầu, từ bản 1.0.33).</p></div>
+      </section>
+      <section class="card" style="margin-top:16px">
+        <div class="card-head"><h2>Biểu đồ</h2><span class="sub" id="tr-unit"></span></div>
+        <div class="card-body"><div class="tr-charts" id="tr-charts"></div></div>
+      </section>
+    </div>
+
     <div data-view="admin" hidden>
       <div class="page-head"><div><h1>Quản trị</h1><p>Ai được vào panel, nhật ký mọi thao tác của admin, và log gửi lên Discord.</p></div></div>
       <nav class="subtabs" data-subnav="admin" aria-label="Mục của Quản trị"></nav>
@@ -3193,6 +3220,7 @@ PATHS.world = '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1
 PATHS.mods = '<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3h7z"/>';
 PATHS.admin = '<path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>';
 PATHS.server = '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>';
+PATHS.traffic = '<path d="M3 20h18"/><rect x="5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="6" width="3" height="12" rx="1"/><rect x="16" y="13" width="3" height="5" rx="1"/>';
 PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>';
 
 // --- admin actions ------------------------------------------------------------
@@ -3207,7 +3235,7 @@ let sessionToken = false;
 let ME = { perms: null, super: false };
 const can = (key) => ME.super || ME.perms === null || ME.perms.has(key);
 // The permission each page needs to be shown ('*': the super admin only).
-const TAB_NEED = { overview: 'players.view', player: 'players.view', map: 'map.view' };
+const TAB_NEED = { overview: 'players.view', player: 'players.view', map: 'map.view', traffic: 'traffic.view' };
 const SUB_NEED = {
   players: { list: 'players.view', killfeed: 'players.view', leaderboard: 'players.view', chat: 'players.view', bans: 'bans.view', prison: 'prison.view' },
   world: { overview: 'world.view', flora: 'world.view', fish: 'world.view' },
@@ -4602,7 +4630,7 @@ $('padm-tp-xy').addEventListener('click', () => {
 // One block per job. Inside a block, sub-pages (SUBS) at #<block>/<sub>.
 const TABS = [
   ['overview', 'Tổng quan'], ['players', 'Người chơi'], ['map', 'Bản đồ'], ['world', 'Thế giới'],
-  ['garage', 'Gara'], ['items', 'Vật phẩm'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['admin', 'Quản trị'],
+  ['garage', 'Gara'], ['items', 'Vật phẩm'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['traffic', 'Truy cập'], ['admin', 'Quản trị'],
 ];
 function renderTabsNav() {
   $('tabs').innerHTML = TABS.filter(([id]) => tabAllowed(id)).map(([id, label]) =>
@@ -9977,6 +10005,136 @@ async function refreshServerTab() {
   if (cfg && !cfgDirty) renderConfig(cfg);
 }
 
+// --- Truy cập (bridge traffic.ts) -----------------------------------------------------
+// Line charts (owner: lines, no table), one per measure, two series where it splits (web /
+// launcher, Windows / Linux): --series-1/2 (validated in both themes), 2px lines, a legend on
+// two-series charts, a crosshair + tooltip on hover. Range: today (hour by hour), 7 / 30 days,
+// or any days (day by day). Fetched at most every 30 s (the counts move slowly).
+const tr = { range: 'day', from: null, to: null, data: null, at: 0, key: '', hover: null };
+const trKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function trSpan() {
+  const today = new Date();
+  if (tr.range === 'custom' && tr.from && tr.to) return [tr.from <= tr.to ? tr.from : tr.to, tr.from <= tr.to ? tr.to : tr.from];
+  const back = { day: 0, week: 6, month: 29 }[tr.range] ?? 0;
+  return [trKey(new Date(today.getTime() - back * 86400000)), trKey(today)];
+}
+async function refreshTraffic(force = false) {
+  const [from, to] = trSpan();
+  const key = `${from}|${to}`;
+  if (!force && tr.data && tr.key === key && Date.now() - tr.at < 30_000) return;
+  tr.at = Date.now(); tr.key = key;
+  try { tr.data = await getJson(`/api/traffic?from=${from}&to=${to}`); renderTraffic(); }
+  catch { $('tr-tiles').innerHTML = '<div class="perf-empty">Chưa đọc được số liệu truy cập.</div>'; $('tr-charts').innerHTML = ''; }
+}
+$('tr-range').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-range]');
+  if (!b) return;
+  tr.range = b.dataset.range;
+  for (const x of $('tr-range').querySelectorAll('button')) x.classList.toggle('on', x === b);
+  $('tr-custom').hidden = tr.range !== 'custom';
+  if (tr.range === 'custom' && !tr.from) {
+    const t = new Date();
+    tr.to = trKey(t); tr.from = trKey(new Date(t.getTime() - 13 * 86400000));
+    $('tr-from').value = tr.from; $('tr-to').value = tr.to;
+    for (const id of ['tr-from', 'tr-to']) $(id).dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  refreshTraffic(true);
+});
+for (const id of ['tr-from', 'tr-to']) {
+  $(id).addEventListener('change', () => {
+    const v = $(id).value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+    if (id === 'tr-from') tr.from = v; else tr.to = v;
+    if (tr.range === 'custom') refreshTraffic(true);
+  });
+}
+window.addEventListener('resize', () => { if (tr.data && currentTab() === 'traffic') renderTraffic(); });
+
+const trNum = (n) => Number(n).toLocaleString('vi-VN');
+const trDay = (k) => { const [, m, d] = k.split('-'); return `${d}/${m}`; };
+const trLabel = (p) => (tr.data.unit === 'hour' ? p.label : trDay(p.label));
+const TR_CHARTS = [
+  { title: 'Lượt mở web', unit: 'lượt', series: [['viewsWeb', 'Web'], ['viewsLauncher', 'Trong launcher']] },
+  { title: 'Người xem mới', unit: 'người', series: [['visitorsWeb', 'Web'], ['visitorsLauncher', 'Trong launcher']] },
+  { title: 'Bấm tải launcher', unit: 'lượt', series: [['clicksWin', 'Windows'], ['clicksLinux', 'Linux']] },
+  { title: 'Cài mới / máy dùng launcher', unit: 'máy', series: [['launchers', 'Máy dùng'], ['installs', 'Cài mới']] },
+  { title: 'Lượt đăng nhập', unit: 'lượt', series: [['loginsWeb', 'Web'], ['loginsLauncher', 'Launcher']] },
+  { title: 'Tài khoản đang dùng', unit: 'tài khoản', series: [['activeWeb', 'Web'], ['activeLauncher', 'Launcher']] },
+];
+const TR_COLORS = ['var(--series-1)', 'var(--series-2)'];
+
+function trChart(c, i) {
+  const pts = tr.data.points;
+  const box = $('tr-charts').clientWidth;
+  const W = Math.max(300, box > 900 ? box / 2 - 12 : box), H = 170, L = 34, R = 10, T = 10, B = 22;
+  const yMax = niceCeil(Math.max(1, ...pts.flatMap((p) => c.series.map(([k]) => p[k]))));
+  const n = pts.length;
+  const x = (j) => L + (n === 1 ? 0.5 : j / (n - 1)) * (W - L - R);
+  const y = (v) => T + (1 - v / yMax) * (H - T - B);
+  const grid = [0, 0.5, 1].map((f) => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(yMax * f)}" y2="${y(yMax * f)}"/><text class="axis" x="${L - 6}" y="${y(yMax * f) + 3.5}" text-anchor="end">${trNum(Math.round(yMax * f))}</text>`).join('');
+  const every = Math.max(1, Math.ceil(n / 7));
+  const ticks = pts.map((p, j) => (j % every === 0 || j === n - 1)
+    ? `<text class="axis" x="${x(j)}" y="${H - 5}" text-anchor="${j === 0 ? 'start' : j === n - 1 ? 'end' : 'middle'}">${trLabel(p)}</text>` : '').join('');
+  const lines = c.series.map(([k], si) => `<path d="${pts.map((p, j) => `${j ? 'L' : 'M'}${x(j).toFixed(1)},${y(p[k]).toFixed(1)}`).join('')}" fill="none" stroke="${TR_COLORS[si]}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
+  let cross = '';
+  if (tr.hover !== null && tr.hover < n) {
+    const j = tr.hover;
+    cross = `<line class="cross" x1="${x(j)}" x2="${x(j)}" y1="${T}" y2="${H - B}"/>`
+      + c.series.map(([k], si) => `<circle cx="${x(j)}" cy="${y(pts[j][k])}" r="4" fill="${TR_COLORS[si]}" stroke="var(--surface)" stroke-width="2"/>`).join('');
+  }
+  const legend = c.series.length > 1 ? c.series.map(([, label], si) => `<span class="legend-i"><i style="background:${TR_COLORS[si]}"></i>${esc(label)}</span>`).join('') : '';
+  return `<div class="perf-chart" data-tr="${i}"><h3>${esc(c.title)} <span class="muted" style="font-weight:500;font-size:12px">${esc(c.unit)} / ${tr.data.unit === 'hour' ? 'giờ' : 'ngày'}</span>${legend}</h3>
+    <svg viewBox="0 0 ${W} ${H}" style="height:${H}px" role="img" aria-label="${esc(c.title)}">${grid}${lines}${ticks}${cross}
+      <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" data-tr-hover="${n}" data-l="${L}" data-w="${W - L - R}"/></svg></div>`;
+}
+
+function renderTraffic() {
+  const d = tr.data;
+  if (!d) return;
+  const [from, to] = trSpan();
+  $('tr-range-label').textContent = from === to ? `${trDay(from)} · theo giờ` : `${trDay(from)} – ${trDay(to)} · theo ngày`;
+  $('tr-unit').textContent = 'rê chuột lên biểu đồ để xem số';
+  const t = d.total;
+  const tile = (k, v, sub) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="k" style="margin-top:4px">${sub}</div></div>`;
+  $('tr-tiles').innerHTML = [
+    tile('Lượt mở web', trNum(t.viewsWeb + t.viewsLauncher), `web ${trNum(t.viewsWeb)} · launcher ${trNum(t.viewsLauncher)}`),
+    tile('Người xem khác nhau', trNum(t.visitors), 'cùng người trong một ngày tính một'),
+    tile('Bấm tải launcher', trNum(t.clicksWin + t.clicksLinux), `Windows ${trNum(t.clicksWin)} · Linux ${trNum(t.clicksLinux)}`),
+    tile('File cài từ server', trNum(t.files), `+ ${trNum(t.filesUpdate)} lượt tự cập nhật · thấp hơn thật`),
+    tile('Cài mới', trNum(t.installs), 'launcher mở lần đầu'),
+    tile('Máy dùng launcher', trNum(t.launcherMachines), 'máy khác nhau'),
+    tile('Lượt đăng nhập', trNum(t.loginsWeb + t.loginsLauncher), `web ${trNum(t.loginsWeb)} · launcher ${trNum(t.loginsLauncher)} · lần đầu ${trNum(t.newUsers)}`),
+    tile('Tài khoản đang dùng', trNum(t.active), 'web hoặc launcher, khác nhau'),
+  ].join('');
+  $('tr-charts').innerHTML = TR_CHARTS.map(trChart).join('');
+  trTip();
+}
+
+/** The tooltip for the hovered point: every chart's values at that hour / day. */
+function trTip() {
+  let tip = document.getElementById('tr-tip');
+  if (tr.hover === null || !tr.data || tr.hover >= tr.data.points.length) { if (tip) tip.remove(); return; }
+  const p = tr.data.points[tr.hover];
+  if (!tip) { tip = document.createElement('div'); tip.id = 'tr-tip'; tip.className = 'perf-tip'; $('tr-charts').append(tip); }
+  tip.innerHTML = `<b>${tr.data.unit === 'hour' ? `${trDay(trSpan()[0])} ${p.label}` : trDay(p.label)}</b>`
+    + TR_CHARTS.map((c) => `<div class="row"><span>${esc(c.title)}</span><b>${c.series.map(([k]) => trNum(p[k])).join(' / ')}</b></div>`).join('');
+  const rect = $('tr-charts').getBoundingClientRect();
+  tip.style.left = `${Math.min(rect.width - 240, Math.max(0, tr.tipX - rect.left + 14))}px`;
+  tip.style.top = `${Math.max(0, tr.tipY - rect.top + 14)}px`;
+}
+$('tr-charts').addEventListener('mousemove', (e) => {
+  const r = e.target.closest('[data-tr-hover]');
+  if (!r) return;
+  const n = Number(r.dataset.trHover);
+  const box = r.getBoundingClientRect();
+  const f = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width));
+  const j = n === 1 ? 0 : Math.round(f * (n - 1));
+  tr.tipX = e.clientX; tr.tipY = e.clientY;
+  if (j !== tr.hover) { tr.hover = j; $('tr-charts').innerHTML = TR_CHARTS.map(trChart).join(''); }
+  trTip();
+});
+$('tr-charts').addEventListener('mouseleave', () => { tr.hover = null; if (tr.data) { $('tr-charts').innerHTML = TR_CHARTS.map(trChart).join(''); trTip(); } });
+
 // --- performance (Server → Hiệu năng) ---------------------------------------------
 // /api/metrics: samples every 10 s (bridge/src/metrics.ts). Small multiples on
 // one shared time axis — FPS, players, game CPU, RAM — never a dual axis; one
@@ -10575,6 +10733,9 @@ $('back').addEventListener('click', () => (history.length > 1 ? history.back() :
 
 async function refreshTab(tab) {
   switch (tab) {
+    case 'traffic':
+      await refreshTraffic();
+      break;
     case 'overview': {
       const q = feedFilter ? `&type=${encodeURIComponent(feedFilter)}` : '';
       const [players, feed] = await Promise.all([getJson('/api/players'), getJson(`/api/feed?limit=150${q}`),

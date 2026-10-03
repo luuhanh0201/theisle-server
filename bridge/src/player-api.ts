@@ -18,6 +18,7 @@ import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoo
 import { readVoiceSettings, shownName } from './voice-settings.js';
 import type { Prison } from './prison.js';
 import { adminIds } from './panel-auth.js';
+import { parseTrafficEvent, type Traffic } from './traffic.js';
 import { MUTATION_REFERENCE, findReference } from './mutation-reference.js';
 import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from './mutation-tiers.js';
 
@@ -459,12 +460,25 @@ export async function handlePlayerApi(
     serverInfo?: () => Promise<PublicServerInfo>;
     voice?: VoiceRoom;
     prison?: Prison;
+    traffic?: Traffic;
   },
 ): Promise<boolean> {
   if (!path.startsWith('/player-api/')) return false;
   // No token configured = the portal is not set up: the routes do not exist.
   if (config.portalToken === null) { send(res, 404, { error: 'not found' }); return true; }
   if (!tokenOk(req)) { send(res, 403, { error: 'forbidden' }); return true; }
+  // Site / launcher traffic the portal counted (traffic.ts → the panel's "Truy cập").
+  if (path === '/player-api/track') {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    if (ctx.traffic === undefined) { send(res, 404, { error: 'not found' }); return true; }
+    try {
+      ctx.traffic.record(parseTrafficEvent(await readSmallJson(req)));
+      send(res, 200, { ok: true });
+    } catch (error) {
+      send(res, error instanceof ValidationError ? 400 : 500, { error: (error as Error).message });
+    }
+    return true;
+  }
   const voice = /^\/player-api\/voice\/(\d{17})(?:\/(token|range))?$/.exec(path);
   if (voice !== null) {
     const cfg = config.voice;

@@ -20,6 +20,7 @@ import { RCON_COMMANDS } from './rcon.js';
 import { MANAGED, GROUPS, KNOWN_PLAYABLES, readLive, readSettings, saveSettings, type ManagedKey } from './gameini.js';
 import { readReadiness } from './readiness.js';
 import { readLiveState, livePlayer } from './live.js';
+import { KEEP_DAYS, type Traffic } from './traffic.js';
 import type { Metrics } from './metrics.js';
 import type { VoiceRoom } from './voice.js';
 import { handlePlayerApi, publicServerInfo, startMutationUse } from './player-api.js';
@@ -221,6 +222,8 @@ export interface Ctx {
   ddos?: { watch: DdosWatch; settings: DdosSettings; iface: string | null };
   prison?: Prison;
   killScenes?: KillScenes;
+  /** Site / launcher traffic (traffic.ts): the panel's "Truy cập" page. */
+  traffic?: Traffic;
   /** An admin's rights in the game were switched on / off: the AdminGuard mod's file is written again. */
   onAdminsChanged?: () => Promise<void>;
 }
@@ -293,7 +296,8 @@ async function handle(
   // The player portal's read-only routes, behind their own token.
   if (await handlePlayerApi(req, res, path, { store, serverPhase: async () => (await power.status()).phase, live: readLiveState,
     serverInfo: async () => publicServerInfo((await readLive()).effective),
-    ...(ctx.voice ? { voice: ctx.voice } : {}), ...(ctx.prison ? { prison: ctx.prison } : {}) })) return;
+    ...(ctx.voice ? { voice: ctx.voice } : {}), ...(ctx.prison ? { prison: ctx.prison } : {}),
+    ...(ctx.traffic ? { traffic: ctx.traffic } : {}) })) return;
 
   // Everything else is the admin panel: allowed address + admin login (panel-gate.ts).
   const login = await panelGate(req, res, url, (name) => sendFile(res, name), (id) => store.player(id)?.player.name ?? null);
@@ -1250,6 +1254,21 @@ async function handlePanel(
       return;
     }
       return;
+    case '/api/traffic': {
+      // The panel's "Truy cập": the last N days (7–120), the distinct counts over them, launchers by version.
+      if (!ctx.traffic) { sendJson(res, 404, { error: 'traffic not counted here' }); return; }
+      // ?from=YYYY-MM-DD&to=YYYY-MM-DD (one day: hour by hour); without them the last 30 days.
+      const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+      const from = url.searchParams.get('from'); const to = url.searchParams.get('to');
+      if (from !== null && to !== null) {
+        if (!DAY_RE.test(from) || !DAY_RE.test(to) || from > to) { sendJson(res, 400, { error: 'from / to: YYYY-MM-DD, from ≤ to' }); return; }
+        sendJson(res, 200, ctx.traffic.range(from, to));
+        return;
+      }
+      const days = Math.max(7, Math.min(KEEP_DAYS, Number(url.searchParams.get('days')) || 30));
+      sendJson(res, 200, { ...ctx.traffic.view(days), versions: ctx.traffic.versions(7) });
+      return;
+    }
     case '/api/leaderboard':
       sendJson(res, 200, store.leaderboard());
       return;

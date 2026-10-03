@@ -15,7 +15,8 @@
  */
 
 const { app, BrowserWindow, Tray, Menu, shell, ipcMain, session, nativeImage, net, Notification, powerMonitor, screen } = require('electron');
-const { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync, renameSync } = require('node:fs');
+const { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync, renameSync, existsSync } = require('node:fs');
+const { randomBytes } = require('node:crypto');
 const { join } = require('node:path');
 const { clashOf, distinctBindings, label, PushToTalk, DEFAULT_PTT, DEFAULT_RANGE } = require('./ptt.js');
 const { Overlay, normaliseKeep } = require('./overlay.js');
@@ -136,6 +137,25 @@ function writeSettings(patch) {
   } catch (err) {
     console.error('[launcher] settings not saved:', err.message);
   }
+}
+
+// Counted on the panel's "Truy cập" (portal /api/track/launcher → bridge traffic.ts): this
+// install, by a random id kept in settings.json — nothing about the player or the PC.
+// A fresh install has no settings file yet: its first start says so (`first`), an update does not.
+const freshInstall = !existsSync(settingsFile());
+const TRAFFIC_EVERY_MS = 6 * 3600_000;
+function sendTraffic() {
+  let id = readSettings().installId;
+  const first = freshInstall && typeof id !== 'string';
+  if (typeof id !== 'string' || !/^[0-9a-f]{32}$/.test(id)) {
+    id = randomBytes(16).toString('hex');
+    writeSettings({ installId: id });
+  }
+  const os = process.platform === 'win32' ? 'win' : process.platform === 'linux' ? 'linux' : 'other';
+  net.fetch(`${BASE}/api/track/launcher`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': app.userAgentFallback },
+    body: JSON.stringify({ id, version: app.getVersion(), os, first }),
+  }).then(() => undefined, () => undefined);
 }
 
 // "Sửa viền đen" (overlay card): on some PCs Chromium draws the overlay's
@@ -767,6 +787,8 @@ function start() {
   });
 
   wireIpc();
+  setTimeout(sendTraffic, 15_000);
+  setInterval(sendTraffic, TRAFFIC_EVERY_MS);
   createSplash();
   createMain();
   overlay = new Overlay({

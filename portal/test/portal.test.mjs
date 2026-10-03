@@ -352,3 +352,40 @@ test('AI zones for the map: public, as the bridge gives them', async () => {
   assert.equal(body.zones[0].name, 'Đồng cỏ');
   assert.equal(body.zones[0].radiusM, 300);
 });
+
+// --- traffic for the panel's "Truy cập" (traffic.ts → bridge traffic.ts) ------------------
+test('traffic: page loads, download clicks, launchers, installers served and players using it reach the bridge', async () => {
+  const tracked = [];
+  const tb = { ...bridge, track: async (e) => { tracked.push(e); return { status: 200, body: {} }; } };
+  const srv = createPortal({ baseUrl: BASE, secureCookies: true, sessionSecret: SECRET, sessionDays: 7, trustProxy: true,
+    bridge: tb, steamFetch: steamSays(true), downloadsDir: downloads });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const p = srv.address().port;
+  const post = (path, body, headers = {}) => fetch(`http://127.0.0.1:${p}${path}`, { method: 'POST', body: JSON.stringify(body), headers });
+  const LAUNCHER_UA = 'Mozilla/5.0 XomGayLauncher/1.0.33 Electron/44';
+  try {
+    assert.equal((await post('/api/track/view', {}, { origin: BASE })).status, 204);
+    await post('/api/track/view', {}, { origin: BASE, 'user-agent': LAUNCHER_UA });
+    await post('/api/track/view', {}, { origin: 'https://evil.example' });                    // another site: not counted
+    await post('/api/track/download', { os: 'linux' }, { origin: BASE });
+    await post('/api/track/download', { os: 'mac' }, { origin: BASE });                       // not an OS we ship
+    await post('/api/track/launcher', { id: 'a'.repeat(32), version: '1.0.33', os: 'win', first: true }, { 'user-agent': LAUNCHER_UA });
+    await post('/api/track/launcher', { id: 'b'.repeat(32), version: '1.0.33', os: 'win' }, { 'user-agent': 'curl/8' });   // not the launcher
+    await (await fetch(`http://127.0.0.1:${p}/tai/XomGay-Launcher-Setup-1.0.0.exe`)).text();
+    await (await fetch(`http://127.0.0.1:${p}/tai/XomGay-Launcher-Setup-1.0.0.exe`, { headers: { 'user-agent': LAUNCHER_UA } })).text();
+    await (await fetch(`http://127.0.0.1:${p}/tai/latest.yml`)).text();                      // the update feed: not a download
+    const cookie = `${COOKIE}=${sign(SECRET, ME, Math.floor(Date.now() / 1000) + 600)}`;
+    await fetch(`http://127.0.0.1:${p}/api/me`, { headers: { cookie } });
+    await fetch(`http://127.0.0.1:${p}/api/me`, { headers: { cookie } });                       // once a day
+    await new Promise((r) => setTimeout(r, 50));
+    const views = tracked.filter((e) => e.kind === 'view');
+    assert.deepEqual(views.map((e) => e.where), ['web', 'launcher']);
+    assert.match(views[0].visitor, /^[0-9a-f]{24}$/, 'a hash, no address');
+    assert.deepEqual(tracked.filter((e) => e.kind === 'download_click'), [{ kind: 'download_click', os: 'linux' }]);
+    assert.deepEqual(tracked.filter((e) => e.kind === 'launcher').map((e) => [e.id.slice(0, 1), e.first]), [['a', true]]);
+    assert.deepEqual(tracked.filter((e) => e.kind === 'download_file').map((e) => [e.os, e.update]), [['win', false], ['win', true]]);
+    assert.deepEqual(tracked.filter((e) => e.kind === 'active'), [{ kind: 'active', where: 'web', steamId: ME }]);
+  } finally {
+    srv.close();
+  }
+});

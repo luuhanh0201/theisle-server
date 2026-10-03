@@ -9,6 +9,7 @@ import { COOKIE, cookieHeader, parseCookies, readSession, sign } from './session
 import { loginUrl, NonceCache, verify } from './steam.js';
 import type { SteamPost } from './steam-http.js';
 import { LauncherLogins, STATE_RE } from './launcher-login.js';
+import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
 
 /**
  * Public routes. Every data route is scoped to the SteamID in the signed
@@ -163,7 +164,7 @@ const DOWNLOAD_TYPES: Record<string, string> = {
 };
 
 /** A file from the downloads directory, streamed (installers are ~100 MB). */
-async function sendDownload(res: ServerResponse, dir: string, name: string): Promise<void> {
+async function sendDownload(res: ServerResponse, dir: string, name: string, onServed?: () => void): Promise<void> {
   const type = DOWNLOAD_TYPES[extname(name)];
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/.test(name) || type === undefined) { send(res, 404, { error: 'not found' }); return; }
   const file = join(dir, name);
@@ -183,6 +184,7 @@ async function sendDownload(res: ServerResponse, dir: string, name: string): Pro
     'cache-control': changing ? 'no-cache' : 'public, max-age=31536000, immutable',
     ...(type.startsWith('application/') && !name.endsWith('.json') ? { 'content-disposition': `attachment; filename="${name}"` } : {}),
   });
+  onServed?.();
   createReadStream(file).on('error', () => res.destroy()).pipe(res);
 }
 
@@ -190,6 +192,12 @@ export function createPortal(opts: PortalOptions): Server {
   SECURITY_HEADERS = securityHeaders(opts.voiceUrl ?? '');
   const nonces = new NonceCache();
   const launcherLogins = new LauncherLogins();
+  // Traffic for the panel's "Truy cập" (traffic.ts → bridge traffic.ts): sent, never waited for.
+  const activeToday = new OncePerDay();
+  const trackLimit = new RateLimit(30, 60_000);
+  const track = (event: Record<string, unknown>): void => {
+    void Promise.resolve(opts.bridge.track?.(event)).catch(() => undefined);
+  };
   // Per IP per minute. The page polls /api/me every second (+2 slow calls per
   // 15 s), and players behind one IP (a net café, a household) share it.
   const apiLimit = new RateLimit(600, 60_000);
@@ -268,6 +276,7 @@ export function createPortal(opts: PortalOptions): Server {
         }
         const maxAge = opts.sessionDays * 86400;
         const value = sign(opts.sessionSecret, result.steamId, Math.floor(Date.now() / 1000) + maxAge);
+        track({ kind: 'login', via: /^launcher\./.test(parseCookies(req.headers.cookie)[NEXT_COOKIE] ?? '') ? 'launcher' : 'web', steamId: result.steamId });
         const asked = parseCookies(req.headers.cookie)[NEXT_COOKIE];
         const session = cookieHeader(value, maxAge, opts.secureCookies);
         let to = AFTER_LOGIN[asked ?? ''] ?? '/';
@@ -292,6 +301,25 @@ export function createPortal(opts: PortalOptions): Server {
 
     if (path.startsWith('/api/')) {
       if (!apiLimit.allow(ip)) { send(res, 429, { error: 'too many requests' }); return; }
+      // Traffic (traffic.ts): a page load, a download button, a launcher running. Always 204: nothing to tell.
+      if (path === '/api/track/view' || path === '/api/track/download' || path === '/api/track/launcher') {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        const ua = req.headers['user-agent'];
+        const body = await readSmallJson(req);
+        if (trackLimit.allow(ip)) {
+          if (path === '/api/track/view' && sameOrigin(req)) {
+            track({ kind: 'view', where: isLauncherUa(ua) ? 'launcher' : 'web', visitor: visitorId(opts.sessionSecret, ip, ua) });
+          } else if (path === '/api/track/download' && sameOrigin(req) && (body?.['os'] === 'win' || body?.['os'] === 'linux')) {
+            track({ kind: 'download_click', os: body['os'] });
+          } else if (path === '/api/track/launcher' && isLauncherUa(ua) && body !== null) {
+            // Checked by the bridge (id: hex, version: x.y.z, os).
+            track({ kind: 'launcher', id: body['id'], version: body['version'], os: body['os'], first: body['first'] === true });
+          }
+        }
+        res.writeHead(204, SECURITY_HEADERS);
+        res.end();
+        return;
+      }
       if (path === '/api/garage') {
         if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
@@ -377,6 +405,8 @@ export function createPortal(opts: PortalOptions): Server {
       }
       if (path === '/api/me') {
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        const where = isLauncherUa(req.headers['user-agent']) ? 'launcher' : 'web';
+        if (activeToday.first(`${where}|${me}`)) track({ kind: 'active', where, steamId: me });
         const r = await opts.bridge.me(me);
         send(res, r.status, r.body);
         return;
@@ -401,7 +431,16 @@ export function createPortal(opts: PortalOptions): Server {
     }
 
     const dl = /^\/tai\/([^/]+)$/.exec(path);
-    if (dl !== null && req.method === 'GET' && opts.downloadsDir) { await sendDownload(res, opts.downloadsDir, dl[1] as string); return; }
+    if (dl !== null && req.method === 'GET' && opts.downloadsDir) {
+      const name = dl[1] as string;
+      const os = installerOs(name);
+      // A whole installer (not a later piece of a resumed / differential download): one download.
+      const range = req.headers.range;
+      const whole = range === undefined || /^bytes=0-/.test(range);
+      await sendDownload(res, opts.downloadsDir, name, os !== null && whole
+        ? () => track({ kind: 'download_file', os, update: isLauncherUa(req.headers['user-agent']) }) : undefined);
+      return;
+    }
     if (req.method === 'GET') { await sendStatic(res, path); return; }
     send(res, 405, { error: 'method not allowed' });
   }

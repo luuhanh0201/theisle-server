@@ -39,6 +39,7 @@ export const PERMS: readonly PermDef[] = [
   { key: 'mods.view', group: 'Tính năng mod', label: 'Xem lệnh chat, Ptera, voice, thông báo' },
   { key: 'mods.edit', group: 'Tính năng mod', label: 'Sửa lệnh chat, Ptera, voice, thông báo' },
   { key: 'server.view', group: 'Server', label: 'Xem tình trạng, hiệu năng, lịch, DDoS' },
+  { key: 'traffic.view', group: 'Server', label: 'Xem thống kê truy cập: lượt mở web, tải / dùng launcher, đăng nhập' },
   { key: 'server.power', group: 'Server', label: 'Bật / tắt / khởi động lại server' },
   { key: 'server.schedule', group: 'Server', label: 'Sửa lịch khởi động lại, sự kiện tốc độ lớn' },
   { key: 'config.view', group: 'Server', label: 'Xem cấu hình game (Game.ini)' },
@@ -218,6 +219,7 @@ export function permissionFor(method: string, path: string): string | null {
     if (path === '/api/items' || /^\/api\/items\/[^/]+\/owners$/.test(path)) return 'items.view';
     if (path === '/api/panel-access') return 'access.edit';
     if (path === '/api/discord') return 'discord.view';
+    if (path === '/api/traffic') return 'traffic.view';
     if (path === '/api/discord/url') return 'discord.edit';   // shows a webhook's secret URL
     return '*';
   }
