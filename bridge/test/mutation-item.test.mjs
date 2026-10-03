@@ -78,11 +78,14 @@ test('a player uses a mutation from their bag: checks, the command, used up only
 
   assert.equal(me.bag, true, 'an admin sees the bag');
   assert.equal((await call(`/player-api/me/${P2}`)).body.bag, false, 'a player does not, for now');
-  // …unless listed in data/bag-access.json (not unlimited: not an admin).
-  writeFileSync(join(root, 'data', 'bag-access.json'), JSON.stringify({ players: [P2, 'nope'] }));
+  // …unless SVip (svip.ts: tries the features being tested; not unlimited: not an admin).
+  const { resetSvipCache } = await import('../dist/svip.js');
+  writeFileSync(join(root, 'data', 'svip.json'), JSON.stringify({ players: [{ steamId: P2 }, { steamId: 'nope' }], features: { bag: 'testing' } }));
+  resetSvipCache();
   const p2 = (await call(`/player-api/me/${P2}`)).body;
-  assert.deepEqual([p2.bag, p2.bagUnlimited], [true, false], 'a listed player sees the bag');
-  writeFileSync(join(root, 'data', 'bag-access.json'), JSON.stringify({ players: [] }));
+  assert.deepEqual([p2.bag, p2.bagUnlimited, p2.svip], [true, false, true], 'an SVip sees the bag');
+  writeFileSync(join(root, 'data', 'svip.json'), JSON.stringify({ players: [], features: { bag: 'testing' } }));
+  resetSvipCache();
   assert.match((await use(a.uid, 1, P2)).body.error, /chưa mở/, 'nor may they use one');
   assert.match(shown.description, /./, 'what it does, for the bag');
   assert.equal((await use('own_nope', 1)).status, 403);

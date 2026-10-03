@@ -18,30 +18,18 @@ import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoo
 import { readVoiceSettings, shownName } from './voice-settings.js';
 import type { Prison } from './prison.js';
 import { adminIds } from './panel-auth.js';
+import { earlyAccess, isSvip } from './svip.js';
 import { parseTrafficEvent, type Traffic } from './traffic.js';
 import { MUTATION_REFERENCE, findReference } from './mutation-reference.js';
 import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from './mutation-tiers.js';
 
 /**
- * The bag (Túi đồ on the portal: using a mutation item) is open to the server's
- * admins only for now (2026-10-02, the owner's call); false opens it to everyone.
+ * The bag (Túi đồ on the portal: using a mutation item) is a feature being tried:
+ * open to the admins and the SVip (svip.ts, the panel's Quản trị → SVip) until
+ * it is switched to everyone there. Their bag runs out as a player's does; only admins' is unlimited.
  */
-const BAG_ADMINS_ONLY = true;
-/**
- * Players the bag is open to besides the admins (data/bag-access.json
- * { "players": ["7656…"] }, 2026-10-02: T-Rex Nổi Loạn). Their bag runs out
- * as a player's does; only admins' is unlimited.
- */
-async function bagPlayers(): Promise<Set<string>> {
-  try {
-    const d = JSON.parse(await readFile(join(config.dataDir, 'bag-access.json'), 'utf8')) as { players?: unknown };
-    return new Set(Array.isArray(d.players) ? d.players.filter((x): x is string => typeof x === 'string' && isSteamId(x)) : []);
-  } catch {
-    return new Set();
-  }
-}
 export async function bagOpen(steamId: string): Promise<boolean> {
-  return !BAG_ADMINS_ONLY || (await adminIds()).has(steamId) || (await bagPlayers()).has(steamId);
+  return earlyAccess('bag', steamId);
 }
 /** An admin's bag never runs out: a used item stays (items.ts settleUse). */
 export async function bagUnlimited(steamId: string): Promise<boolean> {
@@ -638,6 +626,8 @@ export async function handlePlayerApi(
       // Their items (items.ts): what each is; a skin with the colours the game gets when they wear it.
       items: await ownedView(steamId, detail?.player.online ? detail.player.species ?? null : null),
       bag: await bagOpen(steamId),
+      // SVip (svip.ts): tries the features being tested before everyone.
+      svip: await isSvip(steamId),
       bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
       prison: ctx.prison?.playerView(steamId) ?? null,

@@ -21,6 +21,7 @@ import { MANAGED, GROUPS, KNOWN_PLAYABLES, readLive, readSettings, saveSettings,
 import { readReadiness } from './readiness.js';
 import { readLiveState, livePlayer } from './live.js';
 import { KEEP_DAYS, type Traffic } from './traffic.js';
+import { EARLY_FEATURES, readSvip, saveSvip, type SvipState } from './svip.js';
 import type { Metrics } from './metrics.js';
 import type { VoiceRoom } from './voice.js';
 import { handlePlayerApi, publicServerInfo, startMutationUse } from './player-api.js';
@@ -229,6 +230,12 @@ export interface Ctx {
 }
 
 const fmtTime = (s: number): string => new Date(s * 1000).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+
+/** SVip for the panel: the players (with the names seen in game) and the features being tried. */
+let svipNames: (id: string) => string | null = () => null;
+function svipView(s: SvipState): unknown {
+  return { players: s.players.map((p) => ({ ...p, name: svipNames(p.steamId) })), features: EARLY_FEATURES.map((f) => ({ ...f, mode: s.features[f.key] })) };
+}
 
 /** Everything the Server tab shows, in one call. */
 async function serverStatus(ctx: Ctx): Promise<unknown> {
@@ -525,6 +532,10 @@ async function handlePanel(
     sendJson(res, 200, { ...(publicView(ctx.discord.settings) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
     return;
   }
+  if (path === '/api/svip' && req.method === 'GET') {
+    sendJson(res, 200, svipView(await readSvip()));
+    return;
+  }
   if (path === '/api/panel-access' && req.method === 'GET') {
     sendJson(res, 200, { ...await readAccess(), yourIp: login.ip, yourRule: login.ip ? ruleFor(login.ip) : null, webEnabled: config.panel.baseUrl !== null });
     return;
@@ -571,6 +582,7 @@ async function handlePanel(
       (path === '/api/commands-settings' && req.method === 'PUT') ||
       (path === '/api/voice-settings' && req.method === 'PUT') ||
       (path === '/api/panel-access' && req.method === 'PUT') ||
+      (path === '/api/svip' && req.method === 'PUT') ||
       (path === '/api/ai-zones' && req.method === 'PUT') ||
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
@@ -979,6 +991,15 @@ async function handlePanel(
       const view = (s: typeof saved): Record<string, unknown> => ({ enabled: s.enabled, channels: s.channels.map((c) => c.name), routes: s.routes, mentions: s.mentions, relay: s.relay?.url ?? null });
       await audit({ action: 'Discord log saved', detail: describeChanges(view(before), view(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, { ...(publicView(saved) as object), kinds: DISCORD_KINDS, status: ctx.discord.status() });
+      return;
+    }
+
+    if (path === '/api/svip') {
+      const before = await readSvip();
+      const saved = await saveSvip(await readJsonBody(req), name ?? login.steamId ?? null);
+      const ids = (s: typeof saved): string => s.players.map((p) => p.steamId).join(', ');
+      await audit({ action: 'SVip saved', detail: describeChanges({ svip: ids(before), ...before.features }, { svip: ids(saved), ...saved.features }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, svipView(saved));
       return;
     }
 
@@ -1509,6 +1530,7 @@ async function handlePanel(
 }
 
 export function startServer(ctx: Ctx): void {
+  svipNames = (id) => ctx.store.player(id)?.player.name ?? null;
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     void handle(req, res, ctx).catch((error: unknown) => {
       if (error instanceof ValidationError) {

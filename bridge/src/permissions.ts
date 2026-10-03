@@ -55,6 +55,7 @@ export const PERMS: readonly PermDef[] = [
   { key: 'items.grant', group: 'Vật phẩm', label: 'Tặng / thu hồi vật phẩm, áp skin / dùng mutation lên dino người chơi' },
   { key: 'audit.view', group: 'Quản trị', label: 'Xem nhật ký admin (panel + trong game)' },
   { key: 'access.edit', group: 'Quản trị', label: 'Truy cập panel (IP được vào)' },
+  { key: 'svip.edit', group: 'Quản trị', label: 'SVip: thêm / bỏ người dùng trước chức năng thử nghiệm, mở chức năng cho tất cả' },
   { key: 'discord.view', group: 'Quản trị', label: 'Xem cài đặt Discord' },
   { key: 'discord.edit', group: 'Quản trị', label: 'Sửa Discord, xem webhook, gửi thử, đăng ký lệnh' },
 ];
@@ -218,6 +219,7 @@ export function permissionFor(method: string, path: string): string | null {
     if (path === '/api/server/audit') return 'audit.view';
     if (path === '/api/items' || /^\/api\/items\/[^/]+\/owners$/.test(path)) return 'items.view';
     if (path === '/api/panel-access') return 'access.edit';
+    if (path === '/api/svip') return 'svip.edit';
     if (path === '/api/discord') return 'discord.view';
     if (path === '/api/traffic') return 'traffic.view';
     if (path === '/api/discord/url') return 'discord.edit';   // shows a webhook's secret URL
@@ -244,6 +246,7 @@ export function permissionFor(method: string, path: string): string | null {
   if (['/api/backups/restore', '/api/backups/wipe'].includes(path)) return 'backups.restore';
   if (['/api/backups', '/api/backup-settings', '/api/backups/export-settings'].includes(path) || /^\/api\/backups\/file\/[^/]+$/.test(path)) return 'backups.edit';
   if (path === '/api/panel-access') return 'access.edit';
+  if (path === '/api/svip') return 'svip.edit';
   if (path === '/api/items' || /^\/api\/items\/[^/]+$/.test(path)) return 'items.edit';
   if (/^\/api\/items\/[^/]+\/(grant|apply)$/.test(path) || /^\/api\/items\/[^/]+\/grant\/\d{17}$/.test(path)) return 'items.grant';
   if (['/api/discord', '/api/discord/test', '/api/discord/register-commands'].includes(path)) return 'discord.edit';
