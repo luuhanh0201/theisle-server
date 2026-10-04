@@ -372,6 +372,36 @@ export async function createSlot(
 }
 
 /**
+ * A dino from the garage history (deleted/<steam>__<slot>__<why>-<unix>.json: taken out,
+ * cancelled, trashed) put back as it was into a free slot — every captured field kept
+ * (vitals, nutrients, mutations, unlocks, skin, spot), not an admin-made one. The history
+ * file stays. For a dino lost to a redeem that went wrong (2026-10-04: a redeem a few
+ * seconds after a store restored onto the store's corpse and the slot was gone).
+ */
+export async function restoreFromHistory(steamId: string, file: string, slot: string): Promise<SlotMeta> {
+  assertSteamId(steamId);
+  assertSlot(slot);
+  if (!/^\d{17}__[\w-]{1,40}__[a-z]+-\d{9,11}\.json$/.test(file) || !file.startsWith(`${steamId}__`)) {
+    throw new ValidationError('not a garage history file of this player');
+  }
+  const state = await readJson<Record<string, unknown>>(join(config.garageRoot, 'deleted', file));
+  if (state === null || typeof state['classPath'] !== 'string' || typeof state['growth'] !== 'number') {
+    throw new ValidationError('history file unreadable or not a dino');
+  }
+  const taken = (await readJson(slotPath(steamId, slot))) !== null || (await readIndex()).players[steamId]?.[slot] !== undefined;
+  if (taken) throw new ConflictError(`slot "${slot}" already holds a dino`);
+  await mkdir(join(config.garageRoot, 'stored'), { recursive: true });
+  await writeJsonAtomic(slotPath(steamId, slot), { ...state, slot });
+  const capturedAt = typeof state['capturedAt'] === 'number' ? state['capturedAt'] : Math.floor(Date.now() / 1000);
+  const meta: SlotMeta = { classPath: state['classPath'], growth: state['growth'], capturedAt };
+  const index = await readIndex();
+  index.schema = INDEX_SCHEMA;
+  index.players[steamId] = { ...(index.players[steamId] ?? {}), [slot]: meta };
+  await writeJsonAtomic(indexPath(), index);
+  return meta;
+}
+
+/**
  * Move a slot file to deleted/<steam>__<slot>__<unix>.json.
  * Returns the new name, or null when there was no file to move.
  */

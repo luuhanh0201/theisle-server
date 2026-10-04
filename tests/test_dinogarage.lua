@@ -144,6 +144,19 @@ end
 print("\n-- 3. the kill used 0 health --")
 check("killed with 0", H.calls[#H.calls].args[1] == 0, tostring(H.calls[#H.calls].args[1]))
 
+print("\n-- 3b. a redeem onto the store's own corpse is refused; the slot stays --")
+-- Dev-Lucii 2026-10-04: redeem 6 s after a store (cooldown 2 s), still on the corpse: the slot was
+-- restored onto it and the dino was gone.
+do
+  H.calls = {}
+  local idC = send("redeem", { slot = "1" })
+  H.advance(4000)
+  check("refused: respawn first", started(idC) and started(idC).ok == false
+        and (started(idC).messages[1] or ""):match("Respawn first") ~= nil, started(idC) and json.encode(started(idC)))
+  check("nothing restored onto the corpse", H.countCalls("SetGrowth") == 0, "SetGrowth x" .. H.countCalls("SetGrowth"))
+  check("the slot is still in the garage", io.open(RUN .. "/Mods/DinoGarage/Saved/stored/" .. STEAM .. "__1.json", "r") ~= nil)
+end
+
 print("\n-- 4. redeem on the WRONG species is refused --")
 H.calls = {}
 local wrongCtrl = H.makeCtrl(STEAM, H.makePawn({ class = "BlueprintGeneratedClass /Game/BP_Carno.BP_Carno_C" }))

@@ -86,6 +86,20 @@ local HEALTH_SLACK_PCT = 0.01    -- health lost beyond 1 % of max = "took damage
 -- Garage cooldown, per player, in memory (a server restart resets it).
 local lastGarageUse = {}
 
+-- The dino a store just removed (its corpse stays the player's pawn until they respawn):
+-- steamId -> its address. A redeem onto it restored the slot onto a corpse and the dino was
+-- gone (Dev-Lucii 2026-10-04: redeem 6 s after a store, cooldown 2 s).
+local storedPawn = {}
+
+--- Why this pawn cannot take a dino out now (dead, or the one just stored), or nil.
+local function notRedeemable(steamId, pawn)
+    local okH, hp = pcall(function() return pawn:GetHealth() end)
+    if okH and type(hp) == "number" and hp <= 0 then return "dead" end
+    local okA, addr = pcall(function() return pawn:GetAddress() end)
+    if okA and addr ~= nil and storedPawn[steamId] == addr then return "stored" end
+    return nil
+end
+
 --- Seconds left before this player may use the garage again, or nil.
 local function cooldownLeft(steamId, settings)
     local at = lastGarageUse[steamId]
@@ -219,6 +233,7 @@ local function finishStore(c, pawn, steamId, pending)
         return
     end
     lastGarageUse[steamId] = os.time()
+    pcall(function() storedPawn[steamId] = pawn:GetAddress() end)
 
     Events.emit({
         type    = "garage_store",
@@ -417,7 +432,7 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     -- (checked again by Storage.take below; this one gives the clear message)
 
     local pawn = H.livePawnFromCtrl(ctrl)
-    if not pawn then
+    if not pawn or notRedeemable(steamId, pawn) then
         Msg.say(say, "redeem.noDino", "Respawn first, then type !redeem.")
         return false
     end
@@ -460,6 +475,13 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     -- The slot's own colours go on it: the kept web skin must not paint over them.
     Skin.restoredAt[steamId] = os.time()
     H.deferWithPawn(ctrl, RESTORE_DELAY_MS, function(c, livePawn)
+        -- Died during the wait (or it is the stored one): nothing restored, the slot goes back.
+        if notRedeemable(steamId, livePawn) then
+            Storage.putBack(token)
+            Msg.notify(c, "redeem.noDino", "Respawn first, then type !redeem.")
+            H.logError(MOD .. ": redeem of " .. steamId .. "/" .. slot .. " refused at restore time (dead or the stored dino) — slot put back")
+            return
+        end
         -- Move first, then restore: the vitals and mutations land on the
         -- dino where it will stay.
         local moved = toStored and Restore.teleport(livePawn, state.location, state.rotation) or false

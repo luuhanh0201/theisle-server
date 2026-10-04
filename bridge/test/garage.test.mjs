@@ -212,3 +212,24 @@ test('admin slot: the prime tasks it comes out with (primeConditions), eligible 
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'stored', `${A2}__unlocks.json`), 'utf8')).unlockedMutations, ['Reniculate Kidneys']);
   await assert.rejects(() => createSlot(A2, 'badu', { classPath: 'X.BP_Rex_C', growth: 0.6, unlockedMutations: ['<script>'] }), /unlockedMutations/);
 });
+
+test('a dino from the garage history goes back as it was into a free slot; the history file stays', async () => {
+  const { restoreFromHistory } = await import('../dist/garage.js');
+  const { mkdirSync: mk, writeFileSync: wf, readFileSync: rf, existsSync } = await import('node:fs');
+  const { join: j } = await import('node:path');
+  const P = '76561199249248628';
+  const file = `${P}__4__redeemed-1791058983.json`;
+  mk(j(root, 'deleted'), { recursive: true });
+  const state = { version: 3, slot: '4', capturedAt: 1791058977, classPath: 'X.BP_Dilophosaurus_C', growth: 0.611, health: 505.6,
+    elderStacks: 3, mutations: { Slot1: 'Augmented Tapetum' }, nutrients: { fields: { CarbValue: 12 } }, location: { x: 1, y: 2, z: 3 } };
+  wf(j(root, 'deleted', file), JSON.stringify(state));
+  const meta = await restoreFromHistory(P, file, '4');
+  assert.deepEqual(meta, { classPath: 'X.BP_Dilophosaurus_C', growth: 0.611, capturedAt: 1791058977 });
+  const back = JSON.parse(rf(j(root, 'stored', `${P}__4.json`), 'utf8'));
+  assert.deepEqual(back, state, 'every field as captured');
+  assert.equal((await readPlayerGarage(P)).some((g) => g.slot === '4'), true, 'listed in the garage');
+  assert.equal(existsSync(j(root, 'deleted', file)), true, 'the history file stays');
+  await assert.rejects(() => restoreFromHistory(P, file, '4'), /already holds/);
+  await assert.rejects(() => restoreFromHistory(P, '../../etc/passwd', '5'), /history file/);
+  await assert.rejects(() => restoreFromHistory('76561198000000001', file, '5'), /history file/);
+});
