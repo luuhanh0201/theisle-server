@@ -988,7 +988,7 @@ function renderAuth(me) {
   if (me) {
     authContainer.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
-        <span class="muted" style="font-size:13px;font-weight:600">👤 ${esc(me.name ?? me.steamId)}</span>
+        <span class="muted auth-name" style="font-size:13px;font-weight:600" title="${esc(me.name ?? me.steamId)}">👤 ${esc(me.name ?? me.steamId)}</span>
         <button type="button" class="btn btn-ghost" id="logout-btn" style="padding:6px 12px;font-size:12px">Đăng xuất</button>
       </div>`;
     $('logout-btn').addEventListener('click', async () => {
