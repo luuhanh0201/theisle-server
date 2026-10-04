@@ -194,6 +194,41 @@ do
   local bang = settable("!!! cứu")
   hooks[2](H.param(ctrl), bang, H.param(ctrl), H.param(0), settable("!!! cứu"))
   check("'!!!' (no command word) is chat, untouched", word(bang) == "!!! cứu")
+  -- The live server's UE4SS gave no plain FText function (2026-10-04): the hiding
+  -- stayed off without a word. A callable FText object, or none at all and the
+  -- engine's KismetTextLibrary, still blank the command.
+  local realFText, realFind = _G.FText, _G.StaticFindObject
+  _G.FText = setmetatable({}, { __call = function(_, t) return H.ftext(t) end })
+  local viaObj = settable("!food")
+  hooks[2](H.param(ctrl), viaObj, H.param(ctrl), H.param(0), settable("!food"))
+  check("FText as a callable object: still blanked", word(viaObj) == "", word(viaObj))
+  _G.FText = nil
+  _G.StaticFindObject = function(path)
+    if path ~= "/Script/Engine.Default__KismetTextLibrary" then return nil end
+    return { IsValid = function() return true end, Conv_StringToText = function(_, t) return H.ftext(t) end }
+  end
+  local viaLib = settable("!status")
+  hooks[2](H.param(ctrl), viaLib, H.param(ctrl), H.param(0), settable("!status"))
+  check("no FText: blanked through KismetTextLibrary", word(viaLib) == "", word(viaLib))
+  _G.StaticFindObject = function() return nil end
+  local none = settable("!slay")
+  hooks[2](H.param(ctrl), none, H.param(ctrl), H.param(0), settable("!slay"))
+  check("neither: the line is left as it was (no error)", word(none) == "!slay", word(none))
+  _G.FText, _G.StaticFindObject = realFText, realFind
+  -- The bug itself: loaded where FText is no plain function, the hiding hook was
+  -- never registered and nothing said so.
+  _G.FText = setmetatable({}, { __call = function(_, t) return H.ftext(t) end })
+  local before = #H.hooks[CHAT]
+  dofile(RUN .. "/Mods/PlayerCommands/Scripts/main.lua")
+  H.advance(16000)
+  local after = H.hooks[CHAT]
+  check("loaded with a callable FText object: the hiding hook still registered",
+    #after == before + 1, before .. " -> " .. #after)
+  local again = settable("!unstuck")
+  after[#after](H.param(ctrl), again, H.param(ctrl), H.param(0), settable("!unstuck"))
+  check("…and it blanks", word(again) == "", word(again))
+  H.advance(21000)
+  _G.FText = realFText
 end
 
 say("")

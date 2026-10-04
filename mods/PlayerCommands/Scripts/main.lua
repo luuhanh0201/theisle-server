@@ -350,7 +350,7 @@ local CHAT_HOOK_NAME = "/Script/TheIsle.TIPlayerController:GetChatMessage"
 local HIDE_AFTER_MS = 15000
 local HIDE_SETTLE_MS = 20000
 local HIDE_FLAG = "Mods/PlayerCommands/Saved/hide-chat.trying"
-local hideOn = type(FText) == "function"
+local hideOn = true
 do
     local f = io.open(HIDE_FLAG, "r")
     if f then
@@ -367,14 +367,46 @@ local function isChatCommand(text)
     return type(text) == "string" and text:match("^%s*!%a") ~= nil
 end
 
+--- A value Lua can call: a function, or a table / userdata with __call.
+local function callable(v)
+    if type(v) == "function" then return true end
+    if type(v) ~= "table" and type(v) ~= "userdata" then return false end
+    local mt = getmetatable(v)
+    return type(mt) == "table" and mt.__call ~= nil
+end
+
+--- An empty FText, and how it was made: UE4SS's FText("") (a plain function in
+-- some builds, a callable object in others — the live server's 2026-10-04 run
+-- found no plain function and the hiding stayed off without a word), else the
+-- engine's own KismetTextLibrary:Conv_StringToText(""). nil when neither works.
+local function emptyText()
+    if callable(FText) then
+        local ok, t = pcall(FText, "")
+        if ok and t ~= nil then return t, "FText" end
+    end
+    local okLib, lib = pcall(StaticFindObject, "/Script/Engine.Default__KismetTextLibrary")
+    if okLib and lib ~= nil and lib:IsValid() then
+        local ok, t = pcall(function() return lib:Conv_StringToText("") end)
+        if ok and t ~= nil then return t, "KismetTextLibrary" end
+    end
+    return nil
+end
+
 local function blank(param)
     if param == nil then return end
-    pcall(function() param:set(FText("")) end)
+    local t = emptyText()
+    if t ~= nil then pcall(function() param:set(t) end) end
 end
 
 if hideOn then
     H.defer(HIDE_AFTER_MS, function()
         H.try(MOD .. ": hide chat commands hook", function()
+            local probe, via = emptyText()
+            if probe == nil then
+                H.logError(MOD .. ": cannot make an empty chat text (FText is a " .. type(FText)
+                    .. ", no KismetTextLibrary) — chat commands stay visible")
+                return
+            end
             RegisterHook(CHAT_HOOK_NAME, function(_self, textParam, _sender, _mode, rawParam)
                 local ok, text = pcall(function() return H.textOf(textParam:get()) end)
                 if not (ok and isChatCommand(text)) then return end
@@ -390,7 +422,7 @@ if hideOn then
                 blank(textParam)
                 blank(rawParam)
             end)
-            H.log(MOD .. ": chat commands hidden from the chat (hook after the other mods')")
+            H.log(MOD .. ": chat commands hidden from the chat (hook after the other mods', empty text via " .. via .. ")")
         end)
     end)
 end
