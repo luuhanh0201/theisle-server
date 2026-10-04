@@ -10,7 +10,7 @@ const root = mkdtempSync(join(tmpdir(), 'starter-'));
 process.env.DATA_DIR = join(root, 'data');
 process.env.GARAGE_ROOT = join(root, 'garage');
 mkdirSync(join(root, 'garage', 'stored'), { recursive: true });
-const { grantStarters, dinoOptions, checkChoice, useDinoTicket, STARTER_ITEM_ID, ALL_PRIME_TASKS } = await import('../dist/starter.js');
+const { grantStarters, claimStarter, starterOffered, dinoOptions, checkChoice, useDinoTicket, STARTER_ITEM_ID, ALL_PRIME_TASKS } = await import('../dist/starter.js');
 const { inventoryOf, getItem } = await import('../dist/items.js');
 after(() => rmSync(root, { recursive: true, force: true }));
 
@@ -24,14 +24,24 @@ const CATALOG = [
   { species: 'BP_Unknown_C', classPath: null },
 ];
 
-test('every account once: the ones who played, then each new one; the ticket item made once', async () => {
+test('every account offered once: the ones who played, then each new one; taken once, only then in the bag', async () => {
   assert.deepEqual(await grantStarters([A, A, 'not-a-steamid']), [A]);
-  assert.deepEqual(await grantStarters([A, B]), [B], 'A had theirs');
+  assert.deepEqual(await grantStarters([A, B]), [B], 'A was offered theirs');
   assert.deepEqual(await grantStarters([A, B]), []);
   const item = await getItem(STARTER_ITEM_ID);
   assert.equal(item.type, 'dino_ticket');
   assert.deepEqual(item.data, { growthMin: 0.5, growthMax: 1, quest: false });
-  assert.equal((await inventoryOf(A)).filter((o) => o.itemId === STARTER_ITEM_ID).length, 1);
+  assert.equal((await inventoryOf(A)).length, 0, 'offered: not in the bag yet');
+  assert.equal(await starterOffered(A), true);
+  assert.deepEqual(await claimStarter(A), { item: item.name });
+  assert.equal((await inventoryOf(A)).filter((o) => o.itemId === STARTER_ITEM_ID).length, 1, 'taken: in the bag');
+  assert.equal(await starterOffered(A), false, 'the home page box gone');
+  await assert.rejects(() => claimStarter(A), /đã nhận/);
+  assert.deepEqual(await grantStarters([A]), [], 'taken: never offered again');
+  await assert.rejects(() => claimStarter('76561198000000003'), /chưa có/);
+  const both = await Promise.allSettled([claimStarter(B), claimStarter(B)]);
+  assert.deepEqual(both.map((r) => r.status).sort(), ['fulfilled', 'rejected'], 'two clicks at once: one ticket');
+  assert.equal((await inventoryOf(B)).filter((o) => o.itemId === STARTER_ITEM_ID).length, 1);
 });
 
 test('the options: species the server knows with their class, mutations without the quest ones', () => {

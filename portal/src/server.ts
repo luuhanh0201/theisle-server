@@ -33,6 +33,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   POST /api/items/use         { uid, slot?: 1–4, mutation?: name (a Phiếu đổi mutation) } use an item of your bag on the dino you play (login, same-origin, JSON)
  *   GET  /api/items/preview/<uid>  what that would do: each slot's mutation and value, the +1 đời upgrade (login)
  *   GET  /api/items/dino-options   the species and mutations a dino ticket can give (login)
+ *   POST /api/starter/claim     the starter gift: the dino ticket into the bag, once (login, same-origin)
  *   POST /api/checkin           today's check-in: Hổ phách once a day after enough minutes in game (login, same-origin)
  *   POST /api/quests/claim      { quest } a done quest's Hổ phách, once (login, same-origin, JSON)
  *   POST /api/items/dino        { uid, species, female, mutations: { 1–4: name } } use a dino ticket: the dino into your garage (login, same-origin, JSON)
@@ -361,6 +362,15 @@ export function createPortal(opts: PortalOptions): Server {
         const body = await readSmallJson(req);
         if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
         const r = await opts.bridge.claimQuest(me, body['quest']);
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/starter/claim') {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
+        if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
+        const r = await opts.bridge.claimStarter(me);
         send(res, r.status, r.body);
         return;
       }

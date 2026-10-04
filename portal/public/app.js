@@ -2688,7 +2688,7 @@ setInterval(refresh, 1000);
 
 
 // ============================================================================
-// Trang chủ: the rewards first (owner, 2026-10-05) — the starter ticket (bridge starter.ts), the daily
+// Trang chủ: the rewards first (owner, 2026-10-05) — the starter gift (bridge starter.ts), the daily
 // check-in and the Hổ phách balance (bridge economy.ts), and the way into the server.
 // ============================================================================
 const fmtAmber = (n) => Number(n ?? 0).toLocaleString('vi-VN');
@@ -2706,24 +2706,23 @@ function questRow(q, locked) {
 }
 function renderHomeRewards(me) {
   const eco = me?.economy ?? null;
-  const ticket = bagGroups(me?.items ?? []).find((g) => g.type === 'dino_ticket') ?? null;
+  // The starter gift waits here until taken; then the ticket is in the bag and this box is gone.
+  const gift = me?.starter ?? null;
   const quests = me?.quests ?? null;
-  const sig = JSON.stringify([eco, quests, ticket && [ticket.uids.length, ticket.locked ?? null], homeBusy]);
+  const sig = JSON.stringify([eco, quests, gift, homeBusy]);
   if (sig === homeSig) return;
   homeSig = sig;
   // The balance, by the way in.
   $('home-amber').hidden = !eco;
   if (eco) $('home-amber').innerHTML = `🟠 <span>${fmtAmber(eco.balance)}</span> ${esc(eco.currency)}${eco.locked ? ' <small style="opacity:.75">(thử nghiệm)</small>' : ''}`;
-  // The starter ticket, while they have it.
   const st = $('home-starter');
-  st.hidden = !ticket;
-  if (ticket) {
-    const lo = Math.round((ticket.growthMin ?? 0.5) * 100), hi = Math.round((ticket.growthMax ?? 1) * 100);
-    st.innerHTML = `<h3>🎁 Quà tân thủ: chọn 1 dino bất kỳ${ticket.uids.length > 1 ? ` <span class="rar-label rar-legendary">×${ticket.uids.length}</span>` : ''}</h3>
-      <p>Chọn <b>loài</b>, <b>giới tính</b> và <b>mutation 4 ô chính</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng ngẫu nhiên ${lo}–${hi}%.</p>
-      ${ticket.locked ? `<div class="hr-note">🧪 ${esc(ticket.locked)}</div>` : ''}
-      <div class="hr-row"><button type="button" class="btn btn-emerald" id="home-starter-btn" ${ticket.locked ? 'disabled' : ''}>🦖 Chọn dino ngay</button>
-        <span class="muted">Mỗi tài khoản 1 phiếu · cũng có trong Túi đồ</span></div>`;
+  st.hidden = !gift;
+  if (gift) {
+    st.innerHTML = `<h3>🎁 Quà tân thủ: Phiếu chọn dino</h3>
+      <p>Nhận phiếu vào <b>Túi đồ</b>, rồi dùng để chọn <b>loài</b>, <b>giới tính</b> và <b>mutation 4 ô chính</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng ngẫu nhiên 50–100%.</p>
+      ${gift.locked ? `<div class="hr-note">🧪 ${esc(gift.locked)}</div>` : ''}
+      <div class="hr-row"><button type="button" class="btn btn-emerald" id="home-starter-btn" ${gift.locked || homeBusy ? 'disabled' : ''}>🎁 Nhận quà</button>
+        <span class="muted">Mỗi tài khoản 1 lần</span></div>`;
   }
   // The daily and weekly quests.
   const qe = $('home-quests');
@@ -2759,9 +2758,21 @@ function renderHomeRewards(me) {
   }
 }
 $('home-rewards').addEventListener('click', async (e) => {
-  if (e.target.closest('#home-starter-btn')) {
-    const g = bagGroups(lastMeData?.items ?? []).find((x) => x.type === 'dino_ticket');
-    if (g && !g.locked) void openDinoDialog(g);
+  const sb = e.target.closest('#home-starter-btn');
+  if (sb && !sb.disabled && !homeBusy) {
+    homeBusy = true; homeSig = ''; renderHomeRewards(lastMeData);
+    try {
+      const r = await fetch('/api/starter/claim', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
+      const b = await r.json().catch(() => null);
+      showToast(r.status === 200 ? `✅ Đã nhận ${b.item} — xem trong Túi đồ` : `❌ ${b?.error ?? 'Không nhận được quà.'}`);
+    } catch {
+      showToast('❌ Mất kết nối. Thử lại.');
+    } finally {
+      homeBusy = false; homeSig = '';
+      const me = await getJson('/api/me').catch(() => null);
+      if (me?.status === 200) { lastMeData = me.body; bag.sig = ''; renderBag(lastMeData); }
+      renderHomeRewards(lastMeData);
+    }
     return;
   }
   const qb = e.target.closest('[data-quest]');

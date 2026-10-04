@@ -167,12 +167,13 @@ try { places = placesOf(JSON.parse(readFileSync(join(process.cwd(), 'public', 'm
 }
 const questProgress = new QuestProgress(playDays, () => places, (id) => store.isAdmin(id));
 
-// The starter ticket (starter.ts): everyone who has played gets one once, then each new account.
+// The starter gift (starter.ts): offered once to everyone who has played, then to each new account;
+// taken on the home page.
 // First 30 s in (the events are read by then), then every minute.
 const sweepStarters = (): void => {
   grantStarters(store.players().map((p) => p.steamId))
-    .then((fresh) => { if (fresh.length > 0) console.info(`[starter] dino ticket given to ${fresh.length} player(s): ${fresh.slice(0, 5).join(', ')}${fresh.length > 5 ? '…' : ''}`); })
-    .catch((error: unknown) => console.error('[starter] could not give the tickets:', error));
+    .then((fresh) => { if (fresh.length > 0) console.info(`[starter] gift offered to ${fresh.length} player(s): ${fresh.slice(0, 5).join(', ')}${fresh.length > 5 ? '…' : ''}`); })
+    .catch((error: unknown) => console.error('[starter] could not offer the gift:', error));
 };
 setTimeout(sweepStarters, 30_000);
 setInterval(sweepStarters, 60_000);

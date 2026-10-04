@@ -1,19 +1,23 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { config } from './config.js';
 import { ValidationError, createSlot, nextFreeSlot } from './garage.js';
-import { type DinoTicketData, SPECIES_DIET, dietRefusal, ensureItem, getItem, grantItem, inventoryOf, isPendingUse, consumeOwned, speciesKey } from './items.js';
+import { type DinoTicketData, SPECIES_DIET, dietRefusal, ensureItem, getItem, grantItem, inventoryOf, isPendingUse, consumeOwned, revokeItem, speciesKey } from './items.js';
 import { MUTATION_REFERENCE } from './mutation-reference.js';
 
 /**
  * The starter ticket (owner, 2026-10-05): every account that has ever been on the server, and each
- * new one, gets one "Phiếu chọn dino" once. Used from the bag: the player picks any species, its sex
+ * new one, is offered one "Phiếu chọn dino" once — a gift taken on the home page ("nhận từ đó mới hiển
+ * thị trên túi đồ, khi nhận thì mất ô đó"): only then is it in their bag. Used from the bag: the player picks any species, its sex
  * and the mutations of its four slots; the dino goes into their garage with every prime task done
  * and a growth drawn between the ticket's growthMin and growthMax (50–100 % by default) — from about
  * 75 % the game makes it prime. Tried by SVip first (svip.ts feature 'starter'); the panel's
  * "Phát hành" opens it to everyone.
  *
- *   data/starter-granted.json  { players: { <steamId>: <unix s> } }   who has had theirs
+ *   data/starter.json  { offered: { <steamId>: <unix s> }, claimed: { <steamId>: <unix s> } }
+ *
+ * Before the home-page gift (the first hours), the ticket was put straight into the bags:
+ * data/starter-granted.json. Read once: a ticket still unused goes back to "offered".
  */
 
 export const STARTER_ITEM_ID = 'starter_dino';
@@ -22,46 +26,82 @@ const STARTER_ITEM = { type: 'dino_ticket', name: 'Phiếu chọn dino (tân th�
 /** Every prime task done (ten 1s, task 1 first — garage.ts primeConditions). */
 export const ALL_PRIME_TASKS = '1111111111';
 
-const grantedPath = (): string => join(config.dataDir, 'starter-granted.json');
+const statePath = (): string => join(config.dataDir, 'starter.json');
+const oldPath = (): string => join(config.dataDir, 'starter-granted.json');
+const inventoryFile = (): string => join(config.dataDir, 'item-inventory.json');
 
-async function readGranted(): Promise<Record<string, number>> {
-  try {
-    const raw = JSON.parse(await readFile(grantedPath(), 'utf8')) as { players?: unknown };
-    return typeof raw.players === 'object' && raw.players !== null ? raw.players as Record<string, number> : {};
-  } catch {
-    return {};
-  }
+interface StarterState { offered: Record<string, number>; claimed: Record<string, number> }
+
+async function writeState(st: StarterState): Promise<void> {
+  await mkdir(dirname(statePath()), { recursive: true });
+  const tmp = `${statePath()}.tmp`;
+  await writeFile(tmp, JSON.stringify(st, null, 2), 'utf8');
+  await rename(tmp, statePath());
 }
 
-async function writeGranted(players: Record<string, number>): Promise<void> {
-  await mkdir(dirname(grantedPath()), { recursive: true });
-  const tmp = `${grantedPath()}.tmp`;
-  await writeFile(tmp, JSON.stringify({ players }, null, 2), 'utf8');
-  await rename(tmp, grantedPath());
+async function readState(now: number): Promise<StarterState> {
+  try {
+    const raw = JSON.parse(await readFile(statePath(), 'utf8')) as Partial<StarterState>;
+    return { offered: raw.offered ?? {}, claimed: raw.claimed ?? {} };
+  } catch { /* none yet */ }
+  const st: StarterState = { offered: {}, claimed: {} };
+  let old: Record<string, number> = {};
+  try { old = (JSON.parse(await readFile(oldPath(), 'utf8')) as { players?: Record<string, number> }).players ?? {}; } catch { /* none */ }
+  if (Object.keys(old).length > 0) {
+    // The bags are changed: kept as they were first.
+    await copyFile(inventoryFile(), `${inventoryFile()}.bak-starter-${now}`).catch(() => undefined);
+    for (const id of Object.keys(old)) {
+      const unused = (await inventoryOf(id)).some((o) => o.itemId === STARTER_ITEM_ID);
+      if (unused) { await revokeItem(id, STARTER_ITEM_ID); st.offered[id] = now; } else st.claimed[id] = old[id] as number;
+    }
+    await rename(oldPath(), `${oldPath()}.migrated`);
+  }
+  await writeState(st);
+  return st;
 }
 
 let busy: Promise<unknown> = Promise.resolve();
+function serialized<T>(fn: () => Promise<T>): Promise<T> {
+  const run = busy.then(fn, fn);
+  busy = run.catch(() => undefined);
+  return run;
+}
 
 /**
- * Give the ticket to each of these SteamIDs that has never had one. Returns who got it now.
+ * Offer the gift to each of these SteamIDs never offered it. Returns who is offered it now.
  * Run at the bridge's start (everyone who has played) and every minute (anyone new).
  */
 export function grantStarters(steamIds: Iterable<string>, now = Math.floor(Date.now() / 1000)): Promise<string[]> {
   const ids = [...new Set(steamIds)].filter((id) => /^\d{17}$/.test(id));
-  const run = busy.then(async () => {
+  return serialized(async () => {
     await ensureItem(STARTER_ITEM_ID, STARTER_ITEM);
-    const granted = await readGranted();
-    const fresh = ids.filter((id) => granted[id] === undefined);
-    for (const id of fresh) {
-      await grantItem(id, STARTER_ITEM_ID, 'event', null, 'Quà tân thủ: mỗi tài khoản 1 phiếu');
-      granted[id] = now;
-      // Kept after each one: a crash halfway must not give the first ones a second ticket.
-      await writeGranted(granted);
-    }
+    const st = await readState(now);
+    const fresh = ids.filter((id) => st.offered[id] === undefined && st.claimed[id] === undefined);
+    for (const id of fresh) st.offered[id] = now;
+    if (fresh.length > 0) await writeState(st);
     return fresh;
   });
-  busy = run.catch(() => undefined);
-  return run;
+}
+
+/** Whether this player has the gift waiting on the home page. */
+export async function starterOffered(steamId: string, now = Math.floor(Date.now() / 1000)): Promise<boolean> {
+  const st = await serialized(() => readState(now));
+  return st.offered[steamId] !== undefined && st.claimed[steamId] === undefined;
+}
+
+/** Take the gift: the ticket into their bag, the home page's box gone. */
+export function claimStarter(steamId: string, now = Math.floor(Date.now() / 1000)): Promise<{ item: string }> {
+  return serialized(async () => {
+    const st = await readState(now);
+    if (st.claimed[steamId] !== undefined) throw new ValidationError('Bạn đã nhận quà tân thủ rồi.');
+    if (st.offered[steamId] === undefined) throw new ValidationError('Bạn chưa có quà tân thủ.');
+    const item = await ensureItem(STARTER_ITEM_ID, STARTER_ITEM);
+    await grantItem(steamId, STARTER_ITEM_ID, 'event', null, 'Quà tân thủ: mỗi tài khoản 1 phiếu');
+    delete st.offered[steamId];
+    st.claimed[steamId] = now;
+    await writeState(st);
+    return { item: item.name };
+  });
 }
 
 export interface DinoOption { key: string; label: string; classPath: string; diet: 'carnivore' | 'herbivore' | 'omnivore' }

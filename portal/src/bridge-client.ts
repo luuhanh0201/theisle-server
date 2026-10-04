@@ -45,6 +45,8 @@ export class BridgeClient {
   heatmap() { return this.get('/player-api/heatmap'); }
   /** The daily check-in (bridge economy.ts). */
   checkin(steamId: string) { return this.post(`/player-api/checkin/${steamId}`, {}); }
+  /** The starter gift (bridge starter.ts): taken on the home page, the ticket into the bag. */
+  claimStarter(steamId: string) { return this.post(`/player-api/starter/${steamId}/claim`, {}); }
   /** A quest's reward (bridge quests.ts). */
   claimQuest(steamId: string, quest: unknown) { return this.post(`/player-api/quests/${steamId}/claim`, { quest }); }
   /** The dino ticket (bridge starter.ts): what can be picked, and the pick. */

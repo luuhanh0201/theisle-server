@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
 import { isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
-import { dinoOptions, useDinoTicket } from './starter.js';
+import { claimStarter, dinoOptions, starterOffered, useDinoTicket } from './starter.js';
 import { audit } from './audit.js';
 import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
 import { claimQuest, questsOf, type QuestProgress } from './quests.js';
@@ -572,6 +572,23 @@ export async function handlePlayerApi(
     }
     return true;
   }
+  // The starter gift (starter.ts): taken on the home page — the ticket into their bag.
+  const starterClaim = /^\/player-api\/starter\/(\d{17})\/claim$/.exec(path);
+  if (starterClaim !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const who = starterClaim[1] as string;
+    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Quà tân thủ đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    try {
+      const out = await claimStarter(who);
+      const name = ctx.store.player(who)?.player.name ?? null;
+      await audit({ action: 'starter claim', ok: true, detail: `${name ?? who} nhận quà tân thủ: ${out.item} vào túi đồ` }, { steamId: who, name });
+      send(res, 200, out);
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
   // A quest's reward (quests.ts): done, not taken yet.
   const questClaim = /^\/player-api\/quests\/(\d{17})\/claim$/.exec(path);
   if (questClaim !== null) {
@@ -702,6 +719,10 @@ export async function handlePlayerApi(
       items: await ownedView(steamId, detail?.player.online ? detail.player.species ?? null : null),
       // The bag's tab: open to them, or they own something (the starter ticket — shown while being tried).
       bag: (await bagOpen(steamId)) || (await inventoryOf(steamId)).length > 0,
+      // The starter gift (starter.ts), while it waits on the home page.
+      starter: (await starterOffered(steamId))
+        ? ((await earlyAccess('starter', steamId)) ? {} : { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' })
+        : null,
       // SVip (svip.ts): tries the features being tested before everyone.
       svip: await isSvip(steamId),
       // Hổ phách and the daily check-in (economy.ts); being tried: shown, marked.
