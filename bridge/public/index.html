@@ -5873,6 +5873,8 @@ const LAYERS = [
 // map shows only the live list (layer "ai", from the server). Not drawn.
 const STATIC_AI_LAYER = 'animal';
 const LAYER = Object.fromEntries(LAYERS.map(([id, label, color, on]) => [id, { label, color, on }]));
+/** Version of map/water-areas.json + water-mask.png (scripts/build-water-areas.py). */
+const WATER_V = '2026-10-04b';
 const ZONE_VN = { migration: 'Vùng di cư', patrol: 'Vùng tuần tra', sanctuary: 'Sanctuary', mud: 'Bãi bùn' };
 const FOOD_VN = {
   Boar: 'Lợn rừng', Chicken: 'Gà', Deer: 'Hươu', Goat: 'Dê', Rabbit: 'Thỏ', Fish: 'Cá', Crab: 'Cua', Frog: 'Ếch',
@@ -5944,10 +5946,11 @@ function loadMapData() {
       lm.data = data;
       lm.img = img;
       // The waters outlined (scripts/build-water-areas.py): highlighted with the Nguồn nước layer.
-      getJson('map/water-areas.json').then((w) => { lm.water = Array.isArray(w?.areas) ? w.areas : []; drawMap(); }).catch(() => undefined);
+      // WATER_V: bump after re-running the script (the proxy keeps /map/* a week).
+      getJson(`map/water-areas.json?v=${WATER_V}`).then((w) => { lm.water = Array.isArray(w?.areas) ? w.areas : []; drawMap(); }).catch(() => undefined);
       // Every water pixel of the map (scripts/build-water-areas.py), tinted once in the layer's colour.
       const mask = new Image();
-      mask.src = `map/water-mask.png?v=${encodeURIComponent(data.updated)}`;
+      mask.src = `map/water-mask.png?v=${WATER_V}`;
       mask.decode().then(() => {
         const c = document.createElement('canvas');
         c.width = mask.naturalWidth; c.height = mask.naturalHeight;

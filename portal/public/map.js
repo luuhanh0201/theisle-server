@@ -28,6 +28,8 @@ const LAYERS = [
   ['mineral', 'Đá muối*', '#e2e8f0', false],
 ];
 const LAYER = Object.fromEntries(LAYERS.map(([id, label, color, on]) => [id, { label, color, on }]));
+/** Version of map/water-areas.json + water-mask.png (scripts/build-water-areas.py). */
+const WATER_V = '2026-10-04b';
 const ZONES = new Set(['migration', 'patrol', 'sanctuary', 'mud']);
 // The game's fish by the names players use (as the admin map, World → Cá).
 const FISH_VN = { Catfish: 'Cá trê', Coalecanth: 'Cá vây tay', Forktail: 'Forktail', Hoplo: 'Hoplo', Longear: 'Cá thái dương', Muskel: 'Muskel' };
@@ -588,12 +590,13 @@ export function createMap(root) {
       await img.decode();
       st.data = data; st.img = img;
       // The waters outlined (scripts/build-water-areas.py, from the map image): highlighted with the Nước layer.
-      fetch('/map/water-areas.json', { credentials: 'same-origin' }).then((w) => (w.ok ? w.json() : null))
+      // WATER_V: bump after re-running the script (the proxy keeps /map/* a week).
+      fetch(`/map/water-areas.json?v=${WATER_V}`, { credentials: 'same-origin' }).then((w) => (w.ok ? w.json() : null))
         .then((w) => { st.water = Array.isArray(w?.areas) ? w.areas : []; draw(); }).catch(() => undefined);
       // Every water pixel of the map (scripts/build-water-areas.py), tinted once in the layer's colour.
       st.waterTint = null;
       const mask = new Image();
-      mask.src = `/map/water-mask.png?v=${encodeURIComponent(data.updated)}`;
+      mask.src = `/map/water-mask.png?v=${WATER_V}`;
       mask.decode().then(() => { st.waterTint = tintMask(mask, LAYER.water.color); draw(); }).catch(() => undefined);
       msg.hidden = true;
       chips();

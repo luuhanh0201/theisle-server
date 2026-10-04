@@ -158,6 +158,7 @@ def simplify(pts, eps):
     return [pts[0], pts[-1]]
 
 
+SALT = 120         # px (full image, ~34 map units): water this close to the sea is salt (coast, river mouths)
 COAST = 40          # px (full image): water mostly this close to the sea is the sea's shallows
 
 
@@ -195,6 +196,26 @@ def write_mask():
         if len(comp) < 30 or (near_sea[rows, cols].mean() > 0.4 and wide[rows, cols].mean() > 0.15):
             continue
         keep[rows, cols] = True
+    # Salt water (owner, 2026-10-04: "vùng đó không hề có nước ngọt" — the coast, the river
+    # mouths): nothing within SALT px of the sea, except the named lakes (Dam Lake sits by the
+    # sea behind its dam: fresh), kept whole.
+    salt = navy.copy()
+    for _ in range(SALT // 4):
+        salt = shift_or(salt, 4)
+    data = json.load(open(MAP))
+    b = data["bounds"]
+    lakes = np.zeros_like(keep)
+    for f in data["features"]:
+        if f.get("layer") != "water" or f.get("kind") != "label" or "Lake" not in f["name"]:
+            continue
+        r = int((f["at"][0] - b["minX"]) / (b["maxX"] - b["minX"]) * h)
+        c = int((f["at"][1] - b["minY"]) / (b["maxY"] - b["minY"]) * w)
+        seed = nearest(keep, r, c, 120)
+        if seed is not None:
+            lakes |= flood(keep, seed, 700)
+    dropped = int((keep & salt & ~lakes).sum())
+    keep &= ~salt | lakes
+    print(f"salt water left out: {dropped} px (within {SALT} px of the sea, named lakes kept)")
     out = np.zeros((h, w, 4), np.uint8)
     out[keep] = (255, 255, 255, 255)               # white: the map tints it with the layer's colour
     Image.fromarray(out, "RGBA").save(MASK, optimize=True)
@@ -248,6 +269,7 @@ def main():
     print(f"{len(areas)} waters: {sum(1 for x in areas if x['kind'] == 'poly')} outlined, {sum(1 for x in areas if x['kind'] == 'circle')} circles")
     for x in areas:
         print(f"  {x['name']:24s} {x['kind']:6s} {x.get('px', '')}")
+    print("then bump WATER_V in portal/public/map.js and bridge/public/index.html (the proxy caches /map/* a week)")
     if "--preview" in sys.argv:
         out = sys.argv[sys.argv.index("--preview") + 1]
         im = Image.open(IMG).convert("RGB").resize((W, H))
