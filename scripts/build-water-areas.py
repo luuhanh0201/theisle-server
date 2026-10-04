@@ -160,6 +160,10 @@ def simplify(pts, eps):
 
 SALT = 120         # px (full image, ~34 map units): water this close to the sea is salt (coast, river mouths)
 COAST = 40          # px (full image): water mostly this close to the sea is the sea's shallows
+# Fresh however close to the sea (owner, 2026-10-04: "tô đủ cả vùng Delta"): the map's zones
+# (gateway.json, by name) whose water is all kept, ZONE_MARGIN px round them included.
+FRESH_ZONES = ("MZ 11",)   # the Delta: the river, its west branch, the swamp channels
+ZONE_MARGIN = 60
 
 
 def write_mask():
@@ -216,6 +220,25 @@ def write_mask():
     dropped = int((keep & salt & ~lakes).sum())
     keep &= ~salt | lakes
     print(f"salt water left out: {dropped} px (within {SALT} px of the sea, named lakes kept)")
+    zone_img = Image.new("1", (w, h), 0)
+    zd = ImageDraw.Draw(zone_img)
+    for f in data["features"]:
+        if f.get("name") not in FRESH_ZONES or f.get("kind") != "poly":
+            continue
+        for ring in f["pts"]:
+            zd.polygon([((p[1] - b["minY"]) / (b["maxY"] - b["minY"]) * w, (p[0] - b["minX"]) / (b["maxX"] - b["minX"]) * h) for p in ring], fill=1)
+    zone = np.asarray(zone_img, dtype=bool)
+    for _ in range(ZONE_MARGIN // 4):
+        zone = shift_or(zone, 4)
+    # The Delta's thin streams between its islands: a dark green-teal line (blue close to green),
+    # which the teal mask leaves out with the forest's shade (blue far below green).
+    r_, g_, b_ = full[..., 0], full[..., 1], full[..., 2]
+    stream = (r_ <= 60) & (g_ >= 30) & (g_ <= 110) & (g_ - r_ >= 15) & (b_ * 10 >= g_ * 6) & (b_ <= g_ + 15)
+    stream = shift_or(shift_and(stream, 1), 1) & zone
+    zone_water = (clean | stream) & zone
+    added = int((zone_water & ~keep).sum())
+    keep |= zone_water
+    print(f"fresh zones {', '.join(FRESH_ZONES)}: +{added} px (all their water)")
     out = np.zeros((h, w, 4), np.uint8)
     out[keep] = (255, 255, 255, 255)               # white: the map tints it with the layer's colour
     Image.fromarray(out, "RGBA").save(MASK, optimize=True)

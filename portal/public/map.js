@@ -29,7 +29,7 @@ const LAYERS = [
 ];
 const LAYER = Object.fromEntries(LAYERS.map(([id, label, color, on]) => [id, { label, color, on }]));
 /** Version of map/water-areas.json + water-mask.png (scripts/build-water-areas.py). */
-const WATER_V = '2026-10-04b';
+const WATER_V = '2026-10-04c';
 const ZONES = new Set(['migration', 'patrol', 'sanctuary', 'mud']);
 // The game's fish by the names players use (as the admin map, World → Cá).
 const FISH_VN = { Catfish: 'Cá trê', Coalecanth: 'Cá vây tay', Forktail: 'Forktail', Hoplo: 'Hoplo', Longear: 'Cá thái dương', Muskel: 'Muskel' };
