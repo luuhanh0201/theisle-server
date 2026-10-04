@@ -372,6 +372,36 @@ function speciesOf(raw) {
   return Object.keys(registry.species).find((k) => k.toLowerCase() === short) ?? null;
 }
 
+// --- when to draw ------------------------------------------------------------------
+// In the launcher the page counts as visible even in the tray or behind the game (its window keeps
+// backgroundThrottling off, for the voice and the overlay): document.hidden stays false there. The 3D
+// went on drawing every frame while the owner played — in software WebGL (GPU off: SwiftShader),
+// 8 threads at 60 % each, the game's FPS from 40-60 down to 20-30 (2026-10-04). Not focused in the
+// launcher = nobody looks at it: nothing drawn (the same test as app.js's background redraw).
+const offScreen = () => document.hidden || (Boolean(window.isleLauncher) && !document.hasFocus());
+// Software WebGL (no GPU: SwiftShader, llvmpipe) draws on the CPU: at most this many frames a second.
+const SOFTWARE_FPS = 24;
+function softwareGL(renderer) {
+  try {
+    const gl = renderer.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    return /swiftshader|llvmpipe|softpipe|software/i.test(name);
+  } catch {
+    return false;
+  }
+}
+/** A frame gate: true when this frame should be drawn (all frames on a GPU, SOFTWARE_FPS without one). */
+function frameGate(renderer) {
+  const gap = softwareGL(renderer) ? 1000 / SOFTWARE_FPS : 0;
+  let last = 0;
+  return (now) => {
+    if (now - last < gap) return false;
+    last = now;
+    return true;
+  };
+}
+
 // --- one viewer ------------------------------------------------------------------
 /**
  * A 3D view in `host`. opts: { note (element for a status line), interactive
@@ -407,9 +437,11 @@ function create(host, opts = {}) {
     controls.autoRotate = opts.autoRotate === true;
     controls.autoRotateSpeed = 1.2;
     clock = new THREE.Clock();
-    const loop = () => {
+    const due = frameGate(renderer);
+    const loop = (now = 0) => {
       requestAnimationFrame(loop);
-      if (!host.isConnected || host.hidden || (document.hidden && !opts.alwaysRender) || !host.offsetParent) return;   // not shown: nothing to draw
+      if (!host.isConnected || host.hidden || (offScreen() && !opts.alwaysRender) || !host.offsetParent) return;   // not shown: nothing to draw
+      if (!due(now)) return;
       // Follow the box's size here: the tab can be hidden when the model loads (0 × 0).
       const w = host.clientWidth, h = host.clientHeight;
       if (w > 0 && h > 0 && (w !== sizeW || h !== sizeH)) {
@@ -895,9 +927,11 @@ function initHuntStage() {
     if (loadingEl) loadingEl.style.display = 'none';
 
     // Animation Loop
-    const loop = () => {
+    const due = frameGate(renderer);
+    const loop = (now = 0) => {
       requestAnimationFrame(loop);
-      if (!host.isConnected || host.hidden || document.hidden || !host.offsetParent) return;
+      if (!host.isConnected || host.hidden || offScreen() || !host.offsetParent) return;
+      if (!due(now)) return;
 
       const w = host.clientWidth, h = host.clientHeight;
       if (w > 0 && h > 0 && (w !== sizeW || h !== sizeH)) {
