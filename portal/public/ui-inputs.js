@@ -234,7 +234,9 @@ input.dt-native { display: none !important; }
     const pick = { y: p.y, m: p.m, d: p.d, h: p.h ?? (inp.type === 'date' ? 0 : now.getHours()), mi: p.mi ?? 0 };
     if (inp.type === 'time' && pick.y === null) { pick.y = now.getFullYear(); pick.m = now.getMonth(); pick.d = now.getDate(); }
     open = { inp, pick, view: { y: p.y ?? now.getFullYear(), m: p.m ?? now.getMonth() } };
-    if (!pop.isConnected) document.body.append(pop);
+    // In a modal <dialog> (the top layer) the picker must be inside it, or it opens behind the dialog.
+    const host = inp.closest('dialog[open]') ?? document.body;
+    if (pop.parentElement !== host) host.append(pop);
     render();
     pop.hidden = false;
     btnOf.get(inp).setAttribute('aria-expanded', 'true');

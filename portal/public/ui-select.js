@@ -268,7 +268,10 @@ select.cs-native { display: none !important; }
     if (sel.disabled || !btn.getClientRects().length) return;
     if (open) close(false);
     open = { sel, btn, items: [], active: -1 };
-    if (!pop.isConnected) document.body.append(pop);
+    // In a modal <dialog> (the top layer) the list must be inside it, or it opens behind the dialog
+    // (the dino ticket's species list showed nothing, 2026-10-05).
+    const host = sel.closest('dialog[open]') ?? document.body;
+    if (pop.parentElement !== host) host.append(pop);
     search.value = '';
     search.hidden = sel.options.length < SEARCH_FROM;
     list.id = `cs-list-${++uid}`;
