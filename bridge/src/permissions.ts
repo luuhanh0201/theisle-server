@@ -40,6 +40,8 @@ export const PERMS: readonly PermDef[] = [
   { key: 'mods.edit', group: 'Tính năng mod', label: 'Sửa lệnh chat, Ptera, voice, thông báo' },
   { key: 'server.view', group: 'Server', label: 'Xem tình trạng, hiệu năng, lịch, DDoS' },
   { key: 'traffic.view', group: 'Server', label: 'Xem thống kê truy cập: lượt mở web, tải / dùng launcher, đăng nhập' },
+  { key: 'economy.view', group: 'Nhiệm vụ', label: 'Xem Hổ phách, điểm danh, sổ giao dịch' },
+  { key: 'economy.edit', group: 'Nhiệm vụ', label: 'Sửa cấu hình điểm danh / nhiệm vụ, cộng / trừ Hổ phách' },
   { key: 'server.power', group: 'Server', label: 'Bật / tắt / khởi động lại server' },
   { key: 'server.schedule', group: 'Server', label: 'Sửa lịch khởi động lại, sự kiện tốc độ lớn' },
   { key: 'config.view', group: 'Server', label: 'Xem cấu hình game (Game.ini)' },
@@ -222,6 +224,7 @@ export function permissionFor(method: string, path: string): string | null {
     if (path === '/api/svip') return 'svip.edit';
     if (path === '/api/discord') return 'discord.view';
     if (path === '/api/traffic') return 'traffic.view';
+    if (path === '/api/economy' || path === '/api/economy/ledger') return 'economy.view';
     if (path === '/api/discord/url') return 'discord.edit';   // shows a webhook's secret URL
     return '*';
   }
@@ -247,6 +250,7 @@ export function permissionFor(method: string, path: string): string | null {
   if (['/api/backups', '/api/backup-settings', '/api/backups/export-settings'].includes(path) || /^\/api\/backups\/file\/[^/]+$/.test(path)) return 'backups.edit';
   if (path === '/api/panel-access') return 'access.edit';
   if (path === '/api/svip') return 'svip.edit';
+  if (path === '/api/economy/settings' || path === '/api/economy/adjust') return 'economy.edit';
   if (path === '/api/items' || /^\/api\/items\/[^/]+$/.test(path)) return 'items.edit';
   if (/^\/api\/items\/[^/]+\/(grant|apply)$/.test(path) || /^\/api\/items\/[^/]+\/grant\/\d{17}$/.test(path)) return 'items.grant';
   if (['/api/discord', '/api/discord/test', '/api/discord/register-commands'].includes(path)) return 'discord.edit';

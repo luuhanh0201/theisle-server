@@ -2206,6 +2206,7 @@ $('bag-dlg').addEventListener('click', async (e) => {
     if (r.status !== 200) { bagDlgStatus('bad', `❌ ${esc(b?.error ?? 'Không nhận được dino.')} Phiếu vẫn còn.`); return; }
     $('bag-dlg').close(); bag.open = null;
     bagStatus('ok', `✅ Đã nhận <b>${esc(b.species)} ${Math.round(b.growth * 100)}%</b> (${b.female ? 'cái' : 'đực'}, đủ nhiệm vụ prime) vào <b>gara ô ${esc(b.slot)}</b>. Vào Gara, respawn đúng loài rồi lấy ra.`);
+    showToast(`✅ ${b.species} ${Math.round(b.growth * 100)}% đã vào gara ô ${b.slot}`);
   } catch {
     bagDlgStatus('bad', 'Mất kết nối. Thử lại.');
   } finally {
@@ -2246,6 +2247,7 @@ async function refresh() {
       pushOverlayGame(null, null);
       renderAuth(null);
       renderBag(null);
+      renderHomeRewards(null);
       // Disable guest restrictions gracefully
     } else if (me.status === 200) {
       lastMeData = me.body;
@@ -2264,6 +2266,7 @@ async function refresh() {
         renderGara(me.body);
         renderMap(me.body);
         renderBag(me.body);
+        renderHomeRewards(me.body);
       }
     }
 
@@ -2682,3 +2685,85 @@ if (VALID_TABS.includes(initialHash)) {
 
 refresh();
 setInterval(refresh, 1000);
+
+
+// ============================================================================
+// Trang chủ: the rewards first (owner, 2026-10-05) — the starter ticket (bridge starter.ts), the daily
+// check-in and the Hổ phách balance (bridge economy.ts), and the way into the server.
+// ============================================================================
+const fmtAmber = (n) => Number(n ?? 0).toLocaleString('vi-VN');
+let homeSig = '';
+let homeBusy = false;
+function renderHomeRewards(me) {
+  const eco = me?.economy ?? null;
+  const ticket = bagGroups(me?.items ?? []).find((g) => g.type === 'dino_ticket') ?? null;
+  const sig = JSON.stringify([eco, ticket && [ticket.uids.length, ticket.locked ?? null], homeBusy]);
+  if (sig === homeSig) return;
+  homeSig = sig;
+  // The balance, by the way in.
+  $('home-amber').hidden = !eco;
+  if (eco) $('home-amber').innerHTML = `🟠 <span>${fmtAmber(eco.balance)}</span> ${esc(eco.currency)}${eco.locked ? ' <small style="opacity:.75">(thử nghiệm)</small>' : ''}`;
+  // The starter ticket, while they have it.
+  const st = $('home-starter');
+  st.hidden = !ticket;
+  if (ticket) {
+    const lo = Math.round((ticket.growthMin ?? 0.5) * 100), hi = Math.round((ticket.growthMax ?? 1) * 100);
+    st.innerHTML = `<h3>🎁 Quà tân thủ: chọn 1 dino bất kỳ${ticket.uids.length > 1 ? ` <span class="rar-label rar-legendary">×${ticket.uids.length}</span>` : ''}</h3>
+      <p>Chọn <b>loài</b>, <b>giới tính</b> và <b>mutation 4 ô chính</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng ngẫu nhiên ${lo}–${hi}%.</p>
+      ${ticket.locked ? `<div class="hr-note">🧪 ${esc(ticket.locked)}</div>` : ''}
+      <div class="hr-row"><button type="button" class="btn btn-emerald" id="home-starter-btn" ${ticket.locked ? 'disabled' : ''}>🦖 Chọn dino ngay</button>
+        <span class="muted">Mỗi tài khoản 1 phiếu · cũng có trong Túi đồ</span></div>`;
+  }
+  // The daily check-in.
+  const ck = $('home-checkin');
+  ck.hidden = !eco;
+  if (eco) {
+    const c = eco.checkin;
+    const pct = c.needed > 0 ? Math.min(100, Math.round(c.minutes / c.needed * 100)) : 100;
+    const days = c.rewards.map((r, i) => {
+      const n = i + 1;
+      const cls = n < c.day || (c.claimed && n === c.day) ? 'done' : n === c.day ? 'today' : '';
+      return `<div class="hr-day ${cls}">Ngày ${n}<b>${cls === 'done' ? '✓' : `+${fmtAmber(r)}`}</b>${n === c.rewards.length && c.bonusItem ? `<span title="${esc(c.bonusItem)}">🎁</span>` : ''}</div>`;
+    }).join('');
+    const reward = c.rewards[c.day - 1] ?? 0;
+    const label = c.claimed ? '✓ Đã điểm danh hôm nay' : c.ready ? `Điểm danh: +${fmtAmber(reward)} ${eco.currency}` : `Chơi thêm ${Math.max(0, c.needed - c.minutes)} phút để điểm danh`;
+    ck.innerHTML = `<h3>📅 Điểm danh hằng ngày <span class="muted" style="font-size:13px;font-weight:600">ngày ${c.day}/${c.rewards.length}</span></h3>
+      <div class="hr-days">${days}</div>
+      <div class="hr-row" style="justify-content:space-between"><span class="muted">Hôm nay đã chơi <b>${c.minutes}</b>/${c.needed} phút trong game</span>
+        ${c.bonusItem ? `<span class="muted">Ngày ${c.rewards.length}: +🎁 ${esc(c.bonusItem)}</span>` : ''}</div>
+      <div class="hr-progress"><i style="width:${pct}%"></i></div>
+      ${eco.locked ? `<div class="hr-note">🧪 ${esc(eco.locked)}</div>` : ''}
+      <div class="hr-row"><button type="button" class="btn ${c.ready && !eco.locked ? 'btn-emerald' : 'btn-ghost'}" id="home-checkin-btn" ${c.ready && !eco.locked && !homeBusy ? '' : 'disabled'}>${esc(label)}</button>
+        <span class="muted">Bỏ lỡ 1 ngày là quay về ngày 1 · ngày mới lúc 00:00</span></div>`;
+  }
+}
+$('home-rewards').addEventListener('click', async (e) => {
+  if (e.target.closest('#home-starter-btn')) {
+    const g = bagGroups(lastMeData?.items ?? []).find((x) => x.type === 'dino_ticket');
+    if (g && !g.locked) void openDinoDialog(g);
+    return;
+  }
+  if (e.target.closest('#home-play')) {
+    if (window.isleLauncher?.playGame) window.isleLauncher.playGame();
+    else { window.location.href = 'steam://connect/play.xomgay.online:7777'; showToast('Đang mở The Isle qua Steam…'); }
+    return;
+  }
+  if (!e.target.closest('#home-checkin-btn') || homeBusy) return;
+  homeBusy = true;
+  homeSig = '';
+  renderHomeRewards(lastMeData);
+  try {
+    const r = await fetch('/api/checkin', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
+    const b = await r.json().catch(() => null);
+    if (r.status === 200) showToast(`✅ Điểm danh ngày ${b.day}: +${fmtAmber(b.reward)} Hổ phách${b.item ? ` và ${b.item}` : ''}`);
+    else showToast(`❌ ${b?.error ?? 'Không điểm danh được.'}`);
+  } catch {
+    showToast('❌ Mất kết nối. Thử lại.');
+  } finally {
+    homeBusy = false;
+    homeSig = '';
+    const me = await getJson('/api/me').catch(() => null);
+    if (me?.status === 200) lastMeData = me.body;
+    renderHomeRewards(lastMeData);
+  }
+});

@@ -7,6 +7,7 @@ import { config } from './config.js';
 import { isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
 import { dinoOptions, useDinoTicket } from './starter.js';
 import { audit } from './audit.js';
+import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
 import { SLOT_MIN_GROWTH, queueMutationUse, queuePlayerCommand, type MutationUse, queueSkin, SKIN_CHANNEL_MAX, TooSoonError } from './commands.js';
 import { type Item, type Rarity, dietRefusal, getItem, inventoryOf, isPendingUse, listItems, markPendingUse, resolveSkin, speciesKey } from './items.js';
 import { keptSkinsOf, setKeptSkin } from './kept-skins.js';
@@ -456,6 +457,7 @@ export async function handlePlayerApi(
     voice?: VoiceRoom;
     prison?: Prison;
     traffic?: Traffic;
+    playDays?: PlayDays;
   },
 ): Promise<boolean> {
   if (!path.startsWith('/player-api/')) return false;
@@ -568,6 +570,20 @@ export async function handlePlayerApi(
     }
     return true;
   }
+  // The daily check-in (economy.ts): today's Hổ phách, once, after enough minutes in game.
+  const checkin = /^\/player-api\/checkin\/(\d{17})$/.exec(path);
+  if (checkin !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const who = checkin[1] as string;
+    if (!(await earlyAccess('amber', who))) { send(res, 403, { error: 'Điểm danh đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    try {
+      send(res, 200, await claimCheckin(who, ctx.playDays?.minutesToday(who, Math.floor(Date.now() / 1000)) ?? 0));
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 409, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
   const useCmd = /^\/player-api\/items\/(\d{17})\/use$/.exec(path);
   if (useCmd !== null) {
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
@@ -668,6 +684,13 @@ export async function handlePlayerApi(
       bag: (await bagOpen(steamId)) || (await inventoryOf(steamId)).length > 0,
       // SVip (svip.ts): tries the features being tested before everyone.
       svip: await isSvip(steamId),
+      // Hổ phách and the daily check-in (economy.ts); being tried: shown, marked.
+      economy: {
+        currency: CURRENCY,
+        balance: await balanceOf(steamId),
+        checkin: await checkinStatus(steamId, ctx.playDays?.minutesToday(steamId, Math.floor(Date.now() / 1000)) ?? 0),
+        ...((await earlyAccess('amber', steamId)) ? {} : { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' }),
+      },
       bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
       prison: ctx.prison?.playerView(steamId) ?? null,

@@ -104,6 +104,8 @@ const bridge = {
   ai: async () => { bridgeCalls.push('ai'); return { status: 200, body: { t: 1, stale: false, count: 1, list: [{ s: 'Boar', x: 1, y: 2 }] } }; },
   aiZones: async () => ({ status: 200, body: { zones: [{ name: 'Đồng cỏ', x: 1, y: 2, radiusM: 300, species: ['Heo rừng'], count: 3 }] } }),
   heatmap: async () => ({ status: 200, body: { t: 1, next: 300, cell: 50000, players: 2, cells: [{ x: 25000, y: 25000, n: 2 }] } }),
+  checkin: async (steamId) => { bridgeCalls.push(`checkin:${steamId}`); return { status: 200, body: { day: 1, reward: 50, balance: 50, item: null } }; },
+  useDino: async (steamId, body) => { bridgeCalls.push({ useDino: steamId, body }); return { status: 200, body: { slot: '3', species: 'Tyrannosaurus', growth: 0.8, female: true, mutations: {} } }; },
   garage: async (id, body) => { bridgeCalls.push({ garage: id, body }); return { status: 202, body: { id: 5, action: body.action } }; },
   skin: async (id, body) => { bridgeCalls.push({ skin: id, body }); return { status: 202, body: { id: 6, action: 'skin' } }; },
   useItem: async (id, body) => { bridgeCalls.push({ useItem: id, body }); return { status: 202, body: { id: 7, action: 'mutation' } }; },
@@ -145,6 +147,23 @@ test('/api/heatmap (players per square, every 5 minutes) needs a login', async (
   const r = await get('/api/heatmap', { cookie });
   assert.equal(r.status, 200);
   assert.deepEqual((await r.json()).cells, [{ x: 25000, y: 25000, n: 2 }]);
+});
+
+test('the check-in and the dino ticket: login, same-origin; the SteamID is the session\'s, only the pick forwarded', async () => {
+  const cookie = `${COOKIE}=${sign(SECRET, ME, Math.floor(Date.now() / 1000) + 600)}`;
+  const origin = new URL(BASE).origin;
+  const post = (path, headers, body = '{}') => fetch(`http://127.0.0.1:${port}${path}`, { method: 'POST', headers, body, redirect: 'manual' });
+  const json = { 'content-type': 'application/json' };
+  assert.equal((await post('/api/checkin', { ...json, origin })).status, 401, 'no login');
+  assert.equal((await post('/api/checkin', { ...json, cookie, origin: 'https://evil.example' })).status, 403, 'another site');
+  const r = await post('/api/checkin', { ...json, cookie, origin });
+  assert.equal(r.status, 200);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], `checkin:${ME}`);
+  const pick = JSON.stringify({ uid: 'own_9', species: 'Tyrannosaurus', female: true, mutations: { 1: 'Hemomania' }, steamId: '76561198000000002', growth: 1 });
+  assert.equal((await post('/api/items/dino', { ...json, cookie, origin: 'https://evil.example' }, pick)).status, 403);
+  assert.equal((await post('/api/items/dino', { ...json, cookie, origin }, pick)).status, 200);
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { useDino: ME, body: { uid: 'own_9', species: 'Tyrannosaurus', female: true, mutations: { 1: 'Hemomania' } } },
+    'no SteamID, no growth from the browser');
 });
 
 test('the Steam round trip sets a Secure HttpOnly cookie', async () => {

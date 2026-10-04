@@ -305,6 +305,9 @@
   .itm-3d .sex button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(148,163,184,.35); background: rgba(2,6,23,.6); color: #cbd5e1; cursor: pointer; }
   .itm-3d .sex button.on { background: var(--accent); color: #fff; border-color: transparent; }
   .itm-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .qs-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .qs-days label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; min-width: 0; }
+  @media (max-width: 700px) { .qs-days { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .itm-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; }
   .itm-regions { display: flex; flex-direction: column; gap: 2px; }
   .itm-reg { display: grid; grid-template-columns: 110px 40px minmax(0, 1fr) 74px; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
@@ -3069,6 +3072,44 @@
     </div>
 
     <!-- Truy cập: site / launcher traffic (bridge traffic.ts, counted by the portal) -->
+    <!-- Nhiệm vụ: Hổ phách and the daily check-in (bridge economy.ts) — the daily quests next -->
+    <div data-view="quests" hidden>
+      <div class="page-head"><div><h1>Nhiệm vụ</h1><p>Hổ phách — tiền của server, kiếm bằng cách chơi (không bán bằng tiền thật) — và điểm danh hằng ngày (giờ Việt Nam). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b>.</p></div></div>
+      <section class="card">
+        <div class="card-head"><h2>📅 Điểm danh hằng ngày</h2><span class="sub">người chơi chơi đủ phút trong ngày rồi bấm điểm danh trên trang chủ; bỏ lỡ 1 ngày là quay về ngày 1</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+          <div class="itm-fields">
+            <label>Phút chơi cần trong ngày<input id="qs-min" type="number" min="0" max="600" step="1"></label>
+            <label>Vật phẩm tặng kèm ngày 7<select id="qs-bonus"></select></label>
+          </div>
+          <div class="qs-days" id="qs-days"></div>
+          <div class="row" style="justify-content:flex-end"><span class="muted" id="qs-dirty" style="margin-right:auto;font-size:12.5px"></span>
+            <button type="button" class="btn" id="qs-save">Lưu điểm danh</button></div>
+        </div>
+      </section>
+      <section class="card" style="margin-top:16px">
+        <div class="card-head"><h2>🟠 Hổ phách</h2><span class="sub" id="qs-sum"></span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+          <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end" id="qs-adjust">
+            <div class="cfg-field" style="flex:1 1 200px"><label for="qs-id">SteamID</label><input id="qs-id" type="text" inputmode="numeric" maxlength="17" class="mono" placeholder="7656119…" autocomplete="off"></div>
+            <div class="cfg-field" style="flex:0 1 140px"><label for="qs-delta">Cộng (+) / trừ (−)</label><input id="qs-delta" type="number" step="1" min="-100000" max="100000"></div>
+            <div class="cfg-field" style="flex:2 1 240px"><label for="qs-reason">Lý do (bắt buộc)</label><input id="qs-reason" type="text" maxlength="200" placeholder="vd. đền bù lỗi gara" autocomplete="off"></div>
+            <button type="button" class="btn" id="qs-apply">Cộng / trừ</button>
+          </div>
+          <div id="qs-top"></div>
+        </div>
+      </section>
+      <section class="card" style="margin-top:16px">
+        <div class="card-head" style="flex-wrap:wrap;gap:10px"><h2>Sổ giao dịch</h2>
+          <input id="qs-filter" type="text" inputmode="numeric" maxlength="17" class="mono" placeholder="Lọc theo SteamID" style="max-width:220px;margin-left:auto"></div>
+        <div class="card-body" id="qs-ledger"></div>
+      </section>
+      <section class="card" style="margin-top:16px">
+        <div class="card-head"><h2>🎯 Nhiệm vụ hằng ngày</h2><span class="sub">phần tiếp theo</span></div>
+        <div class="card-body"><p class="step-hint" style="margin:0">Mỗi ngày 3 nhiệm vụ ngẫu nhiên theo loài (chơi, sống sót, săn, lớn lên, đi đường, khám phá, prime) và nhiệm vụ tuần — danh sách, mức thưởng sửa ở đây.</p></div>
+      </section>
+    </div>
+
     <div data-view="traffic" hidden>
       <div class="page-head"><div><h1>Truy cập</h1><p>Lượt mở web, tải và dùng launcher, đăng nhập (giờ server). Không lưu IP: người xem là mã băm theo ngày.</p></div></div>
       <section class="card">
@@ -3300,6 +3341,7 @@ PATHS.mods = '<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a
 PATHS.admin = '<path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>';
 PATHS.server = '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>';
 PATHS.members = '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.4 3-5.4 6-5.4s5.4 2 6 5.4"/><path d="M16 4.5a3 3 0 0 1 0 6M18 14.8c1.8.7 2.8 2.4 3 5.2"/>';
+PATHS.quests = '<path d="M8 4h8v4a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4"/><path d="M12 12v4M8.5 20h7M10 16h4l1 4H9z"/>';
 PATHS.traffic = '<path d="M3 20h18"/><rect x="5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="6" width="3" height="12" rx="1"/><rect x="16" y="13" width="3" height="5" rx="1"/>';
 PATHS.trash = '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>';
 
@@ -3315,7 +3357,7 @@ let sessionToken = false;
 let ME = { perms: null, super: false };
 const can = (key) => ME.super || ME.perms === null || ME.perms.has(key);
 // The permission each page needs to be shown ('*': the super admin only).
-const TAB_NEED = { overview: 'players.view', player: 'players.view', map: 'map.view', traffic: 'traffic.view' };
+const TAB_NEED = { overview: 'players.view', player: 'players.view', map: 'map.view', traffic: 'traffic.view', quests: 'economy.view' };
 const SUB_NEED = {
   players: { list: 'players.view', killfeed: 'players.view', leaderboard: 'players.view', chat: 'players.view', bans: 'bans.view', prison: 'prison.view' },
   world: { overview: 'world.view', flora: 'world.view', fish: 'world.view' },
@@ -4721,7 +4763,7 @@ $('padm-tp-xy').addEventListener('click', () => {
 // One block per job. Inside a block, sub-pages (SUBS) at #<block>/<sub>.
 const TABS = [
   ['overview', 'Tổng quan'], ['players', 'Người chơi'], ['map', 'Bản đồ'], ['world', 'Thế giới'],
-  ['garage', 'Gara'], ['items', 'Vật phẩm'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['members', 'Thành viên'], ['traffic', 'Truy cập'], ['admin', 'Quản trị'],
+  ['garage', 'Gara'], ['items', 'Vật phẩm'], ['quests', 'Nhiệm vụ'], ['mods', 'Tính năng mod'], ['server', 'Server'], ['members', 'Thành viên'], ['traffic', 'Truy cập'], ['admin', 'Quản trị'],
 ];
 function renderTabsNav() {
   $('tabs').innerHTML = TABS.filter(([id]) => tabAllowed(id)).map(([id, label]) =>
@@ -9197,6 +9239,80 @@ $('sv-features').addEventListener('click', (e) => {
   });
 });
 
+// --- Nhiệm vụ: Hổ phách and the daily check-in (bridge economy.ts) ---
+const qs = { data: null, draft: null, saved: null, items: [], ledger: [] };
+const qsDirty = () => qs.draft !== null && JSON.stringify(qs.draft) !== qs.saved;
+async function refreshQuests(force = false) {
+  const [eco, items] = await Promise.all([getJson('/api/economy'), can('items.view') ? getJson('/api/items').catch(() => null) : null]);
+  qs.data = eco;
+  qs.items = items?.items ?? [];
+  if (force || !qsDirty()) { qs.draft = structuredClone(eco.settings); qs.saved = JSON.stringify(qs.draft); }
+  await loadQsLedger();
+  renderQuests();
+}
+async function loadQsLedger() {
+  const id = $('qs-filter').value.trim();
+  qs.ledger = (await getJson(`/api/economy/ledger${/^\d{17}$/.test(id) ? `?steamId=${id}` : ''}`)).lines ?? [];
+}
+function renderQuests() {
+  const d = qs.draft, cur = qs.data?.currency ?? 'Hổ phách';
+  if (!d) return;
+  const edit = can('economy.edit');
+  $('qs-min').value = String(d.checkinMinutes);
+  const bonus = [{ id: '', name: '— Không tặng —' }, ...qs.items.filter((i) => !i.retired), ...(d.checkinBonusItem && !qs.items.some((i) => i.id === d.checkinBonusItem) ? [{ id: d.checkinBonusItem, name: d.checkinBonusItem }] : [])];
+  $('qs-bonus').innerHTML = bonus.map((i) => `<option value="${esc(i.id)}"${(d.checkinBonusItem ?? '') === i.id ? ' selected' : ''}>${esc(i.name)}</option>`).join('');
+  if (!$('qs-days').children.length) {
+    $('qs-days').innerHTML = d.checkinRewards.map((_, i) => `<label>Ngày ${i + 1} (${esc(cur)})<input type="number" min="0" max="100000" step="1" data-qs-day="${i}"></label>`).join('');
+  }
+  for (const inp of $('qs-days').querySelectorAll('[data-qs-day]')) inp.value = String(d.checkinRewards[Number(inp.dataset.qsDay)]);
+  for (const el of [$('qs-min'), $('qs-bonus'), ...$('qs-days').querySelectorAll('input')]) el.disabled = !edit;
+  $('qs-save').hidden = !edit;
+  $('qs-adjust').hidden = !edit;
+  $('qs-dirty').textContent = qsDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu';
+  const s = qs.data.summary;
+  $('qs-sum').textContent = `${s.players} người đang có · tổng ${s.total.toLocaleString('vi-VN')} ${cur}`;
+  $('qs-top').innerHTML = s.top.length === 0 ? '<p class="step-hint" style="margin:0">Chưa ai có Hổ phách.</p>'
+    : `<table class="audit-table"><thead><tr><th>Nhiều nhất</th><th>SteamID</th><th style="text-align:right">${esc(cur)}</th></tr></thead><tbody>${s.top.map((x) =>
+      `<tr><td>${x.name ? who(x.steamId, x.name) : '<span class="muted">?</span>'}</td><td class="mono">${esc(x.steamId)}</td><td style="text-align:right"><b>${x.balance.toLocaleString('vi-VN')}</b></td></tr>`).join('')}</tbody></table>`;
+  $('qs-ledger').innerHTML = qs.ledger.length === 0 ? '<p class="step-hint" style="margin:0">Chưa có giao dịch.</p>'
+    : `<table class="audit-table"><thead><tr><th>Lúc</th><th>Người chơi</th><th style="text-align:right">Thay đổi</th><th style="text-align:right">Còn</th><th>Lý do</th><th>Bởi</th></tr></thead><tbody>${qs.ledger.map((l) =>
+      `<tr><td class="muted">${dateTime(l.t)}</td><td>${l.name ? who(l.steamId, l.name) : `<span class="mono">${esc(l.steamId)}</span>`}</td>
+        <td style="text-align:right;color:${l.delta > 0 ? 'var(--grow,#10b981)' : 'var(--kill,#ef4444)'}"><b>${l.delta > 0 ? '+' : ''}${l.delta.toLocaleString('vi-VN')}</b></td>
+        <td style="text-align:right">${l.balance.toLocaleString('vi-VN')}</td><td>${esc(l.reason)}</td><td class="muted">${esc(l.by ?? 'hệ thống')}</td></tr>`).join('')}</tbody></table>`;
+}
+document.querySelector('[data-view="quests"]').addEventListener('input', (e) => {
+  const t = e.target;
+  if (!qs.draft || t.closest('#qs-adjust') || t.id === 'qs-filter') return;
+  if (t.id === 'qs-min') qs.draft.checkinMinutes = Math.max(0, Math.min(600, Math.round(Number(t.value) || 0)));
+  else if (t.id === 'qs-bonus') qs.draft.checkinBonusItem = t.value || null;
+  else if (t.dataset.qsDay !== undefined) qs.draft.checkinRewards[Number(t.dataset.qsDay)] = Math.max(0, Math.min(100000, Math.round(Number(t.value) || 0)));
+  $('qs-dirty').textContent = qsDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu';
+});
+$('qs-bonus').addEventListener('change', (e) => { if (qs.draft) { qs.draft.checkinBonusItem = e.target.value || null; $('qs-dirty').textContent = qsDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu'; } });
+$('qs-save').addEventListener('click', () => withToken('lưu điểm danh', async (token) => {
+  const r = await adminFetch('/api/economy/settings', 'PUT', token, qs.draft);
+  qs.data.settings = r.settings; qs.draft = structuredClone(r.settings); qs.saved = JSON.stringify(qs.draft);
+  renderQuests();
+  toast('Đã lưu điểm danh.');
+}));
+$('qs-apply').addEventListener('click', () => {
+  const steamId = $('qs-id').value.trim(), delta = Math.round(Number($('qs-delta').value)), reason = $('qs-reason').value.trim();
+  if (!/^7656\d{13}$/.test(steamId)) { toast('SteamID: 17 chữ số, bắt đầu bằng 7656…', 'err'); return; }
+  if (!Number.isInteger(delta) || delta === 0) { toast('Nhập số Hổ phách cộng (+) hoặc trừ (−), khác 0', 'err'); return; }
+  if (!reason) { toast('Cần ghi lý do', 'err'); return; }
+  withToken('cộng / trừ Hổ phách', async (token) => {
+    const r = await adminFetch('/api/economy/adjust', 'POST', token, { steamId, delta, reason });
+    toast(`${delta > 0 ? '+' : ''}${delta} → còn ${r.line.balance.toLocaleString('vi-VN')} Hổ phách`);
+    $('qs-delta').value = ''; $('qs-reason').value = '';
+    await refreshQuests(true);
+  });
+});
+let qsFilterTimer = null;
+$('qs-filter').addEventListener('input', () => {
+  clearTimeout(qsFilterTimer);
+  qsFilterTimer = setTimeout(async () => { await loadQsLedger(); renderQuests(); }, 300);
+});
+
 // --- Quản trị → Discord: the log sent by webhook (bridge/src/discord.ts) ---
 const dc = { data: null, draft: null, dirty: false };
 const newId = () => Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, '') || 'c' + Date.now().toString(36);
@@ -10989,6 +11105,9 @@ async function refreshTab(tab) {
   switch (tab) {
     case 'traffic':
       await refreshTraffic();
+      break;
+    case 'quests':
+      await refreshQuests();
       break;
     case 'overview': {
       const q = feedFilter ? `&type=${encodeURIComponent(feedFilter)}` : '';

@@ -42,6 +42,7 @@ import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
 import { audit, auditListeners } from './audit.js';
 import { grantStarters } from './starter.js';
+import { PlayDays } from './economy.js';
 import { loadGuard, runGuardAction, saveGuard, speciesName, type GuardAction } from './garage-guard.js';
 import { Prison } from './prison.js';
 import { KillScenes } from './kill-scene.js';
@@ -155,6 +156,9 @@ const settleGuard = (a: GuardAction): void => {
   });
 };
 
+// Minutes in game per day (economy.ts): the daily check-in needs some.
+const playDays = new PlayDays();
+
 // The starter ticket (starter.ts): everyone who has played gets one once, then each new account.
 // First 30 s in (the events are read by then), then every minute.
 const sweepStarters = (): void => {
@@ -168,6 +172,7 @@ setInterval(sweepStarters, 60_000);
 const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {
     store.apply(event);
+    playDays.onEvent(event);
     for (const action of garageGuard.onEvent(event)) settleGuard(action);
     void notifier.handle(event);
     void primeNotifier.handle(event);
@@ -391,7 +396,7 @@ setInterval(() => {
 // Site / launcher traffic (traffic.ts), counted by the portal: the panel's "Truy cập".
 const traffic = new Traffic();
 await traffic.load();
-startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, traffic, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, traffic, playDays, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
 
 // The prison: the mod's state, finished sentences, escape reminders, the mod's files (prison.ts).
 setInterval(() => {

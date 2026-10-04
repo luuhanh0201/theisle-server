@@ -1,3 +1,4 @@
+import { CURRENCY, credit, economySummary, readEconomySettings, readLedger, saveEconomySettings, type PlayDays } from './economy.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -225,6 +226,8 @@ export interface Ctx {
   killScenes?: KillScenes;
   /** Site / launcher traffic (traffic.ts): the panel's "Truy cập" page. */
   traffic?: Traffic;
+  /** Minutes in game per day (economy.ts): the daily check-in. */
+  playDays?: PlayDays;
   /** An admin's rights in the game were switched on / off: the AdminGuard mod's file is written again. */
   onAdminsChanged?: () => Promise<void>;
 }
@@ -304,7 +307,7 @@ async function handle(
   if (await handlePlayerApi(req, res, path, { store, serverPhase: async () => (await power.status()).phase, live: readLiveState,
     serverInfo: async () => publicServerInfo((await readLive()).effective),
     ...(ctx.voice ? { voice: ctx.voice } : {}), ...(ctx.prison ? { prison: ctx.prison } : {}),
-    ...(ctx.traffic ? { traffic: ctx.traffic } : {}) })) return;
+    ...(ctx.traffic ? { traffic: ctx.traffic } : {}), ...(ctx.playDays ? { playDays: ctx.playDays } : {}) })) return;
 
   // Everything else is the admin panel: allowed address + admin login (panel-gate.ts).
   const login = await panelGate(req, res, url, (name) => sendFile(res, name), (id) => store.player(id)?.player.name ?? null);
@@ -549,6 +552,19 @@ async function handlePanel(
       pendingRestart: await power.status().then((st) => live.iniWrittenAt !== null && st.unit?.since != null && live.iniWrittenAt > st.unit.since) });
     return;
   }
+  // Hổ phách (economy.ts): the settings, who has most, the ledger.
+  if (path === '/api/economy' && req.method === 'GET') {
+    const sum = await economySummary();
+    sendJson(res, 200, { currency: CURRENCY, settings: await readEconomySettings(),
+      summary: { ...sum, top: sum.top.map((x) => ({ ...x, name: ctx.store.player(x.steamId)?.player.name ?? null })) } });
+    return;
+  }
+  if (path === '/api/economy/ledger' && req.method === 'GET') {
+    const id = url.searchParams.get('steamId');
+    const lines = await readLedger(id !== null && /^\d{17}$/.test(id) ? id : null, 300);
+    sendJson(res, 200, { lines: lines.map((l) => ({ ...l, name: ctx.store.player(l.steamId)?.player.name ?? null })) });
+    return;
+  }
   if (path === '/api/svip' && req.method === 'GET') {
     sendJson(res, 200, svipView(await readSvip()));
     return;
@@ -600,6 +616,8 @@ async function handlePanel(
       (path === '/api/voice-settings' && req.method === 'PUT') ||
       (path === '/api/panel-access' && req.method === 'PUT') ||
       (path === '/api/svip' && req.method === 'PUT') ||
+      (path === '/api/economy/settings' && req.method === 'PUT') ||
+      (path === '/api/economy/adjust' && req.method === 'POST') ||
       (path === '/api/ai-zones' && req.method === 'PUT') ||
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
@@ -1017,6 +1035,25 @@ async function handlePanel(
       const ids = (s: typeof saved): string => s.players.map((p) => p.steamId).join(', ');
       await audit({ action: 'SVip saved', detail: describeChanges({ svip: ids(before), ...before.features }, { svip: ids(saved), ...saved.features }) || 'không đổi gì', ok: true });
       sendJson(res, 200, svipView(saved));
+      return;
+    }
+
+    if (path === '/api/economy/settings') {
+      const before = await readEconomySettings();
+      const saved = await saveEconomySettings(await readJsonBody(req));
+      await audit({ action: 'economy settings', detail: describeChanges({ ...before, checkinRewards: before.checkinRewards.join('/') },
+        { ...saved, checkinRewards: saved.checkinRewards.join('/') }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { settings: saved });
+      return;
+    }
+    if (path === '/api/economy/adjust') {
+      const body = (await readJsonBody(req)) as { steamId?: unknown; delta?: unknown; reason?: unknown };
+      const steamId = typeof body.steamId === 'string' ? body.steamId.trim() : '';
+      const delta = typeof body.delta === 'number' ? body.delta : NaN;
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+      const line = await credit(steamId, delta, reason, name ?? login.steamId ?? null);
+      await audit({ action: 'Hổ phách', detail: `${delta > 0 ? '+' : ''}${delta} ${CURRENCY} cho ${ctx.store.player(steamId)?.player.name ?? steamId} (còn ${line.balance}): ${reason}`, ok: true });
+      sendJson(res, 200, { line });
       return;
     }
 

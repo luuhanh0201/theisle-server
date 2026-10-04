@@ -2420,6 +2420,29 @@
   .bag-dlg { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border-radius: 16px; border: 1px solid var(--border-light); background: var(--bg-card); color: var(--text); }
   .bag-dlg::backdrop { background: rgba(2, 6, 23, .7); backdrop-filter: blur(4px); }
   .bag-dlg .in { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  /* The home page's rewards (app.js renderHomeRewards): the starter ticket, the daily check-in. */
+  .home-rewards { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+  .home-rewards .hr-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .home-rewards .hr-play { padding: 12px 22px; font-size: 15px; font-weight: 800; }
+  .home-rewards .hr-amber { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.45); color: #fcd34d; font-weight: 800; font-size: 14px; }
+  .home-rewards .hr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+  .home-rewards .hr-card { border-radius: 16px; padding: 18px 20px; background: var(--bg-card); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .home-rewards .hr-card h3 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .home-rewards .hr-card p { margin: 0; color: var(--text-muted); font-size: 13.5px; line-height: 1.5; }
+  .home-rewards .hr-starter { background: linear-gradient(135deg, rgba(245,158,11,.16), rgba(16,185,129,.08)); border-color: rgba(245,158,11,.55); }
+  .home-rewards .hr-checkin { border-color: rgba(52,211,153,.4); }
+  .home-rewards .hr-note { font-size: 12.5px; color: #fbbf24; font-weight: 600; }
+  .home-rewards .hr-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .home-rewards .hr-day { border-radius: 10px; padding: 8px 4px; text-align: center; background: var(--bg-surface); border: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); min-width: 0; }
+  .home-rewards .hr-day b { display: block; font-size: 13px; color: var(--text); }
+  .home-rewards .hr-day.done { border-color: rgba(52,211,153,.5); background: rgba(16,185,129,.12); }
+  .home-rewards .hr-day.today { border-color: #f59e0b; background: rgba(245,158,11,.14); box-shadow: 0 0 0 1px rgba(245,158,11,.4); }
+  .home-rewards .hr-progress { height: 8px; border-radius: 99px; background: var(--bg-surface); overflow: hidden; }
+  .home-rewards .hr-progress i { display: block; height: 100%; background: linear-gradient(90deg, #10b981, #f59e0b); }
+  .home-rewards .hr-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .home-rewards .hr-row .muted { font-size: 12.5px; }
+  @media (max-width: 480px) { .home-rewards .hr-days { grid-template-columns: repeat(4, minmax(0, 1fr)); } .home-rewards .hr-amber { margin-left: 0; } }
   /* The dino ticket's choice (app.js renderDinoDialog). */
   .bag-dlg .dino-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
   .bag-dlg .dino-muts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -4274,63 +4297,16 @@
            PAGE 1: HOME (Trang chủ)
            ==================================================================== -->
       <section id="page-home" class="page-content">
-        <!-- Đấu Trường Săn Mồi 3D: T-Rex Huyết Long bắt Gallimimus khi bấm Chơi Ngay -->
-        <div class="dino-hunt-card" id="dino-hunt-card">
-          <!-- 3D WebGL Viewport -->
-          <div class="hunt-viewport" id="hunt-viewport">
-            <!-- Fallback Stage Poster: Hien thi ngay lap tuc, khong bao gio de trong card -->
-            <div class="hunt-fallback" id="hunt-fallback">
-              <div class="hunt-grid-floor"></div>
-              <div class="hunt-fallback-content">
-                <div class="hunt-duo-icons">
-                  <span class="dino-avatar trex-avatar" title="T-Rex Huyết Long">🦖</span>
-                  <span class="hunt-vs-pill">VS</span>
-                  <span class="dino-avatar galli-avatar" title="Gallimimus">🦕</span>
-                </div>
-                <h3 class="hunt-fallback-title">ĐẤU TRƯỜNG SINH TỒN THE ISLE EVRIMA</h3>
-                <p class="hunt-fallback-desc">T-Rex Huyết Long săn mồi Gateway</p>
-              </div>
-            </div>
+        <!-- The rewards first, where they are seen (owner, 2026-10-05): the starter ticket, the daily
+             check-in, the Hổ phách balance, and the way into the server (app.js renderHomeRewards). -->
+        <div class="home-rewards" id="home-rewards">
+          <div class="hr-bar">
+            <button type="button" class="btn btn-emerald hr-play" id="home-play">▶ Vào server Xóm Gáy</button>
+            <span class="hr-amber" id="home-amber" hidden></span>
           </div>
-
-          <!-- Top HUD Tag -->
-          <div class="hunt-overlay-top">
-            <div class="hunt-engine-tag">UNREAL ENGINE 5.6</div>
-          </div>
-
-          <!-- Impact Vignette Flash when prey is caught -->
-          <div class="hunt-impact-vignette" id="hunt-impact-vignette"></div>
-
-          <!-- Bottom Action Controls -->
-          <div class="hunt-action-bar">
-            <button type="button" class="btn-hunt-action" id="btn-hunt-action" title="Nhấn để bắt con mồi và kết nối ngay vào máy chủ">
-              <div class="hunt-btn-pulse"></div>
-              <div class="hunt-shimmer-beam"></div>
-              <div class="hunt-btn-icon-wrap">
-                <div class="hunt-icon-radar"></div>
-                <div class="hunt-btn-icon">
-                  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                  </svg>
-                </div>
-              </div>
-              <div class="hunt-btn-texts">
-                <div class="hunt-btn-meta">
-                  <span class="hunt-btn-pill"><span class="hunt-pill-dot"></span> T-REX HUYẾT LONG</span>
-                  <span class="hunt-btn-sub" id="hunt-btn-sub">Bấm để tóm gọn con mồi &amp; vào thẳng máy chủ Xóm Gáy</span>
-                </div>
-                <div class="hunt-btn-main">
-                  <span class="hunt-btn-title" id="hunt-btn-title">BẮT ĐẦU CHUYẾN SINH TỒN</span>
-                </div>
-              </div>
-              <div class="hunt-btn-cta">
-                <span class="hunt-cta-sheen"></span>
-                <span id="hunt-cta-text">CHƠI NGAY</span>
-                <svg class="hunt-cta-arrow" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6"/>
-                </svg>
-              </div>
-            </button>
+          <div class="hr-grid">
+            <section class="hr-card hr-starter" id="home-starter" hidden></section>
+            <section class="hr-card hr-checkin" id="home-checkin" hidden></section>
           </div>
         </div>
 
@@ -5137,8 +5113,9 @@
           <div class="garage-status" id="bag-status" role="status" aria-live="polite" hidden></div>
           <ul class="bag-grid" id="bag-list"></ul>
         </div>
-        <dialog class="bag-dlg" id="bag-dlg" aria-labelledby="bag-dlg-title"><div class="in" id="bag-dlg-in"></div></dialog>
       </section>
+      <!-- Outside the pages: the home page opens it too (the starter ticket), and a hidden page hides its dialog. -->
+      <dialog class="bag-dlg" id="bag-dlg" aria-labelledby="bag-dlg-title"><div class="in" id="bag-dlg-in"></div></dialog>
 
       <!-- ====================================================================
            PAGE 8: OVERLAY (overlay-settings.js; Xóm Gáy Launcher only)
