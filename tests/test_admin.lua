@@ -125,6 +125,23 @@ ok, line = Admin.run(p, { action = "probe" })
 check("probe answers, writes nothing", ok and line:find("^probe:") ~= nil and H.countCalls("SetReplicatedMutationsData") == 0
   and H.countCalls("SetGrowth") == 0 and H.countCalls("SetHealth") == 0, tostring(line))
 
+say("-- 7. feed (Hộp food): the food bar only, at most full; a full dino refused --")
+p = dino()
+p.__props.MaxHunger, p.__props.Hunger = 200, 50      -- 25 %
+local nut = p.NutrientsStruct
+local carb0 = nut.CarbValue
+H.calls = {}
+local before, after
+ok, line, before, after = Admin.feed(p, 0.2)
+check("feed: ok, 25 % -> 45 %", ok and math.abs(before - 0.25) < 1e-9 and math.abs(after - 0.45) < 1e-9 and p.__props.Hunger == 90, tostring(line))
+check("nutrients not touched", H.countCalls("SetNutrientsStruct") == 0 and nut.CarbValue == carb0)
+p.__props.Hunger = 180                                -- 90 %
+ok = Admin.feed(p, 0.5)
+check("never past full", ok and p.__props.Hunger == 200, tostring(p.__props.Hunger))
+ok, line = Admin.feed(p, 0.2)
+check("a full dino: refused (the item stays)", ok == false and line == "full", tostring(line))
+check("a bad amount refused", (Admin.feed(dino(), 2)) == false and (Admin.feed(dino(), 0)) == false)
+
 say(string.format("=== Admin: %d passed, %d failed ===", pass, fail))
 io.flush()
 os.exit(fail == 0 and 0 or 1, true)

@@ -2422,6 +2422,8 @@
   .bag-dlg .in { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
   /* The home page's rewards (app.js renderHomeRewards): the starter ticket, the daily check-in. */
   .home-rewards { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+  .amber-amt { display: inline-flex; align-items: center; gap: .25em; white-space: nowrap; cursor: help; }
+  .amber-ico { width: 1.35em; height: 1.35em; flex: none; }
   .home-rewards .hr-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .home-rewards .hr-amber { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
     background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.45); color: #fcd34d; font-weight: 800; font-size: 14px; }
@@ -2453,13 +2455,25 @@
   .home-rewards .hr-row .muted { font-size: 12.5px; }
   @media (max-width: 480px) { .home-rewards .hr-days { grid-template-columns: repeat(4, minmax(0, 1fr)); } .home-rewards .hr-amber { margin-left: 0; } }
   /* The dino ticket's choice (app.js renderDinoDialog). */
+  .bag-dlg .act { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   .bag-dlg .dino-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
   .bag-dlg .dino-muts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .bag-dlg .dino-slot { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; min-width: 0; }
   .bag-dlg .dino-slot small { font-weight: 500; line-height: 1.4; }
-  .bag-dlg .dino-pick .xseg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; height: 38px; }
-  .bag-dlg .dino-pick .xseg button { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-weight: 700; padding: 0 14px; cursor: pointer; }
-  .bag-dlg .dino-pick .xseg button.on { background: var(--emerald-soft); color: var(--text); }
+  .bag-dlg .xseg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; height: 38px; padding: 0; gap: 0; background: transparent; }
+  .bag-dlg .xseg button { border: 0; border-radius: 0; background: transparent; color: var(--text-muted); font: inherit; font-weight: 700; padding: 0 14px; cursor: pointer; opacity: 1; }
+  .bag-dlg .xseg button.on { background: var(--emerald-soft); color: var(--text); }
+  .bag-dlg .dino-desc { display: flex; gap: 6px; align-items: flex-start; color: var(--text-muted); }
+  .bag-dlg .dino-desc .mut-ico { width: 18px; height: 18px; flex: none; }
+  /* The box's roll (app.js rollBox): text flicks, then one pop when it lands — no endless animation. */
+  .bag-dlg .roll { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 12px; margin: 4px 0; border-radius: 14px;
+    border: 1px solid var(--border); background: radial-gradient(circle at 50% 30%, var(--emerald-soft), transparent 70%); }
+  .bag-dlg .roll-sp { font-size: 26px; font-weight: 800; letter-spacing: .01em; min-height: 1.3em; text-align: center; }
+  .bag-dlg .roll-g { font-size: 18px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .bag-dlg .roll.landed .roll-sp, .bag-dlg .roll.landed .roll-g { color: var(--text); animation: roll-pop .35s ease-out 1; }
+  .bag-dlg .roll.landed .roll-g { color: var(--emerald, #10b981); }
+  @keyframes roll-pop { 0% { transform: scale(.85); opacity: .4; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .bag-dlg .roll.landed .roll-sp, .bag-dlg .roll.landed .roll-g { animation: none; } }
   @media (max-width: 520px) { .bag-dlg .dino-pick, .bag-dlg .dino-muts { grid-template-columns: minmax(0, 1fr); } }
   .bag-dlg .hd { display: flex; gap: 12px; align-items: center; }
   .bag-dlg .hd b { font-size: 16px; display: block; }

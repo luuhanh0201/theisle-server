@@ -23,6 +23,9 @@ test('the settings: defaults, checked, kept', async () => {
   assert.throws(() => validateEconomySettings({ checkinRewards: [1, 2, 3] }), /7 whole numbers/);
   assert.throws(() => validateEconomySettings({ checkinMinutes: -1 }), /0–600/);
   await assert.rejects(() => saveEconomySettings({ checkinBonusItem: 'it_missing' }), /no such item/);
+  const { ensureItem } = await import('../dist/items.js');
+  await ensureItem('dino', { type: 'dino', name: 'Dino', rarity: 'legendary', data: {} });
+  await assert.rejects(() => saveEconomySettings({ checkinBonusItem: 'dino' }), /mở hộp/);
 });
 
 test('balances: credited and taken with a reason, never below 0, a ledger line each time', async () => {

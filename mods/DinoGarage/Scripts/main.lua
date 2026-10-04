@@ -610,6 +610,39 @@ Inbox.on("mutation", function(c, cmd, say)
         if ok then Msg.notify(c, "item.prime", "Dino của bạn đã lên prime — chỉ số prime được áp sau vài giây.", {}) end
         return ok == true
     end
+    if cmd.mode == "growth" then
+        -- Túi tăng trưởng: +amount on a dino still below `below` (the bridge checked; the game's growth now decides).
+        local okG, g = pcall(function() return pawn:GetGrowth() end)
+        local add, below = tonumber(cmd.amount), tonumber(cmd.below)
+        if not (okG and type(g) == "number") or add == nil or below == nil then
+            say("Chưa đọc được tăng trưởng của dino — vật phẩm vẫn còn.")
+            return false
+        end
+        if g + 0.000001 >= below then
+            say(string.format("Túi tăng trưởng chỉ dùng cho dino dưới %d%% (dino đang %d%%) — vật phẩm vẫn còn.",
+                math.floor(below * 100 + 0.5), math.floor(g * 100)))
+            return false
+        end
+        local to = math.min(1, g + add)
+        local ok, line = Admin.grow(pawn, to)
+        H.log("mutation item: " .. cmd.steamId .. " growth bag — " .. tostring(line))
+        if not ok then say("Không tăng được tăng trưởng — vật phẩm vẫn còn."); return false end
+        local words = { from = math.floor(g * 100 + 0.5), to = math.floor(to * 100 + 0.5) }
+        say(string.format("Tăng trưởng %d%% → %d%%.", words.from, words.to))
+        Msg.notify(c, "item.growth", "Dino của bạn đã lớn từ {from}% lên {to}%.", words)
+        return true
+    end
+    if cmd.mode == "food" then
+        -- Hộp food: the food bar only, nutrients left as they are.
+        local ok, line, before, after = Admin.feed(pawn, cmd.amount)
+        H.log("mutation item: " .. cmd.steamId .. " food box — " .. tostring(line))
+        if line == "full" then say("Dino đang no — vật phẩm vẫn còn."); return false end
+        if not ok then say("Không cho ăn được — vật phẩm vẫn còn."); return false end
+        local words = { from = math.floor(before * 100 + 0.5), to = math.floor(after * 100 + 0.5) }
+        say(string.format("Thức ăn %d%% → %d%%.", words.from, words.to))
+        Msg.notify(c, "item.food", "Dino của bạn đã được cho ăn: thức ăn {from}% → {to}%.", words)
+        return true
+    end
     if cmd.mode == "upgrade" then
         local ok, line, _, now = MutationItem.upgrade(pawn, cmd.mutation, cmd.fromStacks, cmd.maxStacks)
         H.log("mutation item: " .. cmd.steamId .. " upgrade " .. tostring(cmd.mutation) .. " — " .. tostring(line))

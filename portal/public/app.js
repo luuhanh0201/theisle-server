@@ -1910,9 +1910,14 @@ const BAG_TICKET = {
   mutation_ticket: { icon: '🎟️', desc: (g) => `Đổi ra một mutation tự chọn (đúng chế độ ăn của loài${g.maxRarity === 'special' ? ', <b>cả mutation nhiệm vụ</b>' : ''}) vào một ô đã mở.` },
   mutation_clear: { icon: '🧹', desc: () => 'Bỏ mutation ở một ô để chọn lại trong game.' },
   prime_ticket: { icon: '👑', desc: () => 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện).' },
-  // The starter ticket (bridge starter.ts): any dino into the garage — no dino in game needed.
-  dino_ticket: { icon: '🦖', desc: (g) => `Chọn <b>1 dino bất kỳ</b>, giới tính và mutation 4 ô chính. Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng ngẫu nhiên ${Math.round((g.growthMin ?? 0.5) * 100)}–${Math.round((g.growthMax ?? 1) * 100)}% — lấy ra như bình thường.` },
+  // The dino boxes (bridge dino-box.ts): opened into a dino item; the dino item used — into the garage.
+  dino_box: { icon: '🎁', action: 'Mở hộp', desc: (g) => `${g.pick === 'random' ? 'Mở ra <b>1 dino ngẫu nhiên</b>' : 'Mở hộp: <b>tự chọn loài</b>'}, tăng trưởng ngẫu nhiên ${Math.round((g.growthMin ?? 0.5) * 100)}–${Math.round((g.growthMax ?? 1) * 100)}%. Mở ra vật phẩm Dino trong túi — dùng nó để chọn giới tính và mutation.` },
+  dino: { icon: '🦖', action: 'Dùng', desc: (g) => `Dùng để chọn <b>giới tính</b> và <b>mutation</b> (ô mở theo tăng trưởng: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>.` },
+  growth_bag: { icon: '🌱', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.1) * 100)}% tăng trưởng</b> — chỉ dùng khi dino dưới ${Math.round((g.below ?? 0.6) * 100)}%.` },
+  food_box: { icon: '🍖', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.2) * 100)}% thức ăn</b> (chống đói, không tăng chất dinh dưỡng).` },
 };
+/** Items used without a dino in game (they go into the garage). */
+const BAG_NO_DINO = new Set(['dino_box', 'dino']);
 const bagKey = (s) => String(s ?? '').replace(/^BP_/, '').replace(/_C$/, '').toLowerCase();
 /** The icon of a mutation (img/mutations/<slug>.svg, the owner's set). */
 const mutSlug = (name) => String(name ?? '').replace(/^MUT_/i, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -1929,12 +1934,14 @@ function bagStatus(kind, html) {
   el.className = `garage-status${kind ? ` ${kind}` : ''}`;
   el.innerHTML = html ?? '';
 }
-/** One card a kind of item: copies of the same item grouped, with how many. */
+/** One card a kind of item: copies of the same item grouped, with how many — a dino item each its own (its species, its growth). */
 function bagGroups(items) {
   const by = new Map();
   for (const it of items) {
-    const g = by.get(it.id);
-    if (g) g.uids.push(it.uid); else by.set(it.id, { ...it, uids: [it.uid] });
+    const key = it.type === 'dino' ? it.uid : it.id;
+    const g = by.get(key);
+    if (g) g.uids.push(it.uid);
+    else by.set(key, { ...it, key, uids: [it.uid], ...(it.type === 'dino' && it.dino ? { name: `${it.dino.label} ${Math.round(it.dino.growth * 100)}%` } : {}) });
   }
   return [...by.values()];
 }
@@ -1948,7 +1955,7 @@ function renderBag(me) {
   const items = Array.isArray(me.items) ? me.items : [];
   const groups = bagGroups(items);
   const dino = me.dino?.species ?? null;
-  const usable = (g) => (g.locked ? false : g.type === 'dino_ticket' ? true : g.type === 'mutation' ? dino !== null && !g.refusal && !me.prison
+  const usable = (g) => (g.locked ? false : BAG_NO_DINO.has(g.type) ? true : g.type === 'mutation' ? dino !== null && !g.refusal && !me.prison
     : g.type === 'skin' ? dino !== null && bagKey(g.species) === bagKey(dino) : dino !== null && !me.prison);
   $('nav-bag-badge').hidden = items.length === 0;
   $('nav-bag-badge').textContent = String(items.length);
@@ -1960,19 +1967,19 @@ function renderBag(me) {
   const shown = groups.filter((g) => (bag.filter === 'all' || (bag.filter === 'usable' ? usable(g) : g.type === bag.filter))
     && (!q || `${g.name} ${g.mutation ?? ''} ${g.species ?? ''}`.toLowerCase().includes(q)));
   // Redraw only when something changed (the page refreshes every second).
-  const sig = JSON.stringify([shown.map((g) => [g.id, g.uids.length, usable(g), g.rarity, g.locked ?? null]), dino, Boolean(me.prison), bag.busy, Boolean(me.bagUnlimited)]);
+  const sig = JSON.stringify([shown.map((g) => [g.key, g.uids.length, usable(g), g.rarity, g.locked ?? null]), dino, Boolean(me.prison), bag.busy, Boolean(me.bagUnlimited)]);
   if (sig === bag.sig) return;
   bag.sig = sig;
   // A card is dimmed only when it does not fit the dino played now (diet, species); out of
   // the game (or in prison) it keeps its look — only its button is off and says why.
-  const mismatch = (g) => !g.locked && g.type !== 'dino_ticket' && dino !== null && (g.type === 'mutation' ? Boolean(g.refusal) : g.type === 'skin' ? bagKey(g.species) !== bagKey(dino) : false);
+  const mismatch = (g) => !g.locked && !BAG_NO_DINO.has(g.type) && dino !== null && (g.type === 'mutation' ? Boolean(g.refusal) : g.type === 'skin' ? bagKey(g.species) !== bagKey(dino) : false);
   const blocked = me.prison ? 'Đang ở tù' : dino === null ? 'Vào game để dùng' : null;
   const button = (g, cls, attr, label) => {
     const ok = usable(g) && !bag.busy;
     // Being tried (svip.ts): shown, but for SVip first.
     if (g.locked) return `<button type="button" class="btn ${cls}" disabled title="${esc(g.locked)}">🧪 Đang thử nghiệm</button>`;
-    const text = ok || mismatch(g) || !blocked || g.type === 'dino_ticket' ? label : blocked;
-    return `<button type="button" class="btn ${cls}" ${attr}="${esc(g.id)}" ${ok ? '' : `disabled title="${esc(blocked && !mismatch(g) ? `${blocked}: điều khiển một con dino trong game` : '')}"`}>${esc(text)}</button>`;
+    const text = ok || mismatch(g) || !blocked || BAG_NO_DINO.has(g.type) ? label : blocked;
+    return `<button type="button" class="btn ${cls}" ${attr}="${esc(g.key)}" ${ok ? '' : `disabled title="${esc(blocked && !mismatch(g) ? `${blocked}: điều khiển một con dino trong game` : '')}"`}>${esc(text)}</button>`;
   };
   $('bag-list').innerHTML = shown.map((g) => {
     const ok = !mismatch(g);
@@ -1993,7 +2000,7 @@ function renderBag(me) {
         <div class="top"><span class="mut-ico tk-ico" aria-hidden="true">${t.icon}</span><div class="nm"><b>${esc(g.name)}</b>${rar}</div>${qty}</div>
         <div class="desc">${t.desc(g)}</div>
         ${g.locked ? `<div class="why">🧪 ${esc(g.locked)}</div>` : ''}
-        <div class="act">${button(g, 'btn-emerald', 'data-bag-use', g.type === 'dino_ticket' ? 'Chọn dino' : 'Dùng')}</div>
+        <div class="act">${button(g, 'btn-emerald', 'data-bag-use', t.action ?? 'Dùng')}</div>
       </li>`;
     }
     const colors = g.skin?.colors ?? {};
@@ -2012,7 +2019,8 @@ const bagVal = (v) => (v == null ? '<span class="muted">chưa rõ số liệu</s
 function renderBagDialog() {
   const o = bag.open;
   if (!o) return;
-  if (o.g.type === 'dino_ticket') { renderDinoDialog(o); return; }
+  if (o.box) { renderBoxDialog(o); return; }
+  if (o.dino) { renderDinoDialog(o); return; }
   const { g, pv, slot } = o;
   const gen = pv.stacks == null ? '?' : pv.stacks + 1;
   const head = `<div class="hd">${g.type === 'mutation' ? mutIcon(g.mutation) : `<span class="mut-ico tk-ico" aria-hidden="true">${BAG_TICKET[g.type]?.icon ?? ''}</span>`}<div><b id="bag-dlg-title">${esc(g.name)}</b>
@@ -2020,6 +2028,19 @@ function renderBagDialog() {
       <div class="muted" style="font-size:12.5px">${esc(pv.species ?? '')} · ${pv.growth != null ? `${Math.round(pv.growth * 100)}%` : '?'} · đời ${esc(gen)}${pv.prime ? ' · prime' : ''}${lastMeData?.bagUnlimited ? ' · ∞ (túi admin)' : g.uids.length > 1 ? ` · còn ${g.uids.length} cái` : ''}</div></div>
       <button type="button" class="x" data-dlg="close" aria-label="Đóng">×</button></div>`;
   const status = '<div class="garage-status" id="bag-dlg-status" role="status" aria-live="polite" hidden></div>';
+  if (g.type === 'growth_bag' || g.type === 'food_box') {
+    const grow = g.type === 'growth_bag';
+    const amount = Math.round((g.amount ?? (grow ? 0.1 : 0.2)) * 100);
+    const below = g.below ?? 0.6;
+    const why = grow && pv.growth != null && pv.growth >= below - 1e-6 ? `Chỉ dùng cho dino dưới ${Math.round(below * 100)}% (dino đang ${Math.round(pv.growth * 100)}%).` : '';
+    const to = grow && pv.growth != null ? Math.min(100, Math.round(pv.growth * 100) + amount) : null;
+    $('bag-dlg-in').innerHTML = `${head}<div class="sec"><h4>${grow ? 'Tăng trưởng' : 'Cho ăn'}</h4>
+      <div class="cmp">${grow ? `Dino đang chơi lớn thêm <b>${amount}%</b>${to !== null ? ` (${Math.round(pv.growth * 100)}% → <b>${to}%</b>)` : ''}. Chỉ số được giữ theo tỉ lệ như lúc trước.`
+        : `Thanh thức ăn <b>+${amount}%</b> (tối đa đầy). Chống đói, không tăng chất dinh dưỡng. Dino đang no thì vật phẩm vẫn còn.`}</div>
+      ${why ? `<div class="why" style="color:#fbbf24;font-size:13px">⚠️ ${esc(why)}</div>` : ''}
+      <div class="row"><button type="button" class="btn btn-emerald" data-dlg="apply" ${why || bag.busy ? 'disabled' : ''}>${grow ? `+${amount}% tăng trưởng` : `+${amount}% thức ăn`}</button></div></div>${status}`;
+    return;
+  }
   if (g.type === 'prime_ticket') {
     const grown = pv.growth != null && pv.growth >= 0.999;
     const why = pv.prime ? 'Dino này đã là prime.' : !grown ? 'Cần dino 100% tăng trưởng.' : '';
@@ -2102,8 +2123,9 @@ async function bagSend(url, body, what, inDialog = false) {
 $('bag-list').addEventListener('click', (e) => {
   const u = e.target.closest('[data-bag-use]');
   if (u && !u.disabled) {
-    const g = bagGroups(lastMeData?.items ?? []).find((x) => x.id === u.dataset.bagUse);
-    if (g?.type === 'dino_ticket') void openDinoDialog(g);
+    const g = bagGroups(lastMeData?.items ?? []).find((x) => x.key === u.dataset.bagUse);
+    if (g?.type === 'dino_box') void openBoxDialog(g);
+    else if (g?.type === 'dino') void openDinoDialog(g.uids[0], g);
     else if (g) void openBagDialog(g);
     return;
   }
@@ -2123,6 +2145,7 @@ $('bag-dlg').addEventListener('click', (e) => {
     if (o.pick?.slot2 && o.slot !== 2 && o.slot !== 4) o.slot = o.pv.slots.find((x) => x.open && (x.slot === 2 || x.slot === 4))?.slot ?? null;
     renderBagDialog(); return;
   }
+  if (e.target.closest('[data-dlg="apply"]')) { void bagSend('/api/items/use', { uid: o.g.uids[0] }, o.g.name, true); return; }
   if (e.target.closest('[data-dlg="prime"]')) { void bagSend('/api/items/use', { uid: o.g.uids[0] }, 'phiếu Prime', true); return; }
   if (e.target.closest('[data-dlg="clear"]') && o.slot) { void bagSend('/api/items/use', { uid: o.g.uids[0], slot: o.slot }, `bỏ mutation ô ${o.slot}`, true); return; }
   if (e.target.closest('[data-dlg="place"]') && o.slot && o.g.type === 'mutation_ticket' && o.pick) {
@@ -2133,88 +2156,177 @@ $('bag-dlg').addEventListener('click', (e) => {
 });
 $('bag-dlg').addEventListener('close', () => { if (!bag.busy) bag.open = null; });
 
-// --- the dino ticket (bridge starter.ts): a species, its sex, the four slots' mutations --------------
+// --- the dino boxes (bridge dino-box.ts) ------------------------------------------------------------
+// A box: opened (its species picked first in a "tự chọn" box) — what was drawn shown with a short roll,
+// then a dino item in the bag. A dino item: its sex and the mutations of the slots its growth opens.
 const DIET_OK = { all: () => true, carnivore: (d) => d === 'carnivore', herbivore: (d) => d === 'herbivore',
   herbivore_omnivore: (d) => d === 'herbivore' || d === 'omnivore' };
-async function openDinoDialog(g) {
-  bagStatus('', 'Đang tải danh sách dino…');
-  const r = await getJson('/api/items/dino-options').catch(() => null);
-  if (r?.status !== 200) { bagStatus('bad', `❌ ${esc(r?.body?.error ?? 'Không tải được danh sách dino.')}`); return; }
+const DIET_VI = { carnivore: 'ăn thịt', herbivore: 'ăn cỏ', omnivore: 'ăn tạp' };
+const pctOf = (g) => `${Math.round(g * 100)}%`;
+const dlgHead = (icon, title, rarity, sub) => `<div class="hd"><span class="mut-ico tk-ico" aria-hidden="true">${icon}</span><div><b id="bag-dlg-title">${esc(title)}</b>
+    ${rarity ? `<span class="rar-label rar-${esc(rarity)}">${esc(BAG_RARITY[rarity] ?? rarity)}</span>` : ''}
+    <div class="muted" style="font-size:12.5px">${sub}</div></div>
+    <button type="button" class="x" data-dlg="close" aria-label="Đóng">×</button></div>`;
+const dlgStatusEl = '<div class="garage-status" id="bag-dlg-status" role="status" aria-live="polite" hidden></div>';
+async function refreshMe() {
+  const me = await getJson('/api/me').catch(() => null);
+  if (me?.status === 200) lastMeData = me.body;
+  bag.sig = '';
+  renderBag(lastMeData);
+}
+
+async function openBoxDialog(g) {
+  bagStatus('', 'Đang mở hộp…');
+  const r = await getJson(`/api/items/box-options/${encodeURIComponent(g.uids[0])}`).catch(() => null);
+  if (r?.status !== 200) { bagStatus('bad', `❌ ${esc(r?.body?.error ?? 'Không đọc được hộp.')}`); return; }
   bagStatus('', '');
-  bag.open = { g, dino: { opts: r.body, species: '', female: false, muts: { 1: '', 2: '', 3: '', 4: '' } } };
+  bag.open = { g, box: { opts: r.body, species: '', phase: 'pick', result: null } };
   renderBagDialog();
   if (!$('bag-dlg').open) $('bag-dlg').showModal();
 }
-/** The mutations that fit slot n of this pick (diet, slot 2 / 4, female only, not in another slot). */
-function dinoSlotChoices(d, n) {
-  const sp = d.opts.species.find((x) => x.key === d.species);
-  if (!sp) return [];
-  const taken = new Set(Object.entries(d.muts).filter(([k, v]) => Number(k) !== n && v).map(([, v]) => v));
-  return d.opts.mutations.filter((m) => (DIET_OK[m.diet] ?? (() => false))(sp.diet)
-    && (!m.slot2 || n === 2 || n === 4) && (!m.femaleOnly || d.female) && !taken.has(m.name));
+function renderBoxDialog(o) {
+  const { g, box } = o;
+  const random = box.opts.pick === 'random';
+  const range = `${pctOf(box.opts.growthMin)}–${pctOf(box.opts.growthMax)}`;
+  const head = dlgHead('🎁', g.name, g.rarity, `${random ? 'Loài ngẫu nhiên' : 'Tự chọn loài'} · tăng trưởng ngẫu nhiên ${range}`);
+  if (box.phase === 'pick') {
+    $('bag-dlg-in').innerHTML = `${head}
+      ${random ? `<div class="sec"><div class="cmp">Mở hộp ra <b>1 trong ${box.opts.species.length} loài</b>, tăng trưởng ngẫu nhiên ${range}. Mở xong là vật phẩm Dino trong túi — dùng để chọn giới tính và mutation.</div></div>`
+        : `<div class="sec"><h4>Chọn loài</h4><label class="dino-slot"><span>Loài</span><select data-box-species><option value="">— Chọn loài —</option>${box.opts.species.map((x) =>
+          `<option value="${esc(x.key)}" title="${esc(DIET_VI[x.diet] ?? '')}"${box.species === x.key ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+          <div class="cmp muted">Tăng trưởng bốc ngẫu nhiên ${range} khi mở.</div></div>`}
+      <div class="act"><button type="button" class="btn btn-emerald" data-dlg="open-box" ${(random || box.species) && !bag.busy ? '' : 'disabled'}>🎁 Mở hộp</button></div>${dlgStatusEl}`;
+    return;
+  }
+  const res = box.result;
+  const drawnSpecies = box.opts.pick === 'random';
+  $('bag-dlg-in').innerHTML = `${head}
+    <div class="roll${box.phase === 'done' ? ' landed' : ''}" aria-live="polite">
+      <div class="roll-sp${drawnSpecies ? '' : ' fixed'}" id="roll-sp">${esc(box.phase === 'done' || !drawnSpecies ? res.label : '…')}</div>
+      <div class="roll-g" id="roll-g">${box.phase === 'done' ? pctOf(res.growth) : '…'}</div>
+    </div>
+    ${box.phase === 'done' ? `<p class="muted" style="margin:0;text-align:center;font-size:13px">Đã vào túi đồ: <b>Dino ${esc(res.label)} ${pctOf(res.growth)}</b>. Dùng để chọn giới tính và mutation (${res.growth >= 0.75 ? 'đủ 4 ô' : res.growth >= 0.5 ? 'ô 1–2' : res.growth >= 0.25 ? 'ô 1' : 'chưa có ô nào'}).</p>
+      <div class="act"><button type="button" class="btn btn-ghost" data-dlg="close">Để trong túi</button><button type="button" class="btn btn-emerald" data-dlg="use-dino">🦖 Dùng ngay</button></div>` : ''}
+    ${dlgStatusEl}`;
 }
-function renderDinoDialog(o) {
-  const d = o.dino;
-  const g = o.g;
-  // A pick that no longer fits (another species, sex) is cleared.
-  for (const n of [1, 2, 3, 4]) if (d.muts[n] && !dinoSlotChoices(d, n).some((m) => m.name === d.muts[n])) d.muts[n] = '';
-  const sp = d.opts.species.find((x) => x.key === d.species);
-  const range = `${Math.round(d.opts.growthMin * 100)}–${Math.round(d.opts.growthMax * 100)}%`;
-  const slotRow = (n) => {
-    const list = dinoSlotChoices(d, n);
-    return `<label class="dino-slot"><span>Ô ${n}${n === 2 || n === 4 ? ' <span class="muted">(nhận cả mutation chỉ ô 2/4)</span>' : ''}</span>
-      <select data-dino-mut="${n}" ${sp ? '' : 'disabled'}><option value="">— Để trống —</option>${list.map((m) =>
-        `<option value="${esc(m.name)}"${d.muts[n] === m.name ? ' selected' : ''}>${esc(m.name)}${m.femaleOnly ? ' (cái)' : ''}${m.quest ? ' (nhiệm vụ)' : ''}</option>`).join('')}</select>
-      ${d.muts[n] ? `<small class="muted">${esc(d.opts.mutations.find((m) => m.name === d.muts[n])?.description ?? '')}</small>` : ''}</label>`;
+/** The roll: names and numbers flick by, slowing down, then land on what the bridge drew (≈1.7 s; text only). */
+function rollBox(o) {
+  const { box } = o;
+  const res = box.result;
+  const names = box.opts.species.map((x) => x.label);
+  const drawnSpecies = box.opts.pick === 'random';
+  const lo = Math.round(box.opts.growthMin * 100), hi = Math.round(box.opts.growthMax * 100);
+  const steps = 18;
+  const land = () => { if (bag.open === o) { box.phase = 'done'; renderBagDialog(); } };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { land(); return; }
+  let i = 0;
+  const tick = () => {
+    if (bag.open !== o) return;
+    i += 1;
+    if (i >= steps) { land(); return; }
+    const sp = $('roll-sp'), gr = $('roll-g');
+    if (sp && drawnSpecies) sp.textContent = names[Math.floor(Math.random() * names.length)] ?? res.label;
+    if (gr) gr.textContent = `${lo + Math.floor(Math.random() * (hi - lo + 1))}%`;
+    setTimeout(tick, 35 + 220 * (i / steps) ** 2.5);
   };
-  $('bag-dlg-in').innerHTML = `<div class="hd"><span class="mut-ico tk-ico" aria-hidden="true">🦖</span><div><b id="bag-dlg-title">${esc(g.name)}</b>
-      <span class="rar-label rar-${esc(g.rarity)}">${esc(BAG_RARITY[g.rarity] ?? g.rarity)}</span>
-      <div class="muted" style="font-size:12.5px">Đủ 10 nhiệm vụ prime · tăng trưởng ngẫu nhiên ${range} · vào gara</div></div>
-      <button type="button" class="x" data-dlg="close" aria-label="Đóng">×</button></div>
-    <div class="sec"><h4>Loài và giới tính</h4>
-      <div class="dino-pick">
-        <label class="dino-slot"><span>Loài</span><select data-dino-species><option value="">— Chọn loài —</option>${d.opts.species.map((x) =>
-          `<option value="${esc(x.key)}"${d.species === x.key ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
-        <div class="dino-slot"><span>Giới tính</span><div class="xseg"><button type="button" data-dino-sex="m" class="${d.female ? '' : 'on'}">♂ Đực</button><button type="button" data-dino-sex="f" class="${d.female ? 'on' : ''}">♀ Cái</button></div></div>
-      </div></div>
-    <div class="sec"><h4>Mutation 4 ô chính</h4>${sp ? '' : '<p class="muted" style="margin:0">Chọn loài trước.</p>'}
-      <div class="dino-muts">${[1, 2, 3, 4].map(slotRow).join('')}</div></div>
-    <p class="muted" style="margin:0;font-size:12.5px">Dùng là hết phiếu. Dino vào ô gara trống kế tiếp (kể cả khi gara đã đủ ô); tăng trưởng được bốc ngẫu nhiên lúc nhận — từ khoảng 75% game cho lên prime.</p>
-    <div class="act"><button type="button" class="btn btn-emerald" data-dlg="dino" ${sp && !bag.busy ? '' : 'disabled'}>Nhận ${esc(sp?.label ?? 'dino')}</button></div>
-    <div class="garage-status" id="bag-dlg-status" role="status" aria-live="polite" hidden></div>`;
+  tick();
 }
 $('bag-dlg').addEventListener('change', (e) => {
   const o = bag.open;
-  if (!o?.dino || bag.busy) return;
-  const sp = e.target.closest('[data-dino-species]');
-  if (sp) { o.dino.species = sp.value; renderBagDialog(); return; }
+  if (!o || bag.busy) return;
+  const bs = e.target.closest('[data-box-species]');
+  if (bs && o.box) { o.box.species = bs.value; renderBagDialog(); return; }
+  if (!o.dino) return;
   const m = e.target.closest('[data-dino-mut]');
   if (m) { o.dino.muts[m.dataset.dinoMut] = m.value; renderBagDialog(); }
 });
+
+async function openDinoDialog(uid, g) {
+  bagStatus('', 'Đang tải mutation…');
+  const r = await getJson(`/api/items/dino-options/${encodeURIComponent(uid)}`).catch(() => null);
+  if (r?.status !== 200) { bagStatus('bad', `❌ ${esc(r?.body?.error ?? 'Không đọc được vật phẩm dino.')}`); return; }
+  bagStatus('', '');
+  bag.open = { g: g ?? { uids: [uid], name: `Dino ${r.body.label} ${pctOf(r.body.growth)}`, rarity: 'legendary' }, uid,
+    dino: { opts: r.body, female: false, muts: { 1: '', 2: '', 3: '', 4: '' } } };
+  renderBagDialog();
+  if (!$('bag-dlg').open) $('bag-dlg').showModal();
+}
+/** The mutations that fit slot n (its diet came from the bridge; slot 2 / 4, female only, not in another slot). */
+function dinoSlotChoices(d, n) {
+  const taken = new Set(Object.entries(d.muts).filter(([k, v]) => Number(k) !== n && v).map(([, v]) => v));
+  return d.opts.mutations.filter((m) => (!m.slot2 || n === 2 || n === 4) && (!m.femaleOnly || d.female) && !taken.has(m.name));
+}
+const SLOT_FROM = { 1: 25, 2: 50, 3: 75, 4: 75 };
+function renderDinoDialog(o) {
+  const d = o.dino;
+  const op = d.opts;
+  // A pick that no longer fits (the sex changed) is cleared.
+  for (const n of [1, 2, 3, 4]) if (d.muts[n] && !dinoSlotChoices(d, n).some((m) => m.name === d.muts[n])) d.muts[n] = '';
+  const slotRow = (n) => {
+    const open = op.openSlots.includes(n);
+    if (!open) return `<label class="dino-slot"><span>Ô ${n}</span><select disabled><option>🔒 Mở từ ${SLOT_FROM[n]}% (dino ${pctOf(op.growth)})</option></select></label>`;
+    const list = dinoSlotChoices(d, n);
+    const chosen = d.muts[n] ? op.mutations.find((m) => m.name === d.muts[n]) : null;
+    return `<label class="dino-slot"><span>Ô ${n}${n === 2 || n === 4 ? ' <span class="muted">(nhận cả mutation chỉ ô 2/4)</span>' : ''}</span>
+      <select data-dino-mut="${n}"><option value="">— Để trống —</option>${list.map((m) =>
+        `<option value="${esc(m.name)}" title="${esc(m.description ?? '')}"${d.muts[n] === m.name ? ' selected' : ''}>${esc(m.name)}${m.femaleOnly ? ' (cái)' : ''}${m.quest ? ' (nhiệm vụ)' : ''}</option>`).join('')}</select>
+      ${chosen ? `<small class="dino-desc">${mutIcon(chosen.name, 'sm')} ${esc(chosen.description ?? '')}</small>` : ''}</label>`;
+  };
+  $('bag-dlg-in').innerHTML = `${dlgHead('🦖', `Dino ${op.label} ${pctOf(op.growth)}`, 'legendary', `${esc(DIET_VI[op.diet] ?? '')} · đủ 10 nhiệm vụ prime · vào gara`)}
+    <div class="sec"><h4>Giới tính</h4>
+      <div class="xseg"><button type="button" data-dino-sex="m" class="${d.female ? '' : 'on'}">♂ Đực</button><button type="button" data-dino-sex="f" class="${d.female ? 'on' : ''}">♀ Cái</button></div></div>
+    <div class="sec"><h4>Mutation <span class="muted" style="font-weight:500">· ${op.openSlots.length ? `mở ${op.openSlots.length}/4 ô theo ${pctOf(op.growth)} tăng trưởng` : 'chưa mở ô nào (dưới 25%)'}</span></h4>
+      <div class="dino-muts">${[1, 2, 3, 4].map(slotRow).join('')}</div></div>
+    <p class="muted" style="margin:0;font-size:12.5px">Dùng là hết vật phẩm. Dino vào ô gara trống kế tiếp (kể cả khi gara đã đủ ô)${op.growth >= 0.75 ? ' — từ 75% game cho lên prime' : ''}.</p>
+    <div class="act"><button type="button" class="btn btn-emerald" data-dlg="dino" ${bag.busy ? 'disabled' : ''}>Nhận ${esc(op.label)} vào gara</button></div>
+    ${dlgStatusEl}`;
+}
 $('bag-dlg').addEventListener('click', async (e) => {
   const o = bag.open;
-  if (!o?.dino || bag.busy) return;
+  if (!o || bag.busy) return;
+  if (o.box) {
+    if (e.target.closest('[data-dlg="use-dino"]') && o.box.result) { const uid = o.box.result.uid; bag.open = null; void openDinoDialog(uid); return; }
+    if (!e.target.closest('[data-dlg="open-box"]')) return;
+    bag.busy = true;
+    renderBagDialog();
+    let error = null;
+    try {
+      const r = await fetch('/api/items/open', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ uid: o.g.uids[0], species: o.box.species || undefined }) });
+      const b = await r.json().catch(() => null);
+      if (r.status !== 200) { error = `❌ ${esc(b?.error ?? 'Không mở được hộp.')} Hộp vẫn còn.`; return; }
+      o.box.result = b;
+      o.box.phase = 'rolling';
+      renderBagDialog();
+      rollBox(o);
+    } catch {
+      error = 'Mất kết nối. Thử lại.';
+    } finally {
+      bag.busy = false;
+      if (o.box.phase === 'pick' && bag.open === o) { renderBagDialog(); if (error) bagDlgStatus('bad', error); }
+      void refreshMe();
+    }
+    return;
+  }
+  if (!o.dino) return;
   const sx = e.target.closest('[data-dino-sex]');
   if (sx) { o.dino.female = sx.dataset.dinoSex === 'f'; renderBagDialog(); return; }
   if (!e.target.closest('[data-dlg="dino"]')) return;
   bag.busy = true;
-  bagDlgStatus('', 'Đang tạo dino…');
+  bagDlgStatus('', 'Đang đưa dino vào gara…');
   try {
     const r = await fetch('/api/items/dino', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ uid: o.g.uids[0], species: o.dino.species, female: o.dino.female, mutations: o.dino.muts }) });
+      body: JSON.stringify({ uid: o.uid, female: o.dino.female, mutations: o.dino.muts }) });
     const b = await r.json().catch(() => null);
-    if (r.status !== 200) { bagDlgStatus('bad', `❌ ${esc(b?.error ?? 'Không nhận được dino.')} Phiếu vẫn còn.`); return; }
+    if (r.status !== 200) { bagDlgStatus('bad', `❌ ${esc(b?.error ?? 'Không nhận được dino.')} Vật phẩm vẫn còn.`); return; }
     $('bag-dlg').close(); bag.open = null;
-    bagStatus('ok', `✅ Đã nhận <b>${esc(b.species)} ${Math.round(b.growth * 100)}%</b> (${b.female ? 'cái' : 'đực'}, đủ nhiệm vụ prime) vào <b>gara ô ${esc(b.slot)}</b>. Vào Gara, respawn đúng loài rồi lấy ra.`);
-    showToast(`✅ ${b.species} ${Math.round(b.growth * 100)}% đã vào gara ô ${b.slot}`);
+    bagStatus('ok', `✅ Đã nhận <b>${esc(b.species)} ${pctOf(b.growth)}</b> (${b.female ? 'cái' : 'đực'}, đủ nhiệm vụ prime) vào <b>gara ô ${esc(b.slot)}</b>. Vào Gara, respawn đúng loài rồi lấy ra.`);
+    showToast(`✅ ${b.species} ${pctOf(b.growth)} đã vào gara ô ${b.slot}`);
   } catch {
     bagDlgStatus('bad', 'Mất kết nối. Thử lại.');
   } finally {
     bag.busy = false;
-    bag.sig = '';
-    const me = await getJson('/api/me').catch(() => null);
-    if (me?.status === 200) lastMeData = me.body;
-    renderBag(lastMeData);
+    void refreshMe();
   }
 });
 $('bag-filter').addEventListener('click', (e) => {
@@ -2692,6 +2804,8 @@ setInterval(refresh, 1000);
 // check-in and the Hổ phách balance (bridge economy.ts), and the way into the server.
 // ============================================================================
 const fmtAmber = (n) => Number(n ?? 0).toLocaleString('vi-VN');
+/** An amount of Hổ phách: "100 <icon>" — the word only on hover (owner, 2026-10-05; amber.svg is theirs). */
+const amber = (n, sign = '') => `<span class="amber-amt" title="Hổ phách">${sign}${fmtAmber(n)} <img class="amber-ico" src="/amber.svg" alt="Hổ phách"></span>`;
 let homeSig = '';
 let homeBusy = false;
 /** One quest: what, how far, its reward and the button to take it. */
@@ -2699,9 +2813,9 @@ function questRow(q, locked) {
   const pct = q.target > 0 ? Math.min(100, Math.round(q.progress / q.target * 100)) : 100;
   const num = (v) => (Number.isInteger(v) ? v : Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 1 }));
   const btn = q.claimed ? '<span class="hq-meta">✓ Đã nhận</span>'
-    : `<button type="button" class="btn ${q.done && !locked ? 'btn-emerald' : 'btn-ghost'}" data-quest="${esc(q.id)}" ${q.done && !locked && !homeBusy ? '' : 'disabled'}>+${fmtAmber(q.reward)}</button>`;
+    : `<button type="button" class="btn ${q.done && !locked ? 'btn-emerald' : 'btn-ghost'}" data-quest="${esc(q.id)}" ${q.done && !locked && !homeBusy ? '' : 'disabled'}>${amber(q.reward, '+')}</button>`;
   return `<li class="hq-item${q.claimed ? ' claimed' : q.done ? ' done' : ''}"><div><b>${esc(q.label)}</b>
-      <div class="hq-meta">${num(q.progress)}/${num(q.target)} ${esc(q.unit)} · thưởng ${fmtAmber(q.reward)} Hổ phách</div></div>${btn}
+      <div class="hq-meta">${num(q.progress)}/${num(q.target)} ${esc(q.unit)} · thưởng ${amber(q.reward)}</div></div>${btn}
       <div class="hr-progress"><i style="width:${pct}%"></i></div></li>`;
 }
 function renderHomeRewards(me) {
@@ -2714,12 +2828,12 @@ function renderHomeRewards(me) {
   homeSig = sig;
   // The balance, by the way in.
   $('home-amber').hidden = !eco;
-  if (eco) $('home-amber').innerHTML = `🟠 <span>${fmtAmber(eco.balance)}</span> ${esc(eco.currency)}${eco.locked ? ' <small style="opacity:.75">(thử nghiệm)</small>' : ''}`;
+  if (eco) $('home-amber').innerHTML = `${amber(eco.balance)}${eco.locked ? ' <small style="opacity:.75">(thử nghiệm)</small>' : ''}`;
   const st = $('home-starter');
   st.hidden = !gift;
   if (gift) {
-    st.innerHTML = `<h3>🎁 Quà tân thủ: Phiếu chọn dino</h3>
-      <p>Nhận phiếu vào <b>Túi đồ</b>, rồi dùng để chọn <b>loài</b>, <b>giới tính</b> và <b>mutation 4 ô chính</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng ngẫu nhiên 50–100%.</p>
+    st.innerHTML = `<h3>🎁 Quà tân thủ: Hộp dino tự chọn</h3>
+      <p>Nhận hộp vào <b>Túi đồ</b> → mở hộp, <b>chọn loài</b> (tăng trưởng ngẫu nhiên 50–100%) → dùng Dino vừa mở để chọn <b>giới tính</b> và <b>mutation</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>.</p>
       ${gift.locked ? `<div class="hr-note">🧪 ${esc(gift.locked)}</div>` : ''}
       <div class="hr-row"><button type="button" class="btn btn-emerald" id="home-starter-btn" ${gift.locked || homeBusy ? 'disabled' : ''}>🎁 Nhận quà</button>
         <span class="muted">Mỗi tài khoản 1 lần</span></div>`;
@@ -2743,17 +2857,17 @@ function renderHomeRewards(me) {
     const days = c.rewards.map((r, i) => {
       const n = i + 1;
       const cls = n < c.day || (c.claimed && n === c.day) ? 'done' : n === c.day ? 'today' : '';
-      return `<div class="hr-day ${cls}">Ngày ${n}<b>${cls === 'done' ? '✓' : `+${fmtAmber(r)}`}</b>${n === c.rewards.length && c.bonusItem ? `<span title="${esc(c.bonusItem)}">🎁</span>` : ''}</div>`;
+      return `<div class="hr-day ${cls}">Ngày ${n}<b>${cls === 'done' ? '✓' : amber(r, '+')}</b>${n === c.rewards.length && c.bonusItem ? `<span title="${esc(c.bonusItem)}">🎁</span>` : ''}</div>`;
     }).join('');
     const reward = c.rewards[c.day - 1] ?? 0;
-    const label = c.claimed ? '✓ Đã điểm danh hôm nay' : c.ready ? `Điểm danh: +${fmtAmber(reward)} ${eco.currency}` : `Chơi thêm ${Math.max(0, c.needed - c.minutes)} phút để điểm danh`;
+    const label = c.claimed ? '✓ Đã điểm danh hôm nay' : c.ready ? `Điểm danh: ${amber(reward, '+')}` : `Chơi thêm ${Math.max(0, c.needed - c.minutes)} phút để điểm danh`;
     ck.innerHTML = `<h3>📅 Điểm danh hằng ngày <span class="muted" style="font-size:13px;font-weight:600">ngày ${c.day}/${c.rewards.length}</span></h3>
       <div class="hr-days">${days}</div>
       <div class="hr-row" style="justify-content:space-between"><span class="muted">Hôm nay đã chơi <b>${c.minutes}</b>/${c.needed} phút trong game</span>
         ${c.bonusItem ? `<span class="muted">Ngày ${c.rewards.length}: +🎁 ${esc(c.bonusItem)}</span>` : ''}</div>
       <div class="hr-progress"><i style="width:${pct}%"></i></div>
       ${eco.locked ? `<div class="hr-note">🧪 ${esc(eco.locked)}</div>` : ''}
-      <div class="hr-row"><button type="button" class="btn ${c.ready && !eco.locked ? 'btn-emerald' : 'btn-ghost'}" id="home-checkin-btn" ${c.ready && !eco.locked && !homeBusy ? '' : 'disabled'}>${esc(label)}</button>
+      <div class="hr-row"><button type="button" class="btn ${c.ready && !eco.locked ? 'btn-emerald' : 'btn-ghost'}" id="home-checkin-btn" ${c.ready && !eco.locked && !homeBusy ? '' : 'disabled'}>${label}</button>
         <span class="muted">Bỏ lỡ 1 ngày là quay về ngày 1 · ngày mới lúc 00:00</span></div>`;
   }
 }

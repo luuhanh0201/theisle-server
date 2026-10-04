@@ -148,6 +148,8 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'cmd.prison', group: 'commands', label: '!slay / !unstuck / !food khi đang ở tù', default: '!{command} không dùng được khi đang ở tù.', vars: ['command'] },
   // --- admin actions (mods/DinoGarage inbox) ---
   { key: 'item.mutationClear', group: 'admin', label: 'Người chơi dùng Phiếu bỏ mutation', default: 'Đã bỏ mutation {mutation} khỏi ô {slot}.', vars: ['mutation', 'slot'] },
+  { key: 'item.growth', group: 'admin', label: 'Người chơi dùng Túi tăng trưởng', default: 'Dino của bạn đã lớn từ {from}% lên {to}%.', vars: ['from', 'to'] },
+  { key: 'item.food', group: 'admin', label: 'Người chơi dùng Hộp food', default: 'Dino của bạn đã được cho ăn: thức ăn {from}% → {to}%.', vars: ['from', 'to'] },
   { key: 'item.prime', group: 'admin', label: 'Người chơi dùng Phiếu Prime', default: 'Dino của bạn đã lên prime — chỉ số prime được áp sau vài giây.', vars: [] },
   { key: 'item.mutationUpgrade', group: 'admin', label: 'Người chơi nâng cấp mutation bằng vật phẩm trùng (+1 đời)', default: 'Dino của bạn đã lên đời {generation} nhờ {mutation} — mọi mutation mạnh hơn.', vars: ['generation', 'mutation'] },
   { key: 'item.mutation', group: 'admin', label: 'Người chơi dùng vật phẩm mutation (từ túi đồ trên web)', default: 'Đã thêm mutation {mutation} vào dino của bạn (ô {slot}).', vars: ['mutation', 'slot'] },

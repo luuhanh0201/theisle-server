@@ -274,3 +274,34 @@ test('an item deleted: out of the catalog and of every bag', async () => {
   assert.ok(!(await I.inventoryOf(P2)).some((o) => o.itemId === it.id));
   assert.equal(await I.deleteItem(it.id), null, 'twice: nothing');
 });
+
+test('Túi tăng trưởng and Hộp food: on the dino played now; the growth bag only below its mark, then +its amount', async () => {
+  const P5 = '76561198000000025';
+  const { readFileSync: rf } = await import('node:fs');
+  const bagItem = await I.createItem({ type: 'growth_bag', name: 'Túi tăng trưởng 10%', rarity: 'rare', data: {} }, ADMIN);
+  assert.deepEqual(bagItem.data, { amount: 0.1, below: 0.6 }, 'the owner\'s defaults: +10 % under 60 %');
+  const food = await I.createItem({ type: 'food_box', name: 'Hộp food lớn', rarity: 'rare', data: { amount: 0.5 } }, ADMIN);
+  assert.throws(() => I.validateItem({ type: 'food_box', name: 'x', data: { amount: 2 } }), /amount must be/);
+  assert.throws(() => I.validateItem({ type: 'growth_bag', name: 'x', data: { below: 0 } }), /below must be/);
+  const g = await I.grantItem(P5, bagItem.id, 'admin', ADMIN);
+  const f = await I.grantItem(P5, food.id, 'admin', ADMIN);
+  const store = new Store();
+  const t = Math.floor(Date.now() / 1000);
+  store.apply({ type: 'session_start', t, steamId: P5, name: 'P5' });
+  store.apply({ type: 'spawn', t, steamId: P5, name: 'P5', species: 'BP_Triceratops_C', growth: 0.6, mutations: {} });
+  const ctx = { store };
+  const inbox = () => JSON.parse(rf(join(root, 'garage', 'inbox.json'), 'utf8')).commands;
+  assert.match((await startMutationUse(ctx, P5, g.uid, null)).body.error, /dưới 60% \(dino đang 60%\)/);
+  store.apply({ type: 'snapshot', t: t + 1, steamId: P5, name: 'P5', species: 'BP_Triceratops_C', growth: 0.55, health: 1 });
+  const gr = await startMutationUse(ctx, P5, g.uid, null);
+  assert.equal(gr.status, 202, JSON.stringify(gr.body));
+  assert.deepEqual((({ mode, amount, below }) => ({ mode, amount, below }))(inbox().find((x) => x.id === gr.body.id)), { mode: 'growth', amount: 0.1, below: 0.6 });
+  const fo = await startMutationUse(ctx, P5, f.uid, null);
+  assert.equal(fo.status, 202);
+  assert.deepEqual((({ mode, amount }) => ({ mode, amount }))(inbox().find((x) => x.id === fo.body.id)), { mode: 'food', amount: 0.5 });
+  // Used up only once the mod says it worked (a full dino, a grown one: the item stays).
+  await I.settleUse({ type: 'portal_command', id: fo.body.id, action: 'mutation', ok: false });
+  assert.ok((await I.inventoryOf(P5)).some((o) => o.uid === f.uid));
+  await I.settleUse({ type: 'portal_command', id: gr.body.id, action: 'mutation', ok: true });
+  assert.equal((await I.inventoryOf(P5)).some((o) => o.uid === g.uid), false);
+});

@@ -32,11 +32,13 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *        the colours of the dino you play now, written in game (DinoGarage)
  *   POST /api/items/use         { uid, slot?: 1–4, mutation?: name (a Phiếu đổi mutation) } use an item of your bag on the dino you play (login, same-origin, JSON)
  *   GET  /api/items/preview/<uid>  what that would do: each slot's mutation and value, the +1 đời upgrade (login)
- *   GET  /api/items/dino-options   the species and mutations a dino ticket can give (login)
+ *   GET  /api/items/box-options/<uid>   a dino box: drawn or picked species, the species, the growth range (login)
+ *   GET  /api/items/dino-options/<uid>  a dino item: its species, growth, open slots, the mutations that fit (login)
+ *   POST /api/items/open        { uid, species? } open a dino box: a dino item into the bag (login, same-origin, JSON)
  *   POST /api/starter/claim     the starter gift: the dino ticket into the bag, once (login, same-origin)
  *   POST /api/checkin           today's check-in: Hổ phách once a day after enough minutes in game (login, same-origin)
  *   POST /api/quests/claim      { quest } a done quest's Hổ phách, once (login, same-origin, JSON)
- *   POST /api/items/dino        { uid, species, female, mutations: { 1–4: name } } use a dino ticket: the dino into your garage (login, same-origin, JSON)
+ *   POST /api/items/dino        { uid, female, mutations: { 1–4: name } } use a dino item: the dino into your garage (login, same-origin, JSON)
  *   GET  /api/command/<id>      the outcome of one of your commands      (login)
  *   POST /api/voice/token       join the proximity voice room (voice.html) (login, same-origin)
  *   GET  /api/voice             who you can hear now: volume + pan per voice user (login)
@@ -383,13 +385,15 @@ export function createPortal(opts: PortalOptions): Server {
         send(res, r.status, r.body);
         return;
       }
-      if (path === '/api/items/dino-options') {
+      const itemOpts = /^\/api\/items\/(box|dino)-options\/([\w-]{1,40})$/.exec(path);
+      if (itemOpts !== null) {
+        if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return; }
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
-        const r = await opts.bridge.dinoOptions(me);
+        const r = await opts.bridge.itemOptions(me, itemOpts[1] as 'box' | 'dino', itemOpts[2] as string);
         send(res, r.status, r.body);
         return;
       }
-      if (path === '/api/items/dino') {
+      if (path === '/api/items/open' || path === '/api/items/dino') {
         if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
         if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
@@ -398,7 +402,9 @@ export function createPortal(opts: PortalOptions): Server {
         const body = await readSmallJson(req);
         if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
         // Only these fields, and never a SteamID from the browser.
-        const r = await opts.bridge.useDino(me, { uid: body['uid'], species: body['species'], female: body['female'], mutations: body['mutations'] });
+        const r = path === '/api/items/open'
+          ? await opts.bridge.openBox(me, { uid: body['uid'], species: body['species'] })
+          : await opts.bridge.useDino(me, { uid: body['uid'], female: body['female'], mutations: body['mutations'] });
         send(res, r.status, r.body);
         return;
       }

@@ -1591,7 +1591,8 @@ async function handlePanel(
       // The skin page's 3D: the portal's own viewer and models (config.portalPublicDir).
       // …and the skin colour editor, shared with the players' Skin Studio (skin-editor.js).
       // (/img/ — the mutation icons too — comes from bridge public/img, before this: panel-gate.ts.)
-      if (path === '/skin3d.js' || path === '/skin-editor.js' || path === '/ui-select.js' || path === '/ui-inputs.js' || path === '/mut-icons.js'
+      // The Hổ phách icon (amber.svg), one file for the portal and the panel.
+      if (path === '/skin3d.js' || path === '/skin-editor.js' || path === '/ui-select.js' || path === '/ui-inputs.js' || path === '/mut-icons.js' || path === '/amber.svg'
         || path.startsWith('/dino3d/') || path.startsWith('/vendor/three-0.170.0/')) {
         await sendFile(res, path.slice(1), config.portalPublicDir);
         return;

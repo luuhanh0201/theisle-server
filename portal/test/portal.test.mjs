@@ -107,6 +107,8 @@ const bridge = {
   claimQuest: async (steamId, quest) => { bridgeCalls.push(`quest:${steamId}:${quest}`); return { status: 200, body: { reward: 100, balance: 100, label: 'Hạ 1 dino' } }; },
   claimStarter: async (steamId) => { bridgeCalls.push(`starter:${steamId}`); return { status: 200, body: { item: 'Phiếu chọn dino' } }; },
   checkin: async (steamId) => { bridgeCalls.push(`checkin:${steamId}`); return { status: 200, body: { day: 1, reward: 50, balance: 50, item: null } }; },
+  itemOptions: async (steamId, kind, uid) => { bridgeCalls.push(`opts:${steamId}:${kind}:${uid}`); return { status: 200, body: { pick: 'random' } }; },
+  openBox: async (steamId, body) => { bridgeCalls.push({ openBox: steamId, body }); return { status: 200, body: { uid: 'own_10', species: 'triceratops', label: 'Triceratops', growth: 0.7, drawn: true } }; },
   useDino: async (steamId, body) => { bridgeCalls.push({ useDino: steamId, body }); return { status: 200, body: { slot: '3', species: 'Tyrannosaurus', growth: 0.8, female: true, mutations: {} } }; },
   garage: async (id, body) => { bridgeCalls.push({ garage: id, body }); return { status: 202, body: { id: 5, action: body.action } }; },
   skin: async (id, body) => { bridgeCalls.push({ skin: id, body }); return { status: 202, body: { id: 6, action: 'skin' } }; },
@@ -171,8 +173,15 @@ test('the check-in and the dino ticket: login, same-origin; the SteamID is the s
   const pick = JSON.stringify({ uid: 'own_9', species: 'Tyrannosaurus', female: true, mutations: { 1: 'Hemomania' }, steamId: '76561198000000002', growth: 1 });
   assert.equal((await post('/api/items/dino', { ...json, cookie, origin: 'https://evil.example' }, pick)).status, 403);
   assert.equal((await post('/api/items/dino', { ...json, cookie, origin }, pick)).status, 200);
-  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { useDino: ME, body: { uid: 'own_9', species: 'Tyrannosaurus', female: true, mutations: { 1: 'Hemomania' } } },
-    'no SteamID, no growth from the browser');
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { useDino: ME, body: { uid: 'own_9', female: true, mutations: { 1: 'Hemomania' } } },
+    'no SteamID, no growth, no species from the browser');
+  const open = JSON.stringify({ uid: 'own_8', species: 'Triceratops', steamId: '76561198000000002', growth: 1 });
+  assert.equal((await post('/api/items/open', { ...json, cookie, origin: 'https://evil.example' }, open)).status, 403);
+  assert.equal((await post('/api/items/open', { ...json, cookie, origin }, open)).status, 200);
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { openBox: ME, body: { uid: 'own_8', species: 'Triceratops' } }, 'a box: the uid and the species only');
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/items/box-options/own_8`)).status, 401);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/items/dino-options/own_10`, { headers: { cookie } })).status, 200);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], `opts:${ME}:dino:own_10`);
 });
 
 test('the Steam round trip sets a Secure HttpOnly cookie', async () => {

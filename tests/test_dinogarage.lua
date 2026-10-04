@@ -1024,6 +1024,40 @@ do
   check("slot 7 refused before anything runs", started(m2) and started(m2).error == "bad_arguments")
 end
 
+say("\n-- the bag's growth bag and food box: on the dino played now, refused (item kept) when they do not apply --")
+do
+  local function sendUse(fields)
+    nextId = nextId + 1
+    local c = { id = nextId, type = "mutation", steamId = STEAM, createdAt = clock, expiresAt = clock + 600 }
+    for k, v in pairs(fields) do c[k] = v end
+    local fm = assert(io.open("Mods/DinoGarage/Saved/inbox.json", "w"))
+    fm:write(json.encode({ commands = { c } })); fm:close()
+    poll.fn()
+    return nextId
+  end
+  local gp = H.makePawn({ growth = 0.55 })
+  -- The harness's SetGrowth does not change what GetGrowth reads: as the engine does.
+  rawset(gp, "SetGrowth", function(_, g) H.record("SetGrowth", g); gp.__props.Growth = g end)
+  local gc = H.makeCtrl(STEAM, gp)
+  useCtrl(gc)
+  local g1 = sendUse({ mode = "growth", amount = 0.1, below = 0.6 })
+  check("55 % + 10 %: 65 % (owner's call: the full 10 %)", started(g1) and started(g1).ok == true and math.abs(gp.__props.Growth - 0.65) < 1e-6,
+        tostring(gp.__props.Growth))
+  local g2 = sendUse({ mode = "growth", amount = 0.1, below = 0.6 })
+  check("65 %: refused, told why, growth kept", started(g2) and started(g2).ok == false and math.abs(gp.__props.Growth - 0.65) < 1e-6
+        and lastMsg(gc):find("dưới 60%", 1, true) ~= nil, lastMsg(gc))
+  local fp = H.makePawn({ growth = 0.8 })
+  rawset(fp, "SetHunger", function(_, x) fp.__props.Hunger = x end)
+  fp.__props.MaxHunger, fp.__props.Hunger = 100, 30
+  local fc = H.makeCtrl(STEAM, fp)
+  useCtrl(fc)
+  local f1 = sendUse({ mode = "food", amount = 0.5 })
+  check("food 30 % + 50 %: 80 %", started(f1) and started(f1).ok == true and math.abs(fp.__props.Hunger - 80) < 1e-6, tostring(fp.__props.Hunger))
+  fp.__props.Hunger = 100
+  local f2 = sendUse({ mode = "food", amount = 0.2 })
+  check("a full dino: refused (the item stays)", started(f2) and started(f2).ok == false and lastMsg(fc):find("no", 1, true) ~= nil, lastMsg(fc))
+end
+
 say("\n-- the admin's minimums: health and growth needed to store --")
 do
   writeSettings('{"storeCountdown":30,"cooldown":0,"maxSlots":20,"minHealthPct":80,"minGrowthPct":50}')

@@ -37,6 +37,7 @@
       "mutation" — (the player, from their bag on the web) { mode "place", mutation, slot, unlock }
                   or { mode "upgrade", mutation, fromStacks, maxStacks } (+1 đời, off)
                   or { mode "clear", slot } (Phiếu bỏ mutation) or { mode "prime" } (Phiếu Prime)
+                  or { mode "growth", amount, below } (Túi tăng trưởng) or { mode "food", amount } (Hộp food)
                   a mutation item into a slot of their dino (garage/mutation.lua).
                   Outcome: a `portal_command` event (action "mutation"); the
                   bridge uses the item up when it is ok.

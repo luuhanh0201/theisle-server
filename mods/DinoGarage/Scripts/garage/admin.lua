@@ -18,6 +18,9 @@
                 (restore.lua R.setOriginals)
       teleport  { x, y, z }: the bridge picks a spot something really stood on
 
+    And for the bag's items (main.lua inbox "mutation"): A.feed — the food
+    bar up by a share of its max, nutrients left as they are (Hộp food).
+
     Returns ok, a line for the panel, a few words for the player.
 ]]
 
@@ -137,6 +140,19 @@ function A.grow(pawn, growth, prime)
     return true, string.format("grow: %d%%, stomach max %s, originals %s", math.floor(g * 100 + 0.5),
         tostring(stomach), wrote and table.concat(wrote, " ") or "not written"),
         string.format("đặt tăng trưởng %d%%", math.floor(g * 100 + 0.5))
+end
+
+--- Hộp food: the food bar (hunger) +amount of its max, at most full; the nutrients are not touched.
+--- Returns ok, a line for the log, the share before and after (0–1).
+function A.feed(pawn, amount)
+    local a = unit(amount)
+    if a == nil or a <= 0 then return false, "feed: amount must be 0–1" end
+    local before = share(pawn, "hunger")
+    if before == nil then return false, "feed: food bar unreadable" end
+    if before >= 0.995 then return false, "full", before, before end
+    local after = math.min(1, before + a)
+    if not setShare(pawn, "hunger", after) then return false, "feed: SetHunger failed", before, before end
+    return true, string.format("feed: food %d%% -> %d%%", math.floor(before * 100 + 0.5), math.floor(after * 100 + 0.5)), before, after
 end
 
 function A.teleport(pawn, x, y, z)

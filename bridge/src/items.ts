@@ -25,8 +25,9 @@ import { findReference, type Diet } from './mutation-reference.js';
  * (0, 0, 0) as a region the species does not use.
  */
 
-export type ItemType = 'skin' | 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket' | 'dino_ticket';
-export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: boolean }> = [
+export type ItemType = 'skin' | 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket'
+  | 'dino_box' | 'dino' | 'growth_bag' | 'food_box';
+export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: boolean; system?: boolean }> = [
   // unique: a player owns it once (a skin); a kind used up (a mutation…) may be owned several times.
   { key: 'skin', label: 'Skin dino', unique: true },
   { key: 'mutation', label: 'Mutation', unique: false },
@@ -34,8 +35,14 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
   { key: 'mutation_ticket', label: 'Phiếu đổi mutation', unique: false },
   { key: 'mutation_clear', label: 'Phiếu bỏ mutation', unique: false },
   { key: 'prime_ticket', label: 'Phiếu Prime', unique: false },
-  // Owner, 2026-10-05: every account gets one (starter.ts) — any dino into the garage.
-  { key: 'dino_ticket', label: 'Phiếu chọn dino', unique: false },
+  // Owner, 2026-10-05 (dino-box.ts): a box opens into a dino (its species and growth drawn — or the
+  // species picked — there and then); the dino, used, goes into the garage with the mutations picked.
+  { key: 'dino_box', label: 'Hộp dino', unique: false },
+  // system: only made by opening a box (each copy carries its own species and growth, Owned.dino).
+  { key: 'dino', label: 'Dino', unique: false, system: true },
+  // Used on the dino played now (mods/DinoGarage garage/admin.lua): growth, food.
+  { key: 'growth_bag', label: 'Túi tăng trưởng', unique: false },
+  { key: 'food_box', label: 'Hộp food', unique: false },
 ];
 
 /**
@@ -46,12 +53,20 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
  */
 export interface TicketData { maxRarity: Rarity }
 /**
- * A dino ticket (starter.ts): the player picks a species, its sex and the mutations of its four slots;
- * it goes into their garage with every prime task done and a growth drawn between growthMin and
- * growthMax. `quest`: quest mutations may be picked too.
+ * A dino box (dino-box.ts): opened, a dino item — its species drawn (`random`) or picked (`choose`),
+ * its growth drawn between growthMin and growthMax. `quest`: the dino may take quest mutations too.
+ * (Before 2026-10-05 the "Phiếu chọn dino", type dino_ticket: read as a `choose` box.)
  */
-export interface DinoTicketData { growthMin: number; growthMax: number; quest: boolean }
-export const DINO_TICKET_DEFAULT: DinoTicketData = { growthMin: 0.5, growthMax: 1, quest: false };
+export interface DinoBoxData { pick: 'random' | 'choose'; growthMin: number; growthMax: number; quest: boolean }
+export const DINO_BOX_DEFAULT: DinoBoxData = { pick: 'choose', growthMin: 0.5, growthMax: 1, quest: false };
+/** Growth bag: +amount on the dino played now, if it is below `below` (owner: +10 % under 60 %, 55 % → 65 %). */
+export interface GrowthBagData { amount: number; below: number }
+export const GROWTH_BAG_DEFAULT: GrowthBagData = { amount: 0.1, below: 0.6 };
+/** Food box: the food bar +amount of its max on the dino played now — food only, no nutrients. */
+export interface FoodBoxData { amount: number }
+export const FOOD_BOX_DEFAULT: FoodBoxData = { amount: 0.2 };
+/** What one dino item (a box opened) is: the species key ("tyrannosaurus"), its growth, quest mutations or not. */
+export interface OwnedDino { species: string; growth: number; quest: boolean }
 export type EmptyData = Record<string, never>;
 
 /**
@@ -102,11 +117,18 @@ export const RARITIES: ReadonlyArray<{ key: Rarity; label: string; pickable: boo
   { key: 'special', label: 'Đặc biệt', pickable: false },
 ];
 /** A quest mutation is always special; nothing else is (an item saved before the rule is read so too). */
-function withRarity(item: Item): Item {
+function withRarity(raw: Item): Item {
+  const item = legacy(raw);
   if (item.type === 'mutation_ticket') return item.rarity === item.data.maxRarity ? item : { ...item, rarity: item.data.maxRarity };
   const quest = item.type === 'mutation' && item.data.unlock;
   if (quest) return item.rarity === 'special' ? item : { ...item, rarity: 'special' };
   return item.rarity === 'special' ? { ...item, rarity: 'legendary' } : item;
+}
+/** An item saved under a type since renamed: the dino ticket is a box the player picks the species of. */
+function legacy(item: Item): Item {
+  const was = item as unknown as { type: string; data: Record<string, unknown> };
+  if (was.type !== 'dino_ticket') return item;
+  return { ...item, type: 'dino_box', data: { ...DINO_BOX_DEFAULT, ...was.data, pick: 'choose' } } as Item;
 }
 /** Rarities from the most common up (a ticket's maxRarity compares on this). */
 export const RARITY_ORDER: readonly Rarity[] = ['common', 'rare', 'epic', 'legendary', 'special'];
@@ -147,7 +169,10 @@ type TypedData =
   | { type: 'mutation_ticket'; data: TicketData }
   | { type: 'mutation_clear'; data: EmptyData }
   | { type: 'prime_ticket'; data: EmptyData }
-  | { type: 'dino_ticket'; data: DinoTicketData };
+  | { type: 'dino_box'; data: DinoBoxData }
+  | { type: 'dino'; data: EmptyData }
+  | { type: 'growth_bag'; data: GrowthBagData }
+  | { type: 'food_box'; data: FoodBoxData };
 export type Item = ItemBase & TypedData;
 type ItemDef = Pick<ItemBase, 'name' | 'rarity'> & TypedData;
 
@@ -160,6 +185,8 @@ export interface Owned {
   /** Who gave it (an admin's SteamID), or null (a script, a loot box). */
   by: string | null;
   note: string | null;
+  /** A dino item's own species and growth (only those). */
+  dino?: OwnedDino;
 }
 
 interface ItemsFile { items: Record<string, Item> }
@@ -253,26 +280,43 @@ export function validateMutationData(raw: unknown): MutationData {
   return { mutation: ref.name, diet: ref.diet, slot2: ref.kind === 'slot2', unlock: ref.kind === 'unlock' };
 }
 
-/** A dino ticket's data, checked: growth 25–100 % (min ≤ max), quest mutations or not. */
-export function validateDinoTicketData(raw: unknown): DinoTicketData {
+/** A dino box's data, checked: drawn or picked species, growth 25–100 % (min ≤ max), quest mutations or not. */
+export function validateDinoBoxData(raw: unknown): DinoBoxData {
   const d = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   const g = (v: unknown, def: number, what: string): number => {
     if (v === undefined) return def;
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0.25 || v > 1) throw new ValidationError(`${what} must be 0.25–1`);
     return Math.round(v * 100) / 100;
   };
-  const growthMin = g(d['growthMin'], DINO_TICKET_DEFAULT.growthMin, 'growthMin');
-  const growthMax = g(d['growthMax'], DINO_TICKET_DEFAULT.growthMax, 'growthMax');
+  const pick = d['pick'] ?? DINO_BOX_DEFAULT.pick;
+  if (pick !== 'random' && pick !== 'choose') throw new ValidationError('pick must be random or choose');
+  const growthMin = g(d['growthMin'], DINO_BOX_DEFAULT.growthMin, 'growthMin');
+  const growthMax = g(d['growthMax'], DINO_BOX_DEFAULT.growthMax, 'growthMax');
   if (growthMin > growthMax) throw new ValidationError('growthMin must not be above growthMax');
   if (d['quest'] !== undefined && typeof d['quest'] !== 'boolean') throw new ValidationError('quest must be true or false');
-  return { growthMin, growthMax, quest: d['quest'] === true };
+  return { pick, growthMin, growthMax, quest: d['quest'] === true };
+}
+
+/** A share (0–1) in steps of 1 %, between lo and hi, or its default. */
+function share(v: unknown, def: number, lo: number, hi: number, what: string): number {
+  if (v === undefined) return def;
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < lo || v > hi) throw new ValidationError(`${what} must be ${lo}–${hi}`);
+  return Math.round(v * 100) / 100;
+}
+export function validateGrowthBagData(raw: unknown): GrowthBagData {
+  const d = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  return { amount: share(d['amount'], GROWTH_BAG_DEFAULT.amount, 0.01, 0.5, 'amount'), below: share(d['below'], GROWTH_BAG_DEFAULT.below, 0.1, 1, 'below') };
+}
+export function validateFoodBoxData(raw: unknown): FoodBoxData {
+  const d = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  return { amount: share(d['amount'], FOOD_BOX_DEFAULT.amount, 0.01, 1, 'amount') };
 }
 
 /** The editable part of an item, checked: { type, name, rarity, data, retired? }. */
 export function validateItem(raw: unknown): ItemDef & { retired?: boolean } {
   if (typeof raw !== 'object' || raw === null) throw new ValidationError('item must be an object');
   const r = raw as Record<string, unknown>;
-  const type = r['type'] ?? 'skin';
+  const type = r['type'] === 'dino_ticket' ? 'dino_box' : r['type'] ?? 'skin';
   if (!ITEM_TYPES.some((t) => t.key === type)) throw new ValidationError('unknown item type');
   const name = typeof r['name'] === 'string' ? r['name'].trim() : '';
   if (name.length < 1 || name.length > 60) throw new ValidationError('name must be 1–60 characters');
@@ -296,7 +340,10 @@ export function validateItem(raw: unknown): ItemDef & { retired?: boolean } {
   }
   if (rarity === 'special') throw new ValidationError('Đặc biệt chỉ dành cho mutation nhiệm vụ');
   if (type === 'mutation_clear' || type === 'prime_ticket') return { type, name, rarity: rarity as Rarity, data: {}, ...extra };
-  if (type === 'dino_ticket') return { type, name, rarity: rarity as Rarity, data: validateDinoTicketData(r['data']), ...extra };
+  if (type === 'dino_box') return { type, name, rarity: rarity as Rarity, data: validateDinoBoxData(r['data']), ...extra };
+  if (type === 'dino') return { type, name, rarity: rarity as Rarity, data: {}, ...extra };
+  if (type === 'growth_bag') return { type, name, rarity: rarity as Rarity, data: validateGrowthBagData(r['data']), ...extra };
+  if (type === 'food_box') return { type, name, rarity: rarity as Rarity, data: validateFoodBoxData(r['data']), ...extra };
   return { type: 'skin', name, rarity: rarity as Rarity, data: validateSkinData(r['data']), ...extra };
 }
 
@@ -334,6 +381,7 @@ export async function getItem(id: string): Promise<Item | null> {
 
 export function createItem(raw: unknown, by: string | null): Promise<Item> {
   const def = validateItem(raw);
+  if (ITEM_TYPES.find((t) => t.key === def.type)?.system) return Promise.reject(new ValidationError('loại vật phẩm này do hệ thống tạo (mở hộp dino)'));
   return serialized(async () => {
     const file = await readJson<ItemsFile>(itemsPath(), { items: {} });
     file.items ??= {};
@@ -348,7 +396,7 @@ export function createItem(raw: unknown, by: string | null): Promise<Item> {
   });
 }
 
-/** An item kept under a fixed id (the starter ticket, starter.ts): made once when missing, else left as the admin set it. */
+/** An item kept under a fixed id (the starter box, the dino item): made once when missing, else left as the admin set it. */
 export function ensureItem(id: string, raw: unknown): Promise<Item> {
   if (!/^[\w-]{1,40}$/.test(id)) return Promise.reject(new ValidationError('bad item id'));
   const def = validateItem(raw);
@@ -371,8 +419,9 @@ export function updateItem(id: string, raw: unknown): Promise<{ before: Item; af
   const def = validateItem(raw);
   return serialized(async () => {
     const file = await readJson<ItemsFile>(itemsPath(), { items: {} });
-    const before = file.items?.[id];
-    if (before === undefined) throw new ValidationError('no such item');
+    const had = file.items?.[id];
+    if (had === undefined) throw new ValidationError('no such item');
+    const before = legacy(had);
     if (def.type !== before.type) throw new ValidationError('an item keeps its type');
     const after = { ...before, name: def.name, rarity: def.rarity, data: def.data,
       retired: def.retired ?? before.retired, updatedAt: Math.floor(Date.now() / 1000) } as Item;
@@ -415,6 +464,7 @@ export function grantItem(steamId: string, itemId: string, source: ItemSource, b
     const item = await getItem(itemId);
     if (item === null) throw new ValidationError('no such item');
     if (item.retired && source === 'admin') throw new ValidationError('vật phẩm này đã ngừng phát hành');
+    if (item.type === 'dino') throw new ValidationError('vật phẩm dino chỉ có khi mở hộp dino — hãy tặng hộp dino');
     const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
     file.players ??= {};
     const list = file.players[steamId] ?? [];
@@ -472,6 +522,37 @@ export function consumeOwned(steamId: string, uid: string): Promise<boolean> {
     else file.players[steamId] = kept;
     await writeJson(inventoryPath(), file);
     return true;
+  });
+}
+
+/**
+ * A box opened: the box's copy out, a dino item in, in one write (two opens at once: one dino).
+ * Null when the copy is not there (used already).
+ */
+export function openOwned(steamId: string, uid: string, intoItemId: string, dino: OwnedDino, note: string): Promise<{ box: Owned; dino: Owned } | null> {
+  return serialized(async () => {
+    const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
+    file.players ??= {};
+    const list = file.players[steamId] ?? [];
+    const box = list.find((o) => o.uid === uid);
+    if (box === undefined) return null;
+    const out: Owned = { uid: newId('own'), itemId: intoItemId, source: box.source, grantedAt: Math.floor(Date.now() / 1000), by: box.by,
+      note: note.slice(0, 200), dino };
+    file.players[steamId] = [...list.filter((o) => o.uid !== uid), out];
+    await writeJson(inventoryPath(), file);
+    return { box, dino: out };
+  });
+}
+
+/** A copy taken out given back as it was (its uid and data), when what it was used for failed. */
+export function putBackOwned(steamId: string, owned: Owned): Promise<void> {
+  return serialized(async () => {
+    const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
+    file.players ??= {};
+    const list = file.players[steamId] ?? [];
+    if (list.some((o) => o.uid === owned.uid)) return;
+    file.players[steamId] = [...list, owned];
+    await writeJson(inventoryPath(), file);
   });
 }
 

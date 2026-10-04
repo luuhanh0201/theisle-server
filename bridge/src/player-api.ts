@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
 import { isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
-import { claimStarter, dinoOptions, starterOffered, useDinoTicket } from './starter.js';
+import { claimStarter, starterOffered } from './starter.js';
+import { boxOptions, dinoItemOptions, openDinoBox, speciesOptions, useDinoItem } from './dino-box.js';
 import { audit } from './audit.js';
 import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
 import { claimQuest, questsOf, type QuestProgress } from './quests.js';
@@ -321,8 +322,8 @@ function send(res: ServerResponse, status: number, body: unknown): void {
 type UseCtx = { store: Store; prison?: Prison };
 type Answer = { status: number; body: Record<string, unknown> };
 /** The items used on the dino a player plays now (a skin is worn instead: /player-api/skin). */
-type DinoItem = Extract<Item, { type: 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket' }>;
-const isDinoItem = (i: Item): i is DinoItem => i.type !== 'skin';
+type DinoItem = Extract<Item, { type: 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket' | 'growth_bag' | 'food_box' }>;
+const isDinoItem = (i: Item): i is DinoItem => i.type !== 'skin' && i.type !== 'dino_box' && i.type !== 'dino';
 const pct = (g: number): string => `${Math.round(g * 100)}%`;
 
 /** The checks before a copy is used or previewed: theirs, usable on a dino, not in prison, in game with a dino (a mutation: its diet). */
@@ -399,6 +400,8 @@ export async function previewMutationUse(ctx: UseCtx, who: string, uid: string):
  *   mutation_ticket   `pick` (one of its pool) into `slot`
  *   mutation_clear    `slot` emptied
  *   prime_ticket      a grown dino made prime
+ *   growth_bag        +its amount on a dino below its `below` (55 % → 65 %)
+ *   food_box          the food bar +its amount (food only, no nutrients)
  * (`upgrade`: the switched-off duplicate +1 đời, mutation-tiers.ts.) The
  * player's own POST /player-api/items/…/use, and the panel's "Dùng lên dino"
  * (server.ts): the same checks for both. 202 { id }: queued; the copy goes
@@ -414,6 +417,13 @@ export async function startMutationUse(ctx: UseCtx, who: string, uid: string, sl
     if (p.prime?.prime === true) return { status: 409, body: { error: 'Dino này đã là prime.' } };
     if (typeof p.growth !== 'number' || p.growth < 0.999) return { status: 409, body: { error: `Phiếu Prime cần dino 100% (đang ${typeof p.growth === 'number' ? pct(p.growth) : '?'}).` } };
     use = { mode: 'prime' };
+  } else if (item.type === 'growth_bag') {
+    const { amount, below } = item.data;
+    if (typeof p.growth !== 'number') return { status: 409, body: { error: 'Chưa đọc được tăng trưởng của dino — thử lại sau vài giây.' } };
+    if (p.growth + 1e-6 >= below) return { status: 409, body: { error: `Túi tăng trưởng chỉ dùng cho dino dưới ${pct(below)} (dino đang ${pct(p.growth)}).` } };
+    use = { mode: 'growth', amount, below };
+  } else if (item.type === 'food_box') {
+    use = { mode: 'food', amount: item.data.amount };
   } else if (item.type === 'mutation_clear') {
     if (slot !== 1 && slot !== 2 && slot !== 3 && slot !== 4) return { status: 400, body: { error: 'Chọn ô mutation 1–4.' } };
     if (!p.mutations?.[`Slot${slot}`]) return { status: 409, body: { error: `Ô ${slot} đang trống.` } };
@@ -540,32 +550,43 @@ export async function handlePlayerApi(
     send(res, r.status, r.body);
     return true;
   }
-  // The dino ticket (starter.ts): what can be picked, then the pick — the dino into their garage.
-  const dinoOpts = /^\/player-api\/items\/(\d{17})\/dino-options$/.exec(path);
-  if (dinoOpts !== null) {
+  // The dino boxes (dino-box.ts): a box opened into a dino item; the dino item used — into their garage.
+  const optsRoute = /^\/player-api\/items\/(\d{17})\/(box|dino)-options\/([\w-]{1,40})$/.exec(path);
+  if (optsRoute !== null) {
     if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
-    const owned = (await inventoryOf(dinoOpts[1] as string));
-    const ticket = (await Promise.all(owned.map((o) => getItem(o.itemId)))).find((i) => i?.type === 'dino_ticket');
-    if (!ticket || ticket.type !== 'dino_ticket') { send(res, 404, { error: 'Bạn không có phiếu chọn dino.' }); return true; }
-    const catalog = ctx.store.catalog.merge(await readGarageCatalog()).list();
-    send(res, 200, { ...dinoOptions(catalog, ticket.data), growthMin: ticket.data.growthMin, growthMax: ticket.data.growthMax });
-    return true;
-  }
-  const dinoUse = /^\/player-api\/items\/(\d{17})\/dino$/.exec(path);
-  if (dinoUse !== null) {
-    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
-    const who = dinoUse[1] as string;
-    const body = await readSmallJson(req);
-    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
-    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Phiếu chọn dino đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    const [, who, kind, uid] = optsRoute as unknown as [string, string, 'box' | 'dino', string];
     try {
       const catalog = ctx.store.catalog.merge(await readGarageCatalog()).list();
-      const out = await useDinoTicket(who, typeof body['uid'] === 'string' ? body['uid'] : '', body, catalog);
-      const name = ctx.store.player(who)?.player.name ?? null;
-      await audit({ action: 'starter dino', ok: true,
-        detail: `${name ?? who} nhận ${out.species} ${Math.round(out.growth * 100)}% ${out.female ? 'cái' : 'đực'} vào gara slot ${out.slot} (phiếu chọn dino; prime đủ nhiệm vụ; mutation ${Object.values(out.mutations).join(', ') || 'không'})` },
-      { steamId: who, name });
-      send(res, 200, out);
+      send(res, 200, kind === 'box' ? await boxOptions(who, uid, catalog) : await dinoItemOptions(who, uid, catalog));
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
+  const boxRoute = /^\/player-api\/items\/(\d{17})\/(open|dino)$/.exec(path);
+  if (boxRoute !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const who = boxRoute[1] as string;
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Hộp dino đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    const uid = typeof body['uid'] === 'string' ? body['uid'] : '';
+    const name = ctx.store.player(who)?.player.name ?? null;
+    try {
+      const catalog = ctx.store.catalog.merge(await readGarageCatalog()).list();
+      if (boxRoute[2] === 'open') {
+        const out = await openDinoBox(who, uid, body, catalog);
+        await audit({ action: 'dino box open', ok: true,
+          detail: `${name ?? who} mở hộp dino: ${out.label} ${Math.round(out.growth * 100)}% (${out.drawn ? 'loài ngẫu nhiên' : 'tự chọn loài'}) vào túi đồ` }, { steamId: who, name });
+        send(res, 200, out);
+      } else {
+        const out = await useDinoItem(who, uid, body, catalog);
+        await audit({ action: 'dino item use', ok: true,
+          detail: `${name ?? who} nhận ${out.species} ${Math.round(out.growth * 100)}% ${out.female ? 'cái' : 'đực'} vào gara slot ${out.slot} (vật phẩm dino; prime đủ nhiệm vụ; mutation ${Object.values(out.mutations).join(', ') || 'không'})` },
+        { steamId: who, name });
+        send(res, 200, out);
+      }
     } catch (err) {
       if (err instanceof ValidationError) send(res, 400, { error: err.message });
       else throw err;
@@ -716,7 +737,7 @@ export async function handlePlayerApi(
       // Colours kept for the next times, by species (kept-skins.ts).
       keptSkins: await keptSkinsOf(steamId),
       // Their items (items.ts): what each is; a skin with the colours the game gets when they wear it.
-      items: await ownedView(steamId, detail?.player.online ? detail.player.species ?? null : null),
+      items: await ownedView(steamId, detail?.player.online ? detail.player.species ?? null : null, ctx.store.catalog.list()),
       // The bag's tab: open to them, or they own something (the starter ticket — shown while being tried).
       bag: (await bagOpen(steamId)) || (await inventoryOf(steamId)).length > 0,
       // The starter gift (starter.ts), while it waits on the home page.
@@ -808,22 +829,28 @@ export async function handlePlayerApi(
  * colours it paints and its species; a mutation, what it does and, when they
  * play a dino now, why that dino cannot take it (null: it can).
  */
-async function ownedView(steamId: string, playing: string | null): Promise<unknown[]> {
+async function ownedView(steamId: string, playing: string | null, catalog: Array<{ species: string; classPath: string | null }>): Promise<unknown[]> {
   const owned = await inventoryOf(steamId);
   if (owned.length === 0) return [];
+  // A dino item's species, as the game names it ("Tyrannosaurus").
+  const labels = new Map(speciesOptions(catalog).map((x) => [x.key, x.label]));
+  const labelOf = (key: string): string => labels.get(key) ?? key.charAt(0).toUpperCase() + key.slice(1);
   const byId = new Map((await listItems()).map((i) => [i.id, i]));
   // A feature still being tried (svip.ts): its items are shown, marked, and cannot be used yet.
   const open = { bag: await earlyAccess('bag', steamId), starter: await earlyAccess('starter', steamId) };
   return owned.flatMap((o) => {
     const i = byId.get(o.itemId);
     if (i === undefined) return [];
-    const locked = !(i.type === 'dino_ticket' ? open.starter : open.bag);
+    const locked = !(i.type === 'dino_box' || i.type === 'dino' ? open.starter : open.bag);
     return [{ uid: o.uid, id: i.id, type: i.type, name: i.name, rarity: i.rarity, source: o.source, grantedAt: o.grantedAt, note: o.note,
       ...(locked ? { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' } : {}),
       ...(i.type === 'skin' ? { species: i.data.species, skin: resolveSkin(i.data) }
         : i.type === 'mutation' ? { mutation: i.data.mutation, diet: i.data.diet, slot2: i.data.slot2, description: findReference(i.data.mutation)?.description ?? null,
           refusal: playing === null ? null : dietRefusal(playing, i.data.diet) }
           : i.type === 'mutation_ticket' ? { maxRarity: i.data.maxRarity }
-            : i.type === 'dino_ticket' ? { growthMin: i.data.growthMin, growthMax: i.data.growthMax } : {}) }];
+            : i.type === 'dino_box' ? { pick: i.data.pick, growthMin: i.data.growthMin, growthMax: i.data.growthMax }
+              : i.type === 'dino' && o.dino ? { dino: { ...o.dino, label: labelOf(o.dino.species) } }
+                : i.type === 'growth_bag' ? { amount: i.data.amount, below: i.data.below }
+                  : i.type === 'food_box' ? { amount: i.data.amount } : {}) }];
   });
 }

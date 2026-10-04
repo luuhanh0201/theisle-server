@@ -19,7 +19,7 @@ import { adminIds } from './panel-auth.js';
 /** The features being tried. A new one: add it here, check earlyAccess() where it is used. */
 export const EARLY_FEATURES = [
   { key: 'bag', label: 'Túi đồ: dùng vật phẩm (mutation, phiếu) trên dino' },
-  { key: 'starter', label: 'Phiếu chọn dino tân thủ (mỗi tài khoản 1 phiếu): dùng để nhận dino' },
+  { key: 'starter', label: 'Hộp dino (quà tân thủ mỗi tài khoản 1 hộp, hộp ngẫu nhiên / tự chọn): mở hộp, dùng Dino để nhận vào gara' },
   { key: 'amber', label: 'Hổ phách + điểm danh hàng ngày (nhận thưởng khi chơi đủ phút trong ngày)' },
   { key: 'quests', label: 'Nhiệm vụ hằng ngày / tuần (thưởng Hổ phách)' },
 ] as const;

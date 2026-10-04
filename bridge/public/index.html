@@ -2866,7 +2866,7 @@
 
     <!-- Vật phẩm -->
     <div data-view="items" hidden>
-      <div class="page-head"><div><h1>Vật phẩm</h1><p>Vật phẩm của server: admin tạo, đặt tên, tặng vào kho của người chơi. Hiện có <b>Skin dino</b>, <b>Mutation</b> và <b>Phiếu</b> (đổi / bỏ mutation, Prime) — người chơi dùng từ Túi đồ lên dino đang chơi; sau này thêm quay hòm, cửa hàng.</p></div></div>
+      <div class="page-head"><div><h1>Vật phẩm</h1><p>Vật phẩm của server: admin tạo, đặt tên, tặng vào kho của người chơi. Hiện có <b>Skin dino</b>, <b>Mutation</b> và <b>Phiếu &amp; hộp</b> (đổi / bỏ mutation, Prime, hộp dino, túi tăng trưởng, hộp food) — người chơi dùng từ Túi đồ; sau này thêm quay hòm, cửa hàng.</p></div></div>
       <nav class="subtabs" data-subnav="items" aria-label="Loại vật phẩm"></nav>
       <div data-sub="items:skins">
         <div class="itm-layout">
@@ -2920,24 +2920,31 @@
       </div>
       <div data-sub="items:tickets" hidden>
         <div class="itm-layout">
-          <section class="card"><div class="card-head"><h2>Phiếu</h2><span class="sub" id="tkt-count"></span>
-              <button type="button" class="btn-soft sm" id="tkt-new" style="margin-left:auto">+ Phiếu mới</button></div>
+          <section class="card"><div class="card-head"><h2>Phiếu &amp; hộp</h2><span class="sub" id="tkt-count"></span>
+              <button type="button" class="btn-soft sm" id="tkt-new" style="margin-left:auto">+ Tạo mới</button></div>
             <div class="card-body"><div class="itm-list" id="tkt-list"></div></div></section>
           <section class="card"><div class="card-head"><h2 id="tkt-title">Phiếu mới</h2><span class="sub" id="tkt-sub"></span></div>
             <div class="card-body" id="tkt-body" style="display:flex;flex-direction:column;gap:16px">
               <div class="itm-fields">
-                <label>Loại phiếu<select id="tkt-type">
+                <label>Loại<select id="tkt-type">
                   <option value="mutation_ticket">🎟️ Phiếu đổi mutation</option>
                   <option value="mutation_clear">🧹 Phiếu bỏ mutation</option>
                   <option value="prime_ticket">👑 Phiếu Prime</option>
-                  <option value="dino_ticket">🦖 Phiếu chọn dino</option></select></label>
-                <label>Tên phiếu<input id="tkt-name" maxlength="60" placeholder="vd: Phiếu đổi mutation Hiếm"></label>
+                  <option value="dino_box">🎁 Hộp dino</option>
+                  <option value="growth_bag">🌱 Túi tăng trưởng</option>
+                  <option value="food_box">🍖 Hộp food</option></select></label>
+                <label>Tên<input id="tkt-name" maxlength="60" placeholder="vd: Phiếu đổi mutation Hiếm"></label>
                 <label id="tkt-rarity-l">Độ hiếm<select id="tkt-rarity"></select></label>
               </div>
               <div class="itm-fields" id="tkt-dino" hidden>
+                <label>Loài<select id="tkt-pick"><option value="random">Ngẫu nhiên (roll khi mở)</option><option value="choose">Người chơi tự chọn khi mở</option></select></label>
                 <label>Tăng trưởng thấp nhất (%)<input id="tkt-gmin" type="number" min="25" max="100" step="1"></label>
                 <label>Tăng trưởng cao nhất (%)<input id="tkt-gmax" type="number" min="25" max="100" step="1"></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input id="tkt-quest" type="checkbox"> Cho chọn cả mutation nhiệm vụ</label>
+              </div>
+              <div class="itm-fields" id="tkt-boost" hidden>
+                <label id="tkt-amt-l">Cộng thêm (%)<input id="tkt-amt" type="number" min="1" max="100" step="1"></label>
+                <label id="tkt-below-l">Chỉ dùng khi dino dưới (%)<input id="tkt-below" type="number" min="10" max="100" step="1"></label>
               </div>
               <div class="step-hint" id="tkt-info"></div>
               <div class="row" style="justify-content:flex-end">
@@ -3096,7 +3103,7 @@
         </div>
       </section>
       <section class="card" style="margin-top:16px">
-        <div class="card-head"><h2>🟠 Hổ phách</h2><span class="sub" id="qs-sum"></span></div>
+        <div class="card-head"><h2>Hổ phách <img src="/amber.svg" alt="" aria-hidden="true" style="width:1.3em;height:1.3em;vertical-align:-0.3em"></h2><span class="sub" id="qs-sum"></span></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
           <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end" id="qs-adjust">
             <div class="cfg-field" style="flex:1 1 200px"><label for="qs-id">SteamID</label><input id="qs-id" type="text" inputmode="numeric" maxlength="17" class="mono" placeholder="7656119…" autocomplete="off"></div>
@@ -4506,12 +4513,17 @@ $('mit-owners').addEventListener('click', async (e) => {
 });
 
 // --- Vật phẩm → Phiếu (items.ts mutation_ticket / mutation_clear / prime_ticket; used in the player's Túi đồ) ---
-const TKT_TYPES = { mutation_ticket: '🎟️ Phiếu đổi mutation', mutation_clear: '🧹 Phiếu bỏ mutation', prime_ticket: '👑 Phiếu Prime', dino_ticket: '🦖 Phiếu chọn dino' };
+const TKT_TYPES = { mutation_ticket: '🎟️ Phiếu đổi mutation', mutation_clear: '🧹 Phiếu bỏ mutation', prime_ticket: '👑 Phiếu Prime',
+  dino_box: '🎁 Hộp dino', growth_bag: '🌱 Túi tăng trưởng', food_box: '🍖 Hộp food' };
+/** A new item's data, by type (items.ts defaults). */
+const TKT_DATA = { dino_box: () => ({ pick: 'random', growthMin: 0.5, growthMax: 1, quest: false }), growth_bag: () => ({ amount: 0.1, below: 0.6 }), food_box: () => ({ amount: 0.2 }) };
 const TKT_INFO = {
   mutation_ticket: 'Người chơi tự chọn một mutation khi dùng: mọi mutation còn trong game, đúng chế độ ăn của loài. Phiếu <b>Đặc biệt</b> đổi được cả mutation nhiệm vụ; độ hiếm khác chỉ để hiển thị. Chỉ vào ô đã mở theo tăng trưởng như game (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%).',
   mutation_clear: 'Bỏ mutation ở một ô (1–4) để người chơi chọn lại trong game.',
   prime_ticket: 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện, chỉ số prime sau vài giây). Dùng cho trường hợp lỡ prime.',
-  dino_ticket: 'Người chơi chọn <b>1 loài bất kỳ</b>, giới tính và mutation 4 ô chính (đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới. Phiếu tân thủ <span class="mono">starter_dino</span> được phát tự động: mỗi tài khoản 1 phiếu (người cũ và người mới). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b>.',
+  dino_box: 'Người chơi <b>mở hộp</b>: loài <b>ngẫu nhiên</b> (có hiệu ứng roll) hoặc <b>tự chọn</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới — ra <b>vật phẩm Dino</b> trong túi. Dùng vật phẩm Dino: chọn giới tính và mutation (ô mở theo tăng trưởng như game: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%; đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>. Quà tân thủ <span class="mono">starter_box</span> (hộp tự chọn) được nhận ở trang chủ, mỗi tài khoản 1 lần. Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Hộp dino).',
+  growth_bag: 'Dùng lên dino <b>đang chơi</b>: cộng thêm tăng trưởng, chỉ khi dino dưới mốc (vd +10% khi dưới 60%: 55% → 65%). Chỉ số giữ theo tỉ lệ. Vật phẩm chỉ mất khi game xác nhận.',
+  food_box: 'Dùng lên dino <b>đang chơi</b>: thanh thức ăn cộng thêm (tối đa đầy) — chống đói, <b>không tăng chất dinh dưỡng</b>. Dino đang no: vật phẩm vẫn còn.',
 };
 const tkt = { sel: null, draft: null, saved: null };
 const tktDirty = () => tkt.draft !== null && JSON.stringify(tkt.draft) !== tkt.saved;
@@ -4561,12 +4573,22 @@ function tktFields() {
   for (const o of $('tkt-rarity').options) o.hidden = !ticket && o.value === 'special';
   $('tkt-rarity').value = ticket ? d.data.maxRarity : d.rarity;
   $('tkt-info').innerHTML = TKT_INFO[d.type];
-  $('tkt-dino').hidden = d.type !== 'dino_ticket';
-  if (d.type === 'dino_ticket') {
+  $('tkt-dino').hidden = d.type !== 'dino_box';
+  if (d.type === 'dino_box') {
+    $('tkt-pick').value = d.data.pick ?? 'choose';
+    $('tkt-pick').disabled = !can('items.edit');
     $('tkt-gmin').value = String(Math.round(d.data.growthMin * 100));
     $('tkt-gmax').value = String(Math.round(d.data.growthMax * 100));
     $('tkt-quest').checked = d.data.quest === true;
     $('tkt-gmin').disabled = $('tkt-gmax').disabled = $('tkt-quest').disabled = !can('items.edit');
+  }
+  $('tkt-boost').hidden = d.type !== 'growth_bag' && d.type !== 'food_box';
+  if (!$('tkt-boost').hidden) {
+    $('tkt-amt-l').firstChild.textContent = d.type === 'growth_bag' ? 'Tăng trưởng cộng thêm (%)' : 'Thức ăn cộng thêm (%)';
+    $('tkt-amt').value = String(Math.round(d.data.amount * 100));
+    $('tkt-below-l').hidden = d.type !== 'growth_bag';
+    if (d.type === 'growth_bag') $('tkt-below').value = String(Math.round(d.data.below * 100));
+    $('tkt-amt').disabled = $('tkt-below').disabled = !can('items.edit');
   }
   $('tkt-dirty').textContent = tktDirty() ? '● Có thay đổi chưa lưu' : tkt.sel ? 'Đã lưu' : '';
 }
@@ -4576,9 +4598,12 @@ $('tkt-body').addEventListener('input', (e) => {
   const t = e.target, d = tkt.draft;
   if (!d || t.closest('#tkt-own-wrap')) return;
   if (t.id === 'tkt-name') d.name = t.value;
-  else if (t.id === 'tkt-type') { d.type = t.value; d.data = t.value === 'mutation_ticket' ? { maxRarity: d.rarity === 'special' ? 'special' : d.rarity } : t.value === 'dino_ticket' ? { growthMin: 0.5, growthMax: 1, quest: false } : {}; if (t.value !== 'mutation_ticket' && d.rarity === 'special') d.rarity = 'legendary'; }
+  else if (t.id === 'tkt-type') { d.type = t.value; d.data = t.value === 'mutation_ticket' ? { maxRarity: d.rarity === 'special' ? 'special' : d.rarity } : TKT_DATA[t.value]?.() ?? {}; if (t.value !== 'mutation_ticket' && d.rarity === 'special') d.rarity = 'legendary'; }
   else if (t.id === 'tkt-gmin' || t.id === 'tkt-gmax') { const v = Number(t.value); if (Number.isFinite(v)) d.data[t.id === 'tkt-gmin' ? 'growthMin' : 'growthMax'] = Math.min(1, Math.max(0.25, v / 100)); }
   else if (t.id === 'tkt-quest') d.data.quest = t.checked;
+  else if (t.id === 'tkt-pick') d.data.pick = t.value;
+  else if (t.id === 'tkt-amt') { const v = Number(t.value); if (Number.isFinite(v)) d.data.amount = Math.min(d.type === 'growth_bag' ? 0.5 : 1, Math.max(0.01, v / 100)); }
+  else if (t.id === 'tkt-below') { const v = Number(t.value); if (Number.isFinite(v)) d.data.below = Math.min(1, Math.max(0.1, v / 100)); }
   else if (t.id === 'tkt-rarity') { if (d.type === 'mutation_ticket') d.data.maxRarity = t.value; d.rarity = t.value; }
   tktFields();
 });
@@ -9333,7 +9358,7 @@ function renderQuests() {
   if (!d) return;
   const edit = can('economy.edit');
   $('qs-min').value = String(d.checkinMinutes);
-  const bonus = [{ id: '', name: '— Không tặng —' }, ...qs.items.filter((i) => !i.retired), ...(d.checkinBonusItem && !qs.items.some((i) => i.id === d.checkinBonusItem) ? [{ id: d.checkinBonusItem, name: d.checkinBonusItem }] : [])];
+  const bonus = [{ id: '', name: '— Không tặng —' }, ...qs.items.filter((i) => !i.retired && i.type !== 'dino'), ...(d.checkinBonusItem && !qs.items.some((i) => i.id === d.checkinBonusItem) ? [{ id: d.checkinBonusItem, name: d.checkinBonusItem }] : [])];
   $('qs-bonus').innerHTML = bonus.map((i) => `<option value="${esc(i.id)}"${(d.checkinBonusItem ?? '') === i.id ? ' selected' : ''}>${esc(i.name)}</option>`).join('');
   if (!$('qs-days').children.length) {
     $('qs-days').innerHTML = d.checkinRewards.map((_, i) => `<label>Ngày ${i + 1} (${esc(cur)})<input type="number" min="0" max="100000" step="1" data-qs-day="${i}"></label>`).join('');
@@ -11108,7 +11133,7 @@ const SUBS = {
   players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban'], ['prison', 'Nhà tù']],
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
-  items: [['skins', 'Skin dino'], ['mutations', 'Mutation'], ['tickets', 'Phiếu']],
+  items: [['skins', 'Skin dino'], ['mutations', 'Mutation'], ['tickets', 'Phiếu & hộp']],
   mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['voice', 'Voice gần'], ['messages', 'Thông báo']],
   admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin'], ['discord', 'Discord']],
   members: [['admins', 'Admin'], ['perms', 'Phân quyền'], ['whitelist', 'Whitelist'], ['vips', 'VIP'], ['svip', 'SVip']],

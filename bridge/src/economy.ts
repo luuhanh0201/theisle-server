@@ -70,7 +70,12 @@ export async function readEconomySettings(): Promise<EconomySettings> {
 
 export async function saveEconomySettings(raw: unknown): Promise<EconomySettings> {
   const s = validateEconomySettings(raw);
-  if (s.checkinBonusItem !== null && (await getItem(s.checkinBonusItem)) === null) throw new ValidationError('no such item');
+  if (s.checkinBonusItem !== null) {
+    const it = await getItem(s.checkinBonusItem);
+    if (it === null) throw new ValidationError('no such item');
+    // A dino item is only made by opening a box (dino-box.ts): give the box.
+    if (it.type === 'dino') throw new ValidationError('vật phẩm Dino chỉ có khi mở hộp — chọn một hộp dino');
+  }
   await writeJson(settingsPath(), s);
   return s;
 }
