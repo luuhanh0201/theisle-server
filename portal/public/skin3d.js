@@ -378,7 +378,15 @@ function speciesOf(raw) {
 // went on drawing every frame while the owner played — in software WebGL (GPU off: SwiftShader),
 // 8 threads at 60 % each, the game's FPS from 40-60 down to 20-30 (2026-10-04). Not focused in the
 // launcher = nobody looks at it: nothing drawn (the same test as app.js's background redraw).
-const offScreen = () => document.hidden || (Boolean(window.isleLauncher) && !document.hasFocus());
+// Shown from the tray, GNOME may leave the focus where it was: the mouse over the page (moved, clicked,
+// scrolled, a key) in the last POINTER_MS counts as looked at too. In the game the mouse is the game's.
+const POINTER_MS = 10000;
+let lastPointer = 0;
+for (const ev of ['pointermove', 'pointerdown', 'wheel', 'keydown']) {
+  window.addEventListener(ev, () => { lastPointer = Date.now(); }, { passive: true, capture: true });
+}
+const offScreen = () => document.hidden
+  || (Boolean(window.isleLauncher) && !document.hasFocus() && Date.now() - lastPointer > POINTER_MS);
 // Software WebGL (no GPU: SwiftShader, llvmpipe) draws on the CPU: at most this many frames a second.
 const SOFTWARE_FPS = 24;
 function softwareGL(renderer) {
@@ -412,6 +420,9 @@ function frameGate(renderer) {
 function create(host, opts = {}) {
   let renderer = null, scene = null, camera = null, controls = null, mixer = null, clock = null;
   let current = null, lastSkin = null, female = false, loading = 0, sizeW = 0, sizeH = 0;
+  // Frames owed to a change (a model, a skin): drawn even off screen, so a garage slot or the skin
+  // editor shows the dino still while the launcher is not focused (only the turning waits).
+  let owed = 0;
   const note = (t) => { if (opts.note) opts.note.textContent = t ?? ''; };
 
   function ensureRenderer() {
@@ -440,8 +451,10 @@ function create(host, opts = {}) {
     const due = frameGate(renderer);
     const loop = (now = 0) => {
       requestAnimationFrame(loop);
-      if (!host.isConnected || host.hidden || (offScreen() && !opts.alwaysRender) || !host.offsetParent) return;   // not shown: nothing to draw
-      if (!due(now)) return;
+      if (!host.isConnected || host.hidden || !host.offsetParent) return;   // not shown: nothing to draw
+      const idle = offScreen() && !opts.alwaysRender;
+      if (idle ? owed <= 0 : !due(now)) return;
+      if (owed > 0) owed--;
       // Follow the box's size here: the tab can be hidden when the model loads (0 × 0).
       const w = host.clientWidth, h = host.clientHeight;
       if (w > 0 && h > 0 && (w !== sizeW || h !== sizeH)) {
@@ -458,6 +471,7 @@ function create(host, opts = {}) {
   }
 
   function paint() {
+    owed = 2;
     if (!current || !lastSkin) return;
     const lightOf = (id) => (lastSkin.light?.[id] ?? 1) * (lastSkin.brightness ?? 1);
     const regionOf = (id) => (female && id === 'MaleDisplay' ? 'Body' : id);
