@@ -44,6 +44,7 @@ test('the catalog is what the mods send: every Msg call has its key, with the sa
   }
   for (const m of MESSAGES) {
     if (m.group === 'server' || m.group === 'corpses' || m.group === 'ai' || m.group === 'ban' || m.group === 'prime' || m.group === 'prison') continue;
+    if (m.fromBridge === true) continue;   // the bridge sends it (garage-guard.ts)
     assert.ok(found.has(m.key), `${m.key} is in messages.ts but no mod sends it`);
   }
 });

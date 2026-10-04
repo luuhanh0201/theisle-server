@@ -405,9 +405,10 @@ export async function restoreFromHistory(steamId: string, file: string, slot: st
  * Move a slot file to deleted/<steam>__<slot>__<unix>.json.
  * Returns the new name, or null when there was no file to move.
  */
-async function moveToTrash(steamId: string, slot: string): Promise<string | null> {
+async function moveToTrash(steamId: string, slot: string, label?: string): Promise<string | null> {
   await mkdir(join(config.garageRoot, 'deleted'), { recursive: true });
-  const trashedAs = `${steamId}__${slot}__${Math.floor(Date.now() / 1000)}.json`;
+  const now = Math.floor(Date.now() / 1000);
+  const trashedAs = `${steamId}__${slot}__${label === undefined ? '' : `${label}-`}${now}.json`;
   try {
     await rename(slotPath(steamId, slot), join(config.garageRoot, 'deleted', trashedAs));
     return trashedAs;
@@ -415,6 +416,70 @@ async function moveToTrash(steamId: string, slot: string): Promise<string | null
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
+}
+
+/**
+ * The history file a redeem moved this slot to (deleted/<steam>__<slot>__redeemed-<unix>.json), taken out
+ * within `before` seconds before `t` — the closest one — or null (put back since, or never there).
+ */
+export async function findRedeemHistory(steamId: string, slot: string, t: number, before = 120): Promise<string | null> {
+  assertSteamId(steamId);
+  assertSlot(slot);
+  let names: string[];
+  try {
+    names = await readdir(join(config.garageRoot, 'deleted'));
+  } catch {
+    return null;
+  }
+  const prefix = `${steamId}__${slot}__redeemed-`;
+  let best: { name: string; at: number } | null = null;
+  for (const name of names) {
+    if (!name.startsWith(prefix) || !name.endsWith('.json')) continue;
+    const at = Number(name.slice(prefix.length, -'.json'.length));
+    if (!Number.isInteger(at) || at > t || at < t - before) continue;
+    if (best === null || at > best.at) best = { name, at };
+  }
+  return best?.name ?? null;
+}
+
+/** Whether a garage history file is (still) there: the mod renames it back when it puts a slot back. */
+export async function historyExists(file: string): Promise<boolean> {
+  if (!/^\d{17}__[\w-]{1,40}__[a-z]+-\d{9,11}\.json$/.test(file)) return false;
+  return (await readJson(join(config.garageRoot, 'deleted', file))) !== null;
+}
+
+/** The lowest free slot number of a player ("1", "2", …), as the mod numbers them. */
+export async function nextFreeSlot(steamId: string): Promise<string> {
+  assertSteamId(steamId);
+  const used = (await readIndex()).players[steamId] ?? {};
+  for (let n = 1; ; n++) {
+    const slot = String(n);
+    if (used[slot] === undefined && (await readJson(slotPath(steamId, slot))) === null) return slot;
+  }
+}
+
+/**
+ * Undo a store the game never saved (garage-guard.ts): the slot goes to deleted/<…>__crashundo-<unix>.json,
+ * only while it still holds that dino (same species, same growth) — never another one stored there since.
+ * Returns the history name, or null when the slot no longer holds it.
+ */
+export async function undoStore(steamId: string, slot: string, classPath: string, growth: number): Promise<string | null> {
+  assertSteamId(steamId);
+  assertSlot(slot);
+  const state = await readJson<Record<string, unknown>>(slotPath(steamId, slot));
+  if (state === null || state['classPath'] !== classPath || typeof state['growth'] !== 'number'
+    || Math.abs(state['growth'] - growth) > 1e-6) return null;
+  const trashedAs = await moveToTrash(steamId, slot, 'crashundo');
+  if (trashedAs === null) return null;
+  const index = await readIndex();
+  const players = index.players[steamId];
+  if (players?.[slot] !== undefined) {
+    delete players[slot];
+    if (Object.keys(players).length === 0) delete index.players[steamId];
+    index.schema = INDEX_SCHEMA;
+    await writeJsonAtomic(indexPath(), index);
+  }
+  return trashedAs;
 }
 
 /**

@@ -40,7 +40,8 @@ import { readLive } from './gameini.js';
 import { DdosWatch, SAMPLE_S, defaultIface, endText, parseNetDev, readDdos, startText } from './ddos.js';
 import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
-import { auditListeners } from './audit.js';
+import { audit, auditListeners } from './audit.js';
+import { loadGuard, runGuardAction, saveGuard, speciesName, type GuardAction } from './garage-guard.js';
 import { Prison } from './prison.js';
 import { KillScenes } from './kill-scene.js';
 import { GameAdminLog } from './game-admin-log.js';
@@ -126,9 +127,37 @@ await prison.load();
 const killScenes = new KillScenes(join(config.dataDir, 'kill-scenes.ndjson'), Math.floor(Date.now() / 1000));
 await killScenes.load();
 await prison.syncModFiles().catch((error: unknown) => console.error('[prison] cannot write the mod files:', error));
+// The garage across a crash or a restart (garage-guard.ts): a dino taken out or stored while
+// the server went down, before the game saved it, is put back / the store undone. One at a time.
+const garageGuard = await loadGuard();
+let guardQueue: Promise<void> = Promise.resolve();
+const settleGuard = (a: GuardAction): void => {
+  guardQueue = guardQueue.then(async () => {
+    try {
+      const out = await runGuardAction(a);
+      garageGuard.resolve(a.key);
+      await saveGuard(garageGuard, garageGuard.since);
+      if (out.done === null) {
+        console.info(`[garage-guard] ${a.key}: nothing to change (${a.why})`);
+        return;
+      }
+      await audit({ action: 'garage guard', detail: out.done, ok: true }, { steamId: null, name: 'garage-guard' });
+      const key = a.kind === 'put-back' ? 'garage.guard.putBack' : 'garage.guard.undoStore';
+      const text = renderMessage(key, { species: speciesName(a.species), slot: out.slot ?? a.slot });
+      if (text !== null && rcon.enabled) await rcon.directMessage(a.steamId, text).catch(() => undefined);
+    } catch (error) {
+      // Not resolved: read again at the next bridge start, tried again.
+      console.error(`[garage-guard] ${a.key} failed:`, error);
+      await audit({ action: 'garage guard', detail: `${a.kind} ${a.steamId} slot ${a.slot}`, ok: false, error: String(error) },
+        { steamId: null, name: 'garage-guard' });
+    }
+  });
+};
+
 const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {
     store.apply(event);
+    for (const action of garageGuard.onEvent(event)) settleGuard(action);
     void notifier.handle(event);
     void primeNotifier.handle(event);
     void skinRelog.handle(event);

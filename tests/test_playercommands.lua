@@ -169,66 +169,17 @@ do
 end
 
 say("")
-say("-- 12. chat commands kept out of the chat others see --")
+say("-- 12. chat lines are never rewritten (hiding them crashed the server, 2026-10-04) --")
 do
-  H.advance(16000)                                     -- the hiding hook comes after every mod's own
+  H.advance(60000)
   local hooks = H.hooks[CHAT]
-  check("a second chat hook, registered after the commands' one", #hooks == 2, tostring(#hooks))
-  local FLAG = "Mods/PlayerCommands/Saved/hide-chat.trying"
-  local function settable(text)
-    local p = { value = H.ftext(text) }
-    p.get = function() return p.value end
-    p.set = function(_, v) p.value = v end
-    return p
-  end
-  local word = function(p) return p.value:ToString() end
-  local text, raw = settable("!unstuck"), settable("!unstuck")
-  hooks[2](H.param(ctrl), text, H.param(ctrl), H.param(0), raw)
-  check("a command's two texts blanked for this receiver", word(text) == "" and word(raw) == "", word(text) .. "|" .. word(raw))
-  check("the first blanking leaves the safety flag", io.open(FLAG, "r") ~= nil)
-  H.advance(21000)
-  check("…removed once the server went on", io.open(FLAG, "r") == nil)
-  local chatLine, chatRaw = settable("ai đi săn không"), settable("ai đi săn không")
-  hooks[2](H.param(ctrl), chatLine, H.param(ctrl), H.param(0), chatRaw)
-  check("ordinary chat untouched", word(chatLine) == "ai đi săn không" and word(chatRaw) == "ai đi săn không")
-  local bang = settable("!!! cứu")
-  hooks[2](H.param(ctrl), bang, H.param(ctrl), H.param(0), settable("!!! cứu"))
-  check("'!!!' (no command word) is chat, untouched", word(bang) == "!!! cứu")
-  -- The live server's UE4SS gave no plain FText function (2026-10-04): the hiding
-  -- stayed off without a word. A callable FText object, or none at all and the
-  -- engine's KismetTextLibrary, still blank the command.
-  local realFText, realFind = _G.FText, _G.StaticFindObject
-  _G.FText = setmetatable({}, { __call = function(_, t) return H.ftext(t) end })
-  local viaObj = settable("!food")
-  hooks[2](H.param(ctrl), viaObj, H.param(ctrl), H.param(0), settable("!food"))
-  check("FText as a callable object: still blanked", word(viaObj) == "", word(viaObj))
-  _G.FText = nil
-  _G.StaticFindObject = function(path)
-    if path ~= "/Script/Engine.Default__KismetTextLibrary" then return nil end
-    return { IsValid = function() return true end, Conv_StringToText = function(_, t) return H.ftext(t) end }
-  end
-  local viaLib = settable("!status")
-  hooks[2](H.param(ctrl), viaLib, H.param(ctrl), H.param(0), settable("!status"))
-  check("no FText: blanked through KismetTextLibrary", word(viaLib) == "", word(viaLib))
-  _G.StaticFindObject = function() return nil end
-  local none = settable("!slay")
-  hooks[2](H.param(ctrl), none, H.param(ctrl), H.param(0), settable("!slay"))
-  check("neither: the line is left as it was (no error)", word(none) == "!slay", word(none))
-  _G.FText, _G.StaticFindObject = realFText, realFind
-  -- The bug itself: loaded where FText is no plain function, the hiding hook was
-  -- never registered and nothing said so.
-  _G.FText = setmetatable({}, { __call = function(_, t) return H.ftext(t) end })
-  local before = #H.hooks[CHAT]
-  dofile(RUN .. "/Mods/PlayerCommands/Scripts/main.lua")
-  H.advance(16000)
-  local after = H.hooks[CHAT]
-  check("loaded with a callable FText object: the hiding hook still registered",
-    #after == before + 1, before .. " -> " .. #after)
-  local again = settable("!unstuck")
-  after[#after](H.param(ctrl), again, H.param(ctrl), H.param(0), settable("!unstuck"))
-  check("…and it blanks", word(again) == "", word(again))
-  H.advance(21000)
-  _G.FText = realFText
+  check("one chat hook only (the commands'), none added later", #hooks == 1, tostring(#hooks))
+  local p = { value = H.ftext("!unstuck") }
+  p.get = function() return p.value end
+  p.set = function(_, v) p.value = v end
+  hooks[1](H.param(ctrl), p, H.param(ctrl), H.param(0))
+  check("a command's text is left as it is", p.value:ToString() == "!unstuck", p.value:ToString())
+  check("no hide flag file", io.open("Mods/PlayerCommands/Saved/hide-chat.trying", "r") == nil)
 end
 
 say("")

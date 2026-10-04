@@ -36,6 +36,8 @@ export interface MessageDef {
    * then only the suggested wording. An admin's text = on, none = off.
    */
   offByDefault?: boolean;
+  /** Sent by the bridge itself although its group is a mod's (the garage guard's): not written for the mods. */
+  fromBridge?: boolean;
 }
 
 const REASONS: Array<[string, string, string]> = [
@@ -108,6 +110,8 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'garage.noLocation', group: 'garage', label: 'Không đọc được vị trí', default: 'Không đọc được vị trí dino. Thử lại.', vars: [] },
   { key: 'garage.prison', group: 'garage', label: 'Đang ở tù: không cất / lấy được', default: 'Bạn đang ở tù: không dùng được gara.', vars: [] },
   { key: 'garage.useWeb', group: 'garage', label: 'Gõ !store / !redeem trong game', default: 'Gara giờ dùng trên trang web của server (mục Gara): cất và lấy dino ở đó.', vars: [] },
+  { key: 'garage.guard.putBack', group: 'garage', label: 'Server sập / khởi động lại khi đang lấy dino: dino được trả lại gara', default: 'Server vừa sập khi bạn lấy {species} ra nên game chưa kịp lưu: dino đã được trả lại vào gara (slot {slot}).', vars: ['species', 'slot'], fromBridge: true },
+  { key: 'garage.guard.undoStore', group: 'garage', label: 'Server sập / khởi động lại trước khi game lưu lần cất: lần cất không tính', default: 'Server vừa sập trước khi game lưu lần cất {species}: dino vẫn ở với bạn, lần cất đó không tính (slot {slot} trống).', vars: ['species', 'slot'], fromBridge: true },
   // --- garage: taking out ---
   { key: 'redeem.restoring', group: 'redeem', label: 'Đang lấy ra (tại chỗ)', default: "Restoring '{slot}'. Hold still for a few seconds.", vars: ['slot'] },
   { key: 'redeem.restoringStored', group: 'redeem', label: 'Đang lấy ra (về chỗ đã cất)', default: "Restoring '{slot}' at the spot you stored it. Hold still for a few seconds.", vars: ['slot'] },
@@ -321,7 +325,7 @@ async function writeJson(path: string, value: unknown): Promise<void> {
 export function modTexts(s: MessagesSettings): { texts: Record<string, string> } {
   const texts: Record<string, string> = {};
   for (const def of MESSAGES) {
-    if (BRIDGE_GROUPS.has(def.group)) continue;
+    if (BRIDGE_GROUPS.has(def.group) || def.fromBridge === true) continue;
     const own = s.texts[def.key];
     if (own !== undefined) texts[def.key] = own;
     else if (def.offByDefault) texts[def.key] = '';

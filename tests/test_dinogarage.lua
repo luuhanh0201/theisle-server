@@ -179,6 +179,17 @@ useCtrl(freshCtrl)
 send("redeem", { slot = "1" })
 H.advance(10)
 check("restore deferred, nothing applied yet", H.countCalls("SetGrowth") == 0)
+do
+  -- Before anything is restored: what the bridge needs to put the slot back after a crash.
+  local starts = eventsOf("garage_redeem_start")
+  local s = starts[#starts]
+  local file = s and s.file or ""
+  check("garage_redeem_start emitted at once: slot, species, growth, the history file",
+    s ~= nil and s.steamId == STEAM and s.slot == "1" and type(s.species) == "string" and s.growth == 0.9
+    and file:match("^" .. STEAM .. "__1__redeemed%-%d+%.json$") ~= nil, s and json.encode(s))
+  check("…and that history file is where the slot went", io.open("Mods/DinoGarage/Saved/deleted/" .. file, "r") ~= nil, file)
+  check("…before any garage_redeem result", #eventsOf("garage_redeem") == 0, tostring(#eventsOf("garage_redeem")))
+end
 H.advance(3100)    -- the 3s restore delay
 check("growth applied in first pass", H.countCalls("SetGrowth") == 1)
 check("vitals applied in first pass", H.countCalls("SetHealth") >= 1)

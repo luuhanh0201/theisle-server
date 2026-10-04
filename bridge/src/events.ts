@@ -255,6 +255,19 @@ export interface GarageRedeemEvent extends BaseEvent {
   ok: boolean;
 }
 
+/**
+ * A slot just taken out of the garage for a redeem, before anything is restored (DinoGarage):
+ * `file` is where it went (deleted/<steam>__<slot>__redeemed-<unix>.json). Read by garage-guard.ts.
+ */
+export interface GarageRedeemStartEvent extends BaseEvent {
+  type: 'garage_redeem_start';
+  steamId: string;
+  slot: string;
+  file: string;
+  species: string;
+  growth: number;
+}
+
 /** Outcome of an admin "remove current dino" command (DinoGarage inbox). */
 export interface AdminKillEvent extends BaseEvent {
   type: 'admin_kill';
@@ -336,7 +349,8 @@ export type GameEvent =
   | PortalCommandEvent
   | GarageStoreResultEvent
   | GarageStoreEvent
-  | GarageRedeemEvent;
+  | GarageRedeemEvent
+  | GarageRedeemStartEvent;
 
 const isString = (v: unknown): v is string => typeof v === 'string';
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -370,6 +384,8 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   garage_store_result: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean',
   garage_store: (e) => isString(e['steamId']) && isString(e['slot']),
   garage_redeem: (e) => isString(e['steamId']) && isString(e['slot']),
+  garage_redeem_start: (e) => isString(e['steamId']) && isString(e['slot']) && isString(e['file'])
+    && isString(e['species']) && isNumber(e['growth']),
   prison_jailed: (e) => isString(e['steamId']) && isString(e['id']),
   prison_escape: (e) => isString(e['steamId']) && isString(e['id']),
   prison_returned: (e) => isString(e['steamId']) && isString(e['id']),

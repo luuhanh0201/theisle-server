@@ -458,6 +458,18 @@ local function doRedeem(ctrl, steamId, slot, where, say)
         return false
     end
     state = taken
+    -- Written before anything is restored: the slot is out of the garage now and the game
+    -- has not saved the restored dino yet. A crash from here on (Dev-Lucii's T-Rex,
+    -- 2026-10-04: the server went down 34 s after a redeem) left it nowhere; the bridge
+    -- (garage-guard.ts) puts the slot back from this history file unless the game kept it.
+    Events.emit({
+        type    = "garage_redeem_start",
+        steamId = steamId,
+        slot    = slot,
+        file    = token.to:match("[^/]+$"),
+        species = state.classPath,
+        growth  = state.growth,
+    })
 
     local toStored = wantsStoredSpot(where)
     if toStored and type(state.location) ~= "table" then
