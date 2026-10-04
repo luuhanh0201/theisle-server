@@ -1,3 +1,4 @@
+import { QUEST_KINDS, readQuestSettings, saveQuestSettings, type QuestProgress } from './quests.js';
 import { CURRENCY, credit, economySummary, readEconomySettings, readLedger, saveEconomySettings, type PlayDays } from './economy.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -228,6 +229,8 @@ export interface Ctx {
   traffic?: Traffic;
   /** Minutes in game per day (economy.ts): the daily check-in. */
   playDays?: PlayDays;
+  /** The daily quests' progress (quests.ts). */
+  questProgress?: QuestProgress;
   /** An admin's rights in the game were switched on / off: the AdminGuard mod's file is written again. */
   onAdminsChanged?: () => Promise<void>;
 }
@@ -307,7 +310,8 @@ async function handle(
   if (await handlePlayerApi(req, res, path, { store, serverPhase: async () => (await power.status()).phase, live: readLiveState,
     serverInfo: async () => publicServerInfo((await readLive()).effective),
     ...(ctx.voice ? { voice: ctx.voice } : {}), ...(ctx.prison ? { prison: ctx.prison } : {}),
-    ...(ctx.traffic ? { traffic: ctx.traffic } : {}), ...(ctx.playDays ? { playDays: ctx.playDays } : {}) })) return;
+    ...(ctx.traffic ? { traffic: ctx.traffic } : {}), ...(ctx.playDays ? { playDays: ctx.playDays } : {}),
+    ...(ctx.questProgress ? { questProgress: ctx.questProgress } : {}) })) return;
 
   // Everything else is the admin panel: allowed address + admin login (panel-gate.ts).
   const login = await panelGate(req, res, url, (name) => sendFile(res, name), (id) => store.player(id)?.player.name ?? null);
@@ -559,6 +563,10 @@ async function handlePanel(
       summary: { ...sum, top: sum.top.map((x) => ({ ...x, name: ctx.store.player(x.steamId)?.player.name ?? null })) } });
     return;
   }
+  if (path === '/api/quests' && req.method === 'GET') {
+    sendJson(res, 200, { settings: await readQuestSettings(), kinds: QUEST_KINDS });
+    return;
+  }
   if (path === '/api/economy/ledger' && req.method === 'GET') {
     const id = url.searchParams.get('steamId');
     const lines = await readLedger(id !== null && /^\d{17}$/.test(id) ? id : null, 300);
@@ -617,6 +625,7 @@ async function handlePanel(
       (path === '/api/panel-access' && req.method === 'PUT') ||
       (path === '/api/svip' && req.method === 'PUT') ||
       (path === '/api/economy/settings' && req.method === 'PUT') ||
+      (path === '/api/quests' && req.method === 'PUT') ||
       (path === '/api/economy/adjust' && req.method === 'POST') ||
       (path === '/api/ai-zones' && req.method === 'PUT') ||
       (path === '/api/ai-drop' && req.method === 'POST') ||
@@ -1043,6 +1052,15 @@ async function handlePanel(
       const saved = await saveEconomySettings(await readJsonBody(req));
       await audit({ action: 'economy settings', detail: describeChanges({ ...before, checkinRewards: before.checkinRewards.join('/') },
         { ...saved, checkinRewards: saved.checkinRewards.join('/') }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { settings: saved });
+      return;
+    }
+    if (path === '/api/quests') {
+      const before = await readQuestSettings();
+      const saved = await saveQuestSettings(await readJsonBody(req));
+      const sum = (q: typeof saved): Record<string, string> => ({ perDay: String(q.perDay),
+        ...Object.fromEntries(q.defs.map((d) => [d.id, `${d.enabled ? '' : '(tắt) '}${d.label} ${d.target} → ${d.reward}`])) });
+      await audit({ action: 'quests settings', detail: describeChanges(sum(before), sum(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, { settings: saved });
       return;
     }

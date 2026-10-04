@@ -45,6 +45,8 @@ export class BridgeClient {
   heatmap() { return this.get('/player-api/heatmap'); }
   /** The daily check-in (bridge economy.ts). */
   checkin(steamId: string) { return this.post(`/player-api/checkin/${steamId}`, {}); }
+  /** A quest's reward (bridge quests.ts). */
+  claimQuest(steamId: string, quest: unknown) { return this.post(`/player-api/quests/${steamId}/claim`, { quest }); }
   /** The dino ticket (bridge starter.ts): what can be picked, and the pick. */
   dinoOptions(steamId: string) { return this.get(`/player-api/items/${steamId}/dino-options`); }
   useDino(steamId: string, body: { uid: unknown; species: unknown; female: unknown; mutations: unknown }) {

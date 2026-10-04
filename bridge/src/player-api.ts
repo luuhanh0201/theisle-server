@@ -8,6 +8,7 @@ import { isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, Val
 import { dinoOptions, useDinoTicket } from './starter.js';
 import { audit } from './audit.js';
 import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
+import { claimQuest, questsOf, type QuestProgress } from './quests.js';
 import { SLOT_MIN_GROWTH, queueMutationUse, queuePlayerCommand, type MutationUse, queueSkin, SKIN_CHANNEL_MAX, TooSoonError } from './commands.js';
 import { type Item, type Rarity, dietRefusal, getItem, inventoryOf, isPendingUse, listItems, markPendingUse, resolveSkin, speciesKey } from './items.js';
 import { keptSkinsOf, setKeptSkin } from './kept-skins.js';
@@ -458,6 +459,7 @@ export async function handlePlayerApi(
     prison?: Prison;
     traffic?: Traffic;
     playDays?: PlayDays;
+    questProgress?: QuestProgress;
   },
 ): Promise<boolean> {
   if (!path.startsWith('/player-api/')) return false;
@@ -566,6 +568,24 @@ export async function handlePlayerApi(
       send(res, 200, out);
     } catch (err) {
       if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
+  // A quest's reward (quests.ts): done, not taken yet.
+  const questClaim = /^\/player-api\/quests\/(\d{17})\/claim$/.exec(path);
+  if (questClaim !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const who = questClaim[1] as string;
+    const body = await readSmallJson(req);
+    if (body === null || typeof body['quest'] !== 'string') { send(res, 400, { error: 'expected { quest }' }); return true; }
+    if (!(await earlyAccess('quests', who))) { send(res, 403, { error: 'Nhiệm vụ đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (!ctx.questProgress) { send(res, 503, { error: 'quests unavailable' }); return true; }
+    try {
+      const p = ctx.store.player(who)?.player;
+      send(res, 200, await claimQuest(who, body['quest'], p?.online ? p.species ?? null : null, ctx.questProgress));
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 409, { error: err.message });
       else throw err;
     }
     return true;
@@ -691,6 +711,11 @@ export async function handlePlayerApi(
         checkin: await checkinStatus(steamId, ctx.playDays?.minutesToday(steamId, Math.floor(Date.now() / 1000)) ?? 0),
         ...((await earlyAccess('amber', steamId)) ? {} : { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' }),
       },
+      // The daily / weekly quests (quests.ts): given at the first ask of the day, for the dino played then.
+      quests: ctx.questProgress ? {
+        ...(await questsOf(steamId, detail?.player.online ? detail.player.species ?? null : null, ctx.questProgress)),
+        ...((await earlyAccess('quests', steamId)) ? {} : { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' }),
+      } : null,
       bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
       prison: ctx.prison?.playerView(steamId) ?? null,

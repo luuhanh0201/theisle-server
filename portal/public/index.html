@@ -2423,7 +2423,6 @@
   /* The home page's rewards (app.js renderHomeRewards): the starter ticket, the daily check-in. */
   .home-rewards { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
   .home-rewards .hr-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .home-rewards .hr-play { padding: 12px 22px; font-size: 15px; font-weight: 800; }
   .home-rewards .hr-amber { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
     background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.45); color: #fcd34d; font-weight: 800; font-size: 14px; }
   .home-rewards .hr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
@@ -2438,6 +2437,16 @@
   .home-rewards .hr-day b { display: block; font-size: 13px; color: var(--text); }
   .home-rewards .hr-day.done { border-color: rgba(52,211,153,.5); background: rgba(16,185,129,.12); }
   .home-rewards .hr-day.today { border-color: #f59e0b; background: rgba(245,158,11,.14); box-shadow: 0 0 0 1px rgba(245,158,11,.4); }
+  .home-rewards .hr-quests { border-color: rgba(96,165,250,.45); }
+  .home-rewards .hq-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .home-rewards .hq-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border); }
+  .home-rewards .hq-item.done { border-color: rgba(52,211,153,.5); }
+  .home-rewards .hq-item.claimed { opacity: .65; }
+  .home-rewards .hq-item b { font-size: 13.5px; }
+  .home-rewards .hq-item .hq-meta { font-size: 12px; color: var(--text-muted); }
+  .home-rewards .hq-item .hr-progress { grid-column: 1 / -1; height: 6px; }
+  .home-rewards .hq-item .btn { padding: 6px 12px; font-size: 12.5px; }
+  .home-rewards .hq-week { font-size: 12px; font-weight: 800; color: #93c5fd; letter-spacing: .04em; text-transform: uppercase; }
   .home-rewards .hr-progress { height: 8px; border-radius: 99px; background: var(--bg-surface); overflow: hidden; }
   .home-rewards .hr-progress i { display: block; height: 100%; background: linear-gradient(90deg, #10b981, #f59e0b); }
   .home-rewards .hr-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -4298,15 +4307,15 @@
            ==================================================================== -->
       <section id="page-home" class="page-content">
         <!-- The rewards first, where they are seen (owner, 2026-10-05): the starter ticket, the daily
-             check-in, the Hổ phách balance, and the way into the server (app.js renderHomeRewards). -->
+             check-in and quests, the Hổ phách balance (app.js renderHomeRewards). -->
         <div class="home-rewards" id="home-rewards">
           <div class="hr-bar">
-            <button type="button" class="btn btn-emerald hr-play" id="home-play">▶ Vào server Xóm Gáy</button>
             <span class="hr-amber" id="home-amber" hidden></span>
           </div>
           <div class="hr-grid">
             <section class="hr-card hr-starter" id="home-starter" hidden></section>
             <section class="hr-card hr-checkin" id="home-checkin" hidden></section>
+            <section class="hr-card hr-quests" id="home-quests" hidden></section>
           </div>
         </div>
 

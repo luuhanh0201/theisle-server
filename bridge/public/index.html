@@ -305,6 +305,14 @@
   .itm-3d .sex button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(148,163,184,.35); background: rgba(2,6,23,.6); color: #cbd5e1; cursor: pointer; }
   .itm-3d .sex button.on { background: var(--accent); color: #fff; border-color: transparent; }
   .itm-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .qq-list { display: flex; flex-direction: column; gap: 8px; }
+  .qq-row { display: grid; grid-template-columns: auto minmax(180px, 2.4fr) minmax(150px, 1.6fr) repeat(2, minmax(80px, .8fr)) repeat(2, minmax(110px, 1fr)) auto; gap: 8px; align-items: end;
+    padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+  .qq-row.off { opacity: .6; }
+  .qq-row label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); font-weight: 650; min-width: 0; }
+  .qq-row .qq-on { flex-direction: row; align-items: center; padding-bottom: 8px; }
+  @media (max-width: 1100px) { .qq-row { grid-template-columns: auto repeat(2, minmax(0, 1fr)) auto; } .qq-row .qq-wide { grid-column: span 2; } }
+  @media (max-width: 560px) { .qq-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .qq-row .qq-wide { grid-column: 1 / -1; } }
   .qs-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
   .qs-days label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; min-width: 0; }
   @media (max-width: 700px) { .qs-days { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -3105,8 +3113,14 @@
         <div class="card-body" id="qs-ledger"></div>
       </section>
       <section class="card" style="margin-top:16px">
-        <div class="card-head"><h2>🎯 Nhiệm vụ hằng ngày</h2><span class="sub">phần tiếp theo</span></div>
-        <div class="card-body"><p class="step-hint" style="margin:0">Mỗi ngày 3 nhiệm vụ ngẫu nhiên theo loài (chơi, sống sót, săn, lớn lên, đi đường, khám phá, prime) và nhiệm vụ tuần — danh sách, mức thưởng sửa ở đây.</p></div>
+        <div class="card-head"><h2>🎯 Nhiệm vụ hằng ngày / tuần</h2><span class="sub">mỗi người nhận ngẫu nhiên N nhiệm vụ ngày (đúng chế độ ăn của loài đang chơi) + 1 nhiệm vụ tuần; nhận thưởng trên trang chủ</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+          <div class="itm-fields" style="max-width:360px"><label>Số nhiệm vụ ngày mỗi người<input id="qq-per" type="number" min="0" max="10" step="1"></label></div>
+          <p class="step-hint" style="margin:0">Tiến độ đo từ game: <b>phút chơi</b>, <b>sống liên tục không chết</b> (phút), <b>hạ dino</b> theo luật bảng kill (admin không tính), <b>lớn thêm</b> (%, không tính nhảy do gara / admin), <b>đi đường</b> (km, không tính dịch chuyển), <b>ghé địa danh / hồ có tên</b> (trong 100 m), <b>nhiệm vụ prime</b> xong. Đổi danh sách: người đã nhận nhiệm vụ hôm nay giữ nguyên tới hết ngày.</p>
+          <div id="qq-list" class="qq-list"></div>
+          <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap"><span class="muted" id="qq-dirty" style="margin-right:auto;font-size:12.5px"></span>
+            <button type="button" class="btn-ghost" id="qq-add">+ Thêm nhiệm vụ</button><button type="button" class="btn" id="qq-save">Lưu nhiệm vụ</button></div>
+        </div>
       </section>
     </div>
 
@@ -9242,8 +9256,68 @@ $('sv-features').addEventListener('click', (e) => {
 // --- Nhiệm vụ: Hổ phách and the daily check-in (bridge economy.ts) ---
 const qs = { data: null, draft: null, saved: null, items: [], ledger: [] };
 const qsDirty = () => qs.draft !== null && JSON.stringify(qs.draft) !== qs.saved;
+const qq = { draft: null, saved: null, kinds: {} };
+const qqDirty = () => qq.draft !== null && JSON.stringify(qq.draft) !== qq.saved;
+const QQ_DIET = { all: 'Mọi loài', carnivore: 'Ăn thịt', herbivore: 'Ăn cỏ' };
+const QQ_PERIOD = { day: 'Ngày', week: 'Tuần' };
+function renderQq() {
+  const d = qq.draft;
+  if (!d) return;
+  const edit = can('economy.edit');
+  $('qq-per').value = String(d.perDay);
+  $('qq-per').disabled = !edit;
+  const opt = (map, cur) => Object.entries(map).map(([k, v]) => `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(v)}</option>`).join('');
+  const kinds = Object.fromEntries(Object.entries(qq.kinds).map(([k, v]) => [k, `${v.label} (${v.unit})`]));
+  $('qq-list').innerHTML = d.defs.map((q, i) => `<div class="qq-row${q.enabled ? '' : ' off'}" data-qq="${i}">
+      <label class="qq-on" title="Bật / tắt"><input type="checkbox" data-qq-f="enabled"${q.enabled ? ' checked' : ''}${edit ? '' : ' disabled'}></label>
+      <label class="qq-wide">Tên hiện cho người chơi<input type="text" maxlength="80" data-qq-f="label" value="${esc(q.label)}"${edit ? '' : ' disabled'}></label>
+      <label class="qq-wide">Loại<select data-qq-f="kind"${edit ? '' : ' disabled'}>${opt(kinds, q.kind)}</select></label>
+      <label>Mục tiêu (${esc(qq.kinds[q.kind]?.unit ?? '')})<input type="number" min="0.1" max="100000" step="any" data-qq-f="target" value="${q.target}"${edit ? '' : ' disabled'}></label>
+      <label>Thưởng<input type="number" min="0" max="100000" step="1" data-qq-f="reward" value="${q.reward}"${edit ? '' : ' disabled'}></label>
+      <label>Dành cho<select data-qq-f="diet"${edit ? '' : ' disabled'}>${opt(QQ_DIET, q.diet)}</select></label>
+      <label>Theo<select data-qq-f="period"${edit ? '' : ' disabled'}>${opt(QQ_PERIOD, q.period)}</select></label>
+      ${edit ? `<button type="button" class="btn-ghost sm" data-qq-del="${i}" title="Xoá nhiệm vụ" style="color:var(--kill,#ef4444)">Xoá</button>` : '<span></span>'}
+    </div>`).join('') || '<p class="step-hint" style="margin:0">Chưa có nhiệm vụ nào.</p>';
+  $('qq-add').hidden = $('qq-save').hidden = !edit;
+  $('qq-dirty').textContent = qqDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu';
+}
+const qqField = (e) => {
+  const row = e.target.closest('[data-qq]'), f = e.target.dataset.qqF;
+  if (!row || !f || !qq.draft) return;
+  const q = qq.draft.defs[Number(row.dataset.qq)];
+  if (f === 'enabled') { q.enabled = e.target.checked; row.classList.toggle('off', !q.enabled); }
+  else if (f === 'target' || f === 'reward') q[f] = Number(e.target.value);
+  else q[f] = e.target.value;
+  if (f === 'kind' && e.type === 'change') renderQq();     // its unit
+  $('qq-dirty').textContent = qqDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu';
+};
+$('qq-list').addEventListener('input', qqField);
+$('qq-list').addEventListener('change', qqField);
+$('qq-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-qq-del]');
+  if (!b || !qq.draft) return;
+  qq.draft.defs.splice(Number(b.dataset.qqDel), 1);
+  renderQq();
+});
+$('qq-per').addEventListener('input', (e) => { if (qq.draft) { qq.draft.perDay = Math.max(0, Math.min(10, Math.round(Number(e.target.value) || 0))); $('qq-dirty').textContent = qqDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu'; } });
+$('qq-add').addEventListener('click', () => {
+  if (!qq.draft) return;
+  let n = qq.draft.defs.length + 1;
+  while (qq.draft.defs.some((q) => q.id === `q${n}`)) n += 1;
+  qq.draft.defs.push({ id: `q${n}`, kind: 'play', label: 'Chơi 30 phút', target: 30, reward: 30, diet: 'all', period: 'day', enabled: true });
+  renderQq();
+});
+$('qq-save').addEventListener('click', () => withToken('lưu nhiệm vụ', async (token) => {
+  const r = await adminFetch('/api/quests', 'PUT', token, qq.draft);
+  qq.draft = structuredClone(r.settings); qq.saved = JSON.stringify(qq.draft);
+  renderQq();
+  toast('Đã lưu nhiệm vụ.');
+}));
 async function refreshQuests(force = false) {
-  const [eco, items] = await Promise.all([getJson('/api/economy'), can('items.view') ? getJson('/api/items').catch(() => null) : null]);
+  const [eco, items, quests] = await Promise.all([getJson('/api/economy'), can('items.view') ? getJson('/api/items').catch(() => null) : null, getJson('/api/quests')]);
+  qq.kinds = quests.kinds;
+  if (force || !qqDirty()) { qq.draft = structuredClone(quests.settings); qq.saved = JSON.stringify(qq.draft); }
+  renderQq();
   qs.data = eco;
   qs.items = items?.items ?? [];
   if (force || !qsDirty()) { qs.draft = structuredClone(eco.settings); qs.saved = JSON.stringify(qs.draft); }
@@ -9272,13 +9346,13 @@ function renderQuests() {
   const s = qs.data.summary;
   $('qs-sum').textContent = `${s.players} người đang có · tổng ${s.total.toLocaleString('vi-VN')} ${cur}`;
   $('qs-top').innerHTML = s.top.length === 0 ? '<p class="step-hint" style="margin:0">Chưa ai có Hổ phách.</p>'
-    : `<table class="audit-table"><thead><tr><th>Nhiều nhất</th><th>SteamID</th><th style="text-align:right">${esc(cur)}</th></tr></thead><tbody>${s.top.map((x) =>
-      `<tr><td>${x.name ? who(x.steamId, x.name) : '<span class="muted">?</span>'}</td><td class="mono">${esc(x.steamId)}</td><td style="text-align:right"><b>${x.balance.toLocaleString('vi-VN')}</b></td></tr>`).join('')}</tbody></table>`;
+    : `<div style="overflow-x:auto"><table class="audit-table"><thead><tr><th>Nhiều nhất</th><th>SteamID</th><th style="text-align:right">${esc(cur)}</th></tr></thead><tbody>${s.top.map((x) =>
+      `<tr><td>${x.name ? who(x.steamId, x.name) : '<span class="muted">?</span>'}</td><td class="mono">${esc(x.steamId)}</td><td style="text-align:right"><b>${x.balance.toLocaleString('vi-VN')}</b></td></tr>`).join('')}</tbody></table></div>`;
   $('qs-ledger').innerHTML = qs.ledger.length === 0 ? '<p class="step-hint" style="margin:0">Chưa có giao dịch.</p>'
-    : `<table class="audit-table"><thead><tr><th>Lúc</th><th>Người chơi</th><th style="text-align:right">Thay đổi</th><th style="text-align:right">Còn</th><th>Lý do</th><th>Bởi</th></tr></thead><tbody>${qs.ledger.map((l) =>
-      `<tr><td class="muted">${dateTime(l.t)}</td><td>${l.name ? who(l.steamId, l.name) : `<span class="mono">${esc(l.steamId)}</span>`}</td>
+    : `<div style="overflow-x:auto"><table class="audit-table"><thead><tr><th>Lúc</th><th>Người chơi</th><th style="text-align:right">Thay đổi</th><th style="text-align:right">Còn</th><th>Lý do</th><th>Bởi</th></tr></thead><tbody>${qs.ledger.map((l) =>
+      `<tr><td class="muted" style="white-space:nowrap">${new Date(l.t * 1000).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td><td>${l.name ? who(l.steamId, l.name) : `<span class="mono">${esc(l.steamId)}</span>`}</td>
         <td style="text-align:right;color:${l.delta > 0 ? 'var(--grow,#10b981)' : 'var(--kill,#ef4444)'}"><b>${l.delta > 0 ? '+' : ''}${l.delta.toLocaleString('vi-VN')}</b></td>
-        <td style="text-align:right">${l.balance.toLocaleString('vi-VN')}</td><td>${esc(l.reason)}</td><td class="muted">${esc(l.by ?? 'hệ thống')}</td></tr>`).join('')}</tbody></table>`;
+        <td style="text-align:right">${l.balance.toLocaleString('vi-VN')}</td><td>${esc(l.reason)}</td><td class="muted">${esc(l.by ?? 'hệ thống')}</td></tr>`).join('')}</tbody></table></div>`;
 }
 document.querySelector('[data-view="quests"]').addEventListener('input', (e) => {
   const t = e.target;

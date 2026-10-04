@@ -2694,10 +2694,21 @@ setInterval(refresh, 1000);
 const fmtAmber = (n) => Number(n ?? 0).toLocaleString('vi-VN');
 let homeSig = '';
 let homeBusy = false;
+/** One quest: what, how far, its reward and the button to take it. */
+function questRow(q, locked) {
+  const pct = q.target > 0 ? Math.min(100, Math.round(q.progress / q.target * 100)) : 100;
+  const num = (v) => (Number.isInteger(v) ? v : Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 1 }));
+  const btn = q.claimed ? '<span class="hq-meta">✓ Đã nhận</span>'
+    : `<button type="button" class="btn ${q.done && !locked ? 'btn-emerald' : 'btn-ghost'}" data-quest="${esc(q.id)}" ${q.done && !locked && !homeBusy ? '' : 'disabled'}>+${fmtAmber(q.reward)}</button>`;
+  return `<li class="hq-item${q.claimed ? ' claimed' : q.done ? ' done' : ''}"><div><b>${esc(q.label)}</b>
+      <div class="hq-meta">${num(q.progress)}/${num(q.target)} ${esc(q.unit)} · thưởng ${fmtAmber(q.reward)} Hổ phách</div></div>${btn}
+      <div class="hr-progress"><i style="width:${pct}%"></i></div></li>`;
+}
 function renderHomeRewards(me) {
   const eco = me?.economy ?? null;
   const ticket = bagGroups(me?.items ?? []).find((g) => g.type === 'dino_ticket') ?? null;
-  const sig = JSON.stringify([eco, ticket && [ticket.uids.length, ticket.locked ?? null], homeBusy]);
+  const quests = me?.quests ?? null;
+  const sig = JSON.stringify([eco, quests, ticket && [ticket.uids.length, ticket.locked ?? null], homeBusy]);
   if (sig === homeSig) return;
   homeSig = sig;
   // The balance, by the way in.
@@ -2713,6 +2724,16 @@ function renderHomeRewards(me) {
       ${ticket.locked ? `<div class="hr-note">🧪 ${esc(ticket.locked)}</div>` : ''}
       <div class="hr-row"><button type="button" class="btn btn-emerald" id="home-starter-btn" ${ticket.locked ? 'disabled' : ''}>🦖 Chọn dino ngay</button>
         <span class="muted">Mỗi tài khoản 1 phiếu · cũng có trong Túi đồ</span></div>`;
+  }
+  // The daily and weekly quests.
+  const qe = $('home-quests');
+  qe.hidden = !quests;
+  if (quests) {
+    qe.innerHTML = `<h3>🎯 Nhiệm vụ hôm nay</h3>
+      ${quests.daily.length ? `<ul class="hq-list">${quests.daily.map((q) => questRow(q, quests.locked)).join('')}</ul>` : '<p>Chưa có nhiệm vụ hôm nay.</p>'}
+      ${quests.weekly ? `<div class="hq-week">Nhiệm vụ tuần</div><ul class="hq-list">${questRow(quests.weekly, quests.locked)}</ul>` : ''}
+      ${quests.locked ? `<div class="hr-note">🧪 ${esc(quests.locked)}</div>` : ''}
+      <p style="font-size:12.5px">Nhiệm vụ mới mỗi ngày lúc 00:00 (tuần: thứ Hai), theo loài bạn đang chơi lúc mở trang lần đầu trong ngày.</p>`;
   }
   // The daily check-in.
   const ck = $('home-checkin');
@@ -2743,9 +2764,21 @@ $('home-rewards').addEventListener('click', async (e) => {
     if (g && !g.locked) void openDinoDialog(g);
     return;
   }
-  if (e.target.closest('#home-play')) {
-    if (window.isleLauncher?.playGame) window.isleLauncher.playGame();
-    else { window.location.href = 'steam://connect/play.xomgay.online:7777'; showToast('Đang mở The Isle qua Steam…'); }
+  const qb = e.target.closest('[data-quest]');
+  if (qb && !qb.disabled && !homeBusy) {
+    homeBusy = true; homeSig = ''; renderHomeRewards(lastMeData);
+    try {
+      const r = await fetch('/api/quests/claim', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ quest: qb.dataset.quest }) });
+      const b = await r.json().catch(() => null);
+      showToast(r.status === 200 ? `✅ ${b.label}: +${fmtAmber(b.reward)} Hổ phách` : `❌ ${b?.error ?? 'Không nhận được thưởng.'}`);
+    } catch {
+      showToast('❌ Mất kết nối. Thử lại.');
+    } finally {
+      homeBusy = false; homeSig = '';
+      const me = await getJson('/api/me').catch(() => null);
+      if (me?.status === 200) lastMeData = me.body;
+      renderHomeRewards(lastMeData);
+    }
     return;
   }
   if (!e.target.closest('#home-checkin-btn') || homeBusy) return;

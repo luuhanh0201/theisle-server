@@ -104,6 +104,7 @@ const bridge = {
   ai: async () => { bridgeCalls.push('ai'); return { status: 200, body: { t: 1, stale: false, count: 1, list: [{ s: 'Boar', x: 1, y: 2 }] } }; },
   aiZones: async () => ({ status: 200, body: { zones: [{ name: 'Đồng cỏ', x: 1, y: 2, radiusM: 300, species: ['Heo rừng'], count: 3 }] } }),
   heatmap: async () => ({ status: 200, body: { t: 1, next: 300, cell: 50000, players: 2, cells: [{ x: 25000, y: 25000, n: 2 }] } }),
+  claimQuest: async (steamId, quest) => { bridgeCalls.push(`quest:${steamId}:${quest}`); return { status: 200, body: { reward: 100, balance: 100, label: 'Hạ 1 dino' } }; },
   checkin: async (steamId) => { bridgeCalls.push(`checkin:${steamId}`); return { status: 200, body: { day: 1, reward: 50, balance: 50, item: null } }; },
   useDino: async (steamId, body) => { bridgeCalls.push({ useDino: steamId, body }); return { status: 200, body: { slot: '3', species: 'Tyrannosaurus', growth: 0.8, female: true, mutations: {} } }; },
   garage: async (id, body) => { bridgeCalls.push({ garage: id, body }); return { status: 202, body: { id: 5, action: body.action } }; },
@@ -159,6 +160,9 @@ test('the check-in and the dino ticket: login, same-origin; the SteamID is the s
   const r = await post('/api/checkin', { ...json, cookie, origin });
   assert.equal(r.status, 200);
   assert.equal(bridgeCalls[bridgeCalls.length - 1], `checkin:${ME}`);
+  assert.equal((await post('/api/quests/claim', { ...json, cookie, origin: 'https://evil.example' }, '{"quest":"hunt"}')).status, 403);
+  assert.equal((await post('/api/quests/claim', { ...json, cookie, origin }, '{"quest":"hunt","steamId":"76561198000000002"}')).status, 200);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], `quest:${ME}:hunt`, 'the session SteamID, the quest only');
   const pick = JSON.stringify({ uid: 'own_9', species: 'Tyrannosaurus', female: true, mutations: { 1: 'Hemomania' }, steamId: '76561198000000002', growth: 1 });
   assert.equal((await post('/api/items/dino', { ...json, cookie, origin: 'https://evil.example' }, pick)).status, 403);
   assert.equal((await post('/api/items/dino', { ...json, cookie, origin }, pick)).status, 200);

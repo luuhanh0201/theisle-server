@@ -188,18 +188,22 @@ export class PlayDays {
       days.set(day, (days.get(day) ?? 0) + (end - s));
       s = end;
     }
-    // Only the last few days matter.
+    // Only the last days matter (a week for the weekly quests).
     const last = dayOf(to);
-    for (const d of [...days.keys()]) if (d < last - 3) days.delete(d);
+    for (const d of [...days.keys()]) if (d < last - 8) days.delete(d);
     this.#seconds.set(id, days);
   }
 
   /** Whole minutes in game on `now`'s day, the session still open counted to now. */
   minutesToday(id: string, now: number): number {
-    const today = dayOf(now);
-    let s = this.#seconds.get(id)?.get(today) ?? 0;
+    return this.minutesOn(id, dayOf(now), now);
+  }
+
+  /** Whole minutes in game on `day` (Vietnam's), a session still open at `now` counted to now. */
+  minutesOn(id: string, day: number, now: number): number {
+    let s = this.#seconds.get(id)?.get(day) ?? 0;
     const from = this.#open.get(id);
-    if (from !== undefined) s += Math.max(0, now - Math.max(from, dayStart(today)));
+    if (from !== undefined) s += Math.max(0, Math.min(now, dayStart(day + 1)) - Math.max(from, dayStart(day)));
     return Math.floor(s / 60);
   }
 }

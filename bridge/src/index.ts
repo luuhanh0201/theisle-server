@@ -43,6 +43,8 @@ import { renderMessage } from './messages.js';
 import { audit, auditListeners } from './audit.js';
 import { grantStarters } from './starter.js';
 import { PlayDays } from './economy.js';
+import { QuestProgress, placesOf, type Place } from './quests.js';
+import { readFileSync } from 'node:fs';
 import { loadGuard, runGuardAction, saveGuard, speciesName, type GuardAction } from './garage-guard.js';
 import { Prison } from './prison.js';
 import { KillScenes } from './kill-scene.js';
@@ -158,6 +160,12 @@ const settleGuard = (a: GuardAction): void => {
 
 // Minutes in game per day (economy.ts): the daily check-in needs some.
 const playDays = new PlayDays();
+// The daily quests' progress (quests.ts), with the map's named places (public/map/gateway.json).
+let places: Place[] = [];
+try { places = placesOf(JSON.parse(readFileSync(join(process.cwd(), 'public', 'map', 'gateway.json'), 'utf8'))); } catch (error) {
+  console.error('[quests] no map places (the visit quests stay at 0):', error);
+}
+const questProgress = new QuestProgress(playDays, () => places, (id) => store.isAdmin(id));
 
 // The starter ticket (starter.ts): everyone who has played gets one once, then each new account.
 // First 30 s in (the events are read by then), then every minute.
@@ -173,6 +181,7 @@ const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {
     store.apply(event);
     playDays.onEvent(event);
+    questProgress.onEvent(event);
     for (const action of garageGuard.onEvent(event)) settleGuard(action);
     void notifier.handle(event);
     void primeNotifier.handle(event);
@@ -396,7 +405,7 @@ setInterval(() => {
 // Site / launcher traffic (traffic.ts), counted by the portal: the panel's "Truy cập".
 const traffic = new Traffic();
 await traffic.load();
-startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, traffic, playDays, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, traffic, playDays, questProgress, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
 
 // The prison: the mod's state, finished sentences, escape reminders, the mod's files (prison.ts).
 setInterval(() => {

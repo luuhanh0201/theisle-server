@@ -21,6 +21,7 @@ export const EARLY_FEATURES = [
   { key: 'bag', label: 'Túi đồ: dùng vật phẩm (mutation, phiếu) trên dino' },
   { key: 'starter', label: 'Phiếu chọn dino tân thủ (mỗi tài khoản 1 phiếu): dùng để nhận dino' },
   { key: 'amber', label: 'Hổ phách + điểm danh hàng ngày (nhận thưởng khi chơi đủ phút trong ngày)' },
+  { key: 'quests', label: 'Nhiệm vụ hằng ngày / tuần (thưởng Hổ phách)' },
 ] as const;
 export type FeatureKey = typeof EARLY_FEATURES[number]['key'];
 export type FeatureMode = 'testing' | 'all';
