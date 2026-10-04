@@ -36,3 +36,8 @@ test('a layer added since the choice was saved (the heat map) starts on; turned 
   assert.deepEqual([...loadLayersForTest()].sort(), ['ai', 'water'], 'off by choice: stays off');
   delete globalThis.localStorage;
 });
+
+test('the heat map colours: how crowded, never the count', async () => {
+  const { heatLevel } = await import('../public/map.js');
+  assert.deepEqual([1, 2, 3, 4, 6, 7, 20].map((n) => heatLevel(n).label), ['Ít', 'Vừa', 'Vừa', 'Đông', 'Đông', 'Rất đông', 'Rất đông']);
+});

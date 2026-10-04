@@ -52,6 +52,27 @@ function tintMask(img, color) {
   return c;
 }
 
+// The heat map's colours: how many players in a 500 m square, never the number itself.
+export const HEAT_LEVELS = [
+  { min: 7, label: 'Rất đông', rgb: [192, 38, 211] },
+  { min: 4, label: 'Đông', rgb: [239, 68, 68] },
+  { min: 2, label: 'Vừa', rgb: [249, 115, 22] },
+  { min: 1, label: 'Ít', rgb: [250, 204, 21] },
+];
+export const heatLevel = (n) => HEAT_LEVELS.find((l) => n >= l.min) ?? HEAT_LEVELS[HEAT_LEVELS.length - 1];
+/** The colour key, bottom left of the map. */
+function heatLegend(ctx, ch) {
+  const items = [...HEAT_LEVELS].reverse();
+  const x0 = 12, h = 22, w = 66 * items.length + 16, y0 = ch - h - 12;
+  ctx.fillStyle = 'rgba(7,10,17,.82)'; ctx.beginPath(); ctx.roundRect(x0, y0, w, h, 8); ctx.fill();
+  ctx.font = '700 11px Inter, system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  items.forEach((l, i) => {
+    const x = x0 + 10 + i * 66;
+    ctx.beginPath(); ctx.arc(x + 5, y0 + h / 2, 5, 0, Math.PI * 2); ctx.fillStyle = `rgb(${l.rgb.join(',')})`; ctx.fill();
+    ctx.fillStyle = '#e2e8f0'; ctx.fillText(l.label, x + 14, y0 + h / 2 + 0.5);
+  });
+}
+
 /** The map picture where the land mask is (white = land), at half size: the island alone. */
 function landCut(img, mask) {
   const c = document.createElement('canvas');
@@ -363,21 +384,22 @@ export function createMap(root, opts = {}) {
       }
     }
 
-    // Where players are (the heat map, a picture every 5 minutes, admins left out): a glow per 500 m
-    // square, stronger for more players, the count in it — never who, nor where in the square.
+    // Where players are (the heat map, a picture every 5 minutes, admins left out): a 500 m glow round
+    // each 500 m square with players, its colour how many (HEAT_LEVELS) — never a count, never who
+    // (owner: "bán kính khoảng 500m để không bị cụ thể quá và làm lộ vị trí người chơi").
     if (st.on.has('heat') && st.heat) {
-      const r = Math.max(16, rY(st.heat.cell / 1000) * 0.85);
+      const r = Math.max(14, rY(st.heat.cell / 1000));
       for (const c of st.heat.cells) {
         const [x, y] = scr(unitsOf(c));
         if (x < -r || y < -r || x > cw + r || y > ch + r) continue;
-        const a = Math.min(0.85, 0.32 + 0.13 * c.n);
+        const [cr, cg, cb] = heatLevel(c.n).rgb;
         const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-        g.addColorStop(0, `rgba(239,68,68,${a})`);
-        g.addColorStop(0.55, `rgba(249,115,22,${(a * 0.55).toFixed(3)})`);
-        g.addColorStop(1, 'rgba(250,204,21,0)');
+        g.addColorStop(0, `rgba(${cr},${cg},${cb},0.62)`);
+        g.addColorStop(0.6, `rgba(${cr},${cg},${cb},0.32)`);
+        g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
-        text(ctx, z >= 1.6 ? `${c.n} người` : String(c.n), x, y, '800 12px Inter, system-ui, sans-serif', '#fff1f2');
       }
+      if (cw >= 360) heatLegend(ctx, ch);
     }
 
     // AI zones the admins drew: where the server keeps AI (name, which kinds).
