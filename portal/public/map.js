@@ -38,6 +38,16 @@ const COLOR = '#34d399';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const unitsOf = (p) => [p.y / 1000, p.x / 1000];
 const hexA = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, '0');
+/** A white-on-transparent mask image, recoloured: a canvas the size of the image. */
+function tintMask(img, color) {
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const x = c.getContext('2d');
+  x.drawImage(img, 0, 0);
+  x.globalCompositeOperation = 'source-in';
+  x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+  return c;
+}
 
 // --- your trail: shown or hidden, cleared from a time on (this browser) -------------------
 const TRAIL_KEY = 'isle-map-trail.v1';
@@ -223,18 +233,20 @@ export function createMap(root) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(st.img, ox, oy, st.img.naturalWidth * s, st.img.naturalHeight * s);
 
-    // The waters (Nước on): each lake / river / pond filled and ringed, under everything else.
+    // The water (Nước on), filled: every lake / river / pond pixel of the map painted over in the
+    // layer's colour (owner: "tô đậm cả vùng nước"), a pond the image does not show as a filled dot.
     // Their names are drawn with the labels below, always shown while the layer is on.
-    if (st.on.has('water') && st.water) {
-      const c = LAYER.water.color;
-      for (const w of st.water) {
-        const f = w.kind === 'circle' ? { kind: 'circle', at: w.at, r: [w.r, w.r] } : w;
-        trace(ctx, f);
-        ctx.fillStyle = hexA(c, w.kind === 'circle' ? 0.16 : 0.32); ctx.fill();
-        // A dark ring under a bright one: the edge reads on any ground.
-        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(2,6,23,.7)'; ctx.stroke();
-        ctx.setLineDash(w.kind === 'circle' ? [5, 4] : []);
-        ctx.lineWidth = 1.8; ctx.strokeStyle = c; ctx.stroke(); ctx.setLineDash([]);
+    if (st.on.has('water')) {
+      if (st.waterTint) {
+        ctx.globalAlpha = 0.85;
+        ctx.drawImage(st.waterTint, ox, oy, st.img.naturalWidth * s, st.img.naturalHeight * s);
+        ctx.globalAlpha = 1;
+      }
+      for (const w of st.water ?? []) {
+        if (w.kind !== 'circle') continue;
+        trace(ctx, { kind: 'circle', at: w.at, r: [w.r * 0.6, w.r * 0.6] });
+        ctx.fillStyle = hexA(LAYER.water.color, 0.75); ctx.fill();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(2,6,23,.6)'; ctx.stroke();
       }
     }
 
@@ -578,6 +590,11 @@ export function createMap(root) {
       // The waters outlined (scripts/build-water-areas.py, from the map image): highlighted with the Nước layer.
       fetch('/map/water-areas.json', { credentials: 'same-origin' }).then((w) => (w.ok ? w.json() : null))
         .then((w) => { st.water = Array.isArray(w?.areas) ? w.areas : []; draw(); }).catch(() => undefined);
+      // Every water pixel of the map (scripts/build-water-areas.py), tinted once in the layer's colour.
+      st.waterTint = null;
+      const mask = new Image();
+      mask.src = `/map/water-mask.png?v=${encodeURIComponent(data.updated)}`;
+      mask.decode().then(() => { st.waterTint = tintMask(mask, LAYER.water.color); draw(); }).catch(() => undefined);
       msg.hidden = true;
       chips();
       root.querySelector('.map-note').innerHTML = `Bản đồ &amp; địa điểm: <a href="${esc(data.source.url)}" target="_blank" rel="noopener">${esc(data.source.name)}</a> (${esc(data.source.author)}), ${esc(data.name)} · ảnh nền chụp trong game, bản quyền của nhà phát triển. * dữ liệu tham khảo, không phải dữ liệu live của server.`;

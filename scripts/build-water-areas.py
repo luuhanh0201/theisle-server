@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
-"""The water bodies of the live map, outlined (owner's request, 2026-10-04: "khi bật
-nguồn nước thì highlight cả vùng nước + tên"). The map data (VulnonaMAP, gateway.json)
-only names the waters (27 labels): their shapes are traced here from the map image.
+"""The water of the live maps, filled (owner's request, 2026-10-04: "tô đậm cả vùng nước
+đó lên", not an outline). The map data (VulnonaMAP, gateway.json) only names the waters
+(27 labels): the water itself is found here on the map image.
+
+    bridge/public/map/water-mask.png   every inland water pixel (lakes, rivers, ponds —
+                                       named or not), as the map image's size: drawn over
+                                       it, filled, while the water layer is on
+    bridge/public/map/water-areas.json the named waters, outlined (and a circle for a water
+                                       the image does not show, filled by the maps)
+
+The sea's shallows along the coast are the same colour as the lakes: a patch of water
+lying mostly within COAST px of the sea AND wide is left out (a river is thin; it only meets
+the sea at its mouth).
 
     python3 scripts/build-water-areas.py [--preview out.png]
 
@@ -30,6 +40,7 @@ MAP = "bridge/public/map/gateway.json"
 IMG = "bridge/public/map/gateway.webp"
 # bridge/public/map is the map data both the panel and the portal get (deploy.sh ships it as both).
 OUT = "bridge/public/map/water-areas.json"
+MASK = "bridge/public/map/water-mask.png"
 SCALE = 2            # work on the image at 1/SCALE
 SEARCH = 45          # px (work scale): how far from the label the water may start
 CIRCLE_R = 9.0       # map units: the circle for a water the image does not show
@@ -147,7 +158,51 @@ def simplify(pts, eps):
     return [pts[0], pts[-1]]
 
 
+COAST = 40          # px (full image): water mostly this close to the sea is the sea's shallows
+
+
+def write_mask():
+    """The full-size water mask as a transparent PNG, coloured where it is water."""
+    full = np.asarray(Image.open(IMG).convert("RGB")).astype(np.int16)
+    teal, navy = masks(full)
+    clean = shift_or(shift_and(teal, 1), 1)        # specks gone
+    clean = shift_and(shift_or(clean, 2), 2)       # small holes closed
+    near_sea = navy.copy()
+    for _ in range(COAST):
+        near_sea = shift_or(near_sea, 1)
+    # Wide water (a shallow, a lake) keeps a core after this erosion; a river does not.
+    wide = shift_and(clean, 4)
+    # Patches by 8-connectivity; a patch mostly near the sea goes.
+    h, w = clean.shape
+    seen = np.zeros_like(clean)
+    keep = np.zeros_like(clean)
+    for r0, c0 in zip(*np.nonzero(clean)):
+        if seen[r0, c0]:
+            continue
+        comp, q = [], deque([(r0, c0)])
+        seen[r0, c0] = True
+        while q:
+            r, c = q.popleft()
+            comp.append((r, c))
+            for dr in (-1, 0, 1):
+                for dc in (-1, 0, 1):
+                    rr, cc = r + dr, c + dc
+                    if 0 <= rr < h and 0 <= cc < w and clean[rr, cc] and not seen[rr, cc]:
+                        seen[rr, cc] = True
+                        q.append((rr, cc))
+        rows, cols = zip(*comp)
+        # Mostly by the sea AND wide: the sea's shallows. A river running to the sea stays (thin).
+        if len(comp) < 30 or (near_sea[rows, cols].mean() > 0.4 and wide[rows, cols].mean() > 0.15):
+            continue
+        keep[rows, cols] = True
+    out = np.zeros((h, w, 4), np.uint8)
+    out[keep] = (255, 255, 255, 255)               # white: the map tints it with the layer's colour
+    Image.fromarray(out, "RGBA").save(MASK, optimize=True)
+    print(f"water mask: {int(keep.sum())} px -> {MASK}")
+
+
 def main():
+    write_mask()
     data, a = load()
     b = data["bounds"]
     H, W = a.shape[:2]
