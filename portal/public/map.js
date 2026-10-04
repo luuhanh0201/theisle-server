@@ -11,6 +11,7 @@
 
 const LAYERS = [
   ['escape', 'Kẻ vượt ngục', '#f43f5e', true],
+  ['heat', 'Mật độ người chơi', '#fb7185', true],
   ['ai', 'AI (live)', '#ef4444', true],
   ['fish', 'Cá (live)', '#22d3ee', true],
   ['aizone', 'Vùng AI', '#fb923c', true],
@@ -48,6 +49,17 @@ function tintMask(img, color) {
   x.drawImage(img, 0, 0);
   x.globalCompositeOperation = 'source-in';
   x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+/** The map picture where the land mask is (white = land), at half size: the island alone. */
+function landCut(img, mask) {
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.naturalWidth / 2); c.height = Math.round(img.naturalHeight / 2);
+  const x = c.getContext('2d');
+  x.drawImage(mask, 0, 0, c.width, c.height);
+  x.globalCompositeOperation = 'source-in';
+  x.drawImage(img, 0, 0, c.width, c.height);
   return c;
 }
 
@@ -93,10 +105,46 @@ export const distanceM = (a, b) => Math.hypot(b.x - a.x, b.y - a.y) / 100;
 export const bearingOf = (a, b) => (Math.atan2(b.x - a.x, -(b.y - a.y)) * 180 / Math.PI + 360) % 360;
 const COMPASS = ['Bắc', 'Đông Bắc', 'Đông', 'Đông Nam', 'Nam', 'Tây Nam', 'Tây', 'Tây Bắc'];
 export const compassName = (deg) => COMPASS[Math.round(deg / 45) % 8];
+/** For the tests: which layers are on, as saved. */
+export const loadLayersForTest = () => loadLayers();
+export const saveLayersForTest = (on) => saveLayers(on);
 export const fmtDistance = (m) => (m >= 1000 ? `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km` : `${Math.round(m)} m`);
 const TARGET = '#facc15';
+// Which layers are on: kept in this browser, shared by every map of the site (the launcher's map tab,
+// its big map in game, the mini map drawn from them).
+const LAYERS_KEY = 'portalMapLayers.v2';
+// The layers there were when the choice was saved: one added since (the heat map) starts as its
+// default, not "off" because it was not in an older choice.
+const LAYERS_SEEN_KEY = 'portalMapLayers.seen';
+function loadLayers() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAYERS_KEY) ?? 'null');
+    if (Array.isArray(saved)) {
+      const on = new Set(saved.filter((id) => LAYER[id]));
+      const seenRaw = JSON.parse(localStorage.getItem(LAYERS_SEEN_KEY) ?? 'null');
+      // Before this key: the layers up to the heat map.
+      const seen = new Set(Array.isArray(seenRaw) ? seenRaw : LAYERS.map((l) => l[0]).filter((id) => id !== 'heat'));
+      for (const [id, , , def] of LAYERS) if (def && !seen.has(id)) on.add(id);
+      return on;
+    }
+  } catch { /* defaults */ }
+  return new Set(LAYERS.filter((l) => l[3]).map((l) => l[0]));
+}
+function saveLayers(on) {
+  try {
+    localStorage.setItem(LAYERS_KEY, JSON.stringify([...on]));
+    localStorage.setItem(LAYERS_SEEN_KEY, JSON.stringify(LAYERS.map((l) => l[0])));
+  } catch { /* not remembered */ }
+}
+// The big map over the game (bigmap.html): the island at `map` opacity, its sea at SEA_SHARE of that,
+// beyond the picture only the `dim` veil — the owner: "những nơi trống thì tự động mờ nhiều hơn".
+const SEA_SHARE = 0.45;
+export const LOOK_DEFAULT = { map: 0.85, dim: 0.35 };
 
-export function createMap(root) {
+/**
+ * opts.overlay: the big map over the game — see-through (setLook), no page around it.
+ */
+export function createMap(root, opts = {}) {
   root.innerHTML = `<div class="map-wrap">
       <canvas></canvas>
       <div class="map-tools">
@@ -127,20 +175,21 @@ export function createMap(root) {
     data: null, img: null, view: null, fit: 1, size: '', raf: 0,
     follow: true, me: null, from: null, to: null, t0: 0,
     zoomIn: true,        // the first position zooms in on the dino (4x the whole island)
-    on: new Set(LAYERS.filter((l) => l[3]).map((l) => l[0])),
+    on: loadLayers(),
     pointers: new Map(), drag: null, pinch: null,
     ai: [],              // [{ s: species, x, y }] from /api/ai
     fish: [],            // the game's fish, [{ s, x, y }] from /api/ai .fish
     zones: [],           // AI zones the admins drew, from /api/ai-zones (the prison flagged)
     escapees: [],        // escaped inmates, [{ name, s, x, y, since }] from /api/ai .escapees
+    heat: null,          // players per 500 m square, every 5 minutes: { t, cell, players, cells: [{ x, y, n }] }
     wp: loadWaypoints(), // { target, saved }
     trail: loadTrail(),  // { on, clearedAt }: shown or not; points up to clearedAt (unix s) hidden
     onTarget: null,      // told when the target changes (the launcher's overlay)
   };
-  try {
-    const saved = JSON.parse(localStorage.getItem('portalMapLayers.v2') ?? 'null');
-    if (Array.isArray(saved)) st.on = new Set(saved.filter((id) => LAYER[id]));
-  } catch { /* defaults */ }
+  st.look = { ...LOOK_DEFAULT };
+  // The big map over the game opens on the whole island, in the middle of the screen (the owner);
+  // ◎ follows the dino from there.
+  if (opts.overlay) { st.follow = false; st.zoomIn = false; followBtn.classList.remove('on'); }
 
   const toImg = ([x, y]) => {
     const b = st.data.bounds;
@@ -222,7 +271,9 @@ export function createMap(root) {
       canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
       st.fit = Math.min(cw / st.img.naturalWidth, ch / st.img.naturalHeight);
       if (!st.view) {
-        st.view = { s: st.fit, ox: (cw - st.img.naturalWidth * st.fit) / 2, oy: (ch - st.img.naturalHeight * st.fit) / 2 };
+        // The big map: a margin for its bar on top and its layer buttons below.
+        const s0 = st.fit * (opts.overlay ? 0.82 : 1);
+        st.view = { s: s0, ox: (cw - st.img.naturalWidth * s0) / 2, oy: (ch - st.img.naturalHeight * s0) / 2 };
       }
     }
     const pos = shown();
@@ -230,10 +281,27 @@ export function createMap(root) {
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
+    paintScene(ctx, cw, ch, pos, st.fit);
+    if (st.to && performance.now() - st.t0 < TWEEN_MS) draw();
+  }
+
+  /** Everything the map shows, at st.view, onto ctx (cw × ch, CSS pixels). `fit`: the whole-island scale. */
+  function paintScene(ctx, cw, ch, pos, fit) {
     const { s, ox, oy } = st.view;
-    const z = s / st.fit;
+    const z = s / fit;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(st.img, ox, oy, st.img.naturalWidth * s, st.img.naturalHeight * s);
+    const iw = st.img.naturalWidth * s, ih = st.img.naturalHeight * s;
+    if (opts.overlay) {
+      // Over the game: a light veil everywhere, the sea faint, the island as set.
+      ctx.fillStyle = `rgba(2,6,23,${st.look.dim})`; ctx.fillRect(0, 0, cw, ch);
+      ctx.globalAlpha = st.look.map * (st.landCut ? SEA_SHARE : 1);
+      ctx.drawImage(st.img, ox, oy, iw, ih);
+      ctx.globalAlpha = st.look.map;
+      if (st.landCut) ctx.drawImage(st.landCut, ox, oy, iw, ih);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.drawImage(st.img, ox, oy, iw, ih);
+    }
 
     // The water (Nước on), filled: every lake / river / pond pixel of the map painted over in the
     // layer's colour (owner: "tô đậm cả vùng nước"), a pond the image does not show as a filled dot.
@@ -292,6 +360,23 @@ export function createMap(root) {
         text(ctx, f.text, x, y, `italic 700 ${big ? 13 : 11.5}px Inter, system-ui, sans-serif`, '#e0f2fe');
       } else {
         text(ctx, f.text.toUpperCase(), x, y, `800 ${big ? 13 : 11}px Inter, system-ui, sans-serif`, hexA(c, 0.92));
+      }
+    }
+
+    // Where players are (the heat map, a picture every 5 minutes, admins left out): a glow per 500 m
+    // square, stronger for more players, the count in it — never who, nor where in the square.
+    if (st.on.has('heat') && st.heat) {
+      const r = Math.max(16, rY(st.heat.cell / 1000) * 0.85);
+      for (const c of st.heat.cells) {
+        const [x, y] = scr(unitsOf(c));
+        if (x < -r || y < -r || x > cw + r || y > ch + r) continue;
+        const a = Math.min(0.85, 0.32 + 0.13 * c.n);
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, `rgba(239,68,68,${a})`);
+        g.addColorStop(0.55, `rgba(249,115,22,${(a * 0.55).toFixed(3)})`);
+        g.addColorStop(1, 'rgba(250,204,21,0)');
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+        text(ctx, z >= 1.6 ? `${c.n} người` : String(c.n), x, y, '800 12px Inter, system-ui, sans-serif', '#fff1f2');
       }
     }
 
@@ -427,7 +512,36 @@ export function createMap(root) {
         ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
       }
     }
-    if (st.to && performance.now() - st.t0 < TWEEN_MS) draw();
+  }
+
+  /**
+   * The launcher's mini map: this map as it is — its layers, target, trail, AI… — around your dino,
+   * radiusM metres to the edge, north up or turned with the dino, onto `c` (width × height CSS px at
+   * dpr). False when there is nothing to draw yet (no map, no position).
+   */
+  function paintMini(c, { width, height, dpr = 1, radiusM = 500, rotate = 'north' }) {
+    const pos = shown();
+    if (!st.data || !pos || !(width > 0) || !(height > 0)) return false;
+    const w = Math.round(width * dpr), h = Math.round(height * dpr);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    const b = st.data.bounds;
+    const s = (Math.min(width, height) / 2) / (radiusM / 10 * (st.img.naturalWidth / (b.maxY - b.minY)));
+    const [ix, iy] = toImg(pos);
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, width, height);   // beyond the picture's edge
+    const yaw = st.me?.position?.yaw;
+    if (rotate === 'heading' && typeof yaw === 'number') {
+      ctx.translate(width / 2, height / 2); ctx.rotate(-Math.PI / 2 - yaw * Math.PI / 180); ctx.translate(-width / 2, -height / 2);
+    }
+    const kept = st.view;
+    st.view = { s, ox: width / 2 - ix * s, oy: height / 2 - iy * s };
+    try {
+      paintScene(ctx, width, height, pos, Math.min(width / st.img.naturalWidth, height / st.img.naturalHeight));
+    } finally {
+      st.view = kept;
+    }
+    return true;
   }
 
   // --- input ---
@@ -507,14 +621,14 @@ export function createMap(root) {
   // --- layers ---
   function chips() {
     root.querySelector('.map-chips').innerHTML = LAYERS.map(([id, label, color]) =>
-      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'escape' ? ` <b class="esc-n">${st.escapees.length}</b>` : id === 'fish' ? ` <b class="fish-n">${st.fish.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : ''}</button>`).join('');
+      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'escape' ? ` <b class="esc-n">${st.escapees.length}</b>` : id === 'fish' ? ` <b class="fish-n">${st.fish.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : id === 'heat' ? ` <b class="heat-n">${st.heat?.players ?? 0}</b>` : ''}</button>`).join('');
   }
   root.querySelector('.map-chips').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-layer]');
     if (!b) return;
     const id = b.dataset.layer;
     if (st.on.has(id)) st.on.delete(id); else st.on.add(id);
-    try { localStorage.setItem('portalMapLayers.v2', JSON.stringify([...st.on])); } catch { /* not remembered */ }
+    saveLayers(st.on);
     chips(); draw();
   });
 
@@ -578,6 +692,13 @@ export function createMap(root) {
   });
   renderTarget(); renderSaved();
 
+  // Another page of the site changed them (the big map in game, the launcher's map tab): the same here.
+  window.addEventListener('storage', (e) => {
+    if (e.key === LAYERS_KEY) { st.on = loadLayers(); chips(); draw(); }
+    else if (e.key === WP_KEY) { st.wp = loadWaypoints(); renderTarget(); renderSaved(); draw(); if (st.onTarget) st.onTarget(st.wp.target); }
+    else if (e.key === TRAIL_KEY) { st.trail = loadTrail(); trailButtons(); draw(); }
+  });
+
   (async () => {
     try {
       const r = await fetch('/map/gateway.json', { credentials: 'same-origin' });
@@ -598,6 +719,12 @@ export function createMap(root) {
       const mask = new Image();
       mask.src = `/map/water-mask.png?v=${WATER_V}`;
       mask.decode().then(() => { st.waterTint = tintMask(mask, LAYER.water.color); draw(); }).catch(() => undefined);
+      // The big map over the game: the island cut out of the picture (half size), to fade the sea.
+      if (opts.overlay) {
+        const land = new Image();
+        land.src = `/map/land-mask.png?v=${WATER_V}`;
+        land.decode().then(() => { st.landCut = landCut(img, land); draw(); }).catch(() => undefined);
+      }
       msg.hidden = true;
       chips();
       root.querySelector('.map-note').innerHTML = `Bản đồ &amp; địa điểm: <a href="${esc(data.source.url)}" target="_blank" rel="noopener">${esc(data.source.name)}</a> (${esc(data.source.author)}), ${esc(data.name)} · ảnh nền chụp trong game, bản quyền của nhà phát triển. * dữ liệu tham khảo, không phải dữ liệu live của server.`;
@@ -629,6 +756,14 @@ export function createMap(root) {
       if (n) n.textContent = String(st.escapees.length);
       draw();
     },
+    /** /api/heatmap: { t, next, cell, players, cells: [{ x, y, n }] } (null: none yet). */
+    setHeat(h) {
+      st.heat = h && Array.isArray(h.cells) && Number.isFinite(h.cell)
+        ? { ...h, cells: h.cells.filter((c) => Number.isFinite(c?.x) && Number.isFinite(c?.y) && c.n > 0) } : null;
+      const n = root.querySelector('.map-chips .heat-n');
+      if (n) n.textContent = String(st.heat?.players ?? 0);
+      draw();
+    },
     /** /api/ai-zones .zones: [{ name, x, y, radiusM, species: [labels], count }]. */
     setAiZones(list) {
       st.zones = Array.isArray(list) ? list.filter((zn) => typeof zn?.x === 'number' && typeof zn?.y === 'number' && typeof zn?.radiusM === 'number') : [];
@@ -656,6 +791,19 @@ export function createMap(root) {
     },
     /** The target you set on the map ({ x, y, name } in world units), or null. */
     getTarget() { return st.wp.target; },
+    paintMini,
+    /** The whole island again, in the middle (the big map, each time it opens). */
+    resetView() {
+      st.view = null; st.size = '';
+      if (opts.overlay) { st.follow = false; followBtn.classList.remove('on'); }
+      draw();
+    },
+    /** The big map over the game: { map, dim } opacities 0–1. */
+    setLook(look) {
+      const clamp = (v, d) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : d);
+      st.look = { map: clamp(look?.map, st.look.map), dim: clamp(look?.dim, st.look.dim) };
+      draw();
+    },
     onTargetChange(cb) { st.onTarget = cb; },
   };
 }

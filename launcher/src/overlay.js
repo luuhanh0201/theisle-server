@@ -352,6 +352,20 @@ class Overlay {
     this.apply();
   }
 
+  /**
+   * The mini map as the portal draws it (map.js: the big map's layers, target, trail), an encoded
+   * image { image, type } about once a second: the map widget shows it instead of drawing its own.
+   */
+  setMiniFrame(frame) {
+    this.#send('map', 'overlay:mini-frame', frame);
+  }
+
+  /** A widget's size on screen now, [width, height] (its scale), for the mini map the portal draws. */
+  size(id) {
+    const b = this.#bounds(id);
+    return [b.width, b.height];
+  }
+
   /** The map image + places, fetched once by the launcher. */
   setMap(data) {
     this.mapData = data;

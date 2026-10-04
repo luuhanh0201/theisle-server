@@ -41,6 +41,7 @@ IMG = "bridge/public/map/gateway.webp"
 # bridge/public/map is the map data both the panel and the portal get (deploy.sh ships it as both).
 OUT = "bridge/public/map/water-areas.json"
 MASK = "bridge/public/map/water-mask.png"
+LAND = "bridge/public/map/land-mask.png"   # the island (not the sea), half size: the big map fades the sea
 SCALE = 2            # work on the image at 1/SCALE
 SEARCH = 45          # px (work scale): how far from the label the water may start
 CIRCLE_R = 9.0       # map units: the circle for a water the image does not show
@@ -166,10 +167,23 @@ FRESH_ZONES = ("MZ 11",)   # the Delta: the river, its west branch, the swamp ch
 ZONE_MARGIN = 60
 
 
+def write_land(navy):
+    """The island: everything that is not the sea's flat navy, specks and the sea's foam cleaned."""
+    sea = shift_and(shift_or(navy, 2), 2)          # small holes in the sea closed
+    land = ~sea
+    land = shift_or(shift_and(land, 3), 3)         # a speck of non-navy out at sea is not land
+    h, w = land.shape
+    out = np.zeros((h, w, 4), np.uint8)
+    out[land] = (255, 255, 255, 255)
+    Image.fromarray(out, "RGBA").resize((w // 2, h // 2), Image.BILINEAR).save(LAND, optimize=True)
+    print(f"land mask: {int(land.mean() * 100)} % of the picture -> {LAND}")
+
+
 def write_mask():
     """The full-size water mask as a transparent PNG, coloured where it is water."""
     full = np.asarray(Image.open(IMG).convert("RGB")).astype(np.int16)
     teal, navy = masks(full)
+    write_land(navy)
     clean = shift_or(shift_and(teal, 1), 1)        # specks gone
     clean = shift_and(shift_or(clean, 2), 2)       # small holes closed
     near_sea = navy.copy()

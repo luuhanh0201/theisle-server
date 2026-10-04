@@ -23,6 +23,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   GET  /api/leaderboard       top players by name
  *   GET  /api/server            online count, game up or not, name, slots, Discord
  *   GET  /api/ai                the AI alive on the server now          (login)
+ *   GET  /api/heatmap           players per 500 m square, every 5 min   (login)
  *   POST /api/garage            { action: store|redeem, slot?, where? } (login)
  *        your own store / redeem, run in game like the chat command. The only
  *        write: same-origin only (Origin, or Sec-Fetch-Site), JSON only, a
@@ -415,6 +416,13 @@ export function createPortal(opts: PortalOptions): Server {
         // The live AI on the map: for logged-in players only.
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
         const r = await opts.bridge.ai();
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/heatmap') {
+        // Where players are (counts per square, no names), like the AI: for logged-in players.
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        const r = await opts.bridge.heatmap();
         send(res, r.status, r.body);
         return;
       }

@@ -5176,7 +5176,13 @@
             <button type="button" class="btn btn-ghost" id="ov-preview">Xem thử 6 giây</button>
             <button type="button" class="btn btn-ghost" id="ov-key">Bật/tắt: <kbd id="ov-key-name">F8</kbd></button>
             <button type="button" class="btn btn-ghost" id="ov-edit-key">Chỉnh sửa: <kbd id="ov-edit-key-name">F9</kbd></button>
+            <button type="button" class="btn btn-ghost" id="ov-bigmap-key" hidden>Bản đồ lớn: <kbd id="ov-bigmap-key-name">M</kbd></button>
           </div>
+          <p class="v-note" id="ov-bigmap-display-wrap" hidden style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <b>🗺️ Bản đồ lớn hiện ở</b>
+            <span style="min-width:300px"><select id="ov-bigmap-display"></select></span>
+            <span>Tự động: màn hình đang có chuột lúc bấm phím — khi chơi là màn hình của game.</span>
+          </p>
           <p class="v-note" id="ov-compat-wrap" hidden>
             <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="ov-compat" style="width:16px;height:16px;accent-color:var(--emerald)"> 🛠 Sửa viền đen quanh overlay</label>
             (bật nếu các khung overlay có <b>nền / viền đen</b> thay vì trong suốt, một số card đồ hoạ, Windows bật HDR).

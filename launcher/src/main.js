@@ -21,6 +21,7 @@ const { join } = require('node:path');
 const { clashOf, distinctBindings, label, PushToTalk, DEFAULT_PTT, DEFAULT_RANGE } = require('./ptt.js');
 const { Overlay, normaliseKeep } = require('./overlay.js');
 const { LoginFlow } = require('./login.js');
+const { pickBigMapDisplay, DEFAULT_BIGMAP_KEY, ChatGuard, bigMapKeyAction, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE } = require('./bigmap.js');
 
 const BASE = (process.env.XOMGAY_URL || 'https://xomgay.online').replace(/\/+$/, '');
 const ORIGIN = new URL(BASE).origin;
@@ -193,10 +194,10 @@ let loggedIn = null;
 let splashWin = null;
 let tray = null;
 let quitting = false;
-/** Global keys: hold to talk, cycle the voice range, overlay on / off, overlay edit mode. */
-const keys = { ptt: null, range: null, overlay: null, edit: null };
-const KEY_SETTING = { ptt: 'ptt', range: 'rangeKey', overlay: 'overlayKey', edit: 'overlayEditKey' };
-const KEY_TITLE = { ptt: 'Bấm để nói', range: 'Đổi tầm nói', overlay: 'Bật / tắt overlay', edit: 'Chỉnh vị trí overlay' };
+/** Global keys: hold to talk, cycle the voice range, overlay on / off, overlay edit mode, the big map. */
+const keys = { ptt: null, range: null, overlay: null, edit: null, bigmap: null };
+const KEY_SETTING = { ptt: 'ptt', range: 'rangeKey', overlay: 'overlayKey', edit: 'overlayEditKey', bigmap: 'bigmapKey' };
+const KEY_TITLE = { ptt: 'Bấm để nói', range: 'Đổi tầm nói', overlay: 'Bật / tắt overlay', edit: 'Chỉnh vị trí overlay', bigmap: 'Bật / tắt bản đồ lớn' };
 const DEFAULT_OVERLAY_KEY = { kind: 'key', code: 66 };   // UiohookKey.F8
 const DEFAULT_EDIT_KEY = { kind: 'key', code: 67 };      // UiohookKey.F9
 let overlay = null;
@@ -447,6 +448,97 @@ async function startLogin() {
   tell(result);
 }
 
+// --- the big map (bigmap.js): the whole map full screen over the game, on its key ----------------------
+
+let bigMapWin = null;
+const bigMap = { open: false, typing: false };
+const chat = new ChatGuard();
+/** The latest { dino, ai, fish… } from the player page, for the big map when it opens. */
+let lastGame = null;
+const MINI_FRAME_MAX = 2 * 1024 * 1024;
+
+/** The screen to open on (bigmap.js): the overlay settings' choice, else the mouse's — the game's. */
+function bigMapDisplay() {
+  return pickBigMapDisplay(screen.getAllDisplays(), readSettings().bigmapDisplay ?? 'auto',
+    screen.getCursorScreenPoint(), screen.getPrimaryDisplay());
+}
+
+/**
+ * Full screen for real (setFullScreen): a plain window the size of a screen is kept out of GNOME's top
+ * bar — on the owner's screen with the bar it was pushed onto the other screen (2026-10-04: the map
+ * opened on the laptop, the game on the HDMI). Placed inside the screen's work area first, then made
+ * full screen there; on another screen than last time: out of full screen, moved, in again (measured
+ * with a test window: open, hide, reopen, other screen and back all landed on the screen asked).
+ */
+const smallOn = (d) => ({ x: d.workArea.x + 40, y: d.workArea.y + 40, width: 800, height: 600 });
+function onDisplay(win, d) {
+  const b = win.getBounds();
+  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  return cx >= d.bounds.x && cx < d.bounds.x + d.bounds.width && cy >= d.bounds.y && cy < d.bounds.y + d.bounds.height;
+}
+function placeBigMap(then) {
+  const d = bigMapDisplay();
+  const show = () => { bigMapWin.show(); bigMapWin.setFullScreen(true); bigMapWin.focus(); then?.(); };
+  if (bigMapWin.isFullScreen() && onDisplay(bigMapWin, d)) { show(); return; }
+  if (bigMapWin.isFullScreen()) {
+    bigMapWin.setFullScreen(false);
+    setTimeout(() => { if (bigMapWin && !bigMapWin.isDestroyed()) { bigMapWin.setBounds(smallOn(d)); show(); } }, 300);
+    return;
+  }
+  bigMapWin.setBounds(smallOn(d));
+  show();
+}
+
+function createBigMap() {
+  // Transparent, the game seen through it (the page dims it, the owner sets how much).
+  bigMapWin = new BrowserWindow({
+    // Resizable: a fixed size (min = max size hints) is never made full screen by the window manager.
+    ...smallOn(bigMapDisplay()), frame: false, transparent: true, resizable: true, movable: false, minimizable: false,
+    maximizable: false, fullscreenable: true, skipTaskbar: true, alwaysOnTop: true, hasShadow: false, show: false,
+    backgroundColor: '#00000000', title: 'Xóm Gáy — bản đồ', icon: ICON,
+    webPreferences: webPrefs({ backgroundThrottling: false }),
+  });
+  bigMapWin.removeMenu();
+  bigMapWin.setAlwaysOnTop(true, 'screen-saver');
+  bigMapWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  guard(bigMapWin);
+  bigMapWin.on('page-title-updated', (e) => e.preventDefault());
+  bigMapWin.on('closed', () => { bigMapWin = null; bigMap.open = false; bigMap.typing = false; });
+  bigMapWin.loadURL(`${BASE}/bigmap.html`);
+}
+
+function openBigMap() {
+  if (!bigMapWin || bigMapWin.isDestroyed()) createBigMap();
+  bigMap.open = true;
+  bigMap.typing = false;
+  placeBigMap(() => console.info(`[bigmap] open on ${JSON.stringify(bigMapDisplay().bounds)}`));
+  if (lastGame) bigMapWin.webContents.send('overlay:game', lastGame);
+  bigMapWin.webContents.send('bigmap:state', true);
+  mainWin?.webContents.send('bigmap:state', true);
+}
+
+function closeBigMap() {
+  if (!bigMap.open) return;
+  bigMap.open = false;
+  bigMap.typing = false;
+  if (bigMapWin && !bigMapWin.isDestroyed()) {
+    bigMapWin.webContents.send('bigmap:state', false);
+    bigMapWin.hide();
+  }
+  mainWin?.webContents.send('bigmap:state', false);
+}
+
+function onBigMapKey() {
+  const focused = BrowserWindow.getFocusedWindow();
+  const action = bigMapKeyAction({
+    open: bigMap.open, typing: bigMap.typing, chatOpen: chat.isOpen(),
+    launcherFocused: focused !== null && focused !== bigMapWin,
+  });
+  // Each press in the log: "M does nothing" told apart from "typing, so ignored".
+  console.info(`[keys] big map key: ${action ?? `ignored (${bigMap.open ? 'typing on the map' : chat.isOpen() ? 'game chat open' : 'launcher focused'})`}`);
+  if (action === 'open') { chat.reset(); openBigMap(); } else if (action === 'close') closeBigMap();
+}
+
 // --- push-to-talk -------------------------------------------------------------------------------------
 
 function startPtt() {
@@ -464,6 +556,7 @@ function startPtt() {
     { name: 'range', binding: saved.rangeKey, fallback: DEFAULT_RANGE },
     { name: 'overlay', binding: saved.overlayKey, fallback: DEFAULT_OVERLAY_KEY },
     { name: 'edit', binding: saved.overlayEditKey, fallback: DEFAULT_EDIT_KEY },
+    { name: 'bigmap', binding: saved.bigmapKey, fallback: DEFAULT_BIGMAP_KEY },
   ]);
   keys.ptt = new PushToTalk(hook, b.ptt, (held) => { toPage('ptt', held); updateTray(); });
   keys.range = new PushToTalk(hook, b.range, (down) => { if (down) toPage('range-key', true); }, DEFAULT_RANGE);
@@ -481,6 +574,12 @@ function startPtt() {
     console.info(`[keys] edit key: editing ${overlay.editing ? 'on' : 'off'}`);
     toPage('overlay:changed', overlay.settings);
   }, DEFAULT_EDIT_KEY);
+  keys.bigmap = new PushToTalk(hook, b.bigmap, (down) => { if (down) onBigMapKey(); }, DEFAULT_BIGMAP_KEY);
+  // The game's chat (bigmap.js): Enter / Esc pressed while the game has the keys, not one of our windows.
+  for (const code of [KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE]) {
+    const key = { kind: 'key', code };
+    new PushToTalk(hook, key, (down) => { if (down && BrowserWindow.getFocusedWindow() === null) chat.press(code); }, key);
+  }
   try {
     hook.start();
     hookRunning = true;
@@ -526,9 +625,43 @@ function wireIpc() {
   });
   // The overlay: voice state in, settings in and out, drag mode, preview.
   ipcMain.on('overlay:state', (e, state) => { if (fromUs(e) && overlay && state && typeof state === 'object') overlay.setVoice(state); });
-  ipcMain.on('overlay:game', (e, game) => { if (fromUs(e) && overlay && game && typeof game === 'object') overlay.setGame(game); });
+  ipcMain.on('overlay:game', (e, game) => {
+    if (!fromUs(e) || !game || typeof game !== 'object') return;
+    lastGame = game;
+    if (overlay) overlay.setGame(game);
+    if (bigMap.open && bigMapWin && !bigMapWin.isDestroyed()) bigMapWin.webContents.send('overlay:game', game);
+  });
+  // The big map (bigmap.html): the latest game data at its start, closing it, "typing in one of its boxes".
+  ipcMain.on('overlay:game:get', (e) => { e.returnValue = fromUs(e) ? lastGame : null; });
+  ipcMain.on('bigmap:close', (e) => { if (fromUs(e)) closeBigMap(); });
+  ipcMain.on('bigmap:typing', (e, on) => { if (fromUs(e)) bigMap.typing = on === true; });
+  ipcMain.on('bigmap:get', (e) => { e.returnValue = fromUs(e) ? { open: bigMap.open } : null; });
+  // Which screen it opens on (overlay settings): 'auto' or a screen's id, with the screens to pick from.
+  ipcMain.on('bigmap:display:get', (e) => {
+    if (!fromUs(e)) { e.returnValue = null; return; }
+    const primary = screen.getPrimaryDisplay().id;
+    e.returnValue = {
+      value: String(readSettings().bigmapDisplay ?? 'auto'),
+      choices: screen.getAllDisplays().map((d, i) => ({
+        id: String(d.id), label: `Màn hình ${i + 1}${d.id === primary ? ' (chính)' : ''} — ${d.size.width}×${d.size.height}`,
+      })),
+    };
+  });
+  ipcMain.on('bigmap:display:set', (e, value) => {
+    if (!fromUs(e) || typeof value !== 'string') return;
+    if (value !== 'auto' && !screen.getAllDisplays().some((d) => String(d.id) === value)) return;
+    writeSettings({ bigmapDisplay: value });
+    if (bigMap.open && bigMapWin && !bigMapWin.isDestroyed()) placeBigMap();
+  });
+  // The mini map the portal draws (map.js, the big map's own layers), for the overlay's map widget.
+  ipcMain.on('overlay:mini-frame', (e, frame) => {
+    if (!fromUs(e) || !overlay || !frame || typeof frame !== 'object') return;
+    const bytes = frame.image;
+    if (!(bytes instanceof Uint8Array || bytes instanceof ArrayBuffer) || bytes.byteLength > MINI_FRAME_MAX) return;
+    overlay.setMiniFrame({ image: bytes, type: typeof frame.type === 'string' ? frame.type : 'image/webp' });
+  });
   ipcMain.on('overlay:get', (e) => {
-    e.returnValue = fromUs(e) && overlay ? { settings: overlay.settings, displays: overlay.displays(), editing: overlay.editing } : null;
+    e.returnValue = fromUs(e) && overlay ? { settings: overlay.settings, displays: overlay.displays(), editing: overlay.editing, sizes: { map: overlay.size('map') } } : null;
   });
   ipcMain.handle('overlay:set', (e, raw) => (fromUs(e) && overlay ? overlay.setSettings(raw) : null));
   ipcMain.on('overlay:edit', (e, on) => {

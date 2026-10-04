@@ -7,7 +7,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const arg = (name) => (process.argv.find((a) => a.startsWith(`--${name}=`)) || '').slice(name.length + 3);
 const ORIGIN = arg('xomgay-origin');
-const KEYS = ['ptt', 'range', 'overlay', 'edit'];
+const KEYS = ['ptt', 'range', 'overlay', 'edit', 'bigmap'];
 
 if (ORIGIN !== '' && location.origin === ORIGIN) {
   const keyLabel = (name) => (KEYS.includes(name) ? ipcRenderer.sendSync('key:label', name) : '');
@@ -57,5 +57,20 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
     /** Your dino, its position and quests, and the AI near (app.js), for the map / dino / quest widgets. */
     overlayGame: (game) => ipcRenderer.send('overlay:game', game),
     onOverlayChanged: (cb) => { if (typeof cb === 'function') ipcRenderer.on('overlay:changed', (_e, s) => cb(s)); },
+    /** The mini map the portal draws (map.js) for the overlay's map widget: { image: bytes, type }. */
+    overlayMiniFrame: (frame) => ipcRenderer.send('overlay:mini-frame', frame),
+
+    /** The big map (bigmap.html, its key — M): the game data as it comes, the latest at once, closing it. */
+    onOverlayGame: (cb) => { if (typeof cb === 'function') ipcRenderer.on('overlay:game', (_e, g) => cb(g)); },
+    overlayGameGet: () => ipcRenderer.sendSync('overlay:game:get'),
+    bigMapGet: () => ipcRenderer.sendSync('bigmap:get'),
+    bigMapClose: () => ipcRenderer.send('bigmap:close'),
+    /** Which screen the big map opens on: { value: 'auto' | id, choices: [{ id, label }] }; set one. */
+    bigMapDisplayGet: () => ipcRenderer.sendSync('bigmap:display:get'),
+    bigMapDisplaySet: (value) => ipcRenderer.send('bigmap:display:set', String(value)),
+    /** A text box of the big map has the focus: its key types a letter there, it does not close the map. */
+    bigMapTyping: (on) => ipcRenderer.send('bigmap:typing', on === true),
+    /** Told when the big map opens / closes (the player page fetches the AI for it meanwhile). */
+    onBigMap: (cb) => { if (typeof cb === 'function') ipcRenderer.on('bigmap:state', (_e, open) => cb(open === true)); },
   });
 }

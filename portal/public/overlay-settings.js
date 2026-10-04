@@ -85,8 +85,11 @@
         <div class="ov-block">${specific}</div>
       </div>
       <div class="v-subhead" style="margin-top:14px">Hiện những gì</div>
-      <div class="ov-checks">${SHOW[current].map(([k, label]) =>
-        `<label><input type="checkbox" data-show="${k}"${w.show[k] ? ' checked' : ''}> ${esc(label)}</label>`).join('')}</div>`;
+      ${current === 'map' && L.overlayMiniFrame
+        // Launcher 1.0.34+: the mini map is drawn from the map itself (map.js).
+        ? `<p class="muted" style="margin:6px 0 0">Mini map hiện đúng các lớp đang bật trên bản đồ (tab Bản đồ, hoặc bản đồ lớn trong game — phím <kbd>${esc(L.keyLabel('bigmap'))}</kbd>): bật / tắt lớp ở đó, cùng điểm đến và vệt đường.</p>`
+        : `<div class="ov-checks">${SHOW[current].map(([k, label]) =>
+          `<label><input type="checkbox" data-show="${k}"${w.show[k] ? ' checked' : ''}> ${esc(label)}</label>`).join('')}</div>`}`;
   }
 
   // --- the layout editor: your screens in small, a box per widget ----------------------------
@@ -201,6 +204,10 @@
     if (!gesture) stage();
     $('ov-key-name').textContent = L.keyLabel('overlay');
     $('ov-edit-key-name').textContent = L.keyLabel('edit');
+    // The big map (launcher 1.0.34+).
+    $('ov-bigmap-key').hidden = !L.bigMapClose;
+    if (L.bigMapClose) $('ov-bigmap-key-name').textContent = L.keyLabel('bigmap');
+    bigMapDisplay();
     $('ov-drag').textContent = editing ? `✓ Xong chỉnh (${L.keyLabel('edit')})` : `✥ Chỉnh trên màn hình (${L.keyLabel('edit')})`;
     tabs();
     panel();
@@ -283,6 +290,28 @@
     const r = await L.captureKey('overlay');
     render();
     if (r && r.error) $('ov-key-name').textContent = r.error;   // already used by another key
+  });
+  // Which screen the big map opens on (launcher 1.0.34+): automatic (the mouse's) or one of them.
+  let displayChoices = '';
+  function bigMapDisplay() {
+    const got = L.bigMapDisplayGet ? L.bigMapDisplayGet() : null;
+    $('ov-bigmap-display-wrap').hidden = !got;
+    if (!got) return;
+    const sel = $('ov-bigmap-display');
+    const opts = [{ id: 'auto', label: 'Tự động — màn hình đang chơi game' }, ...got.choices];
+    const key = JSON.stringify(opts);
+    if (key !== displayChoices) {
+      displayChoices = key;
+      sel.innerHTML = opts.map((o) => `<option value="${esc(o.id)}">${esc(o.label)}</option>`).join('');
+    }
+    if (sel.value !== got.value) sel.value = opts.some((o) => o.id === got.value) ? got.value : 'auto';
+  }
+  $('ov-bigmap-display').addEventListener('change', (e) => { if (L.bigMapDisplaySet) L.bigMapDisplaySet(e.target.value); });
+  $('ov-bigmap-key').addEventListener('click', async () => {
+    $('ov-bigmap-key-name').textContent = 'bấm một phím hoặc nút chuột…';
+    const r = await L.captureKey('bigmap');
+    render();
+    if (r && r.error) $('ov-bigmap-key-name').textContent = r.error;
   });
   $('ov-edit-key').addEventListener('click', async () => {
     $('ov-edit-key-name').textContent = 'bấm một phím hoặc nút chuột…';

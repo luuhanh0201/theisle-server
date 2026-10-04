@@ -1,3 +1,4 @@
+import { HeatMapper } from './heatmap.js';
 import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -49,6 +50,7 @@ export async function bagUnlimited(steamId: string): Promise<boolean> {
  *   GET /player-api/server           online count, whether the game is up, name, slots, Discord
  *   GET /player-api/ai               the AI alive on the server now (species + position), fish apart
  *   GET /player-api/ai-zones         the AI zones admins drew (name, circle, AI kinds)
+ *   GET /player-api/heatmap          how many players in each 500 m square, every 5 minutes (heatmap.ts)
  *   POST /player-api/garage/<steamId>          { action: store|redeem, slot?, where? }
  *   POST /player-api/skin/<steamId>            { colors: { Body: {r,g,b}… (linear, 0–1) }, effects?, pattern?, theme?, variation?, keep? }
  *          or { item: "<itemId>" }: wear a skin item of their inventory (items.ts) on the dino of that species they play now
@@ -441,6 +443,9 @@ export async function startMutationUse(ctx: UseCtx, who: string, uid: string, sl
 }
 
 /** Returns false when the path is not a /player-api route (the caller carries on). */
+/** The players' heat map: one picture every 5 minutes, for everyone (made at the first ask). */
+let heat: HeatMapper | null = null;
+
 export async function handlePlayerApi(
   req: IncomingMessage, res: ServerResponse, path: string,
   ctx: {
@@ -666,6 +671,12 @@ export async function handlePlayerApi(
         ...(z.prison ? { prison: true } : {}),
       })),
     });
+    return true;
+  }
+  if (path === '/player-api/heatmap') {
+    // Where players are, as counts per square (no names, no positions), admins left out.
+    heat ??= new HeatMapper(() => ctx.store.online().map((p) => ({ steamId: p.steamId, loc: p.loc })), (id) => ctx.store.isAdmin(id));
+    send(res, 200, heat.current());
     return true;
   }
   if (path === '/player-api/ai') {

@@ -129,6 +129,11 @@
   const fmt = (n) => Math.round(n).toLocaleString('en-US');
 
   let mapKey = '';
+  // The mini map as the portal draws it (map.js: exactly the big map's layers, target and trail),
+  // about once a second. While one is fresh it is shown; without (an older portal, the player page
+  // not sending) the widget draws its own as before.
+  const MINI_FRESH_MS = 4000;
+  let mini = null;            // { bitmap, at }
   function renderMap() {
     const box = $('w-map');
     const cls = `map ${settings.shape}`;
@@ -138,6 +143,20 @@
     const g = preview() ? SAMPLE_GAME : game;
     const dino = g && g.dino;
     const pos = dino && dino.position;
+    if (!preview() && mini && Date.now() - mini.at < MINI_FRESH_MS && pos) {
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
+        canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(mini.bitmap, 0, 0, canvas.width, canvas.height);
+      // Its target line, distance and labels are in the picture.
+      for (const id of ['map-none', 'map-tgt', 'map-north', 'map-coords']) $(id).hidden = true;
+      mapKey = '';
+      return;
+    }
     // Standing still, nothing new around: the last picture is still right.
     // (Half a metre / two degrees is below what the mini map can show.)
     const key = preview() ? '' : JSON.stringify([
@@ -532,15 +551,6 @@
     el.replaceChildren(...parts);
   }
 
-  // --- overlay guide modal -------------------------------------------------------------
-  const guideModal = $('ov-guide-modal');
-  let guideAutoPrompted = false;
-  const showGuide = () => { if (guideModal) guideModal.hidden = false; };
-  const hideGuide = () => {
-    if (guideModal) guideModal.hidden = true;
-    try { localStorage.setItem('isle_overlay_tour_done', '1'); } catch {}
-  };
-
   // --- all -----------------------------------------------------------------------------------------
   function render() {
     if (!settings) return;
@@ -548,14 +558,6 @@
     document.documentElement.style.setProperty('--bg', `rgba(7, 9, 14, ${settings.bg / 100})`);
     $(`w-${W}`).hidden = false;
     $('edit').hidden = !settings.editing;
-    if (settings.editing && !guideAutoPrompted) {
-      guideAutoPrompted = true;
-      try {
-        if (localStorage.getItem('isle_overlay_tour_done') !== '1') {
-          showGuide();
-        }
-      } catch {}
-    }
     setText($('size'), `${settings.scale}%`);
     // Edit mode shows the widgets that are off too, dimmed, with a switch.
     const off = !settings.enabled || !settings.overlayOn;
@@ -579,6 +581,14 @@
     game = g;
     if (W === 'dino' && !preview()) onHealth(g && g.dino);
     if (W !== 'voice') render();
+  });
+  window.overlay.onMiniFrame?.((f) => {
+    if (W !== 'map' || !f || !f.image) return;
+    createImageBitmap(new Blob([f.image], { type: f.type || 'image/webp' })).then((bitmap) => {
+      if (mini) mini.bitmap.close();
+      mini = { bitmap, at: Date.now() };
+      render();
+    }).catch(() => undefined);
   });
   window.overlay.onMap((m) => {
     if (W !== 'map' || !m || !m.json) return;
@@ -609,9 +619,6 @@
   window.addEventListener('resize', render);
   $('done').addEventListener('click', () => window.overlay.doneEditing());
   $('toggle').addEventListener('click', () => window.overlay.toggleWidget(W));
-  $('guide-btn')?.addEventListener('click', showGuide);
-  $('ov-guide-close')?.addEventListener('click', hideGuide);
-  $('ov-guide-ok')?.addEventListener('click', hideGuide);
   // Move by dragging the frame: not the window manager's drag region (some
   // Linux desktops ignore it) — the launcher moves the window to follow the
   // real pointer, so it can be dropped anywhere, on any screen.
@@ -660,10 +667,6 @@
   }
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (guideModal && !guideModal.hidden) {
-        hideGuide();
-        return;
-      }
       if (settings && settings.editing) window.overlay.doneEditing();
     }
   });

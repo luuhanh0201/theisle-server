@@ -42,6 +42,7 @@ export class BridgeClient {
   server() { return this.get('/player-api/server'); }
   ai() { return this.get('/player-api/ai'); }
   aiZones() { return this.get('/player-api/ai-zones'); }
+  heatmap() { return this.get('/player-api/heatmap'); }
   voice(steamId: string) { return this.get(`/player-api/voice/${steamId}`); }
   voiceToken(steamId: string) { return this.post(`/player-api/voice/${steamId}/token`, {}); }
   voiceRange(steamId: string, range: unknown) { return this.post(`/player-api/voice/${steamId}/range`, { range }); }

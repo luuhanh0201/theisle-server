@@ -1691,13 +1691,17 @@ function renderGame3d(dino) {
 }
 
 
+function ensureMap() {
+  if (map) return;
+  map = createMap($('map'));
+  loadAiZones();
+  loadHeat();
+  // A new target shows on the launcher's mini map at once, not a second later.
+  map.onTargetChange(() => { pushOverlayGame(lastMeData?.dino ?? null); sendMiniFrame(); });
+}
+
 function renderMap(me) {
-  if (!map) {
-    map = createMap($('map'));
-    loadAiZones();
-    // A new target shows on the launcher's mini map at once, not a second later.
-    map.onTargetChange(() => pushOverlayGame(lastMeData?.dino ?? null));
-  }
+  ensureMap();
   map.update(me.dino);
 
   if (me.dino?.position) {
@@ -2155,6 +2159,13 @@ async function refresh() {
     } else if (me.status === 200) {
       lastMeData = me.body;
       pushOverlayGame(me.body.dino);
+      // The launcher's mini map is drawn from this page's map (sendMiniFrame), whatever tab is shown
+      // and also in game mode, when the page itself is not redrawn: your dino goes on it every second.
+      if (window.isleLauncher?.overlayMiniFrame && (miniMapOn || bigMapOpen)) {
+        ensureMap();
+        map.update(me.body.dino);
+        sendMiniFrame();
+      }
       if (!inBackground() || (!gameMode.on && Date.now() - lastDrawn >= BACKGROUND_DRAW_MS)) {
         lastDrawn = Date.now();
         renderAuth(me.body);
@@ -2179,6 +2190,11 @@ async function refresh() {
 // Xóm Gáy Launcher's overlay (mini map, dino numbers, prime quests): the same
 // data this page shows, handed over each second. Nothing else leaves the page.
 let lastAi = [];
+// The game's fish and the AI zones the admins drew: for the launcher's big map (bigmap.js).
+let lastFish = [];
+let lastAiZones = null;
+// Where players are (a picture every 5 minutes, /api/heatmap): the map, the big map, the mini map.
+let lastHeat = null;
 // Escaped inmates (the prison): on the map page and the overlay's mini map for everyone to hunt.
 let lastEscapees = [];
 function pushOverlayGame(dino, me = lastMeData) {
@@ -2191,6 +2207,9 @@ function pushOverlayGame(dino, me = lastMeData) {
       position: dino.position, trail: dino.trail, prime: dino.prime,
     } : null,
     ai: lastAi,
+    fish: lastFish,
+    aiZones: lastAiZones,
+    heat: lastHeat,
     escapees: lastEscapees,
     // The point set on the map (map.js): the mini map draws a line to it.
     target: map ? map.getTarget() : loadWaypoints().target,
@@ -2203,8 +2222,14 @@ let aiBusy = false;
 let miniMapAi = false;
 let miniMapOn = false;
 let overlaySettings = null;
+// The launcher's big map (its key, M) is open: the AI and its zones are fetched for it meanwhile.
+let bigMapOpen = false;
+// The map widget's size on screen ([width, height] CSS px), from the launcher.
+let miniSize = null;
 function readOverlayAi(settings) {
   if (settings) overlaySettings = settings;
+  const got = window.isleLauncher?.overlayGet?.();
+  if (Array.isArray(got?.sizes?.map)) miniSize = got.sizes.map;
   const m = overlaySettings && overlaySettings.widgets && overlaySettings.widgets.map;
   // The mini map shown at all: escaped inmates are drawn on it whatever the AI setting.
   miniMapOn = Boolean(overlaySettings && overlaySettings.enabled && m && m.enabled && (!gameMode.on || gameMode.keep.map));
@@ -2217,13 +2242,14 @@ if (window.isleLauncher?.overlayGet) {
   setInterval(() => readOverlayAi(window.isleLauncher.overlayGet()?.settings), 10_000);
 }
 setInterval(async () => {
-  const wanted = (currentTab === 'map' && !document.hidden) || miniMapAi || miniMapOn;
+  const wanted = (currentTab === 'map' && !document.hidden) || miniMapAi || miniMapOn || bigMapOpen;
   if (aiBusy || !wanted || !lastMeData || !map) return;
   aiBusy = true;
   try {
     const ai = await getJson('/api/ai');
     if (ai.status === 200) {
       lastAi = ai.body?.list ?? [];
+      lastFish = Array.isArray(ai.body?.fish) ? ai.body.fish : [];
       lastEscapees = Array.isArray(ai.body?.escapees) ? ai.body.escapees : [];
       map.setAi(lastAi); map.setFish(ai.body?.fish ?? []); map.setEscapees(lastEscapees);
     }
@@ -2239,10 +2265,59 @@ async function loadAiZones() {
   if (!map) return;
   try {
     const r = await getJson('/api/ai-zones');
-    if (r.status === 200) map.setAiZones(r.body?.zones ?? []);
+    if (r.status === 200) { lastAiZones = r.body?.zones ?? []; map.setAiZones(lastAiZones); }
   } catch { /* the next try */ }
 }
-setInterval(() => { if (currentTab === 'map' && !document.hidden) loadAiZones(); }, 60_000);
+setInterval(() => { if ((currentTab === 'map' && !document.hidden) || bigMapOpen) loadAiZones(); }, 60_000);
+// The heat map changes every 5 minutes: asked each minute while a map shows it (a new picture within a minute).
+async function loadHeat() {
+  if (!map || !lastMeData) return;
+  try {
+    const r = await getJson('/api/heatmap');
+    if (r.status === 200) { lastHeat = r.body; map.setHeat(lastHeat); }
+  } catch { /* the next try */ }
+}
+setInterval(() => { if ((currentTab === 'map' && !document.hidden) || miniMapOn || bigMapOpen) loadHeat(); }, 60_000);
+window.isleLauncher?.onBigMap?.((open) => {
+  bigMapOpen = open;
+  if (open) { ensureMap(); loadAiZones(); loadHeat(); pushOverlayGame(lastMeData?.dino ?? null); }
+});
+
+// The launcher's mini map widget: this page's map (map.js paintMini) — the very layers, target and trail
+// set on the map tab or the big map — drawn at the widget's size and sent as a picture each second.
+let miniCanvas = null;
+let miniBusy = false;
+// Standing still, nothing new around: the picture sent is still right — drawn again only every MINI_SAME_MS.
+let miniKey = '';
+let miniSentAt = 0;
+const MINI_SAME_MS = 5000;
+function sendMiniFrame() {
+  const L = window.isleLauncher;
+  const m = overlaySettings?.widgets?.map;
+  if (!L?.overlayMiniFrame || !miniMapOn || !map || !m || miniBusy) return;
+  const [width, height] = miniSize ?? [260 * (m.scale ?? 100) / 100, 260 * (m.scale ?? 100) / 100];
+  const p = lastMeData?.dino?.position;
+  const round = (list) => (list ?? []).map((a) => [Math.round(a.x / 100), Math.round(a.y / 100)]);
+  let layers = '';
+  try { layers = localStorage.getItem('portalMapLayers.v2') ?? ''; } catch { /* defaults */ }
+  const key = JSON.stringify([width, height, m.radius, m.rotate, layers, map.getTarget(),
+    p ? [Math.round(p.x / 50), Math.round(p.y / 50), Math.round((p.yaw ?? 0) / 2)] : null,
+    round(lastAi), round(lastFish), round(lastEscapees), lastAiZones?.length ?? 0, lastHeat?.t ?? 0, lastMeData?.dino?.trail?.length ?? 0]);
+  if (key === miniKey && Date.now() - miniSentAt < MINI_SAME_MS) return;
+  miniKey = key;
+  miniSentAt = Date.now();
+  miniCanvas ??= document.createElement('canvas');
+  const drawn = map.paintMini(miniCanvas, { width, height, dpr: window.devicePixelRatio || 1, radiusM: m.radius ?? 500, rotate: m.rotate ?? 'north' });
+  if (!drawn) return;
+  miniBusy = true;
+  miniCanvas.toBlob((blob) => {
+    if (!blob) { miniBusy = false; return; }
+    blob.arrayBuffer()
+      .then((buf) => L.overlayMiniFrame({ image: new Uint8Array(buf), type: blob.type }))
+      .catch(() => undefined)
+      .finally(() => { miniBusy = false; });
+  }, 'image/webp', 0.85);
+}
 
 // ============================================================================
 // Interactive Onboarding Tour (Zero-dependency, skippable, live AI highlight)

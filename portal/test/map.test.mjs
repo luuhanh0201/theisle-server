@@ -25,3 +25,14 @@ test('waypoints: nothing stored (or no storage at all) is an empty list, never a
   assert.deepEqual(loadWaypoints(), { target: { x: 1, y: 2, name: 'Hồ' }, saved: [{ id: 'a', name: 'Tổ', x: 5, y: 6 }] });
   delete globalThis.localStorage;
 });
+
+test('a layer added since the choice was saved (the heat map) starts on; turned off, it stays off', async () => {
+  const store = new Map();
+  globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  const { loadLayersForTest, saveLayersForTest } = await import('../public/map.js');
+  store.set('portalMapLayers.v2', JSON.stringify(['ai', 'water']));        // saved before the heat map
+  assert.deepEqual([...loadLayersForTest()].sort(), ['ai', 'heat', 'water']);
+  const on = loadLayersForTest(); on.delete('heat'); saveLayersForTest(on);
+  assert.deepEqual([...loadLayersForTest()].sort(), ['ai', 'water'], 'off by choice: stays off');
+  delete globalThis.localStorage;
+});

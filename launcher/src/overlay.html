@@ -202,26 +202,7 @@
   .h.nw { left: 0; top: 0; cursor: nwse-resize; } .h.se { right: 0; bottom: 0; cursor: nwse-resize; }
   .h.ne { right: 0; top: 0; cursor: nesw-resize; } .h.sw { left: 0; bottom: 0; cursor: nesw-resize; }
   .h.se::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px; border-right: 2px solid var(--gold); border-bottom: 2px solid var(--gold); }
-  .edit .tools button.guide { background: rgba(255,255,255,.14); color: #fff; }
-  .edit .tools button.guide:hover { background: rgba(255,255,255,.24); }
 
-  /* overlay guide modal */
-  .ov-guide-modal { position: absolute; inset: 0; background: rgba(3, 5, 10, .78); display: grid; place-items: center; z-index: 10; backdrop-filter: blur(4px); }
-  .ov-guide-card { width: min(420px, calc(100% - 24px)); background: rgba(12, 18, 30, .96); border: 1px solid rgba(52, 211, 153, .45); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.7), 0 0 24px rgba(16, 185, 129, .2); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
-  .ov-guide-head { display: flex; align-items: center; justify-content: space-between; }
-  .ov-guide-badge { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; color: var(--ok); background: var(--ok-soft); border: 1px solid rgba(52,211,153,.3); padding: 2px 8px; border-radius: 99px; }
-  .ov-guide-close { background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
-  .ov-guide-close:hover { color: #fff; background: rgba(255,255,255,.1); }
-  .ov-guide-title { font-size: 15px; font-weight: 800; color: #fff; margin: 0; }
-  .ov-guide-body { display: flex; flex-direction: column; gap: 10px; font-size: 12px; line-height: 1.45; color: var(--muted); }
-  .ov-guide-row { display: flex; align-items: flex-start; gap: 10px; }
-  .ov-guide-ic { font-size: 16px; flex: none; line-height: 1.2; }
-  .ov-guide-txt b { color: #fff; }
-  .ov-guide-txt code { font-family: monospace; background: rgba(255,255,255,.1); padding: 1px 5px; border-radius: 4px; color: #fde68a; font-size: 11px; }
-  .ov-guide-ai-tag { color: #fca5a5; font-weight: 800; background: rgba(239,68,68,.2); padding: 1px 4px; border-radius: 4px; }
-  .ov-guide-foot { display: flex; justify-content: flex-end; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.08); }
-  .ov-guide-btn { background: #10b981; color: #041f14; font: 800 12.5px system-ui, sans-serif; border: 0; border-radius: 8px; padding: 7px 16px; cursor: pointer; }
-  .ov-guide-btn:hover { background: #34d399; }
 </style>
 </head>
 <body>
@@ -255,48 +236,8 @@
   <div class="edit" id="edit" hidden>
     <div class="h n" data-dir="n"></div><div class="h s" data-dir="s"></div><div class="h e" data-dir="e"></div><div class="h w" data-dir="w"></div>
     <div class="h nw" data-dir="nw"></div><div class="h ne" data-dir="ne"></div><div class="h sw" data-dir="sw"></div><div class="h se" data-dir="se"></div>
-    <div class="tools"><b id="wname"></b><span id="size"></span><button type="button" id="toggle"></button><button type="button" id="guide-btn" class="guide" title="Xem hướng dẫn sử dụng">💡 Hướng dẫn</button><button type="button" id="done">Xong</button></div>
+    <div class="tools"><b id="wname"></b><span id="size"></span><button type="button" id="toggle"></button><button type="button" id="done">Xong</button></div>
     <div class="hint" id="hint">Kéo để di chuyển · kéo mép / góc để phóng to, thu nhỏ · F9 để xong</div>
-  </div>
-
-  <!-- Overlay Guide Modal -->
-  <div class="ov-guide-modal" id="ov-guide-modal" hidden>
-    <div class="ov-guide-card">
-      <div class="ov-guide-head">
-        <span class="ov-guide-badge">🎮 HƯỚNG DẪN OVERLAY HUD</span>
-        <button type="button" class="ov-guide-close" id="ov-guide-close" title="Đóng hướng dẫn">✕ Bỏ qua</button>
-      </div>
-      <h3 class="ov-guide-title">Tuỳ Biến HUD Trong Game</h3>
-      <div class="ov-guide-body">
-        <div class="ov-guide-row">
-          <span class="ov-guide-ic">🗺️</span>
-          <div class="ov-guide-txt">
-            <b>Bản đồ & Radar AI Live:</b> Hiển thị toạ độ, hướng nhìn và <span class="ov-guide-ai-tag">quét trực tiếp AI (Heo rừng, Hươu...)</span> xung quanh bạn để săn mồi.
-          </div>
-        </div>
-        <div class="ov-guide-row">
-          <span class="ov-guide-ic">🦖</span>
-          <div class="ov-guide-txt">
-            <b>Dino Vitals:</b> Cập nhật số Máu (HP), Thể lực, Đói, Nước và số máu bị trừ khi giao tranh.
-          </div>
-        </div>
-        <div class="ov-guide-row">
-          <span class="ov-guide-ic">🎙️</span>
-          <div class="ov-guide-txt">
-            <b>Voice 3D:</b> Ai đang nói gần bạn, mic và hướng âm thanh.
-          </div>
-        </div>
-        <div class="ov-guide-row">
-          <span class="ov-guide-ic">⌨️</span>
-          <div class="ov-guide-txt">
-            <b>Phím tắt:</b> Nhấn <code>F1</code> để ẩn/hiện HUD · Kéo giữa khung để di chuyển · Kéo mép/góc để phóng to thu nhỏ.
-          </div>
-        </div>
-      </div>
-      <div class="ov-guide-foot">
-        <button type="button" class="ov-guide-btn" id="ov-guide-ok">✓ Đã hiểu</button>
-      </div>
-    </div>
   </div>
   <script src="overlay-page.js"></script>
 </body>

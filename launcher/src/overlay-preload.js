@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('overlay', {
   onState: (cb) => ipcRenderer.on('overlay:state', (_e, s) => cb(s)),
   onGame: (cb) => ipcRenderer.on('overlay:game', (_e, g) => cb(g)),
   onMap: (cb) => ipcRenderer.on('overlay:map', (_e, m) => cb(m)),
+  /** The mini map drawn by the portal: { image: bytes, type }. */
+  onMiniFrame: (cb) => ipcRenderer.on('overlay:mini-frame', (_e, f) => cb(f)),
   onPreview: (cb) => ipcRenderer.on('overlay:preview', (_e, ms) => cb(Number(ms) || 6000)),
   /** Edit mode, dragging an edge / corner ('n', 'se'…): 'start' | 'move' | 'end'. */
   resize: (widget, phase, dir) => ipcRenderer.send('overlay:resize', String(widget), String(phase), String(dir || '')),

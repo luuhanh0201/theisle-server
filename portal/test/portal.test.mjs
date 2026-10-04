@@ -103,6 +103,7 @@ const bridge = {
   server: async () => ({ status: 200, body: { online: 3, phase: 'running' } }),
   ai: async () => { bridgeCalls.push('ai'); return { status: 200, body: { t: 1, stale: false, count: 1, list: [{ s: 'Boar', x: 1, y: 2 }] } }; },
   aiZones: async () => ({ status: 200, body: { zones: [{ name: 'Đồng cỏ', x: 1, y: 2, radiusM: 300, species: ['Heo rừng'], count: 3 }] } }),
+  heatmap: async () => ({ status: 200, body: { t: 1, next: 300, cell: 50000, players: 2, cells: [{ x: 25000, y: 25000, n: 2 }] } }),
   garage: async (id, body) => { bridgeCalls.push({ garage: id, body }); return { status: 202, body: { id: 5, action: body.action } }; },
   skin: async (id, body) => { bridgeCalls.push({ skin: id, body }); return { status: 202, body: { id: 6, action: 'skin' } }; },
   useItem: async (id, body) => { bridgeCalls.push({ useItem: id, body }); return { status: 202, body: { id: 7, action: 'mutation' } }; },
@@ -136,6 +137,14 @@ test('/api/ai (live AI for the map) needs a login', async () => {
   const r = await get('/api/ai', { cookie });
   assert.equal(r.status, 200);
   assert.equal((await r.json()).list[0].s, 'Boar');
+});
+
+test('/api/heatmap (players per square, every 5 minutes) needs a login', async () => {
+  assert.equal((await get('/api/heatmap')).status, 401);
+  const cookie = `${COOKIE}=${sign(SECRET, ME, Math.floor(Date.now() / 1000) + 600)}`;
+  const r = await get('/api/heatmap', { cookie });
+  assert.equal(r.status, 200);
+  assert.deepEqual((await r.json()).cells, [{ x: 25000, y: 25000, n: 2 }]);
 });
 
 test('the Steam round trip sets a Secure HttpOnly cookie', async () => {
