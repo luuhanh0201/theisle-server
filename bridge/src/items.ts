@@ -25,7 +25,7 @@ import { findReference, type Diet } from './mutation-reference.js';
  * (0, 0, 0) as a region the species does not use.
  */
 
-export type ItemType = 'skin' | 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket';
+export type ItemType = 'skin' | 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket' | 'dino_ticket';
 export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: boolean }> = [
   // unique: a player owns it once (a skin); a kind used up (a mutation…) may be owned several times.
   { key: 'skin', label: 'Skin dino', unique: true },
@@ -34,6 +34,8 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
   { key: 'mutation_ticket', label: 'Phiếu đổi mutation', unique: false },
   { key: 'mutation_clear', label: 'Phiếu bỏ mutation', unique: false },
   { key: 'prime_ticket', label: 'Phiếu Prime', unique: false },
+  // Owner, 2026-10-05: every account gets one (starter.ts) — any dino into the garage.
+  { key: 'dino_ticket', label: 'Phiếu chọn dino', unique: false },
 ];
 
 /**
@@ -43,6 +45,13 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
  * mutation_clear and prime_ticket carry nothing.
  */
 export interface TicketData { maxRarity: Rarity }
+/**
+ * A dino ticket (starter.ts): the player picks a species, its sex and the mutations of its four slots;
+ * it goes into their garage with every prime task done and a growth drawn between growthMin and
+ * growthMax. `quest`: quest mutations may be picked too.
+ */
+export interface DinoTicketData { growthMin: number; growthMax: number; quest: boolean }
+export const DINO_TICKET_DEFAULT: DinoTicketData = { growthMin: 0.5, growthMax: 1, quest: false };
 export type EmptyData = Record<string, never>;
 
 /**
@@ -137,7 +146,8 @@ type TypedData =
   | { type: 'mutation'; data: MutationData }
   | { type: 'mutation_ticket'; data: TicketData }
   | { type: 'mutation_clear'; data: EmptyData }
-  | { type: 'prime_ticket'; data: EmptyData };
+  | { type: 'prime_ticket'; data: EmptyData }
+  | { type: 'dino_ticket'; data: DinoTicketData };
 export type Item = ItemBase & TypedData;
 type ItemDef = Pick<ItemBase, 'name' | 'rarity'> & TypedData;
 
@@ -243,6 +253,21 @@ export function validateMutationData(raw: unknown): MutationData {
   return { mutation: ref.name, diet: ref.diet, slot2: ref.kind === 'slot2', unlock: ref.kind === 'unlock' };
 }
 
+/** A dino ticket's data, checked: growth 25–100 % (min ≤ max), quest mutations or not. */
+export function validateDinoTicketData(raw: unknown): DinoTicketData {
+  const d = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const g = (v: unknown, def: number, what: string): number => {
+    if (v === undefined) return def;
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0.25 || v > 1) throw new ValidationError(`${what} must be 0.25–1`);
+    return Math.round(v * 100) / 100;
+  };
+  const growthMin = g(d['growthMin'], DINO_TICKET_DEFAULT.growthMin, 'growthMin');
+  const growthMax = g(d['growthMax'], DINO_TICKET_DEFAULT.growthMax, 'growthMax');
+  if (growthMin > growthMax) throw new ValidationError('growthMin must not be above growthMax');
+  if (d['quest'] !== undefined && typeof d['quest'] !== 'boolean') throw new ValidationError('quest must be true or false');
+  return { growthMin, growthMax, quest: d['quest'] === true };
+}
+
 /** The editable part of an item, checked: { type, name, rarity, data, retired? }. */
 export function validateItem(raw: unknown): ItemDef & { retired?: boolean } {
   if (typeof raw !== 'object' || raw === null) throw new ValidationError('item must be an object');
@@ -271,6 +296,7 @@ export function validateItem(raw: unknown): ItemDef & { retired?: boolean } {
   }
   if (rarity === 'special') throw new ValidationError('Đặc biệt chỉ dành cho mutation nhiệm vụ');
   if (type === 'mutation_clear' || type === 'prime_ticket') return { type, name, rarity: rarity as Rarity, data: {}, ...extra };
+  if (type === 'dino_ticket') return { type, name, rarity: rarity as Rarity, data: validateDinoTicketData(r['data']), ...extra };
   return { type: 'skin', name, rarity: rarity as Rarity, data: validateSkinData(r['data']), ...extra };
 }
 
@@ -316,6 +342,24 @@ export function createItem(raw: unknown, by: string | null): Promise<Item> {
     const now = Math.floor(Date.now() / 1000);
     const item = { id, type: def.type, name: def.name, rarity: def.rarity, retired: def.retired ?? false, data: def.data,
       createdAt: now, createdBy: by, updatedAt: now } as Item;
+    file.items[id] = item;
+    await writeJson(itemsPath(), file);
+    return item;
+  });
+}
+
+/** An item kept under a fixed id (the starter ticket, starter.ts): made once when missing, else left as the admin set it. */
+export function ensureItem(id: string, raw: unknown): Promise<Item> {
+  if (!/^[\w-]{1,40}$/.test(id)) return Promise.reject(new ValidationError('bad item id'));
+  const def = validateItem(raw);
+  return serialized(async () => {
+    const file = await readJson<ItemsFile>(itemsPath(), { items: {} });
+    file.items ??= {};
+    const had = file.items[id];
+    if (had !== undefined) return withRarity(had);
+    const now = Math.floor(Date.now() / 1000);
+    const item = { id, type: def.type, name: def.name, rarity: def.rarity, retired: false, data: def.data,
+      createdAt: now, createdBy: null, updatedAt: now } as Item;
     file.items[id] = item;
     await writeJson(itemsPath(), file);
     return item;

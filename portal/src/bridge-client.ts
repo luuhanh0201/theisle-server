@@ -43,6 +43,11 @@ export class BridgeClient {
   ai() { return this.get('/player-api/ai'); }
   aiZones() { return this.get('/player-api/ai-zones'); }
   heatmap() { return this.get('/player-api/heatmap'); }
+  /** The dino ticket (bridge starter.ts): what can be picked, and the pick. */
+  dinoOptions(steamId: string) { return this.get(`/player-api/items/${steamId}/dino-options`); }
+  useDino(steamId: string, body: { uid: unknown; species: unknown; female: unknown; mutations: unknown }) {
+    return this.post(`/player-api/items/${steamId}/dino`, body);
+  }
   voice(steamId: string) { return this.get(`/player-api/voice/${steamId}`); }
   voiceToken(steamId: string) { return this.post(`/player-api/voice/${steamId}/token`, {}); }
   voiceRange(steamId: string, range: unknown) { return this.post(`/player-api/voice/${steamId}/range`, { range }); }

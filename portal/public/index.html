@@ -2420,6 +2420,15 @@
   .bag-dlg { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border-radius: 16px; border: 1px solid var(--border-light); background: var(--bg-card); color: var(--text); }
   .bag-dlg::backdrop { background: rgba(2, 6, 23, .7); backdrop-filter: blur(4px); }
   .bag-dlg .in { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  /* The dino ticket's choice (app.js renderDinoDialog). */
+  .bag-dlg .dino-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+  .bag-dlg .dino-muts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .bag-dlg .dino-slot { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; min-width: 0; }
+  .bag-dlg .dino-slot small { font-weight: 500; line-height: 1.4; }
+  .bag-dlg .dino-pick .xseg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; height: 38px; }
+  .bag-dlg .dino-pick .xseg button { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-weight: 700; padding: 0 14px; cursor: pointer; }
+  .bag-dlg .dino-pick .xseg button.on { background: var(--emerald-soft); color: var(--text); }
+  @media (max-width: 520px) { .bag-dlg .dino-pick, .bag-dlg .dino-muts { grid-template-columns: minmax(0, 1fr); } }
   .bag-dlg .hd { display: flex; gap: 12px; align-items: center; }
   .bag-dlg .hd b { font-size: 16px; display: block; }
   .bag-dlg .x { margin-left: auto; background: none; border: 0; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px 8px; }

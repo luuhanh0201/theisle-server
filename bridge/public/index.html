@@ -2918,9 +2918,15 @@
                 <label>Loại phiếu<select id="tkt-type">
                   <option value="mutation_ticket">🎟️ Phiếu đổi mutation</option>
                   <option value="mutation_clear">🧹 Phiếu bỏ mutation</option>
-                  <option value="prime_ticket">👑 Phiếu Prime</option></select></label>
+                  <option value="prime_ticket">👑 Phiếu Prime</option>
+                  <option value="dino_ticket">🦖 Phiếu chọn dino</option></select></label>
                 <label>Tên phiếu<input id="tkt-name" maxlength="60" placeholder="vd: Phiếu đổi mutation Hiếm"></label>
                 <label id="tkt-rarity-l">Độ hiếm<select id="tkt-rarity"></select></label>
+              </div>
+              <div class="itm-fields" id="tkt-dino" hidden>
+                <label>Tăng trưởng thấp nhất (%)<input id="tkt-gmin" type="number" min="25" max="100" step="1"></label>
+                <label>Tăng trưởng cao nhất (%)<input id="tkt-gmax" type="number" min="25" max="100" step="1"></label>
+                <label style="flex-direction:row;align-items:center;gap:8px"><input id="tkt-quest" type="checkbox"> Cho chọn cả mutation nhiệm vụ</label>
               </div>
               <div class="step-hint" id="tkt-info"></div>
               <div class="row" style="justify-content:flex-end">
@@ -4444,11 +4450,12 @@ $('mit-owners').addEventListener('click', async (e) => {
 });
 
 // --- Vật phẩm → Phiếu (items.ts mutation_ticket / mutation_clear / prime_ticket; used in the player's Túi đồ) ---
-const TKT_TYPES = { mutation_ticket: '🎟️ Phiếu đổi mutation', mutation_clear: '🧹 Phiếu bỏ mutation', prime_ticket: '👑 Phiếu Prime' };
+const TKT_TYPES = { mutation_ticket: '🎟️ Phiếu đổi mutation', mutation_clear: '🧹 Phiếu bỏ mutation', prime_ticket: '👑 Phiếu Prime', dino_ticket: '🦖 Phiếu chọn dino' };
 const TKT_INFO = {
   mutation_ticket: 'Người chơi tự chọn một mutation khi dùng: mọi mutation còn trong game, đúng chế độ ăn của loài. Phiếu <b>Đặc biệt</b> đổi được cả mutation nhiệm vụ; độ hiếm khác chỉ để hiển thị. Chỉ vào ô đã mở theo tăng trưởng như game (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%).',
   mutation_clear: 'Bỏ mutation ở một ô (1–4) để người chơi chọn lại trong game.',
   prime_ticket: 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện, chỉ số prime sau vài giây). Dùng cho trường hợp lỡ prime.',
+  dino_ticket: 'Người chơi chọn <b>1 loài bất kỳ</b>, giới tính và mutation 4 ô chính (đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới. Phiếu tân thủ <span class="mono">starter_dino</span> được phát tự động: mỗi tài khoản 1 phiếu (người cũ và người mới). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b>.',
 };
 const tkt = { sel: null, draft: null, saved: null };
 const tktDirty = () => tkt.draft !== null && JSON.stringify(tkt.draft) !== tkt.saved;
@@ -4498,6 +4505,13 @@ function tktFields() {
   for (const o of $('tkt-rarity').options) o.hidden = !ticket && o.value === 'special';
   $('tkt-rarity').value = ticket ? d.data.maxRarity : d.rarity;
   $('tkt-info').innerHTML = TKT_INFO[d.type];
+  $('tkt-dino').hidden = d.type !== 'dino_ticket';
+  if (d.type === 'dino_ticket') {
+    $('tkt-gmin').value = String(Math.round(d.data.growthMin * 100));
+    $('tkt-gmax').value = String(Math.round(d.data.growthMax * 100));
+    $('tkt-quest').checked = d.data.quest === true;
+    $('tkt-gmin').disabled = $('tkt-gmax').disabled = $('tkt-quest').disabled = !can('items.edit');
+  }
   $('tkt-dirty').textContent = tktDirty() ? '● Có thay đổi chưa lưu' : tkt.sel ? 'Đã lưu' : '';
 }
 $('tkt-list').addEventListener('click', (e) => { const b = e.target.closest('[data-tkt]'); if (b) tktSelect(b.dataset.tkt); });
@@ -4506,7 +4520,9 @@ $('tkt-body').addEventListener('input', (e) => {
   const t = e.target, d = tkt.draft;
   if (!d || t.closest('#tkt-own-wrap')) return;
   if (t.id === 'tkt-name') d.name = t.value;
-  else if (t.id === 'tkt-type') { d.type = t.value; d.data = t.value === 'mutation_ticket' ? { maxRarity: d.rarity === 'special' ? 'special' : d.rarity } : {}; if (t.value !== 'mutation_ticket' && d.rarity === 'special') d.rarity = 'legendary'; }
+  else if (t.id === 'tkt-type') { d.type = t.value; d.data = t.value === 'mutation_ticket' ? { maxRarity: d.rarity === 'special' ? 'special' : d.rarity } : t.value === 'dino_ticket' ? { growthMin: 0.5, growthMax: 1, quest: false } : {}; if (t.value !== 'mutation_ticket' && d.rarity === 'special') d.rarity = 'legendary'; }
+  else if (t.id === 'tkt-gmin' || t.id === 'tkt-gmax') { const v = Number(t.value); if (Number.isFinite(v)) d.data[t.id === 'tkt-gmin' ? 'growthMin' : 'growthMax'] = Math.min(1, Math.max(0.25, v / 100)); }
+  else if (t.id === 'tkt-quest') d.data.quest = t.checked;
   else if (t.id === 'tkt-rarity') { if (d.type === 'mutation_ticket') d.data.maxRarity = t.value; d.rarity = t.value; }
   tktFields();
 });
@@ -9137,10 +9153,12 @@ function renderSvip() {
       <tr><td>${p.name ? who(p.steamId, p.name) : '<span class="muted">chưa vào game</span>'}</td><td class="mono">${esc(p.steamId)}</td>
         <td>${esc(p.note || '')}</td><td class="muted">${p.addedAt ? dateTime(p.addedAt) : ''}${p.by ? ` · ${esc(p.by)}` : ''}</td>
         <td style="text-align:right"><button type="button" class="btn-ghost sm" data-sv-del="${esc(p.steamId)}" style="color:var(--kill,#ef4444)">Bỏ</button></td></tr>`).join('')}</tbody></table>`;
+  // Released or being tried: one button each (owner, 2026-10-05: "nút phát hành — click là phát hành cho tất cả").
   $('sv-features').innerHTML = d.features.map((f) => `<div class="dc-route"><span>${esc(f.label)}</span>
-    <select data-sv-feature="${esc(f.key)}" aria-label="Chế độ">
-      <option value="testing"${f.mode === 'testing' ? ' selected' : ''}>Thử nghiệm: chỉ admin + SVip</option>
-      <option value="all"${f.mode === 'all' ? ' selected' : ''}>Mở cho tất cả người chơi</option></select></div>`).join('');
+    <span style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap">
+      ${f.mode === 'all' ? '<span class="chip tone-grow">✓ Đã phát hành cho tất cả</span>' : '<span class="chip tone-accent">🧪 Đang thử nghiệm: admin + SVip</span>'}
+      <button type="button" class="${f.mode === 'all' ? 'btn-ghost' : 'btn'} sm" data-sv-release="${esc(f.key)}" data-mode="${f.mode === 'all' ? 'testing' : 'all'}">${f.mode === 'all' ? 'Đưa về thử nghiệm' : '🚀 Phát hành'}</button>
+    </span></div>`).join('');
 }
 function saveSvip(players, features, label) {
   return withToken(label, async (token) => {
@@ -9165,10 +9183,18 @@ $('sv-list').addEventListener('click', (e) => {
   if (!b) return;
   saveSvip(sv.data.players.filter((p) => p.steamId !== b.dataset.svDel), sv.data.features, 'bỏ SVip');
 });
-$('sv-features').addEventListener('change', (e) => {
-  const sel = e.target.closest('[data-sv-feature]');
-  if (!sel) return;
-  saveSvip(sv.data.players, sv.data.features.map((f) => (f.key === sel.dataset.svFeature ? { ...f, mode: sel.value } : f)), 'đổi chế độ chức năng');
+$('sv-features').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-sv-release]');
+  if (!b) return;
+  const f = sv.data.features.find((x) => x.key === b.dataset.svRelease);
+  if (!f) return;
+  const release = b.dataset.mode === 'all';
+  confirmAction({
+    title: release ? `Phát hành "${f.label}"?` : `Đưa "${f.label}" về thử nghiệm?`,
+    body: release ? 'Mọi người chơi dùng được ngay (không chỉ admin + SVip).' : 'Chỉ admin + SVip dùng được; người khác thấy "Đang thử nghiệm".',
+    okLabel: release ? 'Phát hành' : 'Đưa về thử nghiệm',
+    run: async () => saveSvip(sv.data.players, sv.data.features.map((x) => (x.key === f.key ? { ...x, mode: b.dataset.mode } : x)), release ? 'phát hành chức năng' : 'đưa về thử nghiệm'),
+  });
 });
 
 // --- Quản trị → Discord: the log sent by webhook (bridge/src/discord.ts) ---

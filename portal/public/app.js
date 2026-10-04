@@ -1910,6 +1910,8 @@ const BAG_TICKET = {
   mutation_ticket: { icon: '🎟️', desc: (g) => `Đổi ra một mutation tự chọn (đúng chế độ ăn của loài${g.maxRarity === 'special' ? ', <b>cả mutation nhiệm vụ</b>' : ''}) vào một ô đã mở.` },
   mutation_clear: { icon: '🧹', desc: () => 'Bỏ mutation ở một ô để chọn lại trong game.' },
   prime_ticket: { icon: '👑', desc: () => 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện).' },
+  // The starter ticket (bridge starter.ts): any dino into the garage — no dino in game needed.
+  dino_ticket: { icon: '🦖', desc: (g) => `Chọn <b>1 dino bất kỳ</b>, giới tính và mutation 4 ô chính. Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>, tăng trưởng ngẫu nhiên ${Math.round((g.growthMin ?? 0.5) * 100)}–${Math.round((g.growthMax ?? 1) * 100)}% — lấy ra như bình thường.` },
 };
 const bagKey = (s) => String(s ?? '').replace(/^BP_/, '').replace(/_C$/, '').toLowerCase();
 /** The icon of a mutation (img/mutations/<slug>.svg, the owner's set). */
@@ -1946,7 +1948,7 @@ function renderBag(me) {
   const items = Array.isArray(me.items) ? me.items : [];
   const groups = bagGroups(items);
   const dino = me.dino?.species ?? null;
-  const usable = (g) => (g.type === 'mutation' ? dino !== null && !g.refusal && !me.prison
+  const usable = (g) => (g.locked ? false : g.type === 'dino_ticket' ? true : g.type === 'mutation' ? dino !== null && !g.refusal && !me.prison
     : g.type === 'skin' ? dino !== null && bagKey(g.species) === bagKey(dino) : dino !== null && !me.prison);
   $('nav-bag-badge').hidden = items.length === 0;
   $('nav-bag-badge').textContent = String(items.length);
@@ -1958,16 +1960,18 @@ function renderBag(me) {
   const shown = groups.filter((g) => (bag.filter === 'all' || (bag.filter === 'usable' ? usable(g) : g.type === bag.filter))
     && (!q || `${g.name} ${g.mutation ?? ''} ${g.species ?? ''}`.toLowerCase().includes(q)));
   // Redraw only when something changed (the page refreshes every second).
-  const sig = JSON.stringify([shown.map((g) => [g.id, g.uids.length, usable(g), g.rarity]), dino, Boolean(me.prison), bag.busy, Boolean(me.bagUnlimited)]);
+  const sig = JSON.stringify([shown.map((g) => [g.id, g.uids.length, usable(g), g.rarity, g.locked ?? null]), dino, Boolean(me.prison), bag.busy, Boolean(me.bagUnlimited)]);
   if (sig === bag.sig) return;
   bag.sig = sig;
   // A card is dimmed only when it does not fit the dino played now (diet, species); out of
   // the game (or in prison) it keeps its look — only its button is off and says why.
-  const mismatch = (g) => dino !== null && (g.type === 'mutation' ? Boolean(g.refusal) : g.type === 'skin' ? bagKey(g.species) !== bagKey(dino) : false);
+  const mismatch = (g) => !g.locked && g.type !== 'dino_ticket' && dino !== null && (g.type === 'mutation' ? Boolean(g.refusal) : g.type === 'skin' ? bagKey(g.species) !== bagKey(dino) : false);
   const blocked = me.prison ? 'Đang ở tù' : dino === null ? 'Vào game để dùng' : null;
   const button = (g, cls, attr, label) => {
     const ok = usable(g) && !bag.busy;
-    const text = ok || mismatch(g) || !blocked ? label : blocked;
+    // Being tried (svip.ts): shown, but for SVip first.
+    if (g.locked) return `<button type="button" class="btn ${cls}" disabled title="${esc(g.locked)}">🧪 Đang thử nghiệm</button>`;
+    const text = ok || mismatch(g) || !blocked || g.type === 'dino_ticket' ? label : blocked;
     return `<button type="button" class="btn ${cls}" ${attr}="${esc(g.id)}" ${ok ? '' : `disabled title="${esc(blocked && !mismatch(g) ? `${blocked}: điều khiển một con dino trong game` : '')}"`}>${esc(text)}</button>`;
   };
   $('bag-list').innerHTML = shown.map((g) => {
@@ -1988,7 +1992,8 @@ function renderBag(me) {
       return `<li class="bag-item rar-${esc(g.rarity)}${ok ? '' : ' off'}">
         <div class="top"><span class="mut-ico tk-ico" aria-hidden="true">${t.icon}</span><div class="nm"><b>${esc(g.name)}</b>${rar}</div>${qty}</div>
         <div class="desc">${t.desc(g)}</div>
-        <div class="act">${button(g, 'btn-emerald', 'data-bag-use', 'Dùng')}</div>
+        ${g.locked ? `<div class="why">🧪 ${esc(g.locked)}</div>` : ''}
+        <div class="act">${button(g, 'btn-emerald', 'data-bag-use', g.type === 'dino_ticket' ? 'Chọn dino' : 'Dùng')}</div>
       </li>`;
     }
     const colors = g.skin?.colors ?? {};
@@ -2007,6 +2012,7 @@ const bagVal = (v) => (v == null ? '<span class="muted">chưa rõ số liệu</s
 function renderBagDialog() {
   const o = bag.open;
   if (!o) return;
+  if (o.g.type === 'dino_ticket') { renderDinoDialog(o); return; }
   const { g, pv, slot } = o;
   const gen = pv.stacks == null ? '?' : pv.stacks + 1;
   const head = `<div class="hd">${g.type === 'mutation' ? mutIcon(g.mutation) : `<span class="mut-ico tk-ico" aria-hidden="true">${BAG_TICKET[g.type]?.icon ?? ''}</span>`}<div><b id="bag-dlg-title">${esc(g.name)}</b>
@@ -2097,7 +2103,8 @@ $('bag-list').addEventListener('click', (e) => {
   const u = e.target.closest('[data-bag-use]');
   if (u && !u.disabled) {
     const g = bagGroups(lastMeData?.items ?? []).find((x) => x.id === u.dataset.bagUse);
-    if (g) void openBagDialog(g);
+    if (g?.type === 'dino_ticket') void openDinoDialog(g);
+    else if (g) void openBagDialog(g);
     return;
   }
   const w = e.target.closest('[data-bag-wear]');
@@ -2125,6 +2132,90 @@ $('bag-dlg').addEventListener('click', (e) => {
   if (e.target.closest('[data-dlg="place"]') && o.slot) void bagSend('/api/items/use', { uid: o.g.uids[0], slot: o.slot }, `mutation ${o.g.mutation}`, true);
 });
 $('bag-dlg').addEventListener('close', () => { if (!bag.busy) bag.open = null; });
+
+// --- the dino ticket (bridge starter.ts): a species, its sex, the four slots' mutations --------------
+const DIET_OK = { all: () => true, carnivore: (d) => d === 'carnivore', herbivore: (d) => d === 'herbivore',
+  herbivore_omnivore: (d) => d === 'herbivore' || d === 'omnivore' };
+async function openDinoDialog(g) {
+  bagStatus('', 'Đang tải danh sách dino…');
+  const r = await getJson('/api/items/dino-options').catch(() => null);
+  if (r?.status !== 200) { bagStatus('bad', `❌ ${esc(r?.body?.error ?? 'Không tải được danh sách dino.')}`); return; }
+  bagStatus('', '');
+  bag.open = { g, dino: { opts: r.body, species: '', female: false, muts: { 1: '', 2: '', 3: '', 4: '' } } };
+  renderBagDialog();
+  if (!$('bag-dlg').open) $('bag-dlg').showModal();
+}
+/** The mutations that fit slot n of this pick (diet, slot 2 / 4, female only, not in another slot). */
+function dinoSlotChoices(d, n) {
+  const sp = d.opts.species.find((x) => x.key === d.species);
+  if (!sp) return [];
+  const taken = new Set(Object.entries(d.muts).filter(([k, v]) => Number(k) !== n && v).map(([, v]) => v));
+  return d.opts.mutations.filter((m) => (DIET_OK[m.diet] ?? (() => false))(sp.diet)
+    && (!m.slot2 || n === 2 || n === 4) && (!m.femaleOnly || d.female) && !taken.has(m.name));
+}
+function renderDinoDialog(o) {
+  const d = o.dino;
+  const g = o.g;
+  // A pick that no longer fits (another species, sex) is cleared.
+  for (const n of [1, 2, 3, 4]) if (d.muts[n] && !dinoSlotChoices(d, n).some((m) => m.name === d.muts[n])) d.muts[n] = '';
+  const sp = d.opts.species.find((x) => x.key === d.species);
+  const range = `${Math.round(d.opts.growthMin * 100)}–${Math.round(d.opts.growthMax * 100)}%`;
+  const slotRow = (n) => {
+    const list = dinoSlotChoices(d, n);
+    return `<label class="dino-slot"><span>Ô ${n}${n === 2 || n === 4 ? ' <span class="muted">(nhận cả mutation chỉ ô 2/4)</span>' : ''}</span>
+      <select data-dino-mut="${n}" ${sp ? '' : 'disabled'}><option value="">— Để trống —</option>${list.map((m) =>
+        `<option value="${esc(m.name)}"${d.muts[n] === m.name ? ' selected' : ''}>${esc(m.name)}${m.femaleOnly ? ' (cái)' : ''}${m.quest ? ' (nhiệm vụ)' : ''}</option>`).join('')}</select>
+      ${d.muts[n] ? `<small class="muted">${esc(d.opts.mutations.find((m) => m.name === d.muts[n])?.description ?? '')}</small>` : ''}</label>`;
+  };
+  $('bag-dlg-in').innerHTML = `<div class="hd"><span class="mut-ico tk-ico" aria-hidden="true">🦖</span><div><b id="bag-dlg-title">${esc(g.name)}</b>
+      <span class="rar-label rar-${esc(g.rarity)}">${esc(BAG_RARITY[g.rarity] ?? g.rarity)}</span>
+      <div class="muted" style="font-size:12.5px">Đủ 10 nhiệm vụ prime · tăng trưởng ngẫu nhiên ${range} · vào gara</div></div>
+      <button type="button" class="x" data-dlg="close" aria-label="Đóng">×</button></div>
+    <div class="sec"><h4>Loài và giới tính</h4>
+      <div class="dino-pick">
+        <label class="dino-slot"><span>Loài</span><select data-dino-species><option value="">— Chọn loài —</option>${d.opts.species.map((x) =>
+          `<option value="${esc(x.key)}"${d.species === x.key ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+        <div class="dino-slot"><span>Giới tính</span><div class="xseg"><button type="button" data-dino-sex="m" class="${d.female ? '' : 'on'}">♂ Đực</button><button type="button" data-dino-sex="f" class="${d.female ? 'on' : ''}">♀ Cái</button></div></div>
+      </div></div>
+    <div class="sec"><h4>Mutation 4 ô chính</h4>${sp ? '' : '<p class="muted" style="margin:0">Chọn loài trước.</p>'}
+      <div class="dino-muts">${[1, 2, 3, 4].map(slotRow).join('')}</div></div>
+    <p class="muted" style="margin:0;font-size:12.5px">Dùng là hết phiếu. Dino vào ô gara trống kế tiếp (kể cả khi gara đã đủ ô); tăng trưởng được bốc ngẫu nhiên lúc nhận — từ khoảng 75% game cho lên prime.</p>
+    <div class="act"><button type="button" class="btn btn-emerald" data-dlg="dino" ${sp && !bag.busy ? '' : 'disabled'}>Nhận ${esc(sp?.label ?? 'dino')}</button></div>
+    <div class="garage-status" id="bag-dlg-status" role="status" aria-live="polite" hidden></div>`;
+}
+$('bag-dlg').addEventListener('change', (e) => {
+  const o = bag.open;
+  if (!o?.dino || bag.busy) return;
+  const sp = e.target.closest('[data-dino-species]');
+  if (sp) { o.dino.species = sp.value; renderBagDialog(); return; }
+  const m = e.target.closest('[data-dino-mut]');
+  if (m) { o.dino.muts[m.dataset.dinoMut] = m.value; renderBagDialog(); }
+});
+$('bag-dlg').addEventListener('click', async (e) => {
+  const o = bag.open;
+  if (!o?.dino || bag.busy) return;
+  const sx = e.target.closest('[data-dino-sex]');
+  if (sx) { o.dino.female = sx.dataset.dinoSex === 'f'; renderBagDialog(); return; }
+  if (!e.target.closest('[data-dlg="dino"]')) return;
+  bag.busy = true;
+  bagDlgStatus('', 'Đang tạo dino…');
+  try {
+    const r = await fetch('/api/items/dino', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ uid: o.g.uids[0], species: o.dino.species, female: o.dino.female, mutations: o.dino.muts }) });
+    const b = await r.json().catch(() => null);
+    if (r.status !== 200) { bagDlgStatus('bad', `❌ ${esc(b?.error ?? 'Không nhận được dino.')} Phiếu vẫn còn.`); return; }
+    $('bag-dlg').close(); bag.open = null;
+    bagStatus('ok', `✅ Đã nhận <b>${esc(b.species)} ${Math.round(b.growth * 100)}%</b> (${b.female ? 'cái' : 'đực'}, đủ nhiệm vụ prime) vào <b>gara ô ${esc(b.slot)}</b>. Vào Gara, respawn đúng loài rồi lấy ra.`);
+  } catch {
+    bagDlgStatus('bad', 'Mất kết nối. Thử lại.');
+  } finally {
+    bag.busy = false;
+    bag.sig = '';
+    const me = await getJson('/api/me').catch(() => null);
+    if (me?.status === 200) lastMeData = me.body;
+    renderBag(lastMeData);
+  }
+});
 $('bag-filter').addEventListener('click', (e) => {
   const b = e.target.closest('[data-bag]');
   if (!b) return;

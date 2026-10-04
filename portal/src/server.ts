@@ -32,6 +32,8 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *        the colours of the dino you play now, written in game (DinoGarage)
  *   POST /api/items/use         { uid, slot?: 1–4, mutation?: name (a Phiếu đổi mutation) } use an item of your bag on the dino you play (login, same-origin, JSON)
  *   GET  /api/items/preview/<uid>  what that would do: each slot's mutation and value, the +1 đời upgrade (login)
+ *   GET  /api/items/dino-options   the species and mutations a dino ticket can give (login)
+ *   POST /api/items/dino        { uid, species, female, mutations: { 1–4: name } } use a dino ticket: the dino into your garage (login, same-origin, JSON)
  *   GET  /api/command/<id>      the outcome of one of your commands      (login)
  *   POST /api/voice/token       join the proximity voice room (voice.html) (login, same-origin)
  *   GET  /api/voice             who you can hear now: volume + pan per voice user (login)
@@ -345,6 +347,25 @@ export function createPortal(opts: PortalOptions): Server {
         // Only these fields, and never a SteamID from the browser.
         const r = await opts.bridge.skin(me, { colors: body['colors'], effects: body['effects'], pattern: body['pattern'], theme: body['theme'],
           variation: body['variation'], keep: body['keep'], forget: body['forget'], item: body['item'] });
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/items/dino-options') {
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        const r = await opts.bridge.dinoOptions(me);
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/items/dino') {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
+        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) { send(res, 415, { error: 'JSON only' }); return; }
+        if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
+        const body = await readSmallJson(req);
+        if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
+        // Only these fields, and never a SteamID from the browser.
+        const r = await opts.bridge.useDino(me, { uid: body['uid'], species: body['species'], female: body['female'], mutations: body['mutations'] });
         send(res, r.status, r.body);
         return;
       }

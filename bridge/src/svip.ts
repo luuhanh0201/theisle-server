@@ -19,6 +19,7 @@ import { adminIds } from './panel-auth.js';
 /** The features being tried. A new one: add it here, check earlyAccess() where it is used. */
 export const EARLY_FEATURES = [
   { key: 'bag', label: 'Túi đồ: dùng vật phẩm (mutation, phiếu) trên dino' },
+  { key: 'starter', label: 'Phiếu chọn dino tân thủ (mỗi tài khoản 1 phiếu): dùng để nhận dino' },
 ] as const;
 export type FeatureKey = typeof EARLY_FEATURES[number]['key'];
 export type FeatureMode = 'testing' | 'all';

@@ -41,6 +41,7 @@ import { DdosWatch, SAMPLE_S, defaultIface, endText, parseNetDev, readDdos, star
 import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
 import { audit, auditListeners } from './audit.js';
+import { grantStarters } from './starter.js';
 import { loadGuard, runGuardAction, saveGuard, speciesName, type GuardAction } from './garage-guard.js';
 import { Prison } from './prison.js';
 import { KillScenes } from './kill-scene.js';
@@ -153,6 +154,16 @@ const settleGuard = (a: GuardAction): void => {
     }
   });
 };
+
+// The starter ticket (starter.ts): everyone who has played gets one once, then each new account.
+// First 30 s in (the events are read by then), then every minute.
+const sweepStarters = (): void => {
+  grantStarters(store.players().map((p) => p.steamId))
+    .then((fresh) => { if (fresh.length > 0) console.info(`[starter] dino ticket given to ${fresh.length} player(s): ${fresh.slice(0, 5).join(', ')}${fresh.length > 5 ? '…' : ''}`); })
+    .catch((error: unknown) => console.error('[starter] could not give the tickets:', error));
+};
+setTimeout(sweepStarters, 30_000);
+setInterval(sweepStarters, 60_000);
 
 const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {

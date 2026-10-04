@@ -4,7 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
-import { isSteamId, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
+import { isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
+import { dinoOptions, useDinoTicket } from './starter.js';
+import { audit } from './audit.js';
 import { SLOT_MIN_GROWTH, queueMutationUse, queuePlayerCommand, type MutationUse, queueSkin, SKIN_CHANNEL_MAX, TooSoonError } from './commands.js';
 import { type Item, type Rarity, dietRefusal, getItem, inventoryOf, isPendingUse, listItems, markPendingUse, resolveSkin, speciesKey } from './items.js';
 import { keptSkinsOf, setKeptSkin } from './kept-skins.js';
@@ -534,6 +536,38 @@ export async function handlePlayerApi(
     send(res, r.status, r.body);
     return true;
   }
+  // The dino ticket (starter.ts): what can be picked, then the pick — the dino into their garage.
+  const dinoOpts = /^\/player-api\/items\/(\d{17})\/dino-options$/.exec(path);
+  if (dinoOpts !== null) {
+    if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const owned = (await inventoryOf(dinoOpts[1] as string));
+    const ticket = (await Promise.all(owned.map((o) => getItem(o.itemId)))).find((i) => i?.type === 'dino_ticket');
+    if (!ticket || ticket.type !== 'dino_ticket') { send(res, 404, { error: 'Bạn không có phiếu chọn dino.' }); return true; }
+    const catalog = ctx.store.catalog.merge(await readGarageCatalog()).list();
+    send(res, 200, { ...dinoOptions(catalog, ticket.data), growthMin: ticket.data.growthMin, growthMax: ticket.data.growthMax });
+    return true;
+  }
+  const dinoUse = /^\/player-api\/items\/(\d{17})\/dino$/.exec(path);
+  if (dinoUse !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const who = dinoUse[1] as string;
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Phiếu chọn dino đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    try {
+      const catalog = ctx.store.catalog.merge(await readGarageCatalog()).list();
+      const out = await useDinoTicket(who, typeof body['uid'] === 'string' ? body['uid'] : '', body, catalog);
+      const name = ctx.store.player(who)?.player.name ?? null;
+      await audit({ action: 'starter dino', ok: true,
+        detail: `${name ?? who} nhận ${out.species} ${Math.round(out.growth * 100)}% ${out.female ? 'cái' : 'đực'} vào gara slot ${out.slot} (phiếu chọn dino; prime đủ nhiệm vụ; mutation ${Object.values(out.mutations).join(', ') || 'không'})` },
+      { steamId: who, name });
+      send(res, 200, out);
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
   const useCmd = /^\/player-api\/items\/(\d{17})\/use$/.exec(path);
   if (useCmd !== null) {
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
@@ -630,7 +664,8 @@ export async function handlePlayerApi(
       keptSkins: await keptSkinsOf(steamId),
       // Their items (items.ts): what each is; a skin with the colours the game gets when they wear it.
       items: await ownedView(steamId, detail?.player.online ? detail.player.species ?? null : null),
-      bag: await bagOpen(steamId),
+      // The bag's tab: open to them, or they own something (the starter ticket — shown while being tried).
+      bag: (await bagOpen(steamId)) || (await inventoryOf(steamId)).length > 0,
       // SVip (svip.ts): tries the features being tested before everyone.
       svip: await isSvip(steamId),
       bagUnlimited: await bagUnlimited(steamId),
@@ -708,13 +743,18 @@ async function ownedView(steamId: string, playing: string | null): Promise<unkno
   const owned = await inventoryOf(steamId);
   if (owned.length === 0) return [];
   const byId = new Map((await listItems()).map((i) => [i.id, i]));
+  // A feature still being tried (svip.ts): its items are shown, marked, and cannot be used yet.
+  const open = { bag: await earlyAccess('bag', steamId), starter: await earlyAccess('starter', steamId) };
   return owned.flatMap((o) => {
     const i = byId.get(o.itemId);
     if (i === undefined) return [];
-    return [{ uid: o.uid, id: i.id, type: i.type, name: i.name, rarity: i.rarity, source: o.source, grantedAt: o.grantedAt,
+    const locked = !(i.type === 'dino_ticket' ? open.starter : open.bag);
+    return [{ uid: o.uid, id: i.id, type: i.type, name: i.name, rarity: i.rarity, source: o.source, grantedAt: o.grantedAt, note: o.note,
+      ...(locked ? { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' } : {}),
       ...(i.type === 'skin' ? { species: i.data.species, skin: resolveSkin(i.data) }
         : i.type === 'mutation' ? { mutation: i.data.mutation, diet: i.data.diet, slot2: i.data.slot2, description: findReference(i.data.mutation)?.description ?? null,
           refusal: playing === null ? null : dietRefusal(playing, i.data.diet) }
-          : i.type === 'mutation_ticket' ? { maxRarity: i.data.maxRarity } : {}) }];
+          : i.type === 'mutation_ticket' ? { maxRarity: i.data.maxRarity }
+            : i.type === 'dino_ticket' ? { growthMin: i.data.growthMin, growthMax: i.data.growthMax } : {}) }];
   });
 }
