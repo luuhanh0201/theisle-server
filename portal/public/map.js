@@ -223,8 +223,24 @@ export function createMap(root) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(st.img, ox, oy, st.img.naturalWidth * s, st.img.naturalHeight * s);
 
+    // The waters (Nước on): each lake / river / pond filled and ringed, under everything else.
+    // Their names are drawn with the labels below, always shown while the layer is on.
+    if (st.on.has('water') && st.water) {
+      const c = LAYER.water.color;
+      for (const w of st.water) {
+        const f = w.kind === 'circle' ? { kind: 'circle', at: w.at, r: [w.r, w.r] } : w;
+        trace(ctx, f);
+        ctx.fillStyle = hexA(c, w.kind === 'circle' ? 0.16 : 0.32); ctx.fill();
+        // A dark ring under a bright one: the edge reads on any ground.
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(2,6,23,.7)'; ctx.stroke();
+        ctx.setLineDash(w.kind === 'circle' ? [5, 4] : []);
+        ctx.lineWidth = 1.8; ctx.strokeStyle = c; ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+
     const feats = st.data.features.filter((f) => st.on.has(f.layer) && (f.kind !== 'label'
-      || (f.size === 'small' ? z >= 2.2 : f.layer === 'landmark' ? z >= 1.5 : f.layer === 'water' ? z >= 1.3 || f.size === 'large' : true)));
+      || f.layer === 'water'   // a water's name goes with its outline, at every zoom
+      || (f.size === 'small' ? z >= 2.2 : f.layer === 'landmark' ? z >= 1.5 : true)));
     for (const f of feats) {
       if (!ZONES.has(f.layer)) continue;
       const c = LAYER[f.layer].color;
@@ -259,7 +275,7 @@ export function createMap(root) {
         ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill();
         text(ctx, f.text, x + 7, y, `600 ${big ? 12 : 11}px Inter, system-ui, sans-serif`, c, 'left');
       } else if (f.layer === 'water') {
-        text(ctx, f.text, x, y, `italic 600 ${big ? 12.5 : 11}px Inter, system-ui, sans-serif`, c);
+        text(ctx, f.text, x, y, `italic 700 ${big ? 13 : 11.5}px Inter, system-ui, sans-serif`, '#e0f2fe');
       } else {
         text(ctx, f.text.toUpperCase(), x, y, `800 ${big ? 13 : 11}px Inter, system-ui, sans-serif`, hexA(c, 0.92));
       }
@@ -559,6 +575,9 @@ export function createMap(root) {
       img.src = `/map/${encodeURIComponent(data.image)}?v=${encodeURIComponent(data.updated)}`;
       await img.decode();
       st.data = data; st.img = img;
+      // The waters outlined (scripts/build-water-areas.py, from the map image): highlighted with the Nước layer.
+      fetch('/map/water-areas.json', { credentials: 'same-origin' }).then((w) => (w.ok ? w.json() : null))
+        .then((w) => { st.water = Array.isArray(w?.areas) ? w.areas : []; draw(); }).catch(() => undefined);
       msg.hidden = true;
       chips();
       root.querySelector('.map-note').innerHTML = `Bản đồ &amp; địa điểm: <a href="${esc(data.source.url)}" target="_blank" rel="noopener">${esc(data.source.name)}</a> (${esc(data.source.author)}), ${esc(data.name)} · ảnh nền chụp trong game, bản quyền của nhà phát triển. * dữ liệu tham khảo, không phải dữ liệu live của server.`;

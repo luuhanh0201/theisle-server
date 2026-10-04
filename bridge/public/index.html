@@ -5943,6 +5943,8 @@ function loadMapData() {
       await img.decode();
       lm.data = data;
       lm.img = img;
+      // The waters outlined (scripts/build-water-areas.py): highlighted with the Nguồn nước layer.
+      getJson('map/water-areas.json').then((w) => { lm.water = Array.isArray(w?.areas) ? w.areas : []; drawMap(); }).catch(() => undefined);
       $('map-msg').hidden = true;
       renderLayerList();
       $('map-legend').innerHTML = `Thực vật: <b style="color:#fbbf24">(α)</b> carb · <b style="color:#f472b6">(β)</b> protein · <b style="color:#38bdf8">(γ)</b> lipid · không ghi = không có chất (chữ hiện khi phóng to). Cây & vùng di cư là dữ liệu thật của server (cập nhật ~2 phút). `
@@ -6067,7 +6069,7 @@ function visible(f, z) {
   if (f.kind === 'label') {
     if (f.size === 'small') return z >= 2.2;
     if (f.layer === 'landmark') return z >= 1.5;
-    if (f.layer === 'water') return z >= 1.3 || f.size === 'large';
+    if (f.layer === 'water') return true;   // a water's name goes with its outline, at every zoom
   }
   return true;
 }
@@ -6114,6 +6116,18 @@ function drawMap() {
   const feats = lm.data.features.filter((f) => visible(f, z));
   const now = performance.now();
   const pulse = 0.5 + 0.5 * Math.sin(now / 180);
+
+  // 0. the waters (Nguồn nước on): each lake / river / pond filled and ringed, under the rest.
+  if (lm.on.has('water') && lm.water) {
+    const c = LAYER.water.color;
+    for (const w of lm.water) {
+      traceShape(ctx, w.kind === 'circle' ? { kind: 'circle', at: w.at, r: [w.r, w.r] } : w);
+      ctx.fillStyle = hexA(c, w.kind === 'circle' ? 0.16 : 0.32); ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(2,6,23,.7)'; ctx.stroke();
+      ctx.setLineDash(w.kind === 'circle' ? [5, 4] : []);
+      ctx.lineWidth = 1.8; ctx.strokeStyle = c; ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
 
   // 1. zones
   for (const f of feats) {
@@ -6252,7 +6266,7 @@ function drawMap() {
       ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill();
       drawText(ctx, f.text, x + 7, y, { font: `600 ${big ? 12 : 11}px Inter, system-ui, sans-serif`, color: c, align: 'left' });
     } else if (f.layer === 'water') {
-      drawText(ctx, f.text, x, y, { font: `italic 600 ${big ? 12.5 : 11}px Inter, system-ui, sans-serif`, color: c });
+      drawText(ctx, f.text, x, y, { font: `italic 700 ${big ? 13 : 11.5}px Inter, system-ui, sans-serif`, color: '#e0f2fe' });
     } else {
       drawText(ctx, f.text.toUpperCase(), x, y, { font: `800 ${big ? 13 : 11}px Inter, system-ui, sans-serif`, color: hexA(c, 0.92) });
     }
