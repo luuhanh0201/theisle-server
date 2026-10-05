@@ -57,7 +57,14 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 - CSS around them: the number box is `span.nf` (a `> input` selector no longer
   matches), the date box `button.dt-btn`, the select `button.cs-btn`, the
   colour swatch `button.cp-btn` (its picker `.cp-pop`); a slider's fill is the
-  CSS variable `--pct`.
+  CSS variable `--pct`. A text input with `list="<datalist id>"` gets the
+  system's suggestion list (`.sg-pop`, read from the datalist each time, so a
+  page may refill the datalist while it is open).
+- Panel refresh (bridge/public/index.html `FORM_PAGES`): a list page redraws
+  every 2 s but never while the admin is at it (`busyUI`: a popup open, typing,
+  a dialog, text selected); a settings page loads once per visit and only shows
+  the "Có thay đổi mới" bar when its data changes on the server. A new
+  settings page goes into `FORM_PAGES` with the GET it is loaded from.
 - The skin colour editor is shared too (`portal/public/skin-editor.js`).
 - Mutation icons: `<img data-mut-icon="Name">` (filled by `portal/public/mut-icons.js`
   from one bundle); never one `<img src=".../<slug>.svg">` each, many at once
