@@ -20,7 +20,7 @@ import { ValidationError } from './garage.js';
  *                    runs is retried until nothing changed during it)
  *   settings export  what a new VPS needs besides the data: the panel's and
  *                    the mods' settings, Game.ini / Engine.ini and the .env
- *                    files — secrets, so the file is for the owner only
+ *                    files, secrets, so the file is for the owner only
  *   wipe             deletes the chosen parts (a data backup first, always),
  *                    game stopped; the garage's own settings are kept
  *   restore          a data backup and / or a settings export back in place

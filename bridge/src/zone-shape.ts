@@ -3,9 +3,9 @@
  * has them:
  *
  *   circle   centre (x, y), radiusM
- *   ellipse  centre, semi-axes radiusM (along angleDeg) and radius2M — a beach,
+ *   ellipse  centre, semi-axes radiusM (along angleDeg) and radius2M, a beach,
  *            a river bank
- *   polygon  its corners, `poly` [[x, y], …], 3–40 of them — any outline
+ *   polygon  its corners, `poly` [[x, y], …], 3–40 of them, any outline
  *
  * The mod, the panel and the players' map all need "is this point inside":
  * an ellipse is turned into a polygon (ELLIPSE_SIDES corners) so the three

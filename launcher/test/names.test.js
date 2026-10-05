@@ -1,5 +1,5 @@
 // Every name the launcher's code uses exists (a missing helper crashes the
-// main process — it happened: notifyOnce went missing in a rewrite and closing
+// main process, it happened: notifyOnce went missing in a rewrite and closing
 // the window threw). TypeScript reads the JS; only "cannot find name" counts.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');

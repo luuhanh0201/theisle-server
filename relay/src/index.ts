@@ -1,5 +1,5 @@
 /**
- * The Discord relay — a Cloudflare Worker, off the VPS (relay/README.md).
+ * The Discord relay, a Cloudflare Worker, off the VPS (relay/README.md).
  *
  *   POST /heartbeat     the bridge, every 2 minutes (Bearer BRIDGE_SECRET):
  *                       the server's state now, kept in KV
@@ -7,7 +7,7 @@
  *                       Discord (once), through the webhook the bridge named;
  *                       the next heartbeat says it is back
  *   POST /interactions  Discord's slash commands (signed, Ed25519): /status,
- *                       /online — answered from the last heartbeat, so they
+ *                       /online, answered from the last heartbeat, so they
  *                       work while the VPS is down, DDoSed or cut off
  *
  * Nothing on the VPS listens for this: the bridge only sends out. KV writes
@@ -103,9 +103,9 @@ export function statusEmbed(s: ServerState | null, now: number): Record<string, 
   return {
     title: plain(s.serverName),
     description: (stale
-      ? `🔴 **Mất kết nối** — tín hiệu cuối <t:${s.t}:R> (<t:${s.t}:f>). VPS có thể đang sập, mất mạng hoặc bị DDoS.`
+      ? `🔴 **Mất kết nối**, tín hiệu cuối <t:${s.t}:R> (<t:${s.t}:f>). VPS có thể đang sập, mất mạng hoặc bị DDoS.`
       : `${PHASE[s.phase] ?? plain(s.phase)} · cập nhật <t:${s.t}:R>`)
-      + (s.attack ? `\n🚨 **Đang bị DDoS** từ <t:${s.attack.since}:R> — đỉnh ${Math.round(s.attack.peakPps).toLocaleString('vi-VN')} gói/s · ${s.attack.peakMbps} Mbit/s` : ''),
+      + (s.attack ? `\n🚨 **Đang bị DDoS** từ <t:${s.attack.since}:R>, đỉnh ${Math.round(s.attack.peakPps).toLocaleString('vi-VN')} gói/s · ${s.attack.peakMbps} Mbit/s` : ''),
     color: stale || s.attack ? 0xef4444 : s.phase === 'running' ? 0x22c55e : 0xf59e0b,
     fields: stale ? [{ name: 'Lần cuối', value: `${s.online} người online`, inline: true }] : fields,
   };
@@ -114,7 +114,7 @@ export function statusEmbed(s: ServerState | null, now: number): Record<string, 
 /** The /online answer. */
 export function onlineText(s: ServerState | null, now: number): string {
   if (s === null) return 'Chưa nhận được tín hiệu nào từ server.';
-  if (now - s.t > STALE_S) return `🔴 Mất kết nối với server từ <t:${s.t}:R> — không biết ai đang online.`;
+  if (now - s.t > STALE_S) return `🔴 Mất kết nối với server từ <t:${s.t}:R>, không biết ai đang online.`;
   if (s.players.length === 0) return `Không có ai online (cập nhật <t:${s.t}:R>).`;
   const names = s.players.map(plain);
   return `**${s.online} người online** (cập nhật <t:${s.t}:R>):\n${names.join(', ')}`.slice(0, 1900);
@@ -171,7 +171,7 @@ export async function checkOutage(env: Env, now = nowS()): Promise<'none' | 'ok'
   if (s.alertedAt) return 'already';
   if (s.alertWebhook) {
     const sent = await postWebhook(s.alertWebhook,
-      `⚠️ **Mất kết nối với server** — không có tín hiệu từ <t:${s.t}:t> (<t:${s.t}:R>). VPS có thể đang sập, mất mạng hoặc bị DDoS.\nLần cuối: ${s.online} người online.`,
+      `⚠️ **Mất kết nối với server**, không có tín hiệu từ <t:${s.t}:t> (<t:${s.t}:R>). VPS có thể đang sập, mất mạng hoặc bị DDoS.\nLần cuối: ${s.online} người online.`,
       0xef4444);
     if (!sent) return 'none';          // try again next minute
   }

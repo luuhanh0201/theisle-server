@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-# Live server data — never in git
+# Live server data, never in git
 **/Saved/
 *.log
 dino_garage.json*

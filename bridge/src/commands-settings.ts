@@ -5,7 +5,7 @@ import { ValidationError } from './garage.js';
 
 /**
  * Settings of the PlayerCommands mod (mods/PlayerCommands/Scripts/main.lua),
- * read fresh by the mod on every command — no restart needed.
+ * read fresh by the mod on every command, no restart needed.
  */
 export const COMMANDS = ['slay', 'unstuck', 'prime', 'status', 'food'] as const;
 export type CommandName = (typeof COMMANDS)[number];

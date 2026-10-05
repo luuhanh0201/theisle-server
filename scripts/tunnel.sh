@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tunnel.sh — open the admin panel on this machine through SSH, and keep it open.
+# tunnel.sh, open the admin panel on this machine through SSH, and keep it open.
 #
 #   ./scripts/tunnel.sh            http://127.0.0.1:8181 -> the bridge on the VPS
 #   ./scripts/tunnel.sh 9000       another local port

@@ -6,7 +6,7 @@ import { ensureItem, grantItem, inventoryOf, revokeItem } from './items.js';
 
 /**
  * The starter gift (owner, 2026-10-05): every account that has ever been on the server, and each new
- * one, is offered once a "Hộp dino tự chọn" — taken on the home page ("nhận từ đó mới hiển thị trên
+ * one, is offered once a "Hộp dino tự chọn", taken on the home page ("nhận từ đó mới hiển thị trên
  * túi đồ, khi nhận thì mất ô đó"): only then is it in their bag. Opened there (dino-box.ts): the
  * species picked, the growth drawn 50–100 %; the dino item, used: its sex and mutations picked, into
  * the garage with every prime task done. Tried by SVip first (svip.ts feature 'starter'); the panel's
@@ -21,6 +21,8 @@ import { ensureItem, grantItem, inventoryOf, revokeItem } from './items.js';
 export const STARTER_ITEM_ID = 'starter_box';
 /** The ticket the first hours gave (an unused one there is taken back by the migration below). */
 const OLD_STARTER_ITEM_ID = 'starter_dino';
+/** The gift's items, old and new: never put in the admins' bags by items.ts fillBags (one per account, taken on the home page). */
+export const STARTER_ITEM_IDS: readonly string[] = ['starter_box', OLD_STARTER_ITEM_ID];
 const STARTER_ITEM = { type: 'dino_box', name: 'Hộp dino tự chọn (tân thủ)', rarity: 'legendary',
   data: { pick: 'choose', growthMin: 0.5, growthMax: 1, quest: false } };
 

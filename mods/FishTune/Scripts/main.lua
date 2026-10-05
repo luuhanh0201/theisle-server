@@ -1,13 +1,13 @@
--- FishTune — more ambient fish, by writing the world AI
+-- FishTune, more ambient fish, by writing the world AI
 -- spawner's fish numbers (MaxAmbientFishPerPlayer 12, AmbientFishSoftLimitPerWater
--- 28, AmbientFishSpawnAttemptsPerPlayer 1, AmbientFishSpawnCooldown 0.5 — the
+-- 28, AmbientFishSpawnAttemptsPerPlayer 1, AmbientFishSpawnCooldown 0.5, the
 -- game's). Game.ini [/Script/TheIsle.TIAIWorldSpawner] is NOT read (read back on
 -- the test server, 2026-09-27). A Lua write on this spawner (GlobalAISpawnLimit,
 -- FishControl) crash-looped the live server on 2026-09-26; these four fish
 -- numbers were written on the test server with no crash (2026-09-27). Runs only
--- where an admin made Mods/FishTune/Saved/ENABLED — in Saved/, which a deploy
+-- where an admin made Mods/FishTune/Saved/ENABLED, in Saved/, which a deploy
 -- leaves alone (a marker next to Scripts/ was deleted by one; a second server on the same VPS
--- could not be joined — its listing pointed at the live port).
+-- could not be joined, its listing pointed at the live port).
 --
 -- It writes nothing by itself. An admin drops Mods/FishTune/Saved/apply.json:
 --   { "id": "a1", "perPlayer": 24, "perWater": 60, "attempts": 3, "cooldown": 0.25,
@@ -22,11 +22,11 @@
 --     "nearClass": "BP_Deinosuchus_C", "nearM": 5000,
 --     "onlyClasses": ["BP_Catfish_C", "BP_Coalecanth_C", "BP_Muskel_C", "BP_Forktail_C"] }
 -- onlyClasses: only these kinds are kept (the big and middle ones), the rest
--- go after 25 s as the game has it — DisallowedAIClasses does not stop fish.
+-- go after 25 s as the game has it, DisallowedAIClasses does not stop fish.
 -- A fish with a long despawn delay could not be caught: bitten, it went
 -- without feeding the crocodile (2026-09-27). So a fish is kept only while
 -- nobody is within keepFromM (80 m), and handed back to the game (25 s) as
--- soon as a player comes within releaseM (40 m) — before they can bite it.
+-- soon as a player comes within releaseM (40 m), before they can bite it.
 -- Each fish the game places gets DespawnDelaySeconds = despawnDelay (game:
 -- 25 s once no player is within its RelevanceDistance, 100 m), so fish stay
 -- in the waters players have left: spread over the map instead of only
@@ -39,11 +39,11 @@
 -- a run, like the spawner writes.
 -- "debug" turns the game's own fish-spawn logging on (bDebugAmbientFishVerbose:
 -- why a spawn failed, in TheIsle.log). "census" counts every TIAmbientFish the
--- game made — placed, or parked at (0, 0, 0) — by class.
+-- game made, placed, or parked at (0, 0, 0), by class.
 -- Flag first: Saved/writing.flag is written before a write and removed a
 -- minute later; found at load, no write is made again (a crash stays one crash).
 --
--- Watching (Saved/watch.json, read only — writes nothing on the game):
+-- Watching (Saved/watch.json, read only, writes nothing on the game):
 --   { "enabled": true, "classes": ["BP_Coalecanth_C", "BP_Catfish_C"], "nearM": 30 }
 -- Why a big fish bitten by a crocodile can go without feeding it (2026-09-27:
 -- a 44 % Deinosuchus ate one, a 27 % one bit one and it was gone). Each fish
@@ -51,7 +51,7 @@
 -- size (GetActorScale3D, an AActor function like K2_GetActorLocation) and that
 -- player's dino (class, growth, stomach). When it goes while a player was that
 -- close, the same, then 2, 6 and 12 s later: the player's stomach again, and
--- what is at that spot — Pawns (a fish the game turned into a creature, a
+-- what is at that spot, Pawns (a fish the game turned into a creature, a
 -- carcass) and fish of that kind. A jump (> 60 m in one look) is logged too.
 
 if not package.path:find("Mods/?.lua", 1, true) then
@@ -66,7 +66,7 @@ local FLAG = DIR .. "writing.flag"
 
 local marker = io.open("Mods/FishTune/Saved/ENABLED", "r")
 if not marker then
-    H.log(MOD .. ": off (no Mods/FishTune/Saved/ENABLED) — nothing to do")
+    H.log(MOD .. ": off (no Mods/FishTune/Saved/ENABLED), nothing to do")
     return
 end
 marker:close()
@@ -77,7 +77,7 @@ do
     if f then
         f:close()
         blocked = true
-        H.logError(MOD .. ": the last run stopped during a write — no more writes. Delete " .. FLAG .. " to try again.")
+        H.logError(MOD .. ": the last run stopped during a write, no more writes. Delete " .. FLAG .. " to try again.")
     end
 end
 
@@ -168,10 +168,10 @@ local function poll()
             else census.placed = census.placed + 1 end
             census.byClass[cls] = (census.byClass[cls] or 0) + 1
         end
-        H.log(string.format("%s: %s — census: %d placed, %d parked, %s", MOD, req.id, census.placed, census.parked,
+        H.log(string.format("%s: %s, census: %d placed, %d parked, %s", MOD, req.id, census.placed, census.parked,
             json.encode(census.byClass)))
     end
-    H.log(string.format("%s: %s — wrote %s | before %s | after %s", MOD, req.id, table.concat(wrote, ", "),
+    H.log(string.format("%s: %s, wrote %s | before %s | after %s", MOD, req.id, table.concat(wrote, ", "),
         json.encode(before), json.encode(after)))
     writeFile(DIR .. "applied.json", json.encode({ id = req.id, t = os.time(), before = before, after = after, census = census }))
 end
@@ -235,7 +235,7 @@ local function keepFish()
                 if addr and kept[addr] and pcall(function() a.DespawnDelaySeconds = GAME_DELAY end) then back = back + 1 end
             end
             kept = {}
-            H.log(string.format("%s: keep turned off — %d fish handed back to the game", MOD, back))
+            H.log(string.format("%s: keep turned off, %d fish handed back to the game", MOD, back))
         end
         return
     end
@@ -309,7 +309,7 @@ local function keepFish()
     for addr in pairs(kept) do if not seen[addr] then kept[addr] = nil end end
     if ((fresh > 0 or released > 0) and now - keptLog >= 60) or now - keptLog >= 300 then
         keptLog = now
-        H.log(string.format("%s: keep — %d fish kept (+%d, %d handed back: a player near), %d placed in all, %d near %d crocodile(s), max %d, %d/%d this window",
+        H.log(string.format("%s: keep, %d fish kept (+%d, %d handed back: a player near), %d placed in all, %d near %d crocodile(s), max %d, %d/%d this window",
             MOD, count, fresh, released, placed, #near, #crocs, maxTotal, windowCount, perWindow))
     end
 end
@@ -387,7 +387,7 @@ local function lookAt(t, id, before, ms)
     end
     local now = dinoOf(id)
     local fed = (now and now.hunger and before and before.hunger) and string.format("%+.1f", now.hunger - before.hunger) or "?"
-    H.log(string.format("%s: watch +%d s — %s stomach %s since (%s); at the spot: %s", MOD, ms / 1000, tostring(id), fed,
+    H.log(string.format("%s: watch +%d s, %s stomach %s since (%s); at the spot: %s", MOD, ms / 1000, tostring(id), fed,
         dinoText(now), #found > 0 and table.concat(found, ", ") or "nothing"))
 end
 
@@ -424,13 +424,13 @@ local function watchFish()
                 local jump = math.sqrt((v.X - t.x) ^ 2 + (v.Y - t.y) ^ 2 + (v.Z - t.z) ^ 2)
                 local d, who = nearestOf(players, v.X, v.Y)
                 if jump > JUMP_CM then
-                    H.log(string.format("%s: fish moved — %s jumped %s m in one look (nearest player %s m, %s)",
+                    H.log(string.format("%s: fish moved, %s jumped %s m in one look (nearest player %s m, %s)",
                         MOD, cls, metres(jump), metres(d), tostring(who)))
                 end
                 t.x, t.y, t.z, t.near, t.who = v.X, v.Y, v.Z, d, who
                 if d ~= nil and d <= nearCm and t.scale == nil then
                     t.scale = scaleOf(a)
-                    H.log(string.format("%s: fish near — %s size %s, %s m from %s (%s)", MOD, cls, t.scale, metres(d),
+                    H.log(string.format("%s: fish near, %s size %s, %s m from %s (%s)", MOD, cls, t.scale, metres(d),
                         tostring(who), dinoText(dinoOf(who))))
                 end
             end
@@ -443,8 +443,8 @@ local function watchFish()
             if t.scale ~= nil then
                 local close = t.near ~= nil and t.near <= nearCm
                 local before = close and dinoOf(t.who) or nil
-                H.log(string.format("%s: fish gone — %s size %s after %d s, last seen %s m from %s%s", MOD, t.cls, t.scale,
-                    now - t.since, metres(t.near), tostring(t.who), close and (" (" .. dinoText(before) .. ")") or " — nobody near"))
+                H.log(string.format("%s: fish gone, %s size %s after %d s, last seen %s m from %s%s", MOD, t.cls, t.scale,
+                    now - t.since, metres(t.near), tostring(t.who), close and (" (" .. dinoText(before) .. ")") or ", nobody near"))
                 if close then
                     for _, ms in ipairs(LOOKS_MS) do
                         H.defer(ms, function() lookAt(t, t.who, before, ms) end)
@@ -459,4 +459,4 @@ end
 -- before one closing in from 40 m can bite it.
 H.every(2000, MOD .. ": poll", function() poll(); keepFish(); watchFish() end)
 local ws = spawner()
-H.log(MOD .. ": loaded — spawner now " .. (ws and json.encode(readBack(ws)) or "not found yet"))
+H.log(MOD .. ": loaded, spawner now " .. (ws and json.encode(readBack(ws)) or "not found yet"))

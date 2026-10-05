@@ -1,4 +1,4 @@
--- ZoneGuard — small dinos only, in the zones the admin marks (panel → Bản đồ
+-- ZoneGuard, small dinos only, in the zones the admin marks (panel → Bản đồ
 -- → Dino nhỏ): the AI zones ticked "Chỉ dino nhỏ" and the sanctuaries ticked
 -- there. The bridge writes every guarded shape and the rules to
 -- Mods/ZoneGuard/Saved/guard.json (bridge/src/zone-guard.ts).
@@ -8,9 +8,9 @@
 --   * is warned once (a server message, text in the panel's Thông báo)
 --   * `grace` seconds later, still inside, is stung: every `every` seconds it
 --     loses `pct`% of its maximum health (GetHealth / GetMaxHealth, then
---     SetHealth — as the garage and !slay use it), like the bees of the
+--     SetHealth, as the garage and !slay use it), like the bees of the
 --     game's own sanctuaries. Staying kills it; leaving stops it.
---   * stepping out and back in within REENTER_S keeps its clock — no fresh
+--   * stepping out and back in within REENTER_S keeps its clock, no fresh
 --     grace for a dino that just walked out of the stings
 --
 -- Safety (docs/lua-safety-rules.md): all on the game thread (H.every), every
@@ -179,9 +179,9 @@ local function tick()
         if st == nil or (st.leftAt and now - st.leftAt > REENTER_S) then
             state[id] = { zone = zone.name, since = now }
             Msg.notify(ctrl, "guard.warn",
-                "Dino của bạn quá lớn cho “{zone}” ({growth}% — tối đa {max}%). Rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!",
+                "Dino của bạn quá lớn cho “{zone}” ({growth}%, tối đa {max}%). Rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!",
                 { zone = zone.name, growth = pctText(g), max = pctText(limit), seconds = math.floor(r.grace) })
-            H.log(string.format("%s: %s (%s %s%%) entered %s — warned", MOD, id, tostring(sp), pctText(g), zone.name))
+            H.log(string.format("%s: %s (%s %s%%) entered %s, warned", MOD, id, tostring(sp), pctText(g), zone.name))
             return
         end
         st.leftAt = nil
@@ -191,7 +191,7 @@ local function tick()
         local left = sting(pawn, r.pct)
         if left == nil then return end
         if not st.stungAt then
-            Msg.notify(ctrl, "guard.sting", "Bạn đang bị ong đốt ở “{zone}” — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.",
+            Msg.notify(ctrl, "guard.sting", "Bạn đang bị ong đốt ở “{zone}”, mất {pct}% máu mỗi {every} giây cho tới khi rời đi.",
                 { zone = zone.name, pct = math.floor(r.pct), every = math.floor(r.every) })
             H.log(string.format("%s: %s (%s) stung in %s", MOD, id, tostring(sp), zone.name))
         end
@@ -207,4 +207,4 @@ local function tick()
 end
 
 H.every(TICK_MS, MOD .. " tick", tick)
-H.log(MOD .. ": loaded — rules from " .. RULES_PATH)
+H.log(MOD .. ": loaded, rules from " .. RULES_PATH)

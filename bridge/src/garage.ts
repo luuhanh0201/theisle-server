@@ -7,7 +7,7 @@ import { PRIME_NEEDED } from './prime.js';
 /**
  * Reads and writes the DinoGarage store on disk.
  *
- * Layout and schema are fixed by the Lua mod — see
+ * Layout and schema are fixed by the Lua mod, see
  * docs/reference/EVRIMA_DinoStorage_Architecture.md:
  *
  *   <root>/storage.json            index, schema 4
@@ -59,13 +59,13 @@ export interface NewSlotSpec {
   /**
    * The prime tasks the dino comes out with: ten 0/1, condition 1 first
    * ("0010101101"). Written as they are by restore.lua (applyPrime); eligible
-   * with 5 or more. Left out: the dino keeps only what a fresh one has — the
+   * with 5 or more. Left out: the dino keeps only what a fresh one has, the
    * panel fills it from the player's last dino of that species (prime-history.ts).
    */
   primeConditions?: string;
   /**
    * The skin it comes out with, as the game holds one (H.readSkin: colors
-   * { Body: {r,g,b} … } linear, patternIndex, themeIndex, variation, female) —
+   * { Body: {r,g,b} … } linear, patternIndex, themeIndex, variation, female),
    * restore.lua paints it (step 8). Left out: the fresh dino's own.
    */
   skin?: unknown;
@@ -73,12 +73,12 @@ export interface NewSlotSpec {
    * The quest mutations it had unlocked (drink saltwater, jump 50 times…):
    * MutationsRequirementsData.UnlockRequiredMutations, as StatsLogger saw it.
    * restore.lua adds them (and every slot's mutation) to the fresh dino's
-   * list — without it a quest mutation in its slot was hidden and did nothing.
+   * list, without it a quest mutation in its slot was hidden and did nothing.
    */
   unlockedMutations?: string[];
   /** Fill the stomach to the game's max for this dino on redeem (default true). */
   stomachFull?: boolean;
-  /** Nutrient level to give (carb, protein, lipid), % of the dino's max —
+  /** Nutrient level to give (carb, protein, lipid), % of the dino's max,
    * its stomach, GetMaxHunger (restore.lua). Default 50. */
   nutrientPct?: number;
   /** Slot key -> mutation FName, e.g. { Slot1: "MUT_Hematophagy" }. */
@@ -256,7 +256,7 @@ export async function createSlot(
     primeData['eligible'] = [...spec.primeConditions].filter((c) => c === '1').length >= PRIME_NEEDED;
   }
   // The game makes a dino prime only with PRIME_NEEDED tasks done: asked with
-  // fewer, it stays not prime — admin slots with 2–4 tasks and prime ticked
+  // fewer, it stays not prime, admin slots with 2–4 tasks and prime ticked
   // came out plain (2026-09-27). Refused here instead of a silent failure.
   if (spec.isPrime === true && (primeData === null || primeData['eligible'] !== true)) {
     throw new ValidationError(`a prime elder needs at least ${PRIME_NEEDED} of the 10 prime tasks done (primeConditions)`);
@@ -354,7 +354,7 @@ export async function createSlot(
     (await readJson(slotPath(steamId, slot))) !== null ||
     (await readIndex()).players[steamId]?.[slot] !== undefined;
   if (taken && spec.overwrite !== true) {
-    throw new ConflictError(`slot "${slot}" already holds a dino — send overwrite: true to replace it`);
+    throw new ConflictError(`slot "${slot}" already holds a dino, send overwrite: true to replace it`);
   }
   // Replacing: keep the old dino in deleted/, the same as an explicit delete.
   const replaced = taken ? await moveToTrash(steamId, slot) : null;
@@ -373,7 +373,7 @@ export async function createSlot(
 
 /**
  * A dino from the garage history (deleted/<steam>__<slot>__<why>-<unix>.json: taken out,
- * cancelled, trashed) put back as it was into a free slot — every captured field kept
+ * cancelled, trashed) put back as it was into a free slot, every captured field kept
  * (vitals, nutrients, mutations, unlocks, skin, spot), not an admin-made one. The history
  * file stays. For a dino lost to a redeem that went wrong (2026-10-04: a redeem a few
  * seconds after a store restored onto the store's corpse and the slot was gone).
@@ -420,7 +420,7 @@ async function moveToTrash(steamId: string, slot: string, label?: string): Promi
 
 /**
  * The history file a redeem moved this slot to (deleted/<steam>__<slot>__redeemed-<unix>.json), taken out
- * within `before` seconds before `t` — the closest one — or null (put back since, or never there).
+ * within `before` seconds before `t`, the closest one, or null (put back since, or never there).
  */
 export async function findRedeemHistory(steamId: string, slot: string, t: number, before = 120): Promise<string | null> {
   assertSteamId(steamId);
@@ -460,7 +460,7 @@ export async function nextFreeSlot(steamId: string): Promise<string> {
 
 /**
  * Undo a store the game never saved (garage-guard.ts): the slot goes to deleted/<…>__crashundo-<unix>.json,
- * only while it still holds that dino (same species, same growth) — never another one stored there since.
+ * only while it still holds that dino (same species, same growth), never another one stored there since.
  * Returns the history name, or null when the slot no longer holds it.
  */
 export async function undoStore(steamId: string, slot: string, classPath: string, growth: number): Promise<string | null> {
@@ -571,7 +571,7 @@ export async function listAll(): Promise<GarageIndex> {
       };
     }
   } catch {
-    // No stored/ directory yet — nothing has been parked.
+    // No stored/ directory yet, nothing has been parked.
   }
   return index;
 }

@@ -14,8 +14,8 @@ import { ValidationError } from './garage.js';
  *     visitor's IP in X-Real-IP (nginx sets it, overwriting whatever the
  *     browser sent); it must be on the panel's allow list
  *     (DATA_DIR/panel-access.json, first seeded from PANEL_ALLOWED_IPS). A
- *     request with no X-Real-IP came straight to 127.0.0.1 — through the SSH
- *     tunnel, i.e. someone holding the server's SSH key — and passes.
+ *     request with no X-Real-IP came straight to 127.0.0.1, through the SSH
+ *     tunnel, i.e. someone holding the server's SSH key, and passes.
  *  2. The person. A Steam login (OpenID, verified with Steam) whose SteamID is
  *     a game admin: the AdminsSteamIDs list the panel manages (Game.ini's when
  *     the panel has not saved one), plus ADMIN_STEAM_IDS from .env, who can
@@ -25,7 +25,7 @@ import { ValidationError } from './garage.js';
  * The login is a signed cookie ("<steamId>.<expires>.<hmac>", HttpOnly,
  * SameSite=Strict), nothing stored server-side. Writes also need a token in
  * x-admin-token: either ADMIN_TOKEN itself (scripts) or the login's own
- * token — an HMAC of the cookie, which the panel page is given and fills in
+ * token, an HMAC of the cookie, which the panel page is given and fills in
  * by itself. A page on another site cannot read it, so it cannot write.
  */
 
@@ -132,7 +132,7 @@ function parseRange(rule: string): { kind: 4 | 6; base: string; bits: number } |
 
 /**
  * A rule is one IP (v4 or v6) or a range: "a.b.c.d/n" or an IPv6 prefix
- * "2405:4802:1d32:eec0::/64" — a home connection's IPv6 changes its last half
+ * "2405:4802:1d32:eec0::/64", a home connection's IPv6 changes its last half
  * every few hours, its /64 prefix stays.
  */
 export function validRule(rule: string): boolean {

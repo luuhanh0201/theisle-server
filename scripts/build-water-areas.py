@@ -3,7 +3,7 @@
 đó lên", not an outline). The map data (VulnonaMAP, gateway.json) only names the waters
 (27 labels): the water itself is found here on the map image.
 
-    bridge/public/map/water-mask.png   every inland water pixel (lakes, rivers, ponds —
+    bridge/public/map/water-mask.png   every inland water pixel (lakes, rivers, ponds,
                                        named or not), as the map image's size: drawn over
                                        it, filled, while the water layer is on
     bridge/public/map/water-areas.json the named waters, outlined (and a circle for a water
@@ -21,7 +21,7 @@ in map units (as gateway.json: [x down, y right]). gateway.json is left alone (i
 fetched again from the source).
 
 How: inland water on the image is a grey-teal (green ≈ blue > red); the sea is a flat
-navy. Per label: the nearest water pixel, then a flood fill —
+navy. Per label: the nearest water pixel, then a flood fill,
   lakes / ponds: in the water mask with its thin parts (rivers) cut off first (an
   erosion), so a lake does not run down its river into the next one; grown back after;
   rivers / falls / the delta: along the water itself, within a reach of the label;
@@ -214,7 +214,7 @@ def write_mask():
         if len(comp) < 30 or (near_sea[rows, cols].mean() > 0.4 and wide[rows, cols].mean() > 0.15):
             continue
         keep[rows, cols] = True
-    # Salt water (owner, 2026-10-04: "vùng đó không hề có nước ngọt" — the coast, the river
+    # Salt water (owner, 2026-10-04: "vùng đó không hề có nước ngọt", the coast, the river
     # mouths): nothing within SALT px of the sea, except the named lakes (Dam Lake sits by the
     # sea behind its dam: fresh), kept whole.
     salt = navy.copy()

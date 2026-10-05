@@ -5,7 +5,7 @@ import { config } from './config.js';
 import { ValidationError } from './garage.js';
 
 /**
- * Everything the server tells players, and how often — editable on the admin
+ * Everything the server tells players, and how often, editable on the admin
  * panel (tab Thông báo).
  *
  *   texts          every message by key; only the ones an admin changed are
@@ -77,27 +77,27 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'ban.edit', group: 'ban', label: 'Thông báo toàn server khi sửa ban (thời hạn / lý do)', default: '✏️ Ban của {name} đổi thành {duration} (hết hạn {until}). Lý do: {reason}', vars: ['name', 'reason', 'duration', 'until', 'since', 'by'], offByDefault: true },
   { key: 'ban.player', group: 'ban', label: 'Tin riêng cho người bị ban (gửi ngay trước khi bị kick, chỉ khi ban từ panel)', default: 'Bạn đã bị ban {duration}. Lý do: {reason}. Khiếu nại: vào Discord của server.', vars: ['name', 'reason', 'duration', 'until'] },
   // --- Pteranodon carry (mods/PteraCarry) ---
-  { key: 'ptera.carry.hint', group: 'ptera', label: 'Gợi ý: có con gắp được ở gần', default: 'Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.', vars: ['species', 'kg'], offByDefault: true },
+  { key: 'ptera.carry.hint', group: 'ptera', label: 'Gợi ý: có con gắp được ở gần', default: 'Có thể gắp {species} ({kg} kg), đang bay, giữ Z + chuột phải sát nó.', vars: ['species', 'kg'], offByDefault: true },
   { key: 'ptera.carry.start', group: 'ptera', label: 'Bắt đầu gắp (cho Ptera)', default: 'Đang gắp {species} ({kg} kg). Đáp xuống hoặc gõ !drop để thả (tối đa {seconds} giây).', vars: ['species', 'kg', 'seconds'], offByDefault: true },
   { key: 'ptera.carry.victim', group: 'ptera', label: 'Bị gắp (cho con bị gắp)', default: 'Bạn đang bị một Pteranodon gắp đi!', vars: [], offByDefault: true },
   { key: 'ptera.carry.dropped', group: 'ptera', label: 'Đã thả (cho Ptera)', default: 'Đã thả {species}.', vars: ['species'], offByDefault: true },
   { key: 'ptera.carry.released', group: 'ptera', label: 'Được thả (cho con bị gắp)', default: 'Pteranodon đã thả bạn ra.', vars: [], offByDefault: true },
-  { key: 'ptera.carry.tooHeavy', group: 'ptera', label: 'Quá nặng', default: '{species} nặng {kg} kg — Pteranodon chỉ gắp được tới {max} kg.', vars: ['species', 'kg', 'max'], offByDefault: true },
+  { key: 'ptera.carry.tooHeavy', group: 'ptera', label: 'Quá nặng', default: '{species} nặng {kg} kg, Pteranodon chỉ gắp được tới {max} kg.', vars: ['species', 'kg', 'max'], offByDefault: true },
   { key: 'ptera.carry.cooldown', group: 'ptera', label: 'Đang hồi', default: 'Gắp đang hồi: chờ {seconds} giây.', vars: ['seconds'], offByDefault: true },
   // --- small dinos only (mods/ZoneGuard) ---
-  { key: 'guard.warn', group: 'guard', label: 'Dino quá lớn vào vùng chỉ dino nhỏ (cảnh báo)', default: 'Dino của bạn quá lớn cho “{zone}” ({growth}% — tối đa {max}%). Rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['zone', 'growth', 'max', 'seconds'] },
-  { key: 'guard.sting', group: 'guard', label: 'Bắt đầu bị ong đốt', default: 'Bạn đang bị ong đốt ở “{zone}” — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['zone', 'pct', 'every'] },
+  { key: 'guard.warn', group: 'guard', label: 'Dino quá lớn vào vùng chỉ dino nhỏ (cảnh báo)', default: 'Dino của bạn quá lớn cho “{zone}” ({growth}%, tối đa {max}%). Rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['zone', 'growth', 'max', 'seconds'] },
+  { key: 'guard.sting', group: 'guard', label: 'Bắt đầu bị ong đốt', default: 'Bạn đang bị ong đốt ở “{zone}”, mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['zone', 'pct', 'every'] },
   { key: 'ptera.carry.nothing', group: 'ptera', label: '!drop khi không gắp gì', default: 'Bạn không gắp con nào.', vars: [] },
   { key: 'ptera.carry.inmate', group: 'ptera', label: 'Gắp tù nhân (bị chặn)', default: 'Không gắp được tù nhân.', vars: [], offByDefault: true },
   // --- prison: outsiders in the prison zone (mods/Prison) ---
-  { key: 'prison.sting.warn', group: 'guard', label: 'Người ngoài vào khu nhà tù (cảnh báo)', default: 'Đây là khu nhà tù — rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['seconds'] },
+  { key: 'prison.sting.warn', group: 'guard', label: 'Người ngoài vào khu nhà tù (cảnh báo)', default: 'Đây là khu nhà tù, rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['seconds'] },
   { key: 'prison.noSleep', group: 'guard', label: 'Người ở tù cho dino ngủ (bị đánh thức)', default: 'Đang ở tù: không được ngủ.', vars: [] },
-  { key: 'prison.sting', group: 'guard', label: 'Người ngoài bắt đầu bị ong đốt ở khu nhà tù', default: 'Bạn đang bị ong đốt ở khu nhà tù — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['pct', 'every'] },
+  { key: 'prison.sting', group: 'guard', label: 'Người ngoài bắt đầu bị ong đốt ở khu nhà tù', default: 'Bạn đang bị ong đốt ở khu nhà tù, mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['pct', 'every'] },
   // --- garage: storing (mods/DinoGarage) ---
-  { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
-  { key: 'garage.tenSeconds', group: 'garage', label: 'Còn 10 giây', default: 'Còn 10 giây là cất xong — đứng yên.', vars: [] },
+  { key: 'garage.countdown', group: 'garage', label: 'Bắt đầu đếm ngược cất', default: 'Bắt đầu cất sau {seconds} giây, đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
+  { key: 'garage.tenSeconds', group: 'garage', label: 'Còn 10 giây', default: 'Còn 10 giây là cất xong, đứng yên.', vars: [] },
   // Off by default: each task given back is told by prime.conditionDone (prime-notify.ts).
-  { key: 'garage.primeFixed', group: 'garage', label: 'Bù tiến độ prime (gara, vùng di cư) — mặc định tắt: đã có tin "hoàn thành nhiệm vụ"', default: 'Đã cập nhật tiến độ prime của bạn (vùng di cư, tuần tra…).', vars: [], offByDefault: true },
+  { key: 'garage.primeFixed', group: 'garage', label: 'Bù tiến độ prime (gara, vùng di cư), mặc định tắt: đã có tin "hoàn thành nhiệm vụ"', default: 'Đã cập nhật tiến độ prime của bạn (vùng di cư, tuần tra…).', vars: [], offByDefault: true },
   { key: 'garage.stored', group: 'garage', label: 'Cất xong', default: 'Đã cất dino vào gara. Respawn đúng loài rồi lấy ra trên trang web.', vars: [] },
   { key: 'garage.failed', group: 'garage', label: 'Cất thất bại ({reason} = một lý do bên dưới)', default: 'Cất thất bại: {reason}. Bạn có thể cất lại ngay.', vars: ['reason'] },
   ...REASONS.map(([k, label, def]): MessageDef => ({ key: `garage.reason.${k}`, group: 'garage', label: `Lý do thất bại: ${label}`, default: def, vars: [] })),
@@ -117,15 +117,15 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'redeem.restoringStored', group: 'redeem', label: 'Đang lấy ra (về chỗ đã cất)', default: "Restoring '{slot}' at the spot you stored it. Hold still for a few seconds.", vars: ['slot'] },
   { key: 'redeem.done', group: 'redeem', label: 'Lấy ra xong', default: "Restored '{slot}'. The slot is now empty.", vars: ['slot'] },
   { key: 'redeem.failed', group: 'redeem', label: 'Lấy ra không xong (trả lại gara)', default: 'Restore did not finish. Your slot is back in the garage.', vars: [] },
-  { key: 'redeem.moveFailed', group: 'redeem', label: 'Không dịch chuyển được về chỗ cất', default: 'Could not move you to the stored spot — restoring here.', vars: [] },
-  { key: 'redeem.noStoredSpot', group: 'redeem', label: 'Slot không có vị trí đã cất', default: "Slot '{slot}' has no stored position — restoring where you stand.", vars: ['slot'] },
+  { key: 'redeem.moveFailed', group: 'redeem', label: 'Không dịch chuyển được về chỗ cất', default: 'Could not move you to the stored spot, restoring here.', vars: [] },
+  { key: 'redeem.noStoredSpot', group: 'redeem', label: 'Slot không có vị trí đã cất', default: "Slot '{slot}' has no stored position, restoring where you stand.", vars: ['slot'] },
   { key: 'redeem.cooldown', group: 'redeem', label: 'Gara đang hồi', default: 'Garage cooldown: wait {seconds} s.', vars: ['seconds'] },
   { key: 'redeem.empty', group: 'redeem', label: 'Gara trống', default: 'Your garage is empty.', vars: [] },
   { key: 'redeem.unknownSlot', group: 'redeem', label: 'Slot không hợp lệ', default: 'Unknown slot.', vars: [] },
   { key: 'redeem.slotEmpty', group: 'redeem', label: 'Slot trống / hỏng', default: "Slot '{slot}' is empty or unreadable.", vars: ['slot'] },
   { key: 'redeem.noDino', group: 'redeem', label: 'Chưa respawn', default: 'Respawn first, then type !redeem.', vars: [] },
   { key: 'redeem.unknownSpecies', group: 'redeem', label: 'Không nhận ra loài hiện tại', default: 'Could not identify your current dino. Try again.', vars: [] },
-  { key: 'redeem.wrongSpecies', group: 'redeem', label: 'Sai loài', default: 'Wrong species — respawn as the one you stored.', vars: [] },
+  { key: 'redeem.wrongSpecies', group: 'redeem', label: 'Sai loài', default: 'Wrong species, respawn as the one you stored.', vars: [] },
   { key: 'redeem.takeFailed', group: 'redeem', label: 'Không lấy slot ra được', default: "Slot '{slot}' could not be taken out ({error}).", vars: ['slot', 'error'] },
   // --- chat commands (mods/PlayerCommands) ---
   { key: 'cmd.food.done', group: 'commands', label: '!food: xong', default: 'Đã nhả thứ trong mồm. Nếu vẫn kẹt, thoát ra vào lại hoặc dùng !unstuck.', vars: [] },
@@ -139,7 +139,7 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'cmd.unstuck.done', group: 'commands', label: '!unstuck: xong', default: 'Đã đưa bạn về điểm an toàn cách {meters} m.', vars: ['meters'] },
   { key: 'cmd.unstuck.cooldown', group: 'commands', label: '!unstuck: đang hồi', default: '!unstuck: chờ thêm {wait}.', vars: ['wait'] },
   { key: 'cmd.unstuck.noDino', group: 'commands', label: '!unstuck: chưa có dino', default: '!unstuck: bạn chưa điều khiển dino nào.', vars: [] },
-  { key: 'cmd.unstuck.noSafeSpot', group: 'commands', label: '!unstuck: chưa có điểm an toàn', default: '!unstuck: chưa có điểm an toàn trên mặt đất — đi bộ trên mặt đất vài giây rồi thử lại.', vars: [] },
+  { key: 'cmd.unstuck.noSafeSpot', group: 'commands', label: '!unstuck: chưa có điểm an toàn', default: '!unstuck: chưa có điểm an toàn trên mặt đất, đi bộ trên mặt đất vài giây rồi thử lại.', vars: [] },
   { key: 'cmd.unstuck.failed', group: 'commands', label: '!unstuck: lỗi', default: '!unstuck không thực hiện được, thử lại sau.', vars: [] },
   { key: 'cmd.prime.info', group: 'commands', label: '!prime: kết quả', default: 'Nhiệm vụ prime: {done}/10 xong (cần {needed}) · Đủ điều kiện: {eligible} · Prime: {status} · Growth {growth}.', vars: ['done', 'needed', 'eligible', 'status', 'prime', 'growth'] },
   { key: 'cmd.prime.noDino', group: 'commands', label: '!prime: chưa có dino', default: '!prime: bạn chưa điều khiển dino nào.', vars: [] },
@@ -151,8 +151,8 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'item.growth', group: 'admin', label: 'Người chơi dùng Túi tăng trưởng', default: 'Dino của bạn đã lớn từ {from}% lên {to}%.', vars: ['from', 'to'] },
   { key: 'item.cure', group: 'admin', label: 'Người chơi dùng Đá muối', default: 'Dino của bạn đã liếm đá muối: dạ dày dịu lại, hết ốm sau khi nôn.', vars: [] },
   { key: 'item.food', group: 'admin', label: 'Người chơi dùng Hộp food', default: 'Dino của bạn đã được cho ăn: thức ăn {from}% → {to}%.', vars: ['from', 'to'] },
-  { key: 'item.prime', group: 'admin', label: 'Người chơi dùng Phiếu Prime', default: 'Dino của bạn đã lên prime — chỉ số prime được áp sau vài giây.', vars: [] },
-  { key: 'item.mutationUpgrade', group: 'admin', label: 'Người chơi nâng cấp mutation bằng vật phẩm trùng (+1 đời)', default: 'Dino của bạn đã lên đời {generation} nhờ {mutation} — mọi mutation mạnh hơn.', vars: ['generation', 'mutation'] },
+  { key: 'item.prime', group: 'admin', label: 'Người chơi dùng Phiếu Prime', default: 'Dino của bạn đã lên prime, chỉ số prime được áp sau vài giây.', vars: [] },
+  { key: 'item.mutationUpgrade', group: 'admin', label: 'Người chơi nâng cấp mutation bằng vật phẩm trùng (+1 đời)', default: 'Dino của bạn đã lên đời {generation} nhờ {mutation}, mọi mutation mạnh hơn.', vars: ['generation', 'mutation'] },
   { key: 'item.mutation', group: 'admin', label: 'Người chơi dùng vật phẩm mutation (từ túi đồ trên web)', default: 'Đã thêm mutation {mutation} vào dino của bạn (ô {slot}).', vars: ['mutation', 'slot'] },
   { key: 'admin.action', group: 'admin', label: 'Admin thao tác lên dino (heal, chỉ số, tăng trưởng, dịch chuyển)', default: 'Admin đã {action} cho dino của bạn.', vars: ['action'] },
   { key: 'admin.kill', group: 'admin', label: 'Admin xoá dino (không lý do)', default: 'An admin removed your dino.', vars: [] },
@@ -163,30 +163,30 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'skin.failed', group: 'skin', label: 'Đổi màu thất bại', default: 'Không đổi được màu dino. Thử lại sau.', vars: [] },
   { key: 'skin.kept', group: 'skin', label: 'Tô lại màu đã giữ (dino mới cùng loài)', default: 'Đã tô lại màu bạn giữ cho loài này.', vars: [] },
   // --- prime tasks (prime-notify.ts): sent by the bridge when a task turns on ---
-  { key: 'prime.conditionDone', group: 'prime', label: 'Hoàn thành một nhiệm vụ prime ({task} = tên nhiệm vụ)', default: '✅ Đã hoàn thành nhiệm vụ prime: {task} ({done}/10 — cần {needed} để đủ điều kiện prime).', vars: ['task', 'n', 'done', 'needed'] },
+  { key: 'prime.conditionDone', group: 'prime', label: 'Hoàn thành một nhiệm vụ prime ({task} = tên nhiệm vụ)', default: '✅ Đã hoàn thành nhiệm vụ prime: {task} ({done}/10, cần {needed} để đủ điều kiện prime).', vars: ['task', 'n', 'done', 'needed'] },
   { key: 'prime.eligible', group: 'prime', label: 'Dino vừa đủ điều kiện prime', default: '🌟 Dino của bạn đã đủ điều kiện prime ({done}/10)! Game xét prime khi dino đạt 75% growth.', vars: ['done', 'needed'] },
   // --- prison (prison.ts): sent by the bridge ---
   { key: 'prison.jailed.announce', group: 'prison', label: 'Thông báo toàn server khi có người bị bỏ tù', default: '🔒 {name} bị bỏ tù {duration}. Lý do: {reason}', vars: ['name', 'duration', 'reason', 'offense', 'prior', 'times'] },
   { key: 'prison.jailed.player', group: 'prison', label: 'Tin riêng cho người bị bỏ tù', default: 'Bạn bị bỏ tù {duration}. Lý do: {reason}. Án chỉ trừ khi bạn online và ở trong nhà tù.', vars: ['name', 'duration', 'reason', 'offense', 'prior', 'times'] },
-  { key: 'prison.moved.player', group: 'prison', label: 'Dino được đưa vào tù (tin riêng)', default: '🔒 Bạn đang ở tù — còn {left}. Ra khỏi khu tù là vượt ngục: cả server sẽ thấy vị trí của bạn.', vars: ['left', 'reason'] },
-  { key: 'prison.escape.announce', group: 'prison', label: 'Vượt ngục (toàn server)', default: '🚨 VƯỢT NGỤC: {name} ({species}) vừa trốn khỏi nhà tù! Án còn {left}. Vị trí đang hiện trên bản đồ — ai hạ được sẽ được ghi công Thợ săn.', vars: ['name', 'species', 'left', 'escapes'] },
+  { key: 'prison.moved.player', group: 'prison', label: 'Dino được đưa vào tù (tin riêng)', default: '🔒 Bạn đang ở tù, còn {left}. Ra khỏi khu tù là vượt ngục: cả server sẽ thấy vị trí của bạn.', vars: ['left', 'reason'] },
+  { key: 'prison.escape.announce', group: 'prison', label: 'Vượt ngục (toàn server)', default: '🚨 VƯỢT NGỤC: {name} ({species}) vừa trốn khỏi nhà tù! Án còn {left}. Vị trí đang hiện trên bản đồ, ai hạ được sẽ được ghi công Thợ săn.', vars: ['name', 'species', 'left', 'escapes'] },
   { key: 'prison.escape.player', group: 'prison', label: 'Vượt ngục (tin riêng cho kẻ trốn)', default: '🚨 Bạn đã ra khỏi nhà tù: cả server được báo và thấy vị trí của bạn trên bản đồ. Án tạm dừng (còn {left}) cho tới khi bạn quay lại.', vars: ['left'] },
   { key: 'prison.escape.remind', group: 'prison', label: 'Nhắc lại khi còn đang trốn (toàn server)', default: '🚨 TRUY NÃ: {name} ({species}) vẫn đang trốn ngục đã {minutes} phút. Án còn {left}. Xem vị trí trên bản đồ.', vars: ['name', 'species', 'minutes', 'left'] },
-  { key: 'prison.returned.announce', group: 'prison', label: 'Kẻ vượt ngục quay lại tù (toàn server)', default: '🔒 {name} đã quay lại nhà tù — án tiếp tục (còn {left}).', vars: ['name', 'left'] },
+  { key: 'prison.returned.announce', group: 'prison', label: 'Kẻ vượt ngục quay lại tù (toàn server)', default: '🔒 {name} đã quay lại nhà tù, án tiếp tục (còn {left}).', vars: ['name', 'left'] },
   { key: 'prison.bounty.announce', group: 'prison', label: 'Có người bắt được kẻ vượt ngục (toàn server)', default: '🏹 BẮT ĐƯỢC KẺ VƯỢT NGỤC: {hunter} đã bắt được {name}! Phần thưởng sẽ được cập nhật sau.', vars: ['hunter', 'name', 'count'] },
   { key: 'prison.caught.announce', group: 'prison', label: 'Kẻ vượt ngục bị bắt lại, không rõ ai bắt (toàn server)', default: '🔒 Kẻ vượt ngục {name} đã bị bắt lại và đưa về nhà tù (án còn {left}).', vars: ['name', 'left'] },
   { key: 'prison.caught.player', group: 'prison', label: 'Bị bắt lại, đưa về tù (tin riêng)', default: '🔒 Bạn đã bị bắt lại và đưa về nhà tù. Án còn {left}.', vars: ['left'] },
   { key: 'prison.died.player', group: 'prison', label: 'Chết khi đang trốn (tin riêng)', default: '💀 Dino của bạn đã chết khi trốn ngục. Spawn lại đúng loài {species} để được tạo lại chính con đó trong nhà tù (loài khác thì con mới vào tù). Án còn {left}.', vars: ['species', 'left'] },
   { key: 'prison.recreated.player', group: 'prison', label: 'Dino được tạo lại trong tù (tin riêng)', default: '🔒 Dino của bạn đã được tạo lại trong nhà tù. Tiếp tục thi hành án: còn {left}.', vars: ['left'] },
   { key: 'prison.killPenalty.player', group: 'prison', label: 'Giết bạn tù: bị cộng án (tin riêng)', default: '⚖️ Bạn đã giết bạn tù {name}: án +{minutes} phút (còn {left}).', vars: ['minutes', 'name', 'left'] },
-  { key: 'prison.extended.player', group: 'prison', label: 'Admin đổi thời gian án (tin riêng)', default: 'Án tù của bạn đổi {minutes} phút — còn {left}.', vars: ['minutes', 'left'] },
+  { key: 'prison.extended.player', group: 'prison', label: 'Admin đổi thời gian án (tin riêng)', default: 'Án tù của bạn đổi {minutes} phút, còn {left}.', vars: ['minutes', 'left'] },
   { key: 'prison.released.player', group: 'prison', label: 'Mãn hạn tù (tin riêng)', default: '🔓 Bạn đã MÃN HẠN TÙ và được đưa về chỗ bị bắt. Chơi đúng luật nhé!', vars: ['name', 'served'] },
   { key: 'prison.releasedEarly.player', group: 'prison', label: 'Được admin thả sớm (tin riêng)', default: '🔓 Admin đã THẢ SỚM bạn khỏi nhà tù. Bạn được đưa về chỗ bị bắt.', vars: ['name', 'served', 'by'] },
   { key: 'prison.released.announce', group: 'prison', label: 'Mãn hạn tù (toàn server)', default: '🔓 RA TÙ: {name} đã mãn hạn tù ({served} trong tù) và được thả.', vars: ['name', 'served'] },
   { key: 'prison.releasedEarly.announce', group: 'prison', label: 'Được admin thả sớm (toàn server)', default: '🔓 RA TÙ: {name} được admin thả sớm khỏi nhà tù.', vars: ['name', 'served', 'by'] },
   // --- greeting (mods/HelloIsle) ---
   { key: 'hello.welcome', group: 'hello', label: 'Chào khi vào game / spawn', default: 'Welcome to the island. Type !ping to check the mods.', vars: [] },
-  { key: 'hello.pong', group: 'hello', label: 'Trả lời !ping', default: 'pong — mods are alive', vars: [] },
+  { key: 'hello.pong', group: 'hello', label: 'Trả lời !ping', default: 'pong, mods are alive', vars: [] },
 ];
 
 export const MESSAGE_BY_KEY: ReadonlyMap<string, MessageDef> = new Map(MESSAGES.map((m) => [m.key, m]));

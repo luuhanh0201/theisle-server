@@ -9,8 +9,8 @@ import { boundRadiusCm, centreOf, zoneOutline, type Point2 } from './zone-shape.
 /**
  * "Small dinos only" zones (mods/ZoneGuard): in the AI zones an admin marked
  * (AiZone.smallOnly) and the sanctuaries an admin ticked, a player's dino
- * grown past its species' limit is warned, then — `graceSec` later, while it
- * stays — stung: every `everySec` it loses `pct`% of its maximum health, as
+ * grown past its species' limit is warned, then, `graceSec` later, while it
+ * stays, stung: every `everySec` it loses `pct`% of its maximum health, as
  * the bees of the game's own sanctuaries do. Leaving stops it; staying kills.
  *
  *   DATA_DIR/zone-guard.json          what the panel saved (this file owns it)

@@ -1,10 +1,10 @@
 /*
- * mut-icons.js — the mutation icons, on every page that shows them (the
- * portal's Túi đồ, the admin panel — the bridge serves this file and the
+ * mut-icons.js, the mutation icons, on every page that shows them (the
+ * portal's Túi đồ, the admin panel, the bridge serves this file and the
  * icons from the portal). One request for all of them (img/mutations/icons.json,
  * scripts/build-mutation-icons.mjs), kept in memory: one <img> a mutation, one
  * request each, again at every redraw (the icons were not cached) tripped the
- * proxy in front of the site — 503 on about half of them (2026-10-02).
+ * proxy in front of the site, 503 on about half of them (2026-10-02).
  *
  * Write <img data-mut-icon="Mutation name or slug" alt="">: this fills its src
  * (a data: URI) once the icons are here, also for images drawn later. A name

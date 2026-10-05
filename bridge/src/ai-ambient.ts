@@ -1,13 +1,13 @@
 import { readLive, saveSettings } from './gameini.js';
 
 /**
- * The game's own AI — rabbits, chickens, boars… it spawns around players
- * (Game.ini bSpawnAI) — on or off, from the AI zones card. With it off, only
+ * The game's own AI, rabbits, chickens, boars… it spawns around players
+ * (Game.ini bSpawnAI), on or off, from the AI zones card. With it off, only
  * the zones' species live on the island (the AIZones mod spawns by itself:
- * checked 2026-09-26 02:02 — with bSpawnAI false the zone kept its AI and
+ * checked 2026-09-26 02:02, with bSpawnAI false the zone kept its AI and
  * refilled its minimum after a reset).
  *
- * Two places: the running server (RCON ToggleAI, a flip — so it is only sent
+ * Two places: the running server (RCON ToggleAI, a flip, so it is only sent
  * when ServerDetails says the state differs) and Game.ini, so a restart does
  * not turn it back. ToggleAI's own reply text is not trusted: it said "AI
  * spawns are now On" while ServerDetails turned to bSpawnAI: false.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-panel-web.sh — open the admin panel on the web, behind its two checks. As root.
+# install-panel-web.sh, open the admin panel on the web, behind its two checks. As root.
 #
 #   sudo ./scripts/install-panel-web.sh --domain admin.example.com --proxy --trusted-proxies "CIDR CIDR…"
 #        behind an anti-DDoS proxy (OneShield): the proxy holds the public
@@ -7,10 +7,10 @@
 #        certificate (proxy SSL mode "Full", NOT "strict") and on 80. The
 #        visitor's IP is taken from the proxy's X-Forwarded-For ONLY when the
 #        connection comes from one of --trusted-proxies (the proxy's own
-#        addresses — the same as the portal's).
+#        addresses, the same as the portal's).
 #   sudo ./scripts/install-panel-web.sh --domain admin.example.com
 #        straight to this server: port 80 only; the certificate is a separate
-#        step (certbot --nginx -d DOMAIN — accepting Let's Encrypt's terms).
+#        step (certbot --nginx -d DOMAIN, accepting Let's Encrypt's terms).
 #   … --dry-run   show the nginx site, change nothing
 #
 # Then, from your machine: PANEL_BASE_URL=https://DOMAIN and PANEL_ALLOWED_IPS
@@ -20,7 +20,7 @@
 #   * nginx: DOMAIN -> the bridge on 127.0.0.1:PORT, with the visitor's
 #     address in X-Real-IP (nginx's own value, never the browser's). The
 #     bridge lets only the allowed IPs in (check 1), then asks for a Steam
-#     login of a game admin (check 2) — bridge/src/panel-auth.ts. Someone
+#     login of a game admin (check 2), bridge/src/panel-auth.ts. Someone
 #     who connects straight to this server's IP with a made-up
 #     X-Forwarded-For is not a trusted proxy: their own address is checked.
 #   * /player-api (the portal's routes on the same bridge) is not served here.
@@ -90,7 +90,7 @@ if (( PROXY )); then
     real_ip_recursive on;"
 fi
 
-SITE="# Written by install-panel-web.sh — the admin panel (the bridge) on the web.
+SITE="# Written by install-panel-web.sh, the admin panel (the bridge) on the web.
 # The bridge checks the visitor's address and asks for an admin's Steam login.
 # Who connected (the proxy, before real_ip) and who the visitor is.
 log_format isle_panel '\$remote_addr [\$time_local] \"\$request\" \$status peer=\$realip_remote_addr';
@@ -135,16 +135,16 @@ cat <<NEXT
     1. in the proxy (OneShield): $DOMAIN -> this server, SSL mode "Full" (not "strict")
     2. in .env on your machine: PANEL_BASE_URL=https://$DOMAIN and PANEL_ALLOWED_IPS,
        then ./scripts/deploy.sh --bridge-only
-    3. open https://$DOMAIN — log in with a Steam account that is a game admin
+    3. open https://$DOMAIN, log in with a Steam account that is a game admin
 NEXT
 else
 cat <<NEXT
 
 ==> panel site installed. Next:
     1. DNS: $DOMAIN  A  <this server's IP>   (straight to this server)
-    2. HTTPS: certbot --nginx -d $DOMAIN   (accepts Let's Encrypt's terms — your call)
+    2. HTTPS: certbot --nginx -d $DOMAIN   (accepts Let's Encrypt's terms, your call)
     3. in .env on your machine: PANEL_BASE_URL=https://$DOMAIN and PANEL_ALLOWED_IPS,
        then ./scripts/deploy.sh --bridge-only
-    4. open https://$DOMAIN — log in with a Steam account that is a game admin
+    4. open https://$DOMAIN, log in with a Steam account that is a game admin
 NEXT
 fi

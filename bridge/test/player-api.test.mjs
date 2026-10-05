@@ -66,7 +66,7 @@ test('no token, a wrong token, or a write: refused', async () => {
   assert.equal((await call('/player-api/me/123')).status, 404, 'only a 17-digit SteamID');
 });
 
-test('me: own stats, lives and garage — nothing that leaks others or positions', async () => {
+test('me: own stats, lives and garage, nothing that leaks others or positions', async () => {
   const { status, body } = await call(`/player-api/me/${ME}`);
   assert.equal(status, 200);
   assert.equal(body.name, 'Me');

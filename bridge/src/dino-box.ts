@@ -12,13 +12,13 @@ import { MUTATION_REFERENCE } from './mutation-reference.js';
  *           box's growthMin and growthMax. The box and the dino change places in one write.
  *   use     the dino item → the player picks its sex and the mutations of the slots its growth opens
  *           (as the game: slot 1 from 25 %, 2 from 50 %, 3 and 4 from 75 %); it goes into their next
- *           free garage slot with every prime task done — from 75 % the game makes it prime.
+ *           free garage slot with every prime task done, from 75 % the game makes it prime.
  */
 
 /** The one item every dino copy is (its species and growth are the copy's own, Owned.dino). */
 export const DINO_ITEM_ID = 'dino';
 const DINO_ITEM = { type: 'dino', name: 'Dino', rarity: 'legendary', data: {} };
-/** Every prime task done (ten 1s, task 1 first — garage.ts primeConditions). */
+/** Every prime task done (ten 1s, task 1 first, garage.ts primeConditions). */
 export const ALL_PRIME_TASKS = '1111111111';
 
 type Catalog = Array<{ species: string; classPath: string | null }>;
@@ -63,7 +63,7 @@ export function checkPick(raw: unknown, option: DinoOption, growth: number, muta
     const slot = Number(key);
     if (![1, 2, 3, 4].includes(slot)) throw new ValidationError('Chỉ có 4 ô mutation (1–4).');
     if (!open.includes(slot)) {
-      throw new ValidationError(`Ô ${slot} mở từ ${Math.round(SLOT_MIN_GROWTH[slot as 1 | 2 | 3 | 4] * 100)}% tăng trưởng — dino này ${Math.round(growth * 100)}%.`);
+      throw new ValidationError(`Ô ${slot} mở từ ${Math.round(SLOT_MIN_GROWTH[slot as 1 | 2 | 3 | 4] * 100)}% tăng trưởng, dino này ${Math.round(growth * 100)}%.`);
     }
     const m = mutations.find((x) => x.name === value);
     if (m === undefined) throw new ValidationError(`Mutation "${String(value)}" không chọn được.`);
@@ -96,7 +96,7 @@ export async function boxOptions(steamId: string, uid: string, catalog: Catalog)
 
 /**
  * Open a box: its species drawn or picked, its growth drawn (`random` for the tests); the dino item in the
- * bag. `keepBox`: an admin's bag (player-api.ts bagUnlimited) — the box stays.
+ * bag. `keepBox`: an admin's bag (player-api.ts bagUnlimited), the box stays.
  */
 export async function openDinoBox(steamId: string, uid: string, raw: unknown, catalog: Catalog, random: () => number = Math.random, keepBox = false,
 ): Promise<{ uid: string; species: string; label: string; growth: number; drawn: boolean }> {
@@ -104,7 +104,7 @@ export async function openDinoBox(steamId: string, uid: string, raw: unknown, ca
   const box = await getItem(owned.itemId);
   if (box === null || box.type !== 'dino_box') throw new ValidationError('Đây không phải hộp dino.');
   const options = speciesOptions(catalog);
-  if (options.length === 0) throw new ValidationError('Server chưa có danh sách dino — thử lại sau.');
+  if (options.length === 0) throw new ValidationError('Server chưa có danh sách dino, thử lại sau.');
   let option: DinoOption | undefined;
   if (box.data.pick === 'random') {
     option = options[Math.min(options.length - 1, Math.floor(random() * options.length))];
@@ -126,7 +126,7 @@ export async function openDinoBox(steamId: string, uid: string, raw: unknown, ca
 function dinoOf(owned: Owned, catalog: Catalog): { dino: OwnedDino; option: DinoOption } {
   if (owned.dino === undefined) throw new ValidationError('Đây không phải vật phẩm dino.');
   const option = speciesOptions(catalog).find((s) => s.key === owned.dino?.species);
-  if (option === undefined) throw new ValidationError('Server chưa có loài này trong danh sách — thử lại sau.');
+  if (option === undefined) throw new ValidationError('Server chưa có loài này trong danh sách, thử lại sau.');
   return { dino: owned.dino, option };
 }
 
@@ -140,7 +140,7 @@ export async function dinoItemOptions(steamId: string, uid: string, catalog: Cat
 
 /**
  * Use a dino item: into the player's next free garage slot (a gift: past the slot limit too), then the
- * item is gone — taken first (two uses at once: one dino), given back as it was when the slot fails.
+ * item is gone, taken first (two uses at once: one dino), given back as it was when the slot fails.
  */
 export async function useDinoItem(steamId: string, uid: string, raw: unknown, catalog: Catalog,
 ): Promise<{ slot: string; species: string; growth: number; female: boolean; mutations: Record<string, string> }> {

@@ -9,7 +9,7 @@ import { config } from './config.js';
  * portal show, so they lag the game by about a second instead of up to 8.
  *
  * AI: Evrima spawns it around players and despawns it, so this live list is
- * the only true source — never a static list of spots.
+ * the only true source, never a static list of spots.
  */
 export interface LivePlayer {
   steamId: string;

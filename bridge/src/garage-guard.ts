@@ -36,7 +36,7 @@ import { ConflictError, findRedeemHistory, historyExists, nextFreeSlot, restoreF
 const GROWTH_AHEAD = 0.15;
 /** Below the stored growth by more than this: not the stored dino. */
 const GROWTH_SLACK = 0.005;
-/** A hatchling: every dino spawns at 0.25 — a slot this young cannot be told from a fresh spawn. */
+/** A hatchling: every dino spawns at 0.25, a slot this young cannot be told from a fresh spawn. */
 const FRESH_GROWTH = 0.26;
 
 interface Pending {

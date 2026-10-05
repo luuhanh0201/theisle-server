@@ -9,8 +9,8 @@
  * dino whose status we missed) do not take the place of the usual ones.
  *
  * Prime elders are kept apart. Their maxima (health and stomach, by the same
- * factor) rise while they stay prime — on this server a Deinosuchus went from
- * 9 500 to 13 500 health — so for them the HIGHEST reading is kept, and how
+ * factor) rise while they stay prime, on this server a Deinosuchus went from
+ * 9 500 to 13 500 health, so for them the HIGHEST reading is kept, and how
  * many readings there were. A snapshot counts as prime when it falls inside a
  * time the "prime" events said the player's dino was a prime elder.
  */
@@ -114,7 +114,7 @@ export class SpeciesStats {
         })
         // Maxima only grow with growth: a usual value above one read at a
         // higher growth is a prime dino's that passed for usual (a
-        // Deinosuchus at 88 %: 10,823, at 100 %: 9,500 — 2026-09-28).
+        // Deinosuchus at 88 %: 10,823, at 100 %: 9,500, 2026-09-28).
         .filter((p, i, all) => {
           const h = p.max.health;
           if (h === undefined) return true;

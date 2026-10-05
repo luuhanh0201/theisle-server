@@ -24,6 +24,7 @@ import { readReadiness } from './readiness.js';
 import { readLiveState, livePlayer } from './live.js';
 import { KEEP_DAYS, type Traffic } from './traffic.js';
 import { EARLY_FEATURES, readSvip, saveSvip, type SvipState } from './svip.js';
+import { STARTER_ITEM_IDS } from './starter.js';
 import type { Metrics } from './metrics.js';
 import type { VoiceRoom } from './voice.js';
 import { handlePlayerApi, publicServerInfo, startMutationUse } from './player-api.js';
@@ -128,7 +129,7 @@ async function sendFile(res: ServerResponse, name: string, root = publicDir): Pr
 
 /**
  * A teleport is dropped from this high above the spot (cm). A ground point's
- * height is the centre of whatever stood there — a small AI's is lower than a
+ * height is the centre of whatever stood there, a small AI's is lower than a
  * big dino's: put there exactly, a Rex went under the landscape (2026-10-02).
  */
 const TELEPORT_DROP_CM = 400;
@@ -158,7 +159,7 @@ async function readJsonBody(req: IncomingMessage, maxBytes = 64 * 1024): Promise
  */
 function authorizeWrite(req: IncomingMessage): string | null {
   if (config.adminToken === null) {
-    return 'writes are disabled — set ADMIN_TOKEN to enable them';
+    return 'writes are disabled, set ADMIN_TOKEN to enable them';
   }
   if (!writeAllowed(req.headers['x-admin-token'], config.adminToken, sessionSecret(), currentLogin.getStore()?.cookie)) {
     return 'invalid or missing x-admin-token';
@@ -207,7 +208,7 @@ async function assertMutationsFor(store: Store, body: NewSlotSpec & { allowUncon
   const unconfirmed = names.filter((n) => !catalog.confirms(species, n));
   if (unconfirmed.length > 0 && !allowOthers) {
     throw new ValidationError(
-      `mutation not confirmed on ${species}: ${unconfirmed.join(', ')} — ` +
+      `mutation not confirmed on ${species}: ${unconfirmed.join(', ')}, ` +
         'send allowUnconfirmedMutations: true to use it anyway',
     );
   }
@@ -348,7 +349,7 @@ async function handlePanel(
     sendJson(res, 403, { error: refused });
     return;
   }
-  // Panel → Quản trị → Phân quyền (the super admin only — "*" above).
+  // Panel → Quản trị → Phân quyền (the super admin only, "*" above).
   if (path === '/api/permissions' && req.method === 'GET') {
     const store = await readPermissions();
     const live = await readLive();
@@ -397,14 +398,14 @@ async function handlePanel(
         const item = await createItem(await readJsonBody(req), login.steamId);
         await audit({ action: 'item created', detail: `${label(item)} · ${item.id}`, ok: true });
         // Into every admin's bag at once (items.ts fillBags; the bridge's minute sweep does it too).
-        await fillBags(await adminIds());
+        await fillBags(await adminIds(), STARTER_ITEM_IDS);
         sendJson(res, 201, { item });
         return;
       }
       if (itemOne) {
         const { before, after } = await updateItem(itemOne[1] as string, await readJsonBody(req));
         // Given out again (no longer retired): back in the admins' bags.
-        if (before.retired && !after.retired) await fillBags(await adminIds());
+        if (before.retired && !after.retired) await fillBags(await adminIds(), STARTER_ITEM_IDS);
         await audit({ action: 'item updated', detail: `${label(after)} · ${after.id}`
           + (before.retired !== after.retired ? (after.retired ? ' · ngừng phát hành' : ' · phát hành lại') : ''), ok: true });
         sendJson(res, 200, { item: after });
@@ -434,7 +435,7 @@ async function handlePanel(
       // A mutation: one copy of their inventory used on the dino they play, as the player would (player-api.ts).
       if (item.type === 'mutation') {
         const copy = (await inventoryOf(steamId)).find((o) => o.itemId === itemId);
-        if (!copy) { sendJson(res, 409, { error: 'người chơi chưa có mutation này trong kho — tặng trước rồi dùng' }); return; }
+        if (!copy) { sendJson(res, 409, { error: 'người chơi chưa có mutation này trong kho, tặng trước rồi dùng' }); return; }
         const upgrade = body.upgrade === true;
         const r = await startMutationUse({ store: ctx.store, ...(ctx.prison ? { prison: ctx.prison } : {}) }, steamId, copy.uid, body.slot, upgrade);
         if (r.status === 202) {
@@ -590,7 +591,7 @@ async function handlePanel(
   // POST   /api/garage/<steamId>/<slot>   put a dino straight into a garage
   // DELETE /api/garage/<steamId>/<slot>   remove one (soft: moved to deleted/)
   // POST   /api/player/<steamId>/kill     remove the dino they are playing now
-  // PUT    /api/mutations/<name>          { description } — "" clears it
+  // PUT    /api/mutations/<name>          { description }, "" clears it
   // POST   /api/server/<start|stop|restart|cancel>   { countdownSeconds, reason }
   // PUT    /api/server/schedule           { daily: ["04:00"], countdownMinutes }
   // POST   /api/rcon/<command>            { args }
@@ -1126,7 +1127,7 @@ async function handlePanel(
       const conds = Object.entries(fix.primeData).filter(([k, v]) => k.startsWith('cond') && v).map(([k]) => k.slice(4)).join(',');
       await audit({
         action: body?.id !== undefined ? 'prime fix updated' : 'prime fix added',
-        detail: `${fix.id} · ${fix.steamId} · ${fix.species} ${Math.round(fix.minGrowth * 100)}–${Math.round(fix.maxGrowth * 100)}% · điều kiện ${conds || '—'}${fix.prime ? ' · prime' : ''}${fix.primeAt !== null ? ` · prime nếu ≥ ${Math.round(fix.primeAt * 100)}%` : ''}${fix.note ? ' · ' + fix.note : ''}`,
+        detail: `${fix.id} · ${fix.steamId} · ${fix.species} ${Math.round(fix.minGrowth * 100)}–${Math.round(fix.maxGrowth * 100)}% · điều kiện ${conds || '-'}${fix.prime ? ' · prime' : ''}${fix.primeAt !== null ? ` · prime nếu ≥ ${Math.round(fix.primeAt * 100)}%` : ''}${fix.note ? ' · ' + fix.note : ''}`,
         ok: true,
       });
       sendJson(res, 200, fix);
@@ -1185,7 +1186,7 @@ async function handlePanel(
       let where = '';
       if (body['action'] === 'teleport') {
         // To another player (next to them), or to a spot on the map: the ground
-        // point nearest to it within 50 m (somewhere a dino really stood — no
+        // point nearest to it within 50 m (somewhere a dino really stood, no
         // height to guess, nothing under the landscape).
         const toPlayer = typeof body['toPlayer'] === 'string' ? store.player(body['toPlayer'])?.player : undefined;
         const to = body['to'] as { x?: unknown; y?: unknown } | undefined;
@@ -1197,7 +1198,7 @@ async function handlePanel(
           const tx = to.x, ty = to.y;
           const near = store.groundPoints.within(tx, ty, 5000, 400)
             .sort((a, b) => ((a[0] - tx) ** 2 + (a[1] - ty) ** 2) - ((b[0] - tx) ** 2 + (b[1] - ty) ** 2))[0];
-          if (!near) { sendJson(res, 409, { error: 'không có điểm mặt đất nào trong 50 m quanh chỗ chọn (chỗ chưa ai đi qua) — chọn chỗ khác' }); return; }
+          if (!near) { sendJson(res, 409, { error: 'không có điểm mặt đất nào trong 50 m quanh chỗ chọn (chỗ chưa ai đi qua), chọn chỗ khác' }); return; }
           action = { action: 'teleport', x: near[0], y: near[1], z: near[2] + TELEPORT_DROP_CM };
           where = `tới ${near[0]}, ${near[1]} (cách chỗ chọn ${Math.round(Math.hypot(near[0] - tx, near[1] - ty) / 100)} m)`;
         } else {
@@ -1594,7 +1595,7 @@ async function handlePanel(
     default:
       // The skin page's 3D: the portal's own viewer and models (config.portalPublicDir).
       // …and the skin colour editor, shared with the players' Skin Studio (skin-editor.js).
-      // (/img/ — the mutation icons too — comes from bridge public/img, before this: panel-gate.ts.)
+      // (/img/, the mutation icons too, comes from bridge public/img, before this: panel-gate.ts.)
       // The Hổ phách icon (amber.svg), one file for the portal and the panel.
       if (path === '/skin3d.js' || path === '/skin-editor.js' || path === '/ui-select.js' || path === '/ui-inputs.js' || path === '/mut-icons.js' || path === '/amber.svg'
         || path.startsWith('/dino3d/') || path.startsWith('/vendor/three-0.170.0/')) {

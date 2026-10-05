@@ -8,9 +8,9 @@ import { inGameOff } from './permissions.js';
  * Game.ini settings the admin panel owns.
  *
  * Game.ini is rendered by deploy.sh from config/Game.ini.template + .env
- * (identity, passwords, RCON, admins — repo-owned). A few gameplay keys are
+ * (identity, passwords, RCON, admins, repo-owned). A few gameplay keys are
  * owned by the panel instead (MANAGED below), identified by KEY NAME inside
- * their section — e.g. every `AllowedClasses=` line under
+ * their section, e.g. every `AllowedClasses=` line under
  * `[/Script/TheIsle.TIGameStateBase]`.
  *
  * Not by comment markers: the game rewrites Game.ini itself (a
@@ -33,12 +33,12 @@ export type Section = 'TIGameSession' | 'TIGameStateBase' | 'TIAIWorldSpawner';
 
 /**
  * AllowedClasses values for the playable roster, spelled as Game.ini expects
- * them — the short name, one line each:  AllowedClasses=Carnotaurus
+ * them, the short name, one line each:  AllowedClasses=Carnotaurus
  *
  * Source: the live server itself (TheIsle 0.21.784, 2026-09-24). Its binary
  * holds 29 dinosaur blueprints (/TheIsle/Core/Characters/Dinosaurs/<Name>/
  * BP_<Name>); all 26 non-critter names were written as AllowedClasses, and
- * RCON GetPlayables answered with these 22 — the game drops the rest
+ * RCON GetPlayables answered with these 22, the game drops the rest
  * (Avaceratops, Baryonyx, Camarasaurus, Oviraptor: blueprints exist, not
  * playable yet). Web lists disagree (18, 20, 22, 27 names, some from Legacy),
  * so they are not the source. With no AllowedClasses line at all the picker can
@@ -97,7 +97,7 @@ const G = 'TIGameStateBase' as const;
 /**
  * The world AI spawner's own numbers (ambient fish). A write from Lua on the
  * live spawner crashed the server (2026-09-26); read from Game.ini they are
- * set when the spawner is made — IF the game takes them from config, which
+ * set when the spawner is made, IF the game takes them from config, which
  * the StatsLogger read-back at start ("spawner: fish per player …") tells.
  */
 const W = 'TIAIWorldSpawner' as const;
@@ -109,7 +109,7 @@ const STEAM = /^\d{17}$/;
  *
  * Source: IsleProbe's dump of the live server's reflection data (TheIsle
  * 0.21.784, 2026-09-24): each property of TIGameSession / TIGameStateBase with
- * its type and live value — which also fixes names the hosting docs get wrong
+ * its type and live value, which also fixes names the hosting docs get wrong
  * (bRandomWeatherEnabled, not bServerDynamicWeather; SpeciesMigrationTime, not
  * MaxMigrationTime). The `verified: false` keys are not reflected properties;
  * the binary reads them by name alongside ServerName, MaxPlayerCount… .
@@ -121,7 +121,7 @@ const STEAM = /^\d{17}$/;
  *
  * Deliberately NOT here (repo/.env-owned): MapName (one map), the server
  * password, RCON and every port (a wrong value locks the panel out), and
- * EnabledMutations (an array of MutationsAvailable structs — format unknown;
+ * EnabledMutations (an array of MutationsAvailable structs, format unknown;
  * bEnableMutations switches them all). Runtime state (ServerFPS, AIAlive,
  * VIPQueue, HLOD arrays) is not configuration.
  */
@@ -139,22 +139,22 @@ export const MANAGED: Record<string, ManagedKey> = {
     itemHelp: 'SteamID64', label: 'Whitelist', help: 'Mỗi dòng một SteamID64. Chỉ có tác dụng khi bật "Chỉ cho whitelist vào".' },
   AdminsSteamIDs: { section: G, group: 'server', type: 'list', item: STEAM, max: 200, min: 1,
     itemHelp: 'SteamID64', label: 'Admin',
-    help: 'Mỗi dòng một SteamID64 — quyền admin trong game (lệnh admin, RCON nhận diện). Phải còn ít nhất 1 admin. Có hiệu lực sau khi khởi động lại.' },
+    help: 'Mỗi dòng một SteamID64, quyền admin trong game (lệnh admin, RCON nhận diện). Phải còn ít nhất 1 admin. Có hiệu lực sau khi khởi động lại.' },
   VIPs: { section: G, group: 'server', type: 'list', item: STEAM, max: 2000,
-    itemHelp: 'SteamID64', label: 'VIP', help: 'Mỗi dòng một SteamID64 — được ưu tiên khi server đầy.' },
+    itemHelp: 'SteamID64', label: 'VIP', help: 'Mỗi dòng một SteamID64, được ưu tiên khi server đầy.' },
   bEnableGlobalChat: { section: S, group: 'server', type: 'bool', default: false,
     label: 'Chat toàn server', help: 'Bật kênh chat global.' },
   bEnableSpawnCodes: { section: S, group: 'server', type: 'bool', default: true,
     label: 'Mã spawn nhóm', help: 'Cho người chơi dùng mã để spawn cạnh nhau.' },
   bEnableHumans: { section: S, group: 'server', type: 'bool', default: false,
-    label: 'Cho chơi người (humans)', help: 'Nhân vật người — mặc định tắt.' },
+    label: 'Cho chơi người (humans)', help: 'Nhân vật người, mặc định tắt.' },
 
   // --- species & spawn
   AllowedClasses: { section: G, group: 'spawn', type: 'list', item: NAME, max: 100,
     itemHelp: 'tên loài, vd. Carnotaurus', label: 'Loài được chơi',
-    help: 'Chỉ loài được tick mới chơi được. Muốn mở mọi loài thì tick hết — không tick loài nào có thể làm màn chọn dino trống.' },
+    help: 'Chỉ loài được tick mới chơi được. Muốn mở mọi loài thì tick hết, không tick loài nào có thể làm màn chọn dino trống.' },
   bUseRegionSpawning: { section: S, group: 'spawn', type: 'bool', default: false, verified: false,
-    label: 'Cho chọn vùng spawn', help: 'Chỉ là công tắc. Bật: màn spawn cho người chơi chọn vùng — có những vùng nào, còn chỗ hay không là do game quyết định. Tắt: game tự spawn ngẫu nhiên.' },
+    label: 'Cho chọn vùng spawn', help: 'Chỉ là công tắc. Bật: màn spawn cho người chơi chọn vùng, có những vùng nào, còn chỗ hay không là do game quyết định. Tắt: game tự spawn ngẫu nhiên.' },
   bUseRegionSpawnCooldown: { section: S, group: 'spawn', type: 'bool', default: false, verified: false,
     label: 'Thời gian chờ chọn vùng', help: 'Bật: phải chờ giữa hai lần chọn vùng spawn.' },
   RegionSpawnCooldownTimeSeconds: { section: S, group: 'spawn', type: 'int', min: 0, max: 86400, default: 0, verified: false,
@@ -166,14 +166,14 @@ export const MANAGED: Record<string, ManagedKey> = {
   AIDensity: { section: S, group: 'ai', type: 'float', min: 0, max: 5, step: 0.05, default: 1,
     label: 'Mật độ AI', help: '0.25 thưa (nhẹ máy) · 1 mặc định · 2 dày (nặng).' },
   AISpawnInterval: { section: S, group: 'ai', type: 'float', min: 5, max: 600, step: 1, default: 40,
-    label: 'Chu kỳ sinh AI (giây)', help: 'Bao lâu server kiểm tra để sinh thêm AI — kể cả CÁ: để 600 thì cá sấu đứng cả chục phút chỉ thấy 1 con, 40 (mặc định) thì 8–9 con có cá to (đo 27/9). Muốn bớt AI trên bờ thì cấm loài hoặc dùng vùng AI, đừng tăng số này.' },
+    label: 'Chu kỳ sinh AI (giây)', help: 'Bao lâu server kiểm tra để sinh thêm AI, kể cả CÁ: để 600 thì cá sấu đứng cả chục phút chỉ thấy 1 con, 40 (mặc định) thì 8–9 con có cá to (đo 27/9). Muốn bớt AI trên bờ thì cấm loài hoặc dùng vùng AI, đừng tăng số này.' },
   DisallowedAIClasses: { section: S, group: 'ai', type: 'list', item: NAME, max: 100,
     itemHelp: 'tên AI, vd. Boar', label: 'Cấm loài AI',
     // Dryosaurus, Gallimimus: also AI the game spawns (seen on the live map
     // 2026-09-26), not only playables.
     suggest: ['Boar', 'Bullfrog', 'Chicken', 'Compsognathus', 'Crab', 'Deer', 'Dryosaurus', 'Frog', 'Gallimimus', 'Goat', 'Lizard',
       'Psittacosaurus', 'Pterodactylus', 'Rabbit', 'Seaturtle'],
-    help: 'Loài được tick: game không tự sinh nữa. Chỉ chặn AI game tự sinh — loài của vùng AI chọn riêng trong từng vùng (Bản đồ → Vùng AI).' },
+    help: 'Loài được tick: game không tự sinh nữa. Chỉ chặn AI game tự sinh, loài của vùng AI chọn riêng trong từng vùng (Bản đồ → Vùng AI).' },
   bSpawnAmbientFauna: { section: S, group: 'ai', type: 'bool', default: false,
     label: 'Sinh động vật môi trường', help: 'Thú nhỏ trang trí (chim, côn trùng…).' },
   MaxAmbientFishPerPlayer: { section: W, group: 'ai', type: 'int', min: 1, max: 40, default: 12, verified: false,
@@ -181,7 +181,7 @@ export const MANAGED: Record<string, ManagedKey> = {
   AmbientFishSoftLimitPerWater: { section: W, group: 'ai', type: 'int', min: 1, max: 120, default: 28, verified: false,
     label: 'Cá tối đa mỗi vùng nước', help: 'Game: 28. Tổng cá trong một hồ / sông / biển.' },
   AmbientFishSpawnAttemptsPerPlayer: { section: W, group: 'ai', type: 'int', min: 1, max: 5, default: 1, verified: false,
-    label: 'Lượt sinh cá mỗi lần', help: 'Game: 1. Số cá game thử sinh quanh mỗi người mỗi nửa giây — cá lên nhanh hơn.' },
+    label: 'Lượt sinh cá mỗi lần', help: 'Game: 1. Số cá game thử sinh quanh mỗi người mỗi nửa giây, cá lên nhanh hơn.' },
   bSpawnPlants: { section: S, group: 'ai', type: 'bool', default: true,
     label: 'Sinh cây ăn được', help: 'Nguồn thức ăn của loài ăn cỏ.' },
   PlantSpawnMultiplier: { section: S, group: 'ai', type: 'float', min: 0, max: 5, step: 0.05, default: 1,
@@ -239,7 +239,7 @@ export const MANAGED: Record<string, ManagedKey> = {
   bQueueDebugLogging: { section: S, group: 'advanced', type: 'bool', default: false,
     label: 'Hàng chờ: log gỡ lỗi', help: 'Ghi chi tiết hàng chờ vào log game.' },
   ESPCheck: { section: S, group: 'advanced', type: 'bool', default: false,
-    label: 'ESPCheck', help: 'Có trong game nhưng không có tài liệu — để nguyên nếu không chắc.' },
+    label: 'ESPCheck', help: 'Có trong game nhưng không có tài liệu, để nguyên nếu không chắc.' },
   bAllowRecordingReplay: { section: S, group: 'advanced', type: 'bool', default: false, verified: false,
     label: 'Cho ghi replay', help: 'Cho người chơi ghi replay phía server.' },
 };

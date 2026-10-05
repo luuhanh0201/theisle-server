@@ -53,7 +53,7 @@ test('the game kept the restored dino (saved before the crash, grown a little si
   assert.ok(g.resolved.includes(`${ME}:redeem:1:1000`), 'settled: not looked at again');
 });
 
-test('settled in the same run: a logout, a death, a new dino or a new garage action — a later start changes nothing', () => {
+test('settled in the same run: a logout, a death, a new dino or a new garage action, a later start changes nothing', () => {
   for (const between of [
     { type: 'session_end', t: 1100, steamId: ME },
     { type: 'death', t: 1100, steamId: ME, growth: 0.75 },

@@ -10,8 +10,8 @@ import { defaultIface, parseNetDev } from './ddos.js';
  *   * the game's own tick rate (ServerFPS, from StatsLogger's live.json),
  *     the players online and the AI alive;
  *   * the machine: CPU % (all cores), RAM used, swap used (/proc);
- *   * the game process alone: CPU (% of ONE core — the game thread is the
- *     bottleneck) and resident memory (/proc/<pid> — the Wine process whose
+ *   * the game process alone: CPU (% of ONE core, the game thread is the
+ *     bottleneck) and resident memory (/proc/<pid>, the Wine process whose
  *     command line runs TheIsleServer-Win64-Shipping.exe).
  *
  * Samples live in memory (KEEP_S) and in DATA_DIR/metrics.ndjson, so a bridge
@@ -37,7 +37,7 @@ export interface MetricSample {
   swapUsed: number | null;
   /**
    * UDP datagrams a second into / out of the machine (/proc/net/snmp; the game
-   * talks UDP, port 7777 — LiveKit voice too, when someone uses it). Absent
+   * talks UDP, port 7777, LiveKit voice too, when someone uses it). Absent
    * before 2026-10-02 16:00.
    */
   udpIn?: number | null;
@@ -93,7 +93,7 @@ export function parseMeminfo(text: string): { totalMb: number; availableMb: numb
   return { totalMb: Math.round(total / 1024), availableMb: Math.round(avail / 1024), swapUsedMb: Math.round((swapTotal - swapFree) / 1024) };
 }
 
-/** utime + stime (clock ticks) from /proc/<pid>/stat — fields after the "(comm)". */
+/** utime + stime (clock ticks) from /proc/<pid>/stat, fields after the "(comm)". */
 export function parseProcessTicks(stat: string): number | null {
   const end = stat.lastIndexOf(')');
   if (end < 0) return null;

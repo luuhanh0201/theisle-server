@@ -133,7 +133,7 @@ export const MUTATION_REFERENCE: MutationReference[] = [
  *
  * Exact match on the normalised name or an alias first. Failing that, the
  * longest reference name the FName STARTS with, which catches suffixed
- * internal names like "PhotosyntheticTissueStatAdder" — but never matches a
+ * internal names like "PhotosyntheticTissueStatAdder", but never matches a
  * shorter name inside a longer one the other way round.
  */
 export function findReference(fname: string): MutationReference | null {

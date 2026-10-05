@@ -1407,7 +1407,7 @@
     display: flex;
   }
 
-  /* Inside the launcher (rule: AGENTS.md "Launcher"): nothing about downloading it —
+  /* Inside the launcher (rule: AGENTS.md "Launcher"): nothing about downloading it,
      every download link / button / block carries class web-only. */
   html.in-launcher .web-only, body.in-launcher .web-only { display: none !important; }
   /* When inside Launcher, hide redundant web blocks */
@@ -2470,7 +2470,7 @@
   .bag-dlg .xseg button.on { background: var(--emerald-soft); color: var(--text); }
   .bag-dlg .dino-desc { display: flex; gap: 6px; align-items: flex-start; color: var(--text-muted); }
   .bag-dlg .dino-desc .mut-ico { width: 18px; height: 18px; flex: none; }
-  /* The box's roll (app.js rollBox): text flicks, then one pop when it lands — no endless animation. */
+  /* The box's roll (app.js rollBox): text flicks, then one pop when it lands, no endless animation. */
   .bag-dlg .roll { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 12px; margin: 4px 0; border-radius: 14px;
     border: 1px solid var(--border); background: radial-gradient(circle at 50% 30%, var(--emerald-soft), transparent 70%); }
   .bag-dlg .roll-sp { font-size: 26px; font-weight: 800; letter-spacing: .01em; min-height: 1.3em; text-align: center; }
@@ -3512,7 +3512,7 @@
   .skin-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
   @media (max-width: 900px) { .skin-layout { grid-template-columns: minmax(0, 1fr); } }
   /* Narrow screens: the 3D canvas's own pixel size must not hold the column open (it is set from
-     the box's width, which then could never shrink — the Skin tab ran off a 380 px screen). */
+     the box's width, which then could never shrink, the Skin tab ran off a 380 px screen). */
   .skin-main, .skin-preview, .skin-preview-3d { min-width: 0; }
   .skin-preview-3d canvas { display: block; width: 100% !important; max-width: 100%; }
   .skin-preview { position: relative; height: 320px; border-radius: 12px; border: 1px solid var(--border); background: radial-gradient(ellipse at 50% 60%, rgba(16,185,129,.12), rgba(2,6,23,.6)); overflow: hidden; }
@@ -5114,7 +5114,7 @@
       </section>
 
       <!-- ====================================================================
-           TÚI ĐỒ (items: mutation used on the dino you play, skins worn) — admins only for now
+           TÚI ĐỒ (items: mutation used on the dino you play, skins worn), admins only for now
            ==================================================================== -->
       <section id="page-bag" class="page-content" hidden>
         <div class="card">
@@ -5165,7 +5165,7 @@
           <p class="v-note" id="ov-bigmap-display-wrap" hidden style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <b>🗺️ Bản đồ lớn hiện ở</b>
             <span style="min-width:300px"><select id="ov-bigmap-display"></select></span>
-            <span>Tự động: màn hình đang có chuột lúc bấm phím — khi chơi là màn hình của game.</span>
+            <span>Tự động: màn hình đang có chuột lúc bấm phím, khi chơi là màn hình của game.</span>
           </p>
           <p class="v-note" id="ov-compat-wrap" hidden>
             <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="ov-compat" style="width:16px;height:16px;accent-color:var(--emerald)"> 🛠 Sửa viền đen quanh overlay</label>

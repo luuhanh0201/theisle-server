@@ -1,6 +1,6 @@
 // The skin colour editor, shared: the players' Skin Studio (app.js) and the
 // admin panel's Vật phẩm → Skin (bridge public/index.html, served from here).
-// One region list — a colour picker and a hex code per region — and the themed
+// One region list, a colour picker and a hex code per region, and the themed
 // palettes; the panel adds a light per region (darker / brighter than a player
 // can pick), the only difference (owner's call, 2026-10-02: the panel's own
 // editor drifted from the players' colours).
@@ -139,7 +139,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
  * slider under each (darker / brighter; double click: back to × 1).
  *   onChange()  after any change by the user
  * Returns { get() → { colors: { Region: "#rrggbb" }, light: { Region: factor≠1 } },
- *           set({ colors?, light? }) — colours "#rrggbb" or linear { r, g, b }, setDisabled(bool) }.
+ *           set({ colors? light? }), colours "#rrggbb" or linear { r, g, b }, setDisabled(bool) }.
  */
 export function mountRegions(host, { prefix = '', light = false, colors = {}, lights = {}, onChange = () => {} } = {}) {
   injectCss();

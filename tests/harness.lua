@@ -5,7 +5,7 @@ Harness.log      = {}
 Harness.hooks    = {}
 Harness.timers   = {}   -- { at = ms, fn = fn }
 Harness.loops    = {}
-Harness.gameLoops = {}  -- LoopInGameThreadWithDelay: { ms, fn } — tests tick them with fn()
+Harness.gameLoops = {}  -- LoopInGameThreadWithDelay: { ms, fn }, tests tick them with fn()
 Harness.calls    = {}   -- ordered record of every engine call
 Harness.now      = 0
 
@@ -303,7 +303,7 @@ function Harness.makePawn(opts)
       if k == "__attach" then return function(c) controller = c end end
       if methods[k] then return methods[k] end
       -- opts.gasVitals: like the live server, vitals live in GAS attribute sets
-      -- and are NOT pawn properties — only the getters see them.
+      -- and are NOT pawn properties, only the getters see them.
       if opts.gasVitals and GAS_VITALS[k] then return nil end
       return props[k]
     end,
@@ -334,7 +334,7 @@ local function notifiesFor(steamId)
 end
 
 --- An FText as UE4SS hands it to Lua: ToString() gives the words, tostring()
---- only an address — the difference that broke every chat command.
+--- only an address, the difference that broke every chat command.
 function Harness.ftext(text)
   return setmetatable({ ToString = function() return text end },
     { __tostring = function() return "FText: 0000733DB33B7B08" end })

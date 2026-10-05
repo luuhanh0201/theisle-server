@@ -118,7 +118,7 @@ export function hear(me: LivePlayer, other: LivePlayer, rangeM: number): { gain:
 
 /**
  * For `steamId` now: who they hear (inside each speaker's own range, loudest
- * first) and who may hear them (inside their range) — the client lets only
+ * first) and who may hear them (inside their range), the client lets only
  * the latter subscribe to its microphone.
  */
 export function peersOf(
@@ -165,7 +165,7 @@ export class VoiceRoom {
   #inflight: Promise<void> | null = null;
   #warned = false;
 
-  /** Each player's chosen range; in memory — the page sends it again when it joins. */
+  /** Each player's chosen range; in memory, the page sends it again when it joins. */
   #ranges = new Map<string, number>();
 
   constructor(readonly cfg: VoiceConfig, readonly fetchImpl: typeof fetch = fetch, readonly maxAgeMs = 2_000) {}

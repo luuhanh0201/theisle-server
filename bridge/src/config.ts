@@ -129,17 +129,17 @@ export const config = {
      * bridge that runs as a user with its own right to manage the unit.
      */
     sudo: env('SUDO', 'sudo'),
-    /** Where the live Game.ini is — the panel's config edits land here. */
+    /** Where the live Game.ini is, the panel's config edits land here. */
     configDir: env(
       'GAME_CONFIG_DIR',
       '/home/isle/server/TheIsle/Saved/Config/WindowsServer',
     ),
-    /** The game's own log (Saved/Logs next to Saved/Config) — read for the readiness checklist. */
+    /** The game's own log (Saved/Logs next to Saved/Config), read for the readiness checklist. */
     logPath: env(
       'GAME_LOG_PATH',
       join(env('GAME_CONFIG_DIR', '/home/isle/server/TheIsle/Saved/Config/WindowsServer'), '..', '..', 'Logs', 'TheIsle.log'),
     ),
-    /** The game's ban list (Saved/PlayerData/PlayerBans.json), read only — bans.ts. */
+    /** The game's ban list (Saved/PlayerData/PlayerBans.json), read only, bans.ts. */
     bansPath: env(
       'PLAYER_BANS_PATH',
       join(env('GAME_CONFIG_DIR', '/home/isle/server/TheIsle/Saved/Config/WindowsServer'), '..', '..', 'PlayerData', 'PlayerBans.json'),
@@ -185,7 +185,7 @@ export const config = {
     baseUrl: (process.env['PANEL_BASE_URL'] || '').replace(/\/+$/, '') || null,
     /** Always admins of the panel, whatever the game's admin list says (the owner can never be locked out). */
     ownerIds: (process.env['ADMIN_STEAM_IDS'] ?? '').split(/[\s,]+/).filter((s) => /^\d{17}$/.test(s)),
-    /** The one admin who sets what every other admin may do (panel → Quản trị → Phân quyền; permissions.ts). Unset: nobody — every admin keeps everything. */
+    /** The one admin who sets what every other admin may do (panel → Quản trị → Phân quyền; permissions.ts). Unset: nobody, every admin keeps everything. */
     superAdminId: /^\d{17}$/.test(process.env['SUPER_ADMIN_STEAM_ID'] ?? '') ? process.env['SUPER_ADMIN_STEAM_ID'] as string : null,
     /** First allowed IPs, until the panel saves its own list (DATA_DIR/panel-access.json). */
     seedIps: (process.env['PANEL_ALLOWED_IPS'] ?? '').split(/[\s,]+/).filter((s) => s !== ''),

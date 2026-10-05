@@ -9,7 +9,7 @@ import { ValidationError } from './garage.js';
  * prime conditions (migration / patrol zones…) and its prime; an admin writes
  * here what the dino had (from the StatsLogger "prime" events), and the mod
  * applies it once, when that player plays that species within that growth
- * range — a dino still in the garage right after it is taken out.
+ * range, a dino still in the garage right after it is taken out.
  *
  *   DinoGarage/Saved/prime-fixes.json       the fixes (written here)
  *   DinoGarage/Saved/prime-fixes.done.json  { done: { id: t } } (written by the mod)
@@ -55,7 +55,7 @@ const SPECIES_RE = /^BP_[A-Za-z0-9]+_C$/;
 const CONDS_RE = /^[01]{10}$/;
 
 /**
- * Add one fix — or, with the `id` of one not applied yet, replace it.
+ * Add one fix, or, with the `id` of one not applied yet, replace it.
  * `conditions`: the ten conditions as "1010101100" (condition 1 first), as
  * the events show them; `eligible` defaults to what the game had.
  */

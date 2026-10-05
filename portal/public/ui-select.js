@@ -1,9 +1,9 @@
 /*
- * ui-select.js — the system's one select box (rule: AGENTS.md "UI"), on every
+ * ui-select.js, the system's one select box (rule: AGENTS.md "UI"), on every
  * page: the admin panel (bridge serves it from the portal), the portal, the
  * launcher's pages. Load it as a classic script before the page's own code:
  *   <script src="/ui-select.js"></script>
- * Every <select> — in the HTML and built later — is shown with this button +
+ * Every <select>, in the HTML and built later, is shown with this button +
  * list instead of the browser's own; the native <select> stays (hidden) and
  * remains the truth. A <select data-plain> is left alone.
  * Its look follows the page's colour tokens (panel: --surface…, portal:
@@ -57,7 +57,7 @@ select.cs-native { display: none !important; }
   (document.head || document.documentElement).append(style);
 })();
 /*
- * Custom select — every <select> on the page, the ones in the HTML and the
+ * Custom select, every <select> on the page, the ones in the HTML and the
  * ones built later, is shown with the panel's own button + list instead of the
  * browser's. The native <select> stays (hidden) and remains the truth: the
  * code keeps reading and writing sel.value / innerHTML / disabled, and a pick

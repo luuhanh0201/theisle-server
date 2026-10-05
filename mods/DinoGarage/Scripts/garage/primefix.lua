@@ -14,11 +14,11 @@
                            primeData { cond1..cond10, eligible }, prime,
                            primeAt, expiresAt } ] }
     primeAt (e.g. 0.75): the dino had every condition, so it would have
-    turned prime at that growth — applied at or past it, prime is asked too.
+    turned prime at that growth, applied at or past it, prime is asked too.
         Saved/prime-fixes.done.json  written here: { "done": { "<id>": t } }
 
     A fix waits (up to expiresAt) until that player plays that species within
-    that growth range — a dino still in the garage is fixed right after it is
+    that growth range, a dino still in the garage is fixed right after it is
     taken out. Game thread (H.every in main.lua): reads one small file,
     decodes it only when it changed.
 ]]
@@ -44,7 +44,7 @@ local function readJson(path)
 end
 
 -- The fixes as last parsed, and the text they came from: the file is read
--- every poll (a few KB, cheap) but decoded only when it changed — decoding it
+-- every poll (a few KB, cheap) but decoded only when it changed, decoding it
 -- every 5 s held the game thread ~7 ms (up to 39), 2026-09-27, though the
 -- bridge rarely writes it.
 local fixesRaw, fixesList = nil, nil
@@ -138,11 +138,11 @@ function P.poll()
                     local _, before = pcall(function() return pawn:GetMaxHealth() end)
                     Restore.regrowKeep(pawn, g, true)
                     local _, after = pcall(function() return pawn:GetMaxHealth() end)
-                    H.log(string.format("primefix: prime stats — max health %s -> %s", tostring(before), tostring(after)))
+                    H.log(string.format("primefix: prime stats, max health %s -> %s", tostring(before), tostring(after)))
                 end
                 done[fix.id] = now
                 changed = true
-                H.log(string.format("primefix: %s for %s (%s %.2f) — %d conditions, prime %s",
+                H.log(string.format("primefix: %s for %s (%s %.2f), %d conditions, prime %s",
                     fix.id, id, cls, g, wrote, tostring(isPrime)))
                 Events.emit({ type = "prime_fix", id = fix.id, steamId = id, species = cls, growth = g,
                     conditions = wrote, prime = isPrime, t = now })

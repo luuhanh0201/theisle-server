@@ -62,7 +62,7 @@ export interface PlayerStats {
   hits: number;
   /** Deaths we could attribute to this player's recent hit on the victim. */
   kills: number;
-  /** Real deaths. A dino removed by !store is excluded — see GARAGE_KILL_WINDOW. */
+  /** Real deaths. A dino removed by !store is excluded, see GARAGE_KILL_WINDOW. */
   deaths: number;
   /** What the players see (their leaderboard, their own stats): kills by #killCounts, deaths not by an admin. The panel keeps the raw ones. */
   countedKills: number;
@@ -89,8 +89,8 @@ export interface PlayerStats {
   playtime: number;
   /**
    * The player's longest-surviving dino, in seconds online: all its stretches
-   * — relogs, its time in and out of the garage, its rebirths (chuyển sinh at
-   * 100 %), an admin's restore of it — the one alive now included.
+   * - relogs, its time in and out of the garage, its rebirths (chuyển sinh at
+   * 100 %), an admin's restore of it, the one alive now included.
    */
   longestLife: number;
   /** That dino's species, and whether it is still alive. */
@@ -121,7 +121,7 @@ export interface PlayerStats {
 export type FeedInput =
   // The Prison mod's events are prison.ts's business, not the feed's.
   | Exclude<GameEvent, SnapshotEvent | DeathEvent | PrisonEvent | { type: 'mod_loaded' }>
-  /** A mutation / growth change the garage (a redeem), an admin or an item made — not the player (#writtenBy). */
+  /** A mutation / growth change the garage (a redeem), an admin or an item made, not the player (#writtenBy). */
   | ((MutationEvent | GrowthSetEvent) & { via?: 'garage' | 'admin' | 'item' })
   | (DeathEvent & {
     /** Not a death: stored, removed by an admin, or a rebirth (chuyển sinh, told a few seconds later). */
@@ -245,7 +245,7 @@ export class Store {
   /**
    * The last time the garage (a redeem), an admin or an item wrote on a player's dino:
    * the mutation and growth changes the game reports right after are that write, not
-   * the player picking — the panel said "chọn mutation" four times for one redeem (2026-10-03).
+   * the player picking, the panel said "chọn mutation" four times for one redeem (2026-10-03).
    */
   readonly #recentWrite = new Map<string, { t: number; via: 'garage' | 'admin' | 'item' }>();
   #writtenBy(steamId: string, t: number): 'garage' | 'admin' | 'item' | null {
@@ -260,7 +260,7 @@ export class Store {
   }
   /**
    * A redeem's preparation: the young dino spawned to be the one taken out, and the
-   * web command — one "lấy gara" line says it all (2026-10-03). Kept until a redeem
+   * web command, one "lấy gara" line says it all (2026-10-03). Kept until a redeem
    * takes them off the log, or the next spawn / command replaces them.
    */
   readonly #prep = new Map<string, { spawn?: FeedEntry & { t: number }; cmd?: FeedEntry & { t: number } }>();
@@ -284,7 +284,7 @@ export class Store {
   isAdmin(steamId: string | null | undefined): boolean { return steamId != null && this.#admins.has(steamId); }
   #nextId = 1;
   #lastEventAt: number | null = null;
-  /** Told of every feed entry as it is added (the Discord log: discord.ts). Replays included — the listener filters. */
+  /** Told of every feed entry as it is added (the Discord log: discord.ts). Replays included, the listener filters. */
   onFeed: ((entry: FeedEntry) => void) | null = null;
   #modsLoadedAt: number | null = null;
 
@@ -310,7 +310,7 @@ export class Store {
           conditions: event.conditions ?? null,
         };
         // A rebirth (chuyển sinh): a dino at 100 % starts again young with one more
-        // elder stack — the same dino going on, so the same chain. Told apart
+        // elder stack, the same dino going on, so the same chain. Told apart
         // from an admin's gift with stacks: there the first reading of the new
         // life still has the old count (they come with the redeem, later).
         {
@@ -429,7 +429,7 @@ export class Store {
       case 'session_start': {
         // Two starts with no end between them: the server went down without
         // closing the session. Close it at the last thing we heard BEFORE this
-        // start — #player() below moves lastSeen forward, and the downtime
+        // start, #player() below moves lastSeen forward, and the downtime
         // would otherwise count as playtime.
         const lastHeard = this.#players.get(event.steamId)?.lastSeen ?? event.t;
         const p = this.#player(event.steamId, event.t, event.name);
@@ -935,7 +935,7 @@ export class Store {
   #view(p: PlayerStats, now: number): PlayerStats {
     const open = p.sessionStart !== null;
     // An open session with nothing heard for a while means the server went
-    // down (or the bridge is replaying old files) — not a connected player.
+    // down (or the bridge is replaying old files), not a connected player.
     const online = open && now - p.lastSeen <= config.offlineAfterSeconds;
     const longest = this.#longestChain(p.steamId, online, now);
     return {
@@ -1023,7 +1023,7 @@ export class Store {
   /**
    * What a "damage" event is, bite by bite. The ApplyDamage hook fires several
    * times for one bite, with the same number (a T-Rex's bite logged up to six
-   * times, 2026-09-28 — the victim lost it once): a repeat. A hold bite
+   * times, 2026-09-28, the victim lost it once): a repeat. A hold bite
    * (mouse held) deals ticks a little lower each time, within the same
    * second: a tick, added to its bite. Anything else is a new bite.
    */

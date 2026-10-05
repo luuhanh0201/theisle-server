@@ -35,8 +35,8 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
   { key: 'mutation_ticket', label: 'Phiếu đổi mutation', unique: false },
   { key: 'mutation_clear', label: 'Phiếu bỏ mutation', unique: false },
   { key: 'prime_ticket', label: 'Phiếu Prime', unique: false },
-  // Owner, 2026-10-05 (dino-box.ts): a box opens into a dino (its species and growth drawn — or the
-  // species picked — there and then); the dino, used, goes into the garage with the mutations picked.
+  // Owner, 2026-10-05 (dino-box.ts): a box opens into a dino (its species and growth drawn, or the
+  // species picked, there and then); the dino, used, goes into the garage with the mutations picked.
   { key: 'dino_box', label: 'Hộp dino', unique: false },
   // system: only made by opening a box (each copy carries its own species and growth, Owned.dino).
   { key: 'dino', label: 'Dino', unique: false, system: true },
@@ -55,7 +55,7 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
  */
 export interface TicketData { maxRarity: Rarity }
 /**
- * A dino box (dino-box.ts): opened, a dino item — its species drawn (`random`) or picked (`choose`),
+ * A dino box (dino-box.ts): opened, a dino item, its species drawn (`random`) or picked (`choose`),
  * its growth drawn between growthMin and growthMax. `quest`: the dino may take quest mutations too.
  * (Before 2026-10-05 the "Phiếu chọn dino", type dino_ticket: read as a `choose` box.)
  */
@@ -64,7 +64,7 @@ export const DINO_BOX_DEFAULT: DinoBoxData = { pick: 'choose', growthMin: 0.5, g
 /** Growth bag: +amount on the dino played now, if it is below `below` (owner: +10 % under 60 %, 55 % → 65 %). */
 export interface GrowthBagData { amount: number; below: number }
 export const GROWTH_BAG_DEFAULT: GrowthBagData = { amount: 0.1, below: 0.6 };
-/** Food box: the food bar +amount of its max on the dino played now — food only, no nutrients. */
+/** Food box: the food bar +amount of its max on the dino played now, food only, no nutrients. */
 export interface FoodBoxData { amount: number }
 export const FOOD_BOX_DEFAULT: FoodBoxData = { amount: 0.2 };
 /** What one dino item (a box opened) is: the species key ("tyrannosaurus"), its growth, quest mutations or not. */
@@ -110,7 +110,7 @@ export function dietRefusal(species: string | null | undefined, diet: Diet): str
 /**
  * How rare an item is; each has its own look on the panel and the portal.
  * An admin picks common…legendary; `special` is a quest mutation's (kind
- * "unlock": earned by a task in game) and only theirs — fixed, not picked.
+ * "unlock": earned by a task in game) and only theirs, fixed, not picked.
  */
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'special';
 export const RARITIES: ReadonlyArray<{ key: Rarity; label: string; pickable: boolean }> = [
@@ -359,7 +359,7 @@ export function resolveSkin(skin: SkinData): SkinRequest {
     colors[k] = { r: ch(c.r), g: ch(c.g), b: ch(c.b) };
   }
   // Colours only (2026-10-02, the owner's call): the dino keeps the pattern / theme / variation its
-  // player chose in game — a skin item's own (older items have some) is not sent.
+  // player chose in game, a skin item's own (older items have some) is not sent.
   return { colors };
 }
 
@@ -467,7 +467,7 @@ export function grantItem(steamId: string, itemId: string, source: ItemSource, b
     const item = await getItem(itemId);
     if (item === null) throw new ValidationError('no such item');
     if (item.retired && source === 'admin') throw new ValidationError('vật phẩm này đã ngừng phát hành');
-    if (item.type === 'dino') throw new ValidationError('vật phẩm dino chỉ có khi mở hộp dino — hãy tặng hộp dino');
+    if (item.type === 'dino') throw new ValidationError('vật phẩm dino chỉ có khi mở hộp dino, hãy tặng hộp dino');
     const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
     file.players ??= {};
     const list = file.players[steamId] ?? [];
@@ -514,7 +514,7 @@ export function revokeItem(steamId: string, itemId: string): Promise<boolean> {
   });
 }
 
-/** Take one copy (by its uid) out of a player's inventory — a used mutation. False when it is not there. */
+/** Take one copy (by its uid) out of a player's inventory, a used mutation. False when it is not there. */
 export function consumeOwned(steamId: string, uid: string): Promise<boolean> {
   return serialized(async () => {
     const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
@@ -530,7 +530,7 @@ export function consumeOwned(steamId: string, uid: string): Promise<boolean> {
 
 /**
  * A box opened: the box's copy out, a dino item in, in one write (two opens at once: one dino).
- * `keepBox`: an admin's bag never runs out — the box stays. Null when the copy is not there (used already).
+ * `keepBox`: an admin's bag never runs out, the box stays. Null when the copy is not there (used already).
  */
 export function openOwned(steamId: string, uid: string, intoItemId: string, dino: OwnedDino, note: string, keepBox = false): Promise<{ box: Owned; dino: Owned } | null> {
   return serialized(async () => {
@@ -550,14 +550,15 @@ export function openOwned(steamId: string, uid: string, intoItemId: string, dino
 /**
  * The admins' bags (owner, 2026-10-05: "tất cả đều tự add vào túi admin"): one copy of every item still
  * given out (not retired; never the dino item, made by opening a box) in each of these bags that has
- * none — one write. Their bag never runs out (player-api.ts bagUnlimited), so one is enough.
+ * none, one write. Their bag never runs out (player-api.ts bagUnlimited), so one is enough. `skip`: items
+ * never put there (the starter gift, one per account, "Hộp dino tự chọn" is the same box for them).
  * Returns how many copies went in.
  */
-export function fillBags(steamIds: Iterable<string>, note = 'Túi admin: mọi vật phẩm'): Promise<number> {
+export function fillBags(steamIds: Iterable<string>, skip: readonly string[] = [], note = 'Túi admin: mọi vật phẩm'): Promise<number> {
   const ids = [...new Set(steamIds)].filter((id) => /^\d{17}$/.test(id));
   if (ids.length === 0) return Promise.resolve(0);
   return serialized(async () => {
-    const all = (await listItems()).filter((i) => !i.retired && !ITEM_TYPES.find((t) => t.key === i.type)?.system);
+    const all = (await listItems()).filter((i) => !i.retired && !skip.includes(i.id) && !ITEM_TYPES.find((t) => t.key === i.type)?.system);
     const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
     file.players ??= {};
     const now = Math.floor(Date.now() / 1000);
@@ -606,7 +607,7 @@ export function isPendingUse(steamId: string, uid: string): boolean {
 }
 
 /**
- * The mod's answer to a use: the copy is used up when it worked — unless
+ * The mod's answer to a use: the copy is used up when it worked, unless
  * `unlimited(steamId)` says this bag never runs out (the server's admins,
  * player-api.ts bagUnlimited; the owner's call, 2026-10-02).
  */

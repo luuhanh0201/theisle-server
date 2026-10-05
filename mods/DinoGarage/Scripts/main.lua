@@ -4,7 +4,7 @@
     Park the dino you are playing and get it back later.
 
     Model is upstream's: TRANSFORM-IN-PLACE, NEVER RESPAWN-WITH-CUSTOMIZER.
-    The player is never kicked and RequestRespawn is never called — it crashes
+    The player is never kicked and RequestRespawn is never called, it crashes
     from Lua. See docs/reference/EVRIMA_DinoStorage_Architecture.md.
 
     Used from the WEB garage (portal → bridge → Saved/inbox.json →
@@ -71,7 +71,7 @@ local function speciesOf(pawn)
 end
 
 --------------------------------------------------------------------------
--- Store (from the web garage — the chat command is gone)
+-- Store (from the web garage, the chat command is gone)
 --------------------------------------------------------------------------
 -- The countdown is a stand-still test: until it ends the dino must stay
 -- within STORE_RADIUS_CM of where the store started and neither deal nor
@@ -189,7 +189,7 @@ end
 
 local CORPSE_GROWTH = 0.25   -- a stored dino's corpse: a hatchling's
 
---- Runs when the countdown ends: capture, save, remove the dino — all in
+--- Runs when the countdown ends: capture, save, remove the dino, all in
 --- this one tick, so there is no moment where both the slot and the live
 --- dino exist (a player quitting in between used to keep both).
 local function finishStore(c, pawn, steamId, pending)
@@ -310,10 +310,10 @@ local function doStore(ctrl, steamId, say, cmdId)
     pendingStore[steamId] = pending
     local seconds = settings.storeCountdown
     if seconds > 0 then
-        Msg.say(say, "garage.countdown", "Bắt đầu cất sau {seconds} giây — đứng yên trong bán kính 5 m, không đánh và không bị đánh.", { seconds = seconds })
+        Msg.say(say, "garage.countdown", "Bắt đầu cất sau {seconds} giây, đứng yên trong bán kính 5 m, không đánh và không bị đánh.", { seconds = seconds })
         if seconds > 10 then
             H.deferWithPlayer(ctrl, (seconds - 10) * 1000, function(c)
-                if pendingStore[steamId] == pending then Msg.notify(c, "garage.tenSeconds", "Còn 10 giây là cất xong — đứng yên.") end
+                if pendingStore[steamId] == pending then Msg.notify(c, "garage.tenSeconds", "Còn 10 giây là cất xong, đứng yên.") end
             end)
         end
     end
@@ -325,7 +325,7 @@ local function doStore(ctrl, steamId, say, cmdId)
         if pendingStore[steamId] == pending then
             pendingStore[steamId] = nil
             storeResult(steamId, pending, false, "left")
-            H.log(MOD .. ": store for " .. steamId .. " cancelled — player or dino gone before the countdown ended")
+            H.log(MOD .. ": store for " .. steamId .. " cancelled, player or dino gone before the countdown ended")
         end
     end)
     return true
@@ -384,7 +384,7 @@ end)
 -- !redeem
 --------------------------------------------------------------------------
 
--- "!redeem <slot> cu" — where the dino comes back, when the admin lets the
+-- "!redeem <slot> cu", where the dino comes back, when the admin lets the
 -- player choose. Vietnamese and English words both work.
 local WHERE_STORED = { cu = true, ["cũ"] = true, old = true, stored = true, back = true }
 local WHERE_HERE   = { here = true, day = true, ["đây"] = true, current = true }
@@ -445,7 +445,7 @@ local function doRedeem(ctrl, steamId, slot, where, say)
         return false
     end
     if current ~= state.classPath then
-        Msg.say(say, "redeem.wrongSpecies", "Wrong species — respawn as the one you stored.")
+        Msg.say(say, "redeem.wrongSpecies", "Wrong species, respawn as the one you stored.")
         return false
     end
 
@@ -475,7 +475,7 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     if toStored and type(state.location) ~= "table" then
         -- Slots made in the admin panel (and old ones) have no stored spot.
         toStored = false
-        Msg.say(say, "redeem.noStoredSpot", "Slot '{slot}' has no stored position — restoring where you stand.", { slot = slot })
+        Msg.say(say, "redeem.noStoredSpot", "Slot '{slot}' has no stored position, restoring where you stand.", { slot = slot })
     end
     if toStored then
         Msg.say(say, "redeem.restoringStored", "Restoring '{slot}' at the spot you stored it. Hold still for a few seconds.", { slot = slot })
@@ -491,14 +491,14 @@ local function doRedeem(ctrl, steamId, slot, where, say)
         if notRedeemable(steamId, livePawn) then
             Storage.putBack(token)
             Msg.notify(c, "redeem.noDino", "Respawn first, then type !redeem.")
-            H.logError(MOD .. ": redeem of " .. steamId .. "/" .. slot .. " refused at restore time (dead or the stored dino) — slot put back")
+            H.logError(MOD .. ": redeem of " .. steamId .. "/" .. slot .. " refused at restore time (dead or the stored dino), slot put back")
             return
         end
         -- Move first, then restore: the vitals and mutations land on the
         -- dino where it will stay.
         local moved = toStored and Restore.teleport(livePawn, state.location, state.rotation) or false
         if toStored and not moved then
-            Msg.notify(c, "redeem.moveFailed", "Could not move you to the stored spot — restoring here.")
+            Msg.notify(c, "redeem.moveFailed", "Could not move you to the stored spot, restoring here.")
         end
         Restore.apply(livePawn, state, function(ok)
             if ok then
@@ -521,7 +521,7 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     end, function()
         -- Left or lost the dino during the wait: nothing was restored.
         Storage.putBack(token)
-        H.logError(MOD .. ": redeem of " .. steamId .. "/" .. slot .. " abandoned — slot put back")
+        H.logError(MOD .. ": redeem of " .. steamId .. "/" .. slot .. " abandoned, slot put back")
     end)
     return true
 end
@@ -539,7 +539,7 @@ end)
 
 --------------------------------------------------------------------------
 -- Commands from the bridge (see garage/inbox.lua): the admin "kill", and the
--- player's own store / redeem from the web garage — the same doStore /
+-- player's own store / redeem from the web garage, the same doStore /
 -- doRedeem as the chat commands, so every check (countdown, cooldown, slot
 -- count, species, one-use slots) applies unchanged.
 --------------------------------------------------------------------------
@@ -556,7 +556,7 @@ Inbox.on("light", function(c, cmd, say)
         local pawn = H.livePawnFromCtrl(c)
         if pawn == nil then say("light: no dino"); return false end
         local ok, why = Light.on(cmd.steamId, pawn)
-        say(ok and "light: on" or ("light: failed — " .. tostring(why)))
+        say(ok and "light: on" or ("light: failed, " .. tostring(why)))
         return ok
     end
     Light.off(cmd.steamId)
@@ -565,7 +565,7 @@ Inbox.on("light", function(c, cmd, say)
 end)
 
 -- An admin's /adminpanel action from the web panel (garage/admin.lua): heal,
--- vitals, growth, teleport — on the dino the player plays now.
+-- vitals, growth, teleport, on the dino the player plays now.
 Inbox.on("admin", function(c, cmd, say)
     local pawn = H.livePawnFromCtrl(c)
     local okH, hp = pcall(function() return pawn and pawn:GetHealth() end)
@@ -590,7 +590,7 @@ Inbox.on("mutation", function(c, cmd, say)
     end
     if cmd.mode == "clear" then
         local ok, line, was = MutationItem.clear(pawn, cmd.slot)
-        H.log("mutation item: " .. cmd.steamId .. " clear slot " .. tostring(cmd.slot) .. " — " .. tostring(line))
+        H.log("mutation item: " .. cmd.steamId .. " clear slot " .. tostring(cmd.slot) .. ", " .. tostring(line))
         say(tostring(line))
         if ok then Msg.notify(c, "item.mutationClear", "Đã bỏ mutation {mutation} khỏi ô {slot}.", { mutation = was, slot = cmd.slot }) end
         return ok == true
@@ -599,15 +599,15 @@ Inbox.on("mutation", function(c, cmd, say)
         -- Phiếu Prime: a grown dino only (the bridge checked; the game's growth now decides).
         local okG, g = pcall(function() return pawn:GetGrowth() end)
         if not (okG and type(g) == "number" and g >= 0.999) then
-            say("Phiếu Prime cần dino 100% — vật phẩm vẫn còn.")
+            say("Phiếu Prime cần dino 100%, vật phẩm vẫn còn.")
             return false
         end
         local okP, already = pcall(function() return pawn:IsPrimeElder() end)
-        if okP and already == true then say("Dino này đã là prime — vật phẩm vẫn còn."); return false end
+        if okP and already == true then say("Dino này đã là prime, vật phẩm vẫn còn."); return false end
         local ok, line = Admin.grow(pawn, 1, true)
-        H.log("mutation item: " .. cmd.steamId .. " prime — " .. tostring(line))
-        say(ok and "Đã lên prime — chỉ số prime được áp sau vài giây." or tostring(line))
-        if ok then Msg.notify(c, "item.prime", "Dino của bạn đã lên prime — chỉ số prime được áp sau vài giây.", {}) end
+        H.log("mutation item: " .. cmd.steamId .. " prime, " .. tostring(line))
+        say(ok and "Đã lên prime, chỉ số prime được áp sau vài giây." or tostring(line))
+        if ok then Msg.notify(c, "item.prime", "Dino của bạn đã lên prime, chỉ số prime được áp sau vài giây.", {}) end
         return ok == true
     end
     if cmd.mode == "growth" then
@@ -615,19 +615,19 @@ Inbox.on("mutation", function(c, cmd, say)
         local okG, g = pcall(function() return pawn:GetGrowth() end)
         local add, below = tonumber(cmd.amount), tonumber(cmd.below)
         if not (okG and type(g) == "number") or add == nil or below == nil then
-            say("Chưa đọc được tăng trưởng của dino — vật phẩm vẫn còn.")
+            say("Chưa đọc được tăng trưởng của dino, vật phẩm vẫn còn.")
             return false
         end
         if g + 0.000001 >= below then
-            if below >= 1 then say("Dino đã 100% tăng trưởng — vật phẩm vẫn còn.") else
-            say(string.format("Túi tăng trưởng chỉ dùng cho dino dưới %d%% (dino đang %d%%) — vật phẩm vẫn còn.",
+            if below >= 1 then say("Dino đã 100% tăng trưởng, vật phẩm vẫn còn.") else
+            say(string.format("Túi tăng trưởng chỉ dùng cho dino dưới %d%% (dino đang %d%%), vật phẩm vẫn còn.",
                 math.floor(below * 100 + 0.5), math.floor(g * 100))) end
             return false
         end
         local to = math.min(1, g + add)
         local ok, line = Admin.grow(pawn, to)
-        H.log("mutation item: " .. cmd.steamId .. " growth bag — " .. tostring(line))
-        if not ok then say("Không tăng được tăng trưởng — vật phẩm vẫn còn."); return false end
+        H.log("mutation item: " .. cmd.steamId .. " growth bag, " .. tostring(line))
+        if not ok then say("Không tăng được tăng trưởng, vật phẩm vẫn còn."); return false end
         local words = { from = math.floor(g * 100 + 0.5), to = math.floor(to * 100 + 0.5) }
         say(string.format("Tăng trưởng %d%% → %d%%.", words.from, words.to))
         Msg.notify(c, "item.growth", "Dino của bạn đã lớn từ {from}% lên {to}%.", words)
@@ -636,9 +636,9 @@ Inbox.on("mutation", function(c, cmd, say)
     if cmd.mode == "food" then
         -- Hộp food: the food bar only, nutrients left as they are.
         local ok, line, before, after = Admin.feed(pawn, cmd.amount)
-        H.log("mutation item: " .. cmd.steamId .. " food box — " .. tostring(line))
-        if line == "full" then say("Dino đang no — vật phẩm vẫn còn."); return false end
-        if not ok then say("Không cho ăn được — vật phẩm vẫn còn."); return false end
+        H.log("mutation item: " .. cmd.steamId .. " food box, " .. tostring(line))
+        if line == "full" then say("Dino đang no, vật phẩm vẫn còn."); return false end
+        if not ok then say("Không cho ăn được, vật phẩm vẫn còn."); return false end
         local words = { from = math.floor(before * 100 + 0.5), to = math.floor(after * 100 + 0.5) }
         say(string.format("Thức ăn %d%% → %d%%.", words.from, words.to))
         Msg.notify(c, "item.food", "Dino của bạn đã được cho ăn: thức ăn {from}% → {to}%.", words)
@@ -647,24 +647,24 @@ Inbox.on("mutation", function(c, cmd, say)
     if cmd.mode == "cure" then
         -- Đá muối: the sickness after vomiting cleared.
         local ok, line = Admin.cure(pawn)
-        H.log("mutation item: " .. cmd.steamId .. " salt lick — " .. tostring(line))
-        if not ok then say("Không chữa được — vật phẩm vẫn còn."); return false end
+        H.log("mutation item: " .. cmd.steamId .. " salt lick, " .. tostring(line))
+        if not ok then say("Không chữa được, vật phẩm vẫn còn."); return false end
         say("Đã liếm đá muối: hết ốm sau khi nôn.")
         Msg.notify(c, "item.cure", "Dino của bạn đã liếm đá muối: dạ dày dịu lại, hết ốm sau khi nôn.", {})
         return true
     end
     if cmd.mode == "upgrade" then
         local ok, line, _, now = MutationItem.upgrade(pawn, cmd.mutation, cmd.fromStacks, cmd.maxStacks)
-        H.log("mutation item: " .. cmd.steamId .. " upgrade " .. tostring(cmd.mutation) .. " — " .. tostring(line))
+        H.log("mutation item: " .. cmd.steamId .. " upgrade " .. tostring(cmd.mutation) .. ", " .. tostring(line))
         say(tostring(line))
         if ok then
-            Msg.notify(c, "item.mutationUpgrade", "Dino của bạn đã lên đời {generation} nhờ {mutation} — mọi mutation mạnh hơn.",
+            Msg.notify(c, "item.mutationUpgrade", "Dino của bạn đã lên đời {generation} nhờ {mutation}, mọi mutation mạnh hơn.",
                 { mutation = cmd.mutation, generation = (now or 0) + 1 })
         end
         return ok == true
     end
     local ok, line = MutationItem.apply(pawn, cmd.mutation, cmd.slot, cmd.unlock, cmd.minGrowth)
-    H.log("mutation item: " .. cmd.steamId .. " " .. tostring(cmd.mutation) .. " slot " .. tostring(cmd.slot) .. " — " .. tostring(line))
+    H.log("mutation item: " .. cmd.steamId .. " " .. tostring(cmd.mutation) .. " slot " .. tostring(cmd.slot) .. ", " .. tostring(line))
     say(tostring(line))
     if ok then Msg.notify(c, "item.mutation", "Đã thêm mutation {mutation} vào dino của bạn (ô {slot}).", { mutation = cmd.mutation, slot = cmd.slot }) end
     return ok == true
@@ -695,7 +695,7 @@ end)
 
 -- A game-thread loop (H.every): the poll reads one small file and acts right
 -- there. It used to be a LoopAsync handing each command to ExecuteInGameThread
--- — the hand-off that lost callbacks on the server (2026-09-24).
+-- - the hand-off that lost callbacks on the server (2026-09-24).
 H.every(INBOX_POLL_MS, MOD .. ": inbox poll", Inbox.poll)
 H.every(GUARD_EVERY_MS, MOD .. ": store guard", guardStores)
 -- Prime progress an admin gives back (garage/primefix.lua).

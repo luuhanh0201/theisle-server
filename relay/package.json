@@ -2,7 +2,7 @@
   "name": "theisle-discord-relay",
   "private": true,
   "type": "module",
-  "description": "Cloudflare Worker: the server's heartbeat, outage alerts and /status, /online in Discord — off the VPS",
+  "description": "Cloudflare Worker: the server's heartbeat, outage alerts and /status, /online in Discord, off the VPS",
   "scripts": {
     "test": "node --test test/*.test.ts",
     "deploy": "wrangler deploy"

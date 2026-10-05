@@ -7,7 +7,7 @@ import { renderMessage } from './messages.js';
 /**
  * Bans (panel → Người chơi → Ban).
  *
- * The game keeps its ban list in Saved/PlayerData/PlayerBans.json — every ban,
+ * The game keeps its ban list in Saved/PlayerData/PlayerBans.json, every ban,
  * from RCON or from the game's own admin panel, with its reason, who banned
  * and until when (checked on this server, 2026-09-26). The bridge only READS
  * it: a new entry is announced to the server (text "ban.announce", tab Thông
@@ -19,7 +19,7 @@ import { renderMessage } from './messages.js';
  * after it a KickPlayer (0x30).
  *
  * Unban and edit (time, reason): RCON has neither, so the bridge edits the
- * game's file — a copy of it first (DATA_DIR/ban-backups), same format — and
+ * game's file, a copy of it first (DATA_DIR/ban-backups), same format, and
  * REMEMBERS the edit (DATA_DIR/ban-edits.json). Whether the game re-reads the
  * file while running is not verified; if it writes its own list back over
  * the edit, the next read puts the edit back (and an unbanned entry coming
@@ -27,7 +27,7 @@ import { renderMessage } from './messages.js';
  *
  * The times in the file are the VPS's local time ("2026.09.26-10.56.54").
  * Its encoding is the game's choice: UTF-8, or UTF-16 LE with a BOM as soon
- * as a name is not plain ASCII ("T-Rex Nổi Loạn", 2026-09-26) — read either
+ * as a name is not plain ASCII ("T-Rex Nổi Loạn", 2026-09-26), read either
  * way, written back in the one it was in.
  */
 

@@ -1,17 +1,17 @@
--- MutLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- MutLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy). Why a quest mutation ("Reniculate Kidneys": drink saltwater)
 -- came out of the garage neither shown nor working (2026-09-27), though the
 -- slot was written back: the game also keeps the quest-unlocked mutations in
 -- MutationsRequirementsData.UnlockRequiredMutations (TArray<FName>), which the
 -- garage never stored. On a Deinosuchus spawned for the test (no player
 -- needed), writes Mods/MutLab/Saved/mutlab.txt:
---   1. read   — every field of MutationsRequirementsData and of
+--   1. read, every field of MutationsRequirementsData and of
 --               ReplicatedMutationsData, and the pawn's functions whose name
 --               has "Mutation" in it (a setter to push the struct?)
---   2. unlock — append "Reniculate Kidneys" to UnlockRequiredMutations (a
+--   2. unlock, append "Reniculate Kidneys" to UnlockRequiredMutations (a
 --               TArray write from Lua), push it with the setter if one exists,
 --               read it back
---   3. slot   — "Reniculate Kidneys" into MutationSlot3 +
+--   3. slot, "Reniculate Kidneys" into MutationSlot3 +
 --               SetReplicatedMutationsData(struct, true), read back both
 -- Each step is flagged (Saved/<step>.trying): a crash in one is named at the
 -- next start and that step is not run again.
@@ -45,7 +45,7 @@ local STEPS = { "read", "unlock", "slot", "setter" }
 local crashed = {}
 for _, s in ipairs(STEPS) do if exists(DIR .. s .. ".trying") then crashed[s] = true end end
 local function step(name, fn)
-    if crashed[name] then out("step %s: SKIPPED — the server stopped during it last time (crash)", name); return false end
+    if crashed[name] then out("step %s: SKIPPED, the server stopped during it last time (crash)", name); return false end
     write(DIR .. name .. ".trying", tostring(os.time()))
     local ok, err = pcall(fn)
     os.remove(DIR .. name .. ".trying")
@@ -223,4 +223,4 @@ H.every(2000, MOD .. ": step", function()
     end
 end)
 
-out("loaded — the probe starts %d s after load", START_AFTER_S)
+out("loaded, the probe starts %d s after load", START_AFTER_S)

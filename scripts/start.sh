@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# start.sh — the one and only place the Wine launch command lives.
+# start.sh, the one and only place the Wine launch command lives.
 # Runs ON THE VPS, normally via systemd (theisle.service).
 #
 # If you need to change how the server starts, change it here. Do not paste a
@@ -28,14 +28,14 @@ export WINEDLLOVERRIDES="dwmapi=n,b${EXTRA_DLL_OVERRIDES:+;$EXTRA_DLL_OVERRIDES}
 export DISPLAY=""                              # headless
 
 if [[ ! -f "$BIN_DIR/$EXE" ]]; then
-    echo "start.sh: $BIN_DIR/$EXE not found — is the server installed?" >&2
+    echo "start.sh: $BIN_DIR/$EXE not found, is the server installed?" >&2
     exit 1
 fi
 
 # UE4SS 3.0+ is two files: dwmapi.dll is only the proxy that loads UE4SS.dll.
 for dll in dwmapi.dll UE4SS.dll; do
     [[ -f "$BIN_DIR/$dll" ]] || \
-        echo "start.sh: warning — $dll missing, UE4SS will NOT load" >&2
+        echo "start.sh: warning, $dll missing, UE4SS will NOT load" >&2
 done
 
 # The Wine launcher. `wine` runs a 64-bit .exe with the 64-bit loader on every

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-ue4ss.sh — install or upgrade UE4SS next to the game binary. As root.
+# install-ue4ss.sh, install or upgrade UE4SS next to the game binary. As root.
 #
 #   sudo ./scripts/install-ue4ss.sh                 latest experimental build
 #   sudo ./scripts/install-ue4ss.sh --url <zip-url> a specific build
@@ -12,14 +12,14 @@
 # (UE4SS.log: "Failed to find EngineVersion / GUObjectArray … PS scan timed
 # out"), so no Lua mod ever loads. The experimental builds support it.
 #
-# Layout: FLAT, as the rest of this repo expects —
+# Layout: FLAT, as the rest of this repo expects,
 #   $BIN_DIR/dwmapi.dll  $BIN_DIR/UE4SS.dll  $BIN_DIR/UE4SS-settings.ini
 #   $BIN_DIR/Mods/…      $BIN_DIR/UE4SS.log
 # Experimental zips put everything but dwmapi.dll in a ue4ss/ subfolder. Its
 # dwmapi.dll loads ue4ss/UE4SS.dll when that folder exists and falls back to
 # UE4SS.dll next to the game otherwise, and UE4SS then uses the folder it was
 # loaded from as its root. So the files are unpacked flat and a ue4ss/ folder
-# must NOT exist in $BIN_DIR — it would silently win over our Mods/.
+# must NOT exist in $BIN_DIR, it would silently win over our Mods/.
 #
 # Never touches: our mods, mods.txt, UE4SS-settings.ini (deploy.sh owns those),
 # any Saved/ directory. The previous DLLs are kept in /home/<user>/backups/.
@@ -51,14 +51,14 @@ BIN_DIR="${BIN_DIR:-$HOME_DIR/server/TheIsle/Binaries/Win64}"
 
 [[ $EUID -eq 0 ]] || die "run as root"
 [[ -f "$BIN_DIR/TheIsleServer-Win64-Shipping.exe" ]] \
-    || die "$BIN_DIR has no TheIsleServer-Win64-Shipping.exe — wrong --bin-dir, or SteamCMD has not installed the Windows build"
+    || die "$BIN_DIR has no TheIsleServer-Win64-Shipping.exe, wrong --bin-dir, or SteamCMD has not installed the Windows build"
 for tool in curl unzip rsync python3; do
     command -v "$tool" >/dev/null 2>&1 || die "$tool is not installed"
 done
 # Replacing the DLLs under a running server would leave it on the old build
-# until some later restart — stop first so the result is known.
+# until some later restart, stop first so the result is known.
 if (( ! DRY_RUN )) && systemctl is-active --quiet theisle.service 2>/dev/null; then
-    die "theisle.service is running — stop it first: systemctl stop theisle"
+    die "theisle.service is running, stop it first: systemctl stop theisle"
 fi
 
 # --- 1. which build ------------------------------------------------------
@@ -73,7 +73,7 @@ assets = json.load(sys.stdin)["assets"]
 hits = [a["browser_download_url"] for a in assets if re.fullmatch(r"UE4SS_v[\w.\-]+\.zip", a["name"])]
 if len(hits) != 1:
     sys.exit("expected exactly one UE4SS_v*.zip asset, found: %s" % [a["name"] for a in assets])
-print(hits[0])')" || die "could not resolve the experimental build (GitHub API) — pass --url"
+print(hits[0])')" || die "could not resolve the experimental build (GitHub API), pass --url"
 fi
 say "build: ${URL##*/}"
 
@@ -90,10 +90,10 @@ else
     SRC="$TMP/x"                # old flat layout (v3.0.x)
 fi
 [[ -f "$TMP/x/dwmapi.dll" && -f "$SRC/UE4SS.dll" && -d "$SRC/Mods" ]] \
-    || die "unexpected zip layout (need dwmapi.dll, UE4SS.dll, Mods/) — not installing"
+    || die "unexpected zip layout (need dwmapi.dll, UE4SS.dll, Mods/), not installing"
 
 if (( DRY_RUN )); then
-    say "DRY RUN — would install into $BIN_DIR:"
+    say "DRY RUN, would install into $BIN_DIR:"
     echo "    dwmapi.dll, UE4SS.dll"
     echo "    Mods/ built-ins + Mods/shared (not mods.txt / mods.json, not our mods)"
     if [[ ! -f "$BIN_DIR/UE4SS-settings.ini" ]]; then echo "    UE4SS-settings.ini (none there yet)"; fi
@@ -109,7 +109,7 @@ for f in dwmapi.dll UE4SS.dll UE4SS-settings.ini ue4ss-build.txt; do
     if [[ -f "$BIN_DIR/$f" ]]; then cp -a "$BIN_DIR/$f" "$BACKUP/"; fi
 done
 if [[ -d "$BIN_DIR/ue4ss" ]]; then
-    # A ue4ss/ folder makes dwmapi.dll load ue4ss/UE4SS.dll and ue4ss/Mods —
+    # A ue4ss/ folder makes dwmapi.dll load ue4ss/UE4SS.dll and ue4ss/Mods,
     # none of our mods. Moved, not deleted.
     say "moving $BIN_DIR/ue4ss out of the way (to $BACKUP/ue4ss)"
     mv "$BIN_DIR/ue4ss" "$BACKUP/ue4ss"

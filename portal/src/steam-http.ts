@@ -61,7 +61,7 @@ function postTo(ip: string, url: URL, init: Parameters<SteamPost>[1]): Promise<s
       host: url.hostname, path: `${url.pathname}${url.search}`, method: init.method, headers: init.headers,
       agent: false,   // a fresh connection to THIS address (a pooled one could be to another)
       // This address, for this host name: SNI and the certificate stay steamcommunity.com.
-      // (Node asks with { all: true } for a list — its "happy eyeballs" — or for one address.)
+      // (Node asks with { all: true } for a list, its "happy eyeballs", or for one address.)
       lookup: (_host, opts, cb) => {
         if ((opts as { all?: boolean }).all) (cb as unknown as (e: Error | null, a: Array<{ address: string; family: number }>) => void)(null, [{ address: ip, family: 4 }]);
         else (cb as (e: Error | null, a: string, f: number) => void)(null, ip, 4);

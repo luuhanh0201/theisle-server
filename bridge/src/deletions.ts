@@ -5,7 +5,7 @@ import { config } from './config.js';
 
 /**
  * What the super admin deletes on the panel (2026-10-02; no other admin sees
- * the buttons, and the routes are the super admin's only — permissions.ts):
+ * the buttons, and the routes are the super admin's only, permissions.ts):
  *
  *   chat lines   the chat comes from the game's events, read again at every
  *                bridge start, so it is not cut out of them: the lines deleted

@@ -8,7 +8,7 @@ Read only. Run on the VPS:
 One row per player count (0, 1, 2 … as seen): how many 10 s samples, the
 game's CPU (% of one core), the server FPS (average and the lowest), UDP
 datagrams a second in / out of the machine (the game talks UDP; LiveKit voice
-too when someone uses it) and the interface's kbit/s — those network columns
+too when someone uses it) and the interface's kbit/s, those network columns
 exist from 2026-10-02 16:00 on (bridge metrics.ts udpIn / udpOut / netInKbps /
 netOutKbps).
 """

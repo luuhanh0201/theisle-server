@@ -1,11 +1,11 @@
 --[[
-    DinoGarage/light.lua — ADMIN TEST (panel API /api/light-test → inbox "light")
+    DinoGarage/light.lua, ADMIN TEST (panel API /api/light-test → inbox "light")
 
     Can a light the server spawns make a dino glow at night on the players'
     machines? A PointLight (the engine's), marked replicated before its spawn
     finishes, attached to the player's dino; "off" takes it away. Tried on a
     test server (LightLab, 2026-09-27): spawn, attach, colour and intensity all
-    work there, no crash — whether players SEE it could only be told on the
+    work there, no crash, whether players SEE it could only be told on the
     live server (nobody can join the test one).
 
     One light per player, found again by its address (never kept as an
@@ -31,7 +31,7 @@ do
     if f then
         f:close()
         tried = false
-        H.logError("light: the last run stopped while making a test light — off. Delete " .. L.FLAG .. " to try again.")
+        H.logError("light: the last run stopped while making a test light, off. Delete " .. L.FLAG .. " to try again.")
     end
 end
 

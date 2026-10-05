@@ -680,7 +680,7 @@
       ctx.createMediaStreamSource(stream).connect(ctx.destination);
       $('test').textContent = '⏹ Tắt thử âm thanh';
       $('test').classList.add('btn-emerald');
-      $('test-note').textContent = 'Đang nghe lại giọng bạn — người khác không nghe thấy lúc này.';
+      $('test-note').textContent = 'Đang nghe lại giọng bạn, người khác không nghe thấy lúc này.';
     } catch (err) {
       stopHearing();
       $('test-note').textContent = micError(err);

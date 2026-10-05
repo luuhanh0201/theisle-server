@@ -99,7 +99,7 @@ export function validateDiscord(raw: unknown, before: DiscordSettings = DISCORD_
   for (const c of opts.unique === false ? [] : channels) {
     const other = seen.get(c.url);
     if (other !== undefined) {
-      throw new ValidationError(`"${c.name}" và "${other}" đang dùng cùng một webhook — mỗi kênh Discord cần một webhook riêng (tạo trong chính kênh đó)`);
+      throw new ValidationError(`"${c.name}" và "${other}" đang dùng cùng một webhook, mỗi kênh Discord cần một webhook riêng (tạo trong chính kênh đó)`);
     }
     seen.set(c.url, c.name);
   }
@@ -192,7 +192,7 @@ export interface LogLine { kind: DiscordKind; text: string; t: number }
 /** A feed entry as a log line, or null when it is not one (damage, prime…). */
 /**
  * `isAdmin`: an admin's deaths and kills, either side, go to no channel (the
- * players read them there; the owner, 2026-10-04 — as on the site, store.ts). The panel keeps them.
+ * players read them there; the owner, 2026-10-04, as on the site, store.ts). The panel keeps them.
  */
 export function lineOf(e: FeedEntry, isAdmin: (steamId: string | undefined) => boolean = () => false): LogLine | null {
   const t = e.t;
@@ -212,24 +212,24 @@ export function lineOf(e: FeedEntry, isAdmin: (steamId: string | undefined) => b
       const life = duration(e.lifeSeconds);
       if (e.killer !== undefined && e.killer !== 'ai') {
         const killer = `${who(e.killerName, e.killer)} (${species(e.killerSpecies)}${pct(e.killerGrowth)})`;
-        return { kind: 'kill', t, text: `⚔️ ${killer} đã giết ${victim}${life ? ` — sống được ${life}` : ''}` };
+        return { kind: 'kill', t, text: `⚔️ ${killer} đã giết ${victim}${life ? `, sống được ${life}` : ''}` };
       }
       return { kind: 'death', t, text: `💀 ${victim} đã chết${life ? ` sau ${life}` : ''}` };
     }
     case 'spawn':
       return { kind: 'spawn', t, text: `🦖 ${who(e.name, e.steamId)} spawn ${species(e.species)}${pct(e.growth)}` };
     case 'growth':
-      return { kind: 'growth', t, text: `📈 ${who(e.name, e.steamId)} — ${species(e.species)} lên ${Math.round(e.milestone * 100)}%` };
+      return { kind: 'growth', t, text: `📈 ${who(e.name, e.steamId)}, ${species(e.species)} lên ${Math.round(e.milestone * 100)}%` };
     case 'mutation':
       // Written back by the garage / an admin / an item (store.ts `via`): not the player's pick.
       if ('via' in e && e.via !== undefined) return null;
-      return e.to ? { kind: 'mutation', t, text: `🧬 ${who(e.name, e.steamId)} — ${species(e.species)} có mutation **${plain(e.to)}**` } : null;
+      return e.to ? { kind: 'mutation', t, text: `🧬 ${who(e.name, e.steamId)}, ${species(e.species)} có mutation **${plain(e.to)}**` } : null;
     case 'garage_store':
       return { kind: 'garage', t, text: `📦 ${who(e.name, e.steamId)} cất ${species(e.species)}${pct(e.growth)} vào gara (${plain(e.slot)})` };
     case 'garage_redeem':
       return e.ok ? { kind: 'garage', t, text: `📤 ${who(e.name, e.steamId)} lấy ${species(e.species)}${pct(e.growth)} từ gara (${plain(e.slot)})` } : null;
     case 'admin_kill':
-      return { kind: 'adminKill', t, text: `🗡️ Admin xoá dino của ${who(e.name, e.steamId)}${e.species ? ` (${species(e.species)}${pct(e.growth)})` : ''}${e.ok ? '' : ` — không được: ${plain(e.error ?? '?')}`}` };
+      return { kind: 'adminKill', t, text: `🗡️ Admin xoá dino của ${who(e.name, e.steamId)}${e.species ? ` (${species(e.species)}${pct(e.growth)})` : ''}${e.ok ? '' : `, không được: ${plain(e.error ?? '?')}`}` };
     default:
       return null;
   }
@@ -239,7 +239,7 @@ export function lineOf(e: FeedEntry, isAdmin: (steamId: string | undefined) => b
 export function banLine(b: { steamId: string; name: string; reason: string; bannedAt: number | null }, vars: Record<string, string>): LogLine {
   return {
     kind: 'ban', t: b.bannedAt ?? Math.floor(Date.now() / 1000),
-    text: `⛔ **${plain(b.name)}**${idOf(b.steamId)} bị ban **${plain(vars['duration'] ?? '')}** — bởi ${plain(vars['by'] ?? '?')}`
+    text: `⛔ **${plain(b.name)}**${idOf(b.steamId)} bị ban **${plain(vars['duration'] ?? '')}**, bởi ${plain(vars['by'] ?? '?')}`
       + `\n**Lý do:** ${plain(b.reason || '(không ghi)')}`
       + `\n**Ban lúc:** ${plain(vars['since'] ?? '?')} · **Hết hạn:** ${plain(vars['until'] ?? '?')}`,
   };
@@ -250,10 +250,10 @@ export function banChangeLine(before: { steamId: string; name: string; reason: s
   after: { reason: string } | null, afterVars: Record<string, string> | null, by: string): LogLine {
   const t = Math.floor(Date.now() / 1000);
   if (after === null || afterVars === null) {
-    return { kind: 'ban', t, text: `✅ Gỡ ban **${plain(before.name)}**${idOf(before.steamId)} — bởi ${plain(by)}`
+    return { kind: 'ban', t, text: `✅ Gỡ ban **${plain(before.name)}**${idOf(before.steamId)}, bởi ${plain(by)}`
       + `\n**Lý do ban cũ:** ${plain(before.reason || '(không ghi)')}\n**Ban lúc:** ${plain(beforeVars['since'] ?? '?')} · **Hết hạn cũ:** ${plain(beforeVars['until'] ?? '?')}` };
   }
-  const lines = [`✏️ Sửa ban **${plain(before.name)}**${idOf(before.steamId)} — bởi ${plain(by)}`];
+  const lines = [`✏️ Sửa ban **${plain(before.name)}**${idOf(before.steamId)}, bởi ${plain(by)}`];
   if (beforeVars['until'] !== afterVars['until']) {
     lines.push(`**Thời hạn:** ${plain(beforeVars['duration'] ?? '')} (hết ${plain(beforeVars['until'] ?? '')}) → **${plain(afterVars['duration'] ?? '')}** (hết ${plain(afterVars['until'] ?? '')})`);
   }
@@ -266,7 +266,7 @@ export function auditLine(a: AuditEntry): LogLine {
   return {
     kind: 'admin', t: a.t,
     text: `🛠️ ${a.byName ? `**${plain(a.byName)}**` : a.by ? plain(a.by) : 'hệ thống'}: ${plain(a.action)}`
-      + `${a.detail ? ` — ${plain(a.detail).slice(0, 300)}` : ''}${a.ok ? '' : ` ❌ ${plain(a.error ?? 'lỗi')}`}`,
+      + `${a.detail ? `, ${plain(a.detail).slice(0, 300)}` : ''}${a.ok ? '' : ` ❌ ${plain(a.error ?? 'lỗi')}`}`,
   };
 }
 
@@ -278,7 +278,7 @@ const PHASE_TEXT: Record<string, string> = {
 export function phaseLine(from: string | null, to: string, t: number, planned: boolean): LogLine | null {
   if (from === to || to === 'unknown' || !PHASE_TEXT[to]) return null;
   const text = from === 'running' && !planned && (to === 'stopped' || to === 'starting' || to === 'failed')
-    ? '⚠️ Server dừng bất ngờ (crash?) — đang chờ nó chạy lại'
+    ? '⚠️ Server dừng bất ngờ (crash?), đang chờ nó chạy lại'
     : PHASE_TEXT[to] as string;
   return { kind: 'server', t, text };
 }
@@ -430,7 +430,7 @@ export class DiscordLog {
   async test(channelId: string, who: string): Promise<string | null> {
     const c = this.#settings.channels.find((x) => x.id === channelId);
     if (!c) return 'kênh không tồn tại (lưu trước đã)';
-    const r = await this.#send(c.url, [{ ch: c.id, kind: 'admin', t: Math.floor(this.#now() / 1000), text: `✅ Thử kết nối từ panel — ${plain(who)}` }]);
+    const r = await this.#send(c.url, [{ ch: c.id, kind: 'admin', t: Math.floor(this.#now() / 1000), text: `✅ Thử kết nối từ panel, ${plain(who)}` }]);
     return r === 'sent' ? null : this.#stateOf(c.id).lastError ?? 'không gửi được';
   }
 
@@ -465,8 +465,8 @@ export class DiscordLog {
         return 'retry';
       }
       if (res.status >= 500) return this.#backoff(st, now, `Discord lỗi ${res.status}`);
-      // 4xx: the webhook is gone or the message is refused — waiting will not help.
-      st.lastError = res.status === 404 || res.status === 401 ? 'webhook không còn (bị xoá?) — dán lại URL' : `Discord từ chối (${res.status}) ${text.slice(0, 120)}`;
+      // 4xx: the webhook is gone or the message is refused, waiting will not help.
+      st.lastError = res.status === 404 || res.status === 401 ? 'webhook không còn (bị xoá?), dán lại URL' : `Discord từ chối (${res.status}) ${text.slice(0, 120)}`;
       return 'rejected';
     } catch (error) {
       return this.#backoff(st, now, `không gửi được: ${(error as Error).message}`);

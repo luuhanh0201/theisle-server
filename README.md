@@ -3,11 +3,11 @@
 Config, mods and operations tooling for a **The Isle: Evrima** dedicated server
 running on a Linux VPS under Wine, with UE4SS + Lua mods.
 
-This repo is the source of truth. The VPS is a deploy target — anything edited
+This repo is the source of truth. The VPS is a deploy target, anything edited
 directly on the server is overwritten on the next deploy.
 
 **Cài đặt từ đầu (tiếng Việt):** [docs/HUONG-DAN-CAI-DAT.md](docs/HUONG-DAN-CAI-DAT.md)
-— từ VPS Ubuntu trống, SteamCMD, tới server + mod + admin panel.
+- từ VPS Ubuntu trống, SteamCMD, tới server + mod + admin panel.
 Wine (chạy bản server Windows trên Linux): [docs/HUONG-DAN-WINE.md](docs/HUONG-DAN-WINE.md).
 Nhật ký thay đổi trên VPS: [docs/NHAT-KY-VAN-HANH.md](docs/NHAT-KY-VAN-HANH.md).
 Cổng người chơi (web public, đăng nhập Steam): [docs/portal.md](docs/portal.md).
@@ -32,7 +32,7 @@ mods/StatsLogger  ──►  Saved/events.ndjson  ──►  bridge  ──►  
 ```
 
 Append-only NDJSON, polled once a second. Either side can crash and restart
-without losing events — the file is the handoff.
+without losing events, the file is the handoff.
 
 ## Setup (local)
 
@@ -61,14 +61,14 @@ git revert <commit>      # or: git checkout <last-good-tag>
 ./scripts/deploy.sh
 ```
 
-Each deploy keeps a timestamped backup of the previous config on the VPS — see
+Each deploy keeps a timestamped backup of the previous config on the VPS, see
 `docs/deploy.md` for the exact path and how to restore it.
 
 ## Features
 
 | | Where | Notes |
 |---|---|---|
-| Park / retrieve a dino | `mods/DinoGarage` | `!store`, `!redeem`, `!garage` — see `docs/garage.md` |
+| Park / retrieve a dino | `mods/DinoGarage` | `!store`, `!redeem`, `!garage`, see `docs/garage.md` |
 | Put a dino into a garage | panel / `POST /api/garage/...` | needs `ADMIN_TOKEN` |
 | Damage and kill log | `mods/StatsLogger` | only player-on-player direct hits are visible to Lua |
 | kick / ban / unban | not here | already in the server's own admin panel |
@@ -82,7 +82,7 @@ shipped by `scripts/deploy.sh`). Reach it through an SSH tunnel:
 ssh -N -L 8181:127.0.0.1:8080 isle@<vps>     # then http://127.0.0.1:8181
 ```
 
-It binds to localhost. **Put it behind a reverse proxy with authentication** —
+It binds to localhost. **Put it behind a reverse proxy with authentication**,
 it serves player data, chat and live positions, and has no auth of its own.
 
 Tabs: server (start/stop/restart with player countdown, daily restarts, live
@@ -131,7 +131,7 @@ server, UE4SS, the systemd unit). It is intended to run **once**. Read
 ## Working with AI agents
 
 `AGENTS.md` holds the operating rules; `CLAUDE.md` just imports it. Keep both in
-sync with reality — an agent that trusts a stale path will break the server.
+sync with reality, an agent that trusts a stale path will break the server.
 
 ## Attribution
 

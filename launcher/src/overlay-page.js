@@ -24,7 +24,7 @@
       { name: 'Troodon Nhỏ', speaking: true, gain: 0.45, pan: -0.7 },
       { name: 'Anky', speaking: false, gain: 0.2, pan: 0 },
     ],
-    toast: { text: 'Tầm giọng: 30 m — Nói thường', at: 0 },
+    toast: { text: 'Tầm giọng: 30 m, Nói thường', at: 0 },
   };
   const SAMPLE_GAME = {
     dino: {
@@ -66,7 +66,7 @@
     const idle = settings.autoHide === 'idle' && !st.talking && speaking.length === 0 && !preview();
     let warn = '';
     if (st.phase === 'reconnecting') warn = '◌ Voice đang nối lại…';
-    else if (st.inGame === false) warn = '! Chưa vào game — không ai nghe thấy bạn';
+    else if (st.inGame === false) warn = '! Chưa vào game, không ai nghe thấy bạn';
     $('warn').hidden = !(show.warnings && warn);
     $('warn').className = 'box warn';
     $('warn').textContent = warn;
@@ -543,7 +543,7 @@
       const mark = document.createElement('b'); mark.style.left = `${pb.deadline * 100}%`;
       tr.append(i, mark);
       const s = document.createElement('div'); s.className = 'sub';
-      s.textContent = pb.locked ? `Đã qua mốc ${Math.round(pb.deadline * 100)}% — kết quả đã chốt`
+      s.textContent = pb.locked ? `Đã qua mốc ${Math.round(pb.deadline * 100)}%, kết quả đã chốt`
         : `Growth ${(pb.growth * 100).toFixed(0)}% · chốt ở ${Math.round(pb.deadline * 100)}%`;
       dl.append(tr, s);
       parts.push(dl);
@@ -568,7 +568,7 @@
     $('toggle').title = settings.enabled ? 'Tắt khung này' : 'Bật khung này';
     setText($('hint'), settings.enabled
       ? 'Kéo để di chuyển · kéo mép / góc để phóng to, thu nhỏ · F9 để xong'
-      : 'Khung này đang tắt — bấm ＋ Bật để hiện nó trong game');
+      : 'Khung này đang tắt, bấm ＋ Bật để hiện nó trong game');
     if (W === 'voice') renderVoice();
     else if (W === 'map') renderMap();
     else if (W === 'dino') renderDino();
@@ -620,7 +620,7 @@
   $('done').addEventListener('click', () => window.overlay.doneEditing());
   $('toggle').addEventListener('click', () => window.overlay.toggleWidget(W));
   // Move by dragging the frame: not the window manager's drag region (some
-  // Linux desktops ignore it) — the launcher moves the window to follow the
+  // Linux desktops ignore it), the launcher moves the window to follow the
   // real pointer, so it can be dropped anywhere, on any screen.
   let mv = false;
   let frame = 0;

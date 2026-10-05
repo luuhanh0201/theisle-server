@@ -8,7 +8,7 @@ import type { Sanctuary } from './zone-guard.js';
  *
  * The game's zones are its plant spawners (TIEdibleSpawner, exported by the
  * Flora mod): the migration zones (bShouldUseMigration, active now), the
- * patrol zones (bPatrolZone) and the juvenile ones (bJuvenilesZone — the
+ * patrol zones (bPatrolZone) and the juvenile ones (bJuvenilesZone, the
  * sanctuaries). The game keeps its own rules on who they count for. Measured
  * on this server (every condition that turned on by itself, 26–27/09):
  *   1 sanctuary  every species, Deinosuchus too, inside Sanctuary 67–73
@@ -16,13 +16,13 @@ import type { Sanctuary } from './zone-guard.js';
  *                a Deinosuchus, one of which went through the zones for nothing)
  *   6 patrol     nobody, ever
  * So: a dino that stays DWELL_S in such a zone and still lacks that condition
- * is given it — through a prime fix (prime-fixes.ts), which the DinoGarage mod
+ * is given it, through a prime fix (prime-fixes.ts), which the DinoGarage mod
  * applies within 5 s; the player is told by prime-notify.ts like for any task.
  * Nothing is given past the prime deadline, nor twice while the game has not
  * yet reported the first one.
  *
  * A spawner's own shape is only its plant patch (often ~20 m); the zone players
- * see — on the game's map and ours (VulnonaMAP: MZ, PZ, Sanctuary) — is much
+ * see, on the game's map and ours (VulnonaMAP: MZ, PZ, Sanctuary), is much
  * larger. So a task's zones are the game's (the spawners that are that kind of
  * zone now) AND each map zone of that kind with one of those spawners in it.
  */

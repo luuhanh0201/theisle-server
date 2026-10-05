@@ -6,7 +6,7 @@ import type { MutationSlots } from './events.js';
  * (Túi đồ, items.ts). In game it is one number for the whole dino: its
  * ElderReplicationStacks (đời = stacks + 1). A mutation item the dino has
  * already raises it by one (a rebirth's +1 đời, every mutation on the dino
- * with it) — while that mutation still grows: its table (mutation-reference.ts
+ * with it), while that mutation still grows: its table (mutation-reference.ts
  * `tiers`, đời 1…4, the last holds beyond) stops at its max, and a mutation
  * with no table, or one value, counts as maxed (the owner's call, 2026-10-02).
  */
@@ -15,7 +15,7 @@ export const ACTIVE_SLOTS = ['Slot1', 'Slot2', 'Slot3', 'Slot4'] as const;
 
 /**
  * A duplicate item raising the dino +1 đời: OFF (2026-10-02). The owner wants
- * ONE mutation stronger, not the whole dino — and the game keeps no per-mutation
+ * ONE mutation stronger, not the whole dino, and the game keeps no per-mutation
  * tier (ReplicatedMutationsData holds names only; the strength follows
  * ElderReplicationStacks), so +1 đời made every mutation, later picks too,
  * stronger. Kept for a separate "lên đời dino" item; a per-mutation way is being

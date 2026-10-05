@@ -11,7 +11,7 @@
  * divide it applies to a pasted in-game location). Its X runs top → bottom on
  * the image and its Y left → right ("axis_X H"), between the map's #cfg
  * min/max. The game SHOWS a location as "Y, X, Z" (a pawn at world x 148697,
- * y 349211 reads "349,211.187, 148,696.686, …" in game — checked on the live
+ * y 349211 reads "349,211.187, 148,696.686, …" in game, checked on the live
  * server), so VulnonaMAP's X is the world Y and its Y the world X:
  *   left = (x/1000 - minY) / (maxY - minY) * imageWidth
  *   top  = (y/1000 - minX) / (maxX - minX) * imageHeight

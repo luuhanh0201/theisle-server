@@ -8,8 +8,8 @@
  */
 
 /** A key or mouse button: { kind: 'key' | 'mouse', code }. */
-const DEFAULT_PTT = { kind: 'key', code: 47 };     // UiohookKey.V — hold to talk
-const DEFAULT_RANGE = { kind: 'key', code: 41 };   // UiohookKey.Backquote (` ~) — cycle the voice range
+const DEFAULT_PTT = { kind: 'key', code: 47 };     // UiohookKey.V, hold to talk
+const DEFAULT_RANGE = { kind: 'key', code: 41 };   // UiohookKey.Backquote (` ~), cycle the voice range
 
 const MOUSE_NAMES = { 3: 'Chuột giữa', 4: 'Chuột bên 1 (Mouse 4)', 5: 'Chuột bên 2 (Mouse 5)' };
 
@@ -49,14 +49,14 @@ const REPRESS_AFTER_MS = 1200;
  * X11's key auto-repeat sends a release and a press again for every repeat
  * (Windows sends presses only): a key held a moment toggled the overlay a
  * dozen times, every ~170 ms (2026-09-28). A release is only taken once no
- * press follows it this soon — so the talk key lets go this much later.
+ * press follows it this soon, so the talk key lets go this much later.
  */
 const RELEASE_SETTLE_MS = 40;
 
 /**
  * Tracks held / released for one binding and calls onChange only on a change
  * (keys auto-repeat while held). Used for the talk key, the range key and the
- * overlay keys. A lost release used to eat the next press — the overlay key
+ * overlay keys. A lost release used to eat the next press, the overlay key
  * (F8) worked every other time (2026-09-27): now a press long after the last
  * event of that key is a new press (released, then held again).
  */

@@ -3,8 +3,8 @@ import { ValidationError } from './garage.js';
 
 /**
  * The bridge's side of the relay (relay/, a Cloudflare Worker off the VPS):
- * every 2 minutes a heartbeat — the server's state now, and the Discord
- * webhook to post "unreachable" / "back" on — so that when the VPS goes quiet
+ * every 2 minutes a heartbeat, the server's state now, and the Discord
+ * webhook to post "unreachable" / "back" on, so that when the VPS goes quiet
  * (down, cut off, DDoS) the relay notices and says so, and /status, /online
  * in Discord still answer. Outgoing HTTPS only.
  *
@@ -51,7 +51,7 @@ export async function sendHeartbeat(relay: { url: string; secret: string }, hb: 
 }
 
 export const COMMANDS = [
-  { name: 'status', description: 'Tình trạng server: đang chạy, số người, FPS — kể cả khi VPS mất kết nối', type: 1 },
+  { name: 'status', description: 'Tình trạng server: đang chạy, số người, FPS, kể cả khi VPS mất kết nối', type: 1 },
   { name: 'online', description: 'Ai đang online trên server', type: 1 },
 ];
 

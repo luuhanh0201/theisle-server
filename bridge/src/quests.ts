@@ -306,7 +306,7 @@ function pick<T extends { id: string }>(pool: T[], n: number, seed: string): T[]
   return [...pool].sort((a, b) => h(a.id).localeCompare(h(b.id))).slice(0, n);
 }
 
-/** Today's quests (and this week's) for a player — given the first time asked, for the dino played then. */
+/** Today's quests (and this week's) for a player, given the first time asked, for the dino played then. */
 async function assigned(state: QuestState, s: QuestSettings, id: string, species: string | null, now: number): Promise<{ a: Assigned; changed: boolean }> {
   const day = dayOf(now), week = weekOf(day);
   const a: Assigned = state.players[id] ?? { day: -1, daily: [], claimed: [], week: -1, weekly: null, weeklyClaimed: false };

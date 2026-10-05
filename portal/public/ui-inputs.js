@@ -1,5 +1,5 @@
 /*
- * ui-inputs.js — the system's number and date / time inputs (rule: AGENTS.md
+ * ui-inputs.js, the system's number and date / time inputs (rule: AGENTS.md
  * "UI"), on every page: the admin panel (bridge serves it from the portal), the
  * portal, the launcher's pages. Load it as a classic script before the page's
  * own code, after ui-select.js:
@@ -72,7 +72,7 @@ input.dt-native { display: none !important; }
   (document.head || document.documentElement).append(style);
 })();
 /*
- * Form controls — the panel's own number and date / time inputs, on every
+ * Form controls, the panel's own number and date / time inputs, on every
  * <input type=number|date|time|datetime-local> (in the HTML and built later),
  * the way "Custom select" above does selects. The native input stays the truth:
  * code keeps reading and writing input.value / min / max / disabled / hidden,

@@ -1,7 +1,7 @@
 /**
  * Where players are, for every player's map (owner, 2026-10-04: "bản đồ nhiệt để biết được khu nào
  * có người chơi", every 5 minutes; for all players, the positions at that moment, one layer, admins
- * not counted). Only how many players stand in each square of HEAT_CELL — never who, nor where in
+ * not counted). Only how many players stand in each square of HEAT_CELL, never who, nor where in
  * the square: the portal still never gets anyone else's position.
  *
  * One picture per HEAT_EVERY_S, on the clock (:00, :05, :10…): everyone sees the same, and it is

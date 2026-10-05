@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""garage-vitals.py — READ ONLY. Every dino taken out of the garage, followed
+"""garage-vitals.py, READ ONLY. Every dino taken out of the garage, followed
 through what happened to it next: its maxima (stomach, thirst, stamina, health)
 and vitals from the 5 s snapshots, each admin Heal on it (the game's own log),
 each relog. Flags a stomach / thirst max that fell (the hatchling's originals

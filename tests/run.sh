@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run.sh — syntax-check every Lua file, then run the functional tests against a
+# run.sh, syntax-check every Lua file, then run the functional tests against a
 # mock UE4SS. No game and no server required.
 #
 #   ./tests/run.sh

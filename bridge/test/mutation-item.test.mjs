@@ -175,7 +175,7 @@ test('a copy the dino has already: +1 đời within its max; the confirm box num
   assert.deepEqual(pv.slots[0], { slot: 1, name: 'Cellular Regeneration', value: '20%', minGrowth: 0.25, open: true });
   assert.deepEqual(pv.has, ['Slot1']);
   assert.equal(pv.upgrade, null, 'no upgrade offered');
-  assert.match((await startMutationUse(ctx, P1, a.uid, 3)).body.error, /ô 1 — dùng thêm không mạnh hơn/, 'not a second time in a slot');
+  assert.match((await startMutationUse(ctx, P1, a.uid, 3)).body.error, /ô 1, dùng thêm không mạnh hơn/, 'not a second time in a slot');
   assert.match((await startMutationUse(ctx, P1, a.uid, null, true)).body.error, /tạm tắt/, 'the upgrade itself refused');
   assert.equal((await I.inventoryOf(P1)).some((o) => o.uid === a.uid), true, 'the item stays');
   assert.equal((await startMutationUse(ctx, P1, h.uid, 3)).status, 202, 'only in an inherited slot: may go in a slot');

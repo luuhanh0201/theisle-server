@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# install.sh — provision a FRESH VPS. Intended to run once, as root.
+# install.sh, provision a FRESH VPS. Intended to run once, as root.
 #
-# It does NOT deploy config or mods — run ./scripts/deploy.sh from your machine
+# It does NOT deploy config or mods, run ./scripts/deploy.sh from your machine
 # afterwards. Read docs/architecture.md and docs/server-paths.md first.
 #
 #   sudo ./scripts/install.sh
 #   sudo ./scripts/install.sh --resume     finish an install that stopped part-way
 #
 # Refuses to run if the server directory already exists, so it can never
-# clobber an installed server or its Saved/ data — unless --resume is given.
+# clobber an installed server or its Saved/ data, unless --resume is given.
 # Every step after the check is safe to repeat: SteamCMD "validate" only
 # re-checks files, UE4SS is reinstalled (install-ue4ss.sh), units/sudoers are rewritten.
 
@@ -18,7 +18,7 @@ SERVICE_USER="${SERVICE_USER:-isle}"
 HOME_DIR="/home/$SERVICE_USER"
 GAME_ROOT="$HOME_DIR/server"
 WINEPREFIX_DIR="$HOME_DIR/prefix"
-STEAM_APP_ID=412680          # The Isle DEDICATED SERVER (376210 is the game client — not installable anonymously)
+STEAM_APP_ID=412680          # The Isle DEDICATED SERVER (376210 is the game client, not installable anonymously)
 STEAM_BRANCH=evrima          # without it SteamCMD installs the obsolete Legacy build
 NODE_MIN_MAJOR=20
 
@@ -34,13 +34,13 @@ esac
 
 [[ $EUID -eq 0 ]] || die "run as root"
 if [[ -d "$GAME_ROOT" ]] && (( ! RESUME )); then
-    die "$GAME_ROOT already exists — refusing to reinstall (use --resume to finish a partial install)"
+    die "$GAME_ROOT already exists, refusing to reinstall (use --resume to finish a partial install)"
 fi
 
 # --- 1. packages --------------------------------------------------------
 
 # Node comes from NodeSource, not apt: Ubuntu's nodejs is too old for the
-# bridge (it needs 20+). Install it first — docs/HUONG-DAN-CAI-DAT.md, step 2.
+# bridge (it needs 20+). Install it first, docs/HUONG-DAN-CAI-DAT.md, step 2.
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
     die "Node $NODE_MIN_MAJOR+ is not installed. Install it system-wide first (NodeSource), then re-run."
 fi
@@ -105,11 +105,11 @@ for attempt in 1 2 3; do
         +quit && [[ -f "$SERVER_EXE" ]]; then
         break
     fi
-    (( attempt < 3 )) || die "SteamCMD failed 3 times — see the output above"
-    say "SteamCMD did not finish (attempt $attempt/3) — retrying in 10s"
+    (( attempt < 3 )) || die "SteamCMD failed 3 times, see the output above"
+    say "SteamCMD did not finish (attempt $attempt/3), retrying in 10s"
     sleep 10
 done
-[[ -f "$SERVER_EXE" ]] || die "the Windows server binary is missing after SteamCMD — check the output above"
+[[ -f "$SERVER_EXE" ]] || die "the Windows server binary is missing after SteamCMD, check the output above"
 
 # --- 5. UE4SS ----------------------------------------------------------
 
@@ -120,7 +120,7 @@ bash "$(dirname "$0")/install-ue4ss.sh" --bin-dir "$BIN_DIR" --user "$SERVICE_US
     ${UE4SS_URL:+--url "$UE4SS_URL"}
 # Mods/shared/ comes from UE4SS (Types.lua, UEHelpers/). Ours goes in shared/isle.
 [[ -f "$BIN_DIR/Mods/shared/UEHelpers/UEHelpers.lua" ]] || \
-    echo "install.sh: warning — UE4SS shared/UEHelpers not found" >&2
+    echo "install.sh: warning, UE4SS shared/UEHelpers not found" >&2
 
 mkdir -p "$BIN_DIR/Mods/shared/isle"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$HOME_DIR"
@@ -173,7 +173,7 @@ install -d -o "$SERVICE_USER" -g "$SERVICE_USER" "$BRIDGE_DIR"
 # Runtime data directories. Lua cannot mkdir, so these must exist before the
 # mods first try to write, and deploy.sh deliberately never touches them.
 # Every level is listed: `install -d -o` only chowns the LAST component, so
-# "Mods/DinoGarage/Saved" alone would leave Mods/DinoGarage owned by root —
+# "Mods/DinoGarage/Saved" alone would leave Mods/DinoGarage owned by root,
 # and deploy.sh (running as $SERVICE_USER) could then not create Scripts/ in it.
 # On --resume this also repairs the ownership of those directories.
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" \
@@ -236,7 +236,7 @@ if command -v ufw >/dev/null 2>&1; then
     ufw allow 10000/tcp         # join queue (bQueueEnabled)
     echo "    RCON: open it only to your admin IP, e.g."
     echo "      ufw allow from <your.ip> to any port 8888 proto tcp"
-    echo "    Panel: bound to 127.0.0.1 — put it behind a reverse proxy with"
+    echo "    Panel: bound to 127.0.0.1, put it behind a reverse proxy with"
     echo "      auth. Do NOT open port 8080 to the internet."
 fi
 

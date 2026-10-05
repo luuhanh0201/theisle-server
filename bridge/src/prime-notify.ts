@@ -9,7 +9,7 @@ import { PRIME_CONDITIONS, PRIME_NEEDED } from './prime.js';
  *
  * From StatsLogger's "prime" events (one whenever a dino's conditions change).
  * A condition that turns on counts only on the same dino: same species, and a
- * growth close to the last reading — a fresh spawn, a change of species or a
+ * growth close to the last reading, a fresh spawn, a change of species or a
  * dino taken out of the garage (growth jumps) only sets the new baseline. The
  * passive ones (7, 8, 10: there from the start) are never announced. The events
  * file is replayed at every bridge start: old events set the baseline but send

@@ -4,7 +4,7 @@
     Shared guards for every mod. Read docs/lua-safety-rules.md first.
 
     Contract for everything in this file:
-      * it never raises — engine calls are pcall-wrapped
+      * it never raises, engine calls are pcall-wrapped
       * it returns nil / false on failure and logs the reason
       * it re-resolves UObjects instead of trusting cached ones
 ]]
@@ -45,7 +45,7 @@ end
 --------------------------------------------------------------------------
 -- Every H.every loop and every hook wrapped in H.timed is timed with
 -- os.clock (wall clock in ms on Windows); every PERF_REPORT_S one line goes to
--- UE4SS.log: "[perf] 300s: X ms on the game thread (Y %) — the top ones".
+-- UE4SS.log: "[perf] 300s: X ms on the game thread (Y %), the top ones".
 -- UE4SS's own cost of calling into Lua is not in it.
 
 M.PERF_REPORT_S = 300
@@ -65,7 +65,7 @@ function M.perfReport(now)
         local r = rows[i]
         parts[#parts + 1] = string.format("%s %.0f ms (%dx, max %.0f)", r.what, r.p.ms, r.p.n, r.p.max)
     end
-    M.log(string.format("[perf] %s %ds: %.0f ms on the game thread (%.2f%%) — %s",
+    M.log(string.format("[perf] %s %ds: %.0f ms on the game thread (%.2f%%), %s",
         M.modName or "?", span, total, total / (span * 10), #parts > 0 and table.concat(parts, " | ") or "nothing ran"))
     perf, perfSince = {}, now
 end
@@ -127,7 +127,7 @@ function M.readField(obj, candidates, label)
     if not reportedField[label] then
         reportedField[label] = true
         M.logError(string.format(
-            "readField: no candidate resolved for '%s' (tried: %s) — "
+            "readField: no candidate resolved for '%s' (tried: %s), "
             .. "verify the name with UE4SS Live View", label,
             table.concat(candidates, ", ")))
     end
@@ -193,7 +193,7 @@ local loggedSkinFields = false
 
 -- Skin effects (mud, dirt, blood, scars…): the game has SkinEffects /
 -- SetSkinEffects / SetMudAmount / SetBloodAmount / SetScars (strings in the
--- server binary, 2026-09-27) — where and in which shape is probed here, READ
+-- server binary, 2026-09-27), where and in which shape is probed here, READ
 -- ONLY. Reading an unknown non-scalar value once crashed the server
 -- (2026-09-24): the struct's fields are listed by reflection with their types
 -- first, and only numbers / booleans are read.
@@ -391,7 +391,7 @@ function M.onGameThread(what, fn)
     if type(ExecuteInGameThread) ~= "function" then
         if not warnedNoGameThread then
             warnedNoGameThread = true
-            M.logError("ExecuteInGameThread is not available in this UE4SS build — "
+            M.logError("ExecuteInGameThread is not available in this UE4SS build, "
                 .. "refusing to touch engine objects off the game thread ('"
                 .. tostring(what) .. "' and everything like it will not run)")
         end
@@ -405,7 +405,7 @@ end
 
 --- Run fn after `ms`, never on the current call stack, and on the game thread.
 -- Rule 3/4: use this instead of doing work inside a Pre hook, and re-resolve
--- every object inside fn — the world has moved on by then.
+-- every object inside fn, the world has moved on by then.
 -- Newer UE4SS (the server's experimental build): ExecuteInGameThreadWithDelay
 -- waits and runs on the game thread, one call from where we are (a hook).
 -- Older builds: ExecuteWithDelay (async thread) then ExecuteInGameThread.
@@ -424,7 +424,7 @@ function M.defer(ms, fn)
 end
 
 --- Run fn on the game thread every `ms`, for as long as the server runs.
--- Preferred: LoopInGameThreadWithDelay — one callback, registered once, run by
+-- Preferred: LoopInGameThreadWithDelay, one callback, registered once, run by
 -- the game thread itself. Queuing a new ExecuteInGameThread from a LoopAsync
 -- tick every second lost callbacks on the server's experimental UE4SS
 -- ("Ref was not function", 2026-09-24) and, with a "still queued" flag, a
@@ -472,7 +472,7 @@ end
 
 --- Same, but only runs when the player also has a live pawn.
 -- onGone (optional) runs instead when, after the wait, the player has left or
--- has no dino — for callers that must undo something (a taken garage slot).
+-- has no dino, for callers that must undo something (a taken garage slot).
 function M.deferWithPawn(ctrl, ms, fn, onGone)
     local id = M.safeSteamId(ctrl)
     if not id then
@@ -517,8 +517,8 @@ local function pruneSeen(now)
 end
 
 --- The text of an FText / FString / FName hook value, or nil.
--- tostring() on an FText gives "FText: 0000733DB33B7B08" — an address, not
--- the words — so every chat command silently failed to match.
+-- tostring() on an FText gives "FText: 0000733DB33B7B08", an address, not
+-- the words, so every chat command silently failed to match.
 function M.textOf(v)
     if type(v) == "string" then return v end
     if v == nil then return nil end

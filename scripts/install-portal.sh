@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-portal.sh — set up the player portal (portal/) on the VPS. As root.
+# install-portal.sh, set up the player portal (portal/) on the VPS. As root.
 #
 #   sudo ./scripts/install-portal.sh                   service only (reach it through an SSH tunnel)
 #   sudo ./scripts/install-portal.sh --domain example.com --www --proxy
@@ -12,7 +12,7 @@
 #        player IP from its X-Forwarded-For reaches the portal (rate limits).
 #   sudo ./scripts/install-portal.sh --domain example.com   (no proxy)
 #        nginx on port 80 only; you then add the public certificate yourself
-#        (certbot --nginx -d example.com — that means accepting Let's Encrypt's
+#        (certbot --nginx -d example.com, that means accepting Let's Encrypt's
 #        terms, which is your call, so this script does not do it).
 #   sudo ./scripts/install-portal.sh --dry-run         show what would happen
 #
@@ -26,12 +26,12 @@
 #     group portal (who reads it). The deploy user joins group portal so it can
 #     hand the .env to that group.
 #   * theisle-portal.service, sandboxed (read-only filesystem, no privilege
-#     escalation, private /tmp) — the portal writes nothing to disk.
+#     escalation, private /tmp), the portal writes nothing to disk.
 #   * sudoers: the deploy user may start/stop/restart this unit, nothing else.
 #   * with --domain: nginx as reverse proxy (Ubuntu's package), and ufw opens
 #     80/443. The portal itself keeps listening on 127.0.0.1 only. This script
 #     owns /etc/nginx/sites-available/isle-portal.conf and isle-default.conf
-#     (unknown host names get nothing — no default page, no portal by IP), so
+#     (unknown host names get nothing, no default page, no portal by IP), so
 #     another site (the admin panel) can sit beside them.
 #
 # Safe to run again: every step checks or overwrites its own files only.
@@ -183,7 +183,7 @@ else
     WWW_REDIRECT=""
     (( WWW )) && WWW_REDIRECT="    if (\$host = www.$DOMAIN) { return 301 https://$DOMAIN\$request_uri; }"
 
-    SITE="# Written by install-portal.sh — the player portal. The admin panel is NOT here.
+    SITE="# Written by install-portal.sh, the player portal. The admin panel is NOT here.
 $( ((PROXY)) && echo "# Behind an anti-DDoS proxy: it holds the public certificate and reaches this
 # server on 443 (self-signed origin certificate: proxy SSL mode \"Full\", not
 # \"strict\") or on 80." || true )
@@ -216,7 +216,7 @@ $WWW_REDIRECT
         proxy_read_timeout 30s;
     }
 }"
-    DEFAULT="# Written by install-portal.sh — any other host name (or the bare IP) gets nothing.
+    DEFAULT="# Written by install-portal.sh, any other host name (or the bare IP) gets nothing.
 server {
     listen 80 default_server;
     listen [::]:80 default_server;

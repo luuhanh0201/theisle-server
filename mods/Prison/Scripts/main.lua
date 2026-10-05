@@ -1,4 +1,4 @@
--- Prison — a rule breaker serves time on the island, in a zone the admin
+-- Prison, a rule breaker serves time on the island, in a zone the admin
 -- draws (panel → Bản đồ: an AI zone ticked "Nhà tù"; sentences from panel →
 -- Người chơi → Bỏ tù; bridge/src/prison.ts owns them).
 --
@@ -9,19 +9,19 @@
 --                                   sentences: { steamId: { id, total, release } }
 --   Mods/Prison/Saved/state.json    written here: per sentence, the time
 --                                   served, escaped or not, the arrest spot,
---                                   done — the bridge reads it
+--                                   done, the bridge reads it
 --
--- An inmate (a SteamID with a sentence — not a dino: a new dino of theirs
+-- An inmate (a SteamID with a sentence, not a dino: a new dino of theirs
 -- goes in too):
 --   * a fresh dino of theirs (SETTLE_S after it appears) is moved to a drop
 --     spot; the first time, where it stood is kept: it goes back there when
 --     the sentence ends
 --   * growth, stomach, thirst, nutrients and the prime tasks stay as they
 --     were when it was moved in (re-set when they drift; growth first, then
---     the vitals, since SetGrowth refills them — restore.lua rule 1)
+--     the vitals, since SetGrowth refills them, restore.lua rule 1)
 --   * inside the zone its health cannot go down (put back every tick) and
 --     the sentence runs; outside it the sentence stops and health is not
---     held — an "escape": one event when it walks out, one when it comes
+--     held, an "escape": one event when it walks out, one when it comes
 --     back (the bridge announces, shows it on the map, credits whoever kills it)
 --   * it may not sleep: a dino that falls asleep is woken up (and told why)
 --   * offline, dead or in the species screen: nothing runs
@@ -218,7 +218,7 @@ local function garage()
             garageMods = { capture = C, restore = R }
         else
             garageMods = false
-            H.logError(MOD .. ": the garage's capture / restore did not load — a dead escaper will not be made again")
+            H.logError(MOD .. ": the garage's capture / restore did not load, a dead escaper will not be made again")
         end
     end
     return garageMods or nil
@@ -334,7 +334,7 @@ local function noSleep(ctrl, id, pawn, run, now)
     if not sleepChecked then
         -- Once per run, to see in the log that the flag reads on the live dinos.
         sleepChecked = true
-        H.log(string.format("%s: sleep check — bIsSleeping on %s reads %s", MOD, tostring(speciesOf(pawn)), tostring(asleep)))
+        H.log(string.format("%s: sleep check, bIsSleeping on %s reads %s", MOD, tostring(speciesOf(pawn)), tostring(asleep)))
     end
     if asleep ~= true then run.asleepSince = nil; return end
     local first = run.asleepSince == nil
@@ -344,7 +344,7 @@ local function noSleep(ctrl, id, pawn, run, now)
         pcall(function() pawn.bIsSleeping = false end)
     end
     if first then
-        H.log(string.format("%s: %s fell asleep in prison — WakeUp %s", MOD, id, woke and "called" or "failed"))
+        H.log(string.format("%s: %s fell asleep in prison, WakeUp %s", MOD, id, woke and "called" or "failed"))
     end
     if ctrl and now - (run.sleepToldAt or 0) >= SLEEP_NOTIFY_S then
         run.sleepToldAt = now
@@ -368,7 +368,7 @@ local function jail(id, pawn, sen, st, run, addr, hp, now, c)
     if #c.drops == 0 then
         if not warnedNoDrop then
             warnedNoDrop = true
-            H.logError(MOD .. ": no drop spot in the prison zone yet — walk inside it once (ground points)")
+            H.logError(MOD .. ": no drop spot in the prison zone yet, walk inside it once (ground points)")
         end
         return
     end
@@ -452,7 +452,7 @@ local function handleInmate(ctrl, id, pawn, sen, now, c)
             st.recreate = true
             dirty = true
             Events.emit({ type = "prison_died", steamId = id, id = sen.id, species = st.dino.classPath and tostring(st.dino.classPath):match("([%w_]+)$") or nil })
-            H.log(string.format("%s: %s died on the run — the next %s is made again", MOD, id, tostring(st.dino.classPath)))
+            H.log(string.format("%s: %s died on the run, the next %s is made again", MOD, id, tostring(st.dino.classPath)))
         end
         -- A corpse: the next dino goes in again.
         run.addr, run.pending = nil, nil
@@ -534,7 +534,7 @@ local function handleOutsider(ctrl, id, pawn, now, c)
     end
     if s == nil or (s.leftAt and now - s.leftAt > REENTER_S) then
         stings[id] = { since = now }
-        Msg.notify(ctrl, "prison.sting.warn", "Đây là khu nhà tù — rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!",
+        Msg.notify(ctrl, "prison.sting.warn", "Đây là khu nhà tù, rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!",
             { seconds = math.floor(c.sting.grace) })
         return
     end
@@ -545,7 +545,7 @@ local function handleOutsider(ctrl, id, pawn, now, c)
     if hp == nil or mx == nil or mx <= 0 then return end
     if not set(pawn, "SetHealth", math.max(0, hp - mx * c.sting.pct / 100)) then return end
     if not s.stungAt then
-        Msg.notify(ctrl, "prison.sting", "Bạn đang bị ong đốt ở khu nhà tù — mất {pct}% máu mỗi {every} giây cho tới khi rời đi.",
+        Msg.notify(ctrl, "prison.sting", "Bạn đang bị ong đốt ở khu nhà tù, mất {pct}% máu mỗi {every} giây cho tới khi rời đi.",
             { pct = math.floor(c.sting.pct), every = math.floor(c.sting.every) })
     end
     s.stungAt = now
@@ -592,5 +592,5 @@ local function tick()
 end
 
 H.every(TICK_MS, MOD .. " tick", tick)
-H.log(MOD .. ": loaded — config from " .. CONFIG_PATH)
+H.log(MOD .. ": loaded, config from " .. CONFIG_PATH)
 Events.emit({ type = "mod_loaded", mod = MOD })

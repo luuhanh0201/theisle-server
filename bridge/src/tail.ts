@@ -10,7 +10,7 @@ import { parseEvent, type GameEvent } from './events.js';
  *   - the file was truncated in place
  *
  * Rotation is detected by INODE, not by size. A rotated file usually starts
- * smaller, but not always — if the replacement happens to be the same size as
+ * smaller, but not always, if the replacement happens to be the same size as
  * our offset, a size check sees nothing and we silently skip every new event.
  * The inode changes on rename-and-recreate, so that is what we key on, with
  * the size check kept as the fallback for truncation in place.
@@ -40,17 +40,17 @@ export class NdjsonTail {
     } catch {
       if (!this.#warnedMissing) {
         this.#warnedMissing = true;
-        console.warn(`[tail] ${this.path} does not exist yet — waiting for it`);
+        console.warn(`[tail] ${this.path} does not exist yet, waiting for it`);
       }
       return;
     }
     this.#warnedMissing = false;
 
     if (this.#inode !== null && inode !== this.#inode) {
-      console.info('[tail] inode changed — file was rotated, restarting from 0');
+      console.info('[tail] inode changed, file was rotated, restarting from 0');
       this.#reset();
     } else if (size < this.#offset) {
-      console.info('[tail] file shrank — truncated in place, restarting from 0');
+      console.info('[tail] file shrank, truncated in place, restarting from 0');
       this.#reset();
     }
     this.#inode = inode;

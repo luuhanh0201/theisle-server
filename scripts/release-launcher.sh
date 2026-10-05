@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# release-launcher.sh — publish a built Xóm Gáy Launcher at https://<portal>/tai/
+# release-launcher.sh, publish a built Xóm Gáy Launcher at https://<portal>/tai/
 #
 #   cd launcher && npm run dist          # builds dist/ (AppImage + Windows installer)
 #   ./scripts/release-launcher.sh        # uploads them to the VPS (DEPLOY_HOST in .env)
@@ -37,7 +37,7 @@ WIN="XomGay-Launcher-Setup-$VERSION.exe"
 LIN="XomGay-Launcher-$VERSION.AppImage"
 FILES=()
 for f in "$WIN" "$WIN.blockmap" latest.yml "$LIN" latest-linux.yml; do
-    [[ -f "$DIST/$f" ]] || die "$DIST/$f is missing — run 'npm run dist' in launcher/ first"
+    [[ -f "$DIST/$f" ]] || die "$DIST/$f is missing, run 'npm run dist' in launcher/ first"
     FILES+=("$DIST/$f")
 done
 # The feeds must name this version: a stale latest.yml would offer an old build.
@@ -74,7 +74,7 @@ RSYNC=(rsync -a --itemize-changes --chmod=D750,F640 --omit-dir-times)
 for f in "$WIN" "$LIN"; do
     remote_sum="$(ssh "$DEPLOY_HOST" "sha256sum '$REMOTE/$f' 2>/dev/null | cut -d' ' -f1" || true)"
     if [[ -n "$remote_sum" && "$remote_sum" != "$(sha256sum "$DIST/$f" | cut -d' ' -f1)" ]]; then
-        die "$f is already published with different content — bump \"version\" in launcher/package.json and rebuild"
+        die "$f is already published with different content, bump \"version\" in launcher/package.json and rebuild"
     fi
 done
 

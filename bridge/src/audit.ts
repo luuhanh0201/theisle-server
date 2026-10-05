@@ -27,7 +27,7 @@ export interface AuditEntry {
   detail?: string;
   ok: boolean;
   error?: string;
-  /** "Name (SteamID)" of the admin, or "ADMIN_TOKEN" — the line as a person reads it. */
+  /** "Name (SteamID)" of the admin, or "ADMIN_TOKEN", the line as a person reads it. */
   by?: string;
   byId?: string | null;
   byName?: string | null;

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
- * The login cookie: "<steamId>.<expiresUnix>.<hmac>". Stateless — the HMAC
+ * The login cookie: "<steamId>.<expiresUnix>.<hmac>". Stateless, the HMAC
  * (SHA-256, PORTAL_SESSION_SECRET) is what makes it unforgeable; nothing is
  * stored server-side. Compared in constant time.
  */

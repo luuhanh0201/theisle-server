@@ -234,7 +234,7 @@ check("…pushed, before the active slots, then the mutation list redrawn",
 check("the unlock-write flag is gone", io.open("Mods/DinoGarage/Saved/unlock-write.trying", "r") == nil)
 check("slot 1 is free again", Storage.listSlots(STEAM)["1"] == nil)
 
-print("\n-- 6. the stand-still test: 5 m, no damage — a failure costs no cooldown --")
+print("\n-- 6. the stand-still test: 5 m, no damage, a failure costs no cooldown --")
 writeSettings('{"storeCountdown":30,"cooldown":60,"maxSlots":5}')
 clock = clock + 61                                       -- past section 5's redeem
 local function storing()
@@ -580,7 +580,7 @@ do
     if n == "SetMaxHunger" then lastHealth = i end   -- the stomach, recomputed from the new max health
   end
   -- This fake's max health never moves, so the same growth again "did nothing": down to 0.5
-  -- and back too (restore.lua R.primeGrowth, 19b3) — 4 growth writes, the last one 1.
+  -- and back too (restore.lua R.primeGrowth, 19b3), 4 growth writes, the last one 1.
   local growthArgs = {}
   for _, c in ipairs(H.calls) do if c.what == "SetGrowth" then growthArgs[#growthArgs + 1] = tostring(c.args[1]) end end
   check("a prime dino: the growth set again after prime, the stomach / vitals after that", growths == 4
@@ -588,7 +588,7 @@ do
         and lastGrowth > lastPrime and lastHealth > lastGrowth,
         growths .. " / " .. lastPrime .. " / " .. lastGrowth .. " / " .. lastHealth .. " / " .. table.concat(growthArgs, " "))
   local logged = false
-  for _, l in ipairs(H.log) do if l:find("prime stats — max health", 1, true) then logged = true end end
+  for _, l in ipairs(H.log) do if l:find("prime stats, max health", 1, true) then logged = true end end
   check("…and logged", logged)
 end
 
@@ -651,7 +651,7 @@ check("stomach max = the species' ratio × that max health, not the stored 1,227
       lastMax and math.abs(lastMax - 1086) < 0.01, tostring(lastMax))
 check("stomach = the same share as stored (89.6 %), never above its max",
       lastFood and math.abs(lastFood - 1100 / 1227.4 * 1086) < 0.01 and lastFood <= lastMax, tostring(lastFood))
-check("health full as stored, on the new max — not 12,274 above a 10,860 max",
+check("health full as stored, on the new max, not 12,274 above a 10,860 max",
       lastHp and math.abs(lastHp - 10860) < 0.01, tostring(lastHp))
 local vitalsLine = false
 for _, l in ipairs(H.log) do if l:find("restore: vitals now", 1, true) then vitalsLine = true end end
@@ -673,7 +673,7 @@ for _, cl in ipairs(H.calls) do
   if cl.what == "SetBlood" then lastBlood = cl.args[1] end
   if cl.what == "SetOxygen" then lastOxygen = cl.args[1] end
 end
-check("blood full as stored (no maxBlood: health's max), on the new max — not 9,350 of 12,274",
+check("blood full as stored (no maxBlood: health's max), on the new max, not 9,350 of 12,274",
       lastBlood and math.abs(lastBlood - 12274) < 0.01, tostring(lastBlood))
 check("oxygen the same share as stored (50 %) of the new max", lastOxygen and math.abs(lastOxygen - 500) < 0.01, tostring(lastOxygen))
 print("\n-- 19b3. a prime out of the garage onto a dino spawned a while before: down below the prime mark and back --")
@@ -724,8 +724,8 @@ end
 do
   local Restore = require("garage.restore")
   check("scaled: a share of the stored max on the new max", Restore.scaled(50, 200, 80) == 20)
-  check("scaled: no stored max — capped at the new max", Restore.scaled(500, nil, 80) == 80 and Restore.scaled(30, nil, 80) == 30)
-  check("scaled: new max unreadable — the value as stored", Restore.scaled(500, 600, nil) == 500)
+  check("scaled: no stored max, capped at the new max", Restore.scaled(500, nil, 80) == 80 and Restore.scaled(30, nil, 80) == 30)
+  check("scaled: new max unreadable, the value as stored", Restore.scaled(500, 600, nil) == 500)
   check("scaled: never above full", Restore.scaled(700, 600, 80) == 80)
 end
 
@@ -813,7 +813,7 @@ do
   local late = false
   for _, l in ipairs(H.log) do if l:find("prime came late", 1, true) or l:find("still not prime", 1, true) then late = true end end
   -- Prime from the start in this fake: the max is prime's after the first write already, the same
-  -- growth again does not move it, so down to 0.5 and back as well (4 writes) — never the late look.
+  -- growth again does not move it, so down to 0.5 and back as well (4 writes), never the late look.
   check("prime at once: the usual regrow, no late look", growthWrites == 4 and not late, growthWrites .. " / " .. tostring(late))
 end
 

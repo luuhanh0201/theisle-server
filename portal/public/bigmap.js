@@ -58,7 +58,7 @@ document.addEventListener('keydown', (e) => {
   close();
 });
 
-// Each time it opens: the whole island in the middle of the screen again — also once the window has
+// Each time it opens: the whole island in the middle of the screen again, also once the window has
 // gone full screen (it opens smaller first), until you move or zoom the map yourself.
 let untouched = true;
 L?.onBigMap?.((open) => { if (open) { untouched = true; map.resetView(); } });

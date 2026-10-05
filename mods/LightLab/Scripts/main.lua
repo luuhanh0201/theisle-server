@@ -1,13 +1,13 @@
--- LightLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- LightLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy). Looking for a light that would show on players' machines dim or
 -- coloured: a client builds a replicated actor from its CLASS DEFAULTS (a
--- light's colour / intensity set on the server do not reach it — the engine
+-- light's colour / intensity set on the server do not reach it, the engine
 -- PointLight showed white on the live server, 2026-09-27). So: is there a
 -- class in the game whose light is already dim or coloured by default?
 -- Writes to Mods/LightLab/Saved/lightlab.txt, READ ONLY:
---   1. world: one actor of each class in the world — its light components
+--   1. world: one actor of each class in the world, its light components
 --      (class, colour, intensity, radius)
---   2. dino: a Deinosuchus spawned for the test — any light on it?
+--   2. dino: a Deinosuchus spawned for the test, any light on it?
 --   3. memory: every loaded object whose class is a light component (placed
 --      or a Blueprint's template), with its owner / outer and numbers
 -- Each step is flagged (Saved/<step>.trying): a crash in one is named at the
@@ -43,7 +43,7 @@ local STEPS = { "world", "dino", "memory" }
 local crashed = {}
 for _, s in ipairs(STEPS) do if exists(DIR .. s .. ".trying") then crashed[s] = true end end
 local function step(name, fn)
-    if crashed[name] then out("step %s: SKIPPED — the server stopped during it last time (crash)", name); return false end
+    if crashed[name] then out("step %s: SKIPPED, the server stopped during it last time (crash)", name); return false end
     write(DIR .. name .. ".trying", tostring(os.time()))
     local ok, err = pcall(fn)
     os.remove(DIR .. name .. ".trying")
@@ -141,7 +141,7 @@ H.every(2000, MOD .. ": step", function()
                 byOuter[#byOuter + 1] = name:sub(1, 180) .. " :: " .. lightText(obj)
             end)
             out("memory: %d objects scanned, %d light components (sky / sun left out)%s", scanned, hits,
-                hits >= MAX_MEMORY_HITS and " — stopped at the limit" or "")
+                hits >= MAX_MEMORY_HITS and ", stopped at the limit" or "")
             table.sort(byOuter)
             for _, l in ipairs(byOuter) do out("memory: %s", l) end
         end)
@@ -152,4 +152,4 @@ H.every(2000, MOD .. ": step", function()
     end
 end)
 
-out("loaded — the probe starts %d s after load", START_AFTER_S)
+out("loaded, the probe starts %d s after load", START_AFTER_S)

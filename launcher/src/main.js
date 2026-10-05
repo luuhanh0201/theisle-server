@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Xóm Gáy Launcher: the live player portal in one window (home, game,
- * garage, map, ranking, skin, voice — voice is a tab, so it keeps running
+ * garage, map, ranking, skin, voice, voice is a tab, so it keeps running
  * while you switch tabs, minimise, or play), plus what a web page cannot do:
  *
  *   - push-to-talk, the voice-range key and the overlay key on global keys /
@@ -47,7 +47,7 @@ if (needsX11) {
   app.exit(0);
 } else {
   // One launcher at a time. Just relaunched (above): our parent may still hold
-  // the lock for a moment while it exits — wait for it (≤ 3 s). Any other
+  // the lock for a moment while it exits, wait for it (≤ 3 s). Any other
   // holder is a launcher already running: it was told (second-instance), quit.
   const parent = Number((process.argv.find((a) => a.startsWith('--xomgay-relaunched=')) || '').split('=')[1]);
   const parentAlive = () => {
@@ -87,7 +87,7 @@ function startLog() {
       } catch { /* disk full / read-only: never break the app for a log line */ }
     };
   }
-  console.info(`[launcher] v${app.getVersion()} ${process.platform} ${process.arch} — ${BASE}`);
+  console.info(`[launcher] v${app.getVersion()} ${process.platform} ${process.arch}, ${BASE}`);
 }
 
 // --- Linux AppImage: a menu entry + the xomgay-launcher:// link ---------------------------------------
@@ -104,7 +104,7 @@ function integrateAppImage() {
   const iconFile = join(dataHome, 'icons', 'hicolor', '256x256', 'apps', 'xomgay-launcher.png');
   const quoted = `"${appimage.replace(/(["\\$`])/g, '\\$1')}"`;
   const entry = [
-    '[Desktop Entry]', 'Type=Application', 'Name=Xóm Gáy Launcher', 'Comment=Gara, bản đồ live, voice gần, overlay — The Isle Evrima',
+    '[Desktop Entry]', 'Type=Application', 'Name=Xóm Gáy Launcher', 'Comment=Gara, bản đồ live, voice gần, overlay, The Isle Evrima',
     `Exec=${quoted} %U`, 'Icon=xomgay-launcher', 'Terminal=false', 'Categories=Game;',
     'MimeType=x-scheme-handler/xomgay-launcher;', 'StartupWMClass=xomgay-launcher', '',
   ].join('\n');
@@ -141,7 +141,7 @@ function writeSettings(patch) {
 }
 
 // Counted on the panel's "Truy cập" (portal /api/track/launcher → bridge traffic.ts): this
-// install, by a random id kept in settings.json — nothing about the player or the PC.
+// install, by a random id kept in settings.json, nothing about the player or the PC.
 // A fresh install has no settings file yet: its first start says so (`first`), an update does not.
 const freshInstall = !existsSync(settingsFile());
 const TRAFFIC_EVERY_MS = 6 * 3600_000;
@@ -160,7 +160,7 @@ function sendTraffic() {
 }
 
 // "Sửa viền đen" (overlay card): on some PCs Chromium draws the overlay's
-// transparent windows with a black background (graphics driver, Windows HDR) —
+// transparent windows with a black background (graphics driver, Windows HDR),
 // a black frame around each widget. Without GPU acceleration it draws them in
 // software, transparent everywhere. Only before the app is ready: changing it
 // restarts the launcher.
@@ -457,7 +457,7 @@ const chat = new ChatGuard();
 let lastGame = null;
 const MINI_FRAME_MAX = 2 * 1024 * 1024;
 
-/** The screen to open on (bigmap.js): the overlay settings' choice, else the mouse's — the game's. */
+/** The screen to open on (bigmap.js): the overlay settings' choice, else the mouse's, the game's. */
 function bigMapDisplay() {
   return pickBigMapDisplay(screen.getAllDisplays(), readSettings().bigmapDisplay ?? 'auto',
     screen.getCursorScreenPoint(), screen.getPrimaryDisplay());
@@ -465,7 +465,7 @@ function bigMapDisplay() {
 
 /**
  * Full screen for real (setFullScreen): a plain window the size of a screen is kept out of GNOME's top
- * bar — on the owner's screen with the bar it was pushed onto the other screen (2026-10-04: the map
+ * bar, on the owner's screen with the bar it was pushed onto the other screen (2026-10-04: the map
  * opened on the laptop, the game on the HDMI). Placed inside the screen's work area first, then made
  * full screen there; on another screen than last time: out of full screen, moved, in again (measured
  * with a test window: open, hide, reopen, other screen and back all landed on the screen asked).
@@ -495,7 +495,7 @@ function createBigMap() {
     // Resizable: a fixed size (min = max size hints) is never made full screen by the window manager.
     ...smallOn(bigMapDisplay()), frame: false, transparent: true, resizable: true, movable: false, minimizable: false,
     maximizable: false, fullscreenable: true, skipTaskbar: true, alwaysOnTop: true, hasShadow: false, show: false,
-    backgroundColor: '#00000000', title: 'Xóm Gáy — bản đồ', icon: ICON,
+    backgroundColor: '#00000000', title: 'Xóm Gáy, bản đồ', icon: ICON,
     webPreferences: webPrefs({ backgroundThrottling: false }),
   });
   bigMapWin.removeMenu();
@@ -617,7 +617,7 @@ function wireIpc() {
     const clash = clashOf(others, name, b);
     if (clash !== null) {
       k.set(before);
-      return { error: `Phím ${label(b, require('uiohook-napi').UiohookKey)} đang dùng cho "${KEY_TITLE[clash]}" — chọn phím khác.` };
+      return { error: `Phím ${label(b, require('uiohook-napi').UiohookKey)} đang dùng cho "${KEY_TITLE[clash]}", chọn phím khác.` };
     }
     writeSettings({ [KEY_SETTING[name]]: b });
     updateTray();
@@ -643,7 +643,7 @@ function wireIpc() {
     e.returnValue = {
       value: String(readSettings().bigmapDisplay ?? 'auto'),
       choices: screen.getAllDisplays().map((d, i) => ({
-        id: String(d.id), label: `Màn hình ${i + 1}${d.id === primary ? ' (chính)' : ''} — ${d.size.width}×${d.size.height}`,
+        id: String(d.id), label: `Màn hình ${i + 1}${d.id === primary ? ' (chính)' : ''}, ${d.size.width}×${d.size.height}`,
       })),
     };
   });
@@ -675,7 +675,7 @@ function wireIpc() {
   ipcMain.on('overlay:compat:set', (e, on) => {
     if (!fromUs(e)) return;
     writeSettings({ overlayCompat: on === true });
-    console.info(`[launcher] overlay compatibility (no GPU acceleration): ${on === true ? 'on' : 'off'} — restarting`);
+    console.info(`[launcher] overlay compatibility (no GPU acceleration): ${on === true ? 'on' : 'off'}, restarting`);
     if ((on === true) !== overlayCompat) relaunch();
   });
   const fromOverlay = (e) => overlay !== null && Object.values(overlay.wins).some((w) => !w.isDestroyed() && w.webContents === e.sender);
@@ -790,7 +790,7 @@ function setGameModeKeep(raw) {
 
 function updateTray() {
   if (!tray) return;
-  const talking = keys.ptt?.held ? ' — đang nói' : '';
+  const talking = keys.ptt?.held ? ', đang nói' : '';
   tray.setToolTip(`Xóm Gáy Launcher v${app.getVersion()}${talking}`);
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Mở Xóm Gáy Launcher', click: showMain },
@@ -837,7 +837,7 @@ function createTray() {
 
 // Checked at start and every 6 h, or now from the page / tray ("Kiểm tra cập
 // nhật"). A newer version downloads by itself; installing it restarts the
-// launcher — the player chooses when (or it installs when they quit).
+// launcher, the player chooses when (or it installs when they quit).
 let updater = null;
 /** phase: dev (not packaged) | idle | checking | latest | downloading | ready | error */
 let updateState = { phase: app.isPackaged ? 'idle' : 'dev', current: app.getVersion(), version: null, percent: null, error: null };
@@ -882,7 +882,7 @@ function checkUpdates() {
 
 function start() {
   startLog();
-  // Electron puts the app name in the User-Agent — "XómGáyLauncher/1.0.0".
+  // Electron puts the app name in the User-Agent, "XómGáyLauncher/1.0.0".
   // Letters outside ASCII are not valid in an HTTP header, and the anti-DDoS
   // proxy in front of the portal answers such a request with 400. ASCII only.
   app.userAgentFallback = app.userAgentFallback.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');

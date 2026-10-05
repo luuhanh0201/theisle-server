@@ -1,8 +1,8 @@
--- FishFind — where are the fish classes? (for fish zones, like the AI zones)
+-- FishFind, where are the fish classes? (for fish zones, like the AI zones)
 --
 -- Enumerating classes and GetFullName() crashed this server (2026-09-26 15:47,
 -- docs/lua-safety-rules.md), so this only asks the engine for GUESSED paths
--- with StaticFindObject — what AIZones does for every AI it spawns, and which
+-- with StaticFindObject, what AIZones does for every AI it spawns, and which
 -- answers nil for a wrong path. The 6 short names are the game's own
 -- (TIAIWorldSpawner.AIAmbientFishClasses, FishProbe). For a class found, its
 -- parents' names (GetSuperStruct + the name, as FishProbe already did).
@@ -104,11 +104,11 @@ end
 
 -- Step 2 CRASHED the server (2026-09-26 16:25) before writing a line: its
 -- first call was GetSuperStruct() on the native fish classes found by
--- StaticFindObject — the 15:47 crash also walked parents of fish classes.
+-- StaticFindObject, the 15:47 crash also walked parents of fish classes.
 -- Never walk a fish class's parents. Its flag (fishfind2.flag) stays.
 --
 -- Step 3: only each spawner entry's GetFullName() (what StatsLogger calls on
--- every player's class) — no parents. Flag: fishfind3.flag.
+-- every player's class), no parents. Flag: fishfind3.flag.
 local FLAG3 = DIR .. "fishfind3.flag"
 local OUT3 = DIR .. "fishfind3.txt"
 local function probe3()
@@ -156,7 +156,7 @@ end
 local already = io.open(FLAG, "r")
 if already then
     already:close()
-    H.log(MOD .. ": already ran (" .. FLAG .. ") — nothing to do")
+    H.log(MOD .. ": already ran (" .. FLAG .. "), nothing to do")
 else
     -- Only while nobody plays: a crash here must not throw anyone out.
     local done, since = false, os.time()
@@ -168,5 +168,5 @@ else
         done = true
         H.try(MOD .. ": probe", probe)
     end)
-    H.log(MOD .. ": loaded — looks for the fish classes once nobody is online")
+    H.log(MOD .. ": loaded, looks for the fish classes once nobody is online")
 end

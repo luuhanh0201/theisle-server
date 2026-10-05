@@ -1,4 +1,4 @@
-// The server's items (panel → Vật phẩm): skins for now — saved by name for one species,
+// The server's items (panel → Vật phẩm): skins for now, saved by name for one species,
 // each region lighter or darker than a player can pick, given to players' inventories,
 // worn on the right dino (items.ts, /player-api skin { item }). npm test.
 import { test, after } from 'node:test';

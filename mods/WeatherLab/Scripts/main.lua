@@ -1,4 +1,4 @@
--- WeatherLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- WeatherLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy). READ ONLY: writes nothing on the game.
 --
 -- The owner wants rain and storms gone, other weather kept (2026-10-02). Game.ini
@@ -9,7 +9,7 @@
 --      other kind on an unknown actor crashed the server, lua-safety-rules §2);
 --      and TIGameStateBase's scalar properties named like weather.
 --   2. then every 30 s for 60 minutes: the same values again, a line only for
---      what changed — the weather changes every Min/MaxWeatherVariationInterval
+--      what changed, the weather changes every Min/MaxWeatherVariationInterval
 --      (set short in the test copy's Game.ini), so a change shows which value moves.
 -- Writes Mods/WeatherLab/Saved/weatherlab.txt.
 
@@ -155,4 +155,4 @@ H.every(2000, MOD .. ": step", function()
     nextAt = now + EVERY_S
 end)
 
-out("loaded — census %d s after load, then a watch every %d s for %d s", START_AFTER_S, EVERY_S, WATCH_S)
+out("loaded, census %d s after load, then a watch every %d s for %d s", START_AFTER_S, EVERY_S, WATCH_S)

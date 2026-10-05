@@ -105,7 +105,7 @@ dofile(RUN .. "/Mods/Flora/Scripts/main.lua")
 check("after a crash mid-export: off, and says why", table.concat(H.log, "\n"):find("did not finish", 1, true) ~= nil)
 os.remove(FLAG); os.remove(OUT)
 
-say("\n-- step 2: control — nutrients only in active migration areas, fewer plants outside, all put back when off --")
+say("\n-- step 2: control, nutrients only in active migration areas, fewer plants outside, all put back when off --")
 H.reset()
 local SET = "Mods/Flora/Saved/settings.json"
 local CFLAG = "Mods/Flora/Saved/control.running"
@@ -156,7 +156,7 @@ round()
 check("off and put back: it then leaves the game alone", H.countCalls("SetCanGiveNutrients") == calls)
 check("never off the game thread (control)", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
 
-say("\n-- step 2b: at most N plants in an area — the game's amount capped, the extra removed (no-nutrient ones first) --")
+say("\n-- step 2b: at most N plants in an area, the game's amount capped, the extra removed (no-nutrient ones first) --")
 local crowd = {}
 local function plantAt(i, nutri)
   local o = nutri(obj("BP_Fireweed_C", { K2_GetActorLocation = at(100 + i * 10, 100), bCanGiveNutrients = true, Spawner = mz }), "bCanGiveNutrients")

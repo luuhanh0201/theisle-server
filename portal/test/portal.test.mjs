@@ -262,7 +262,7 @@ test('skin: login, same-origin, JSON only; the SteamID is the session\'s, only t
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/skin`, { headers: { cookie } })).status, 405);
 });
 
-test('bag: use a mutation item — login, same-origin, JSON only; the SteamID is the session\'s, only uid / slot / mutation forwarded', async () => {
+test('bag: use a mutation item, login, same-origin, JSON only; the SteamID is the session\'s, only uid / slot / mutation forwarded', async () => {
   const cookie = `${COOKIE}=${sign(SECRET, ME, Math.floor(Date.now() / 1000) + 600)}`;
   const origin = new URL(BASE).origin;
   const post = (headers, body) => fetch(`http://127.0.0.1:${port}/api/items/use`, { method: 'POST', headers, body, redirect: 'manual' });

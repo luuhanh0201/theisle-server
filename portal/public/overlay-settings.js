@@ -87,7 +87,7 @@
       <div class="v-subhead" style="margin-top:14px">Hiện những gì</div>
       ${current === 'map' && L.overlayMiniFrame
         // Launcher 1.0.34+: the mini map is drawn from the map itself (map.js).
-        ? `<p class="muted" style="margin:6px 0 0">Mini map hiện đúng các lớp đang bật trên bản đồ (tab Bản đồ, hoặc bản đồ lớn trong game — phím <kbd>${esc(L.keyLabel('bigmap'))}</kbd>): bật / tắt lớp ở đó, cùng điểm đến và vệt đường.</p>`
+        ? `<p class="muted" style="margin:6px 0 0">Mini map hiện đúng các lớp đang bật trên bản đồ (tab Bản đồ, hoặc bản đồ lớn trong game, phím <kbd>${esc(L.keyLabel('bigmap'))}</kbd>): bật / tắt lớp ở đó, cùng điểm đến và vệt đường.</p>`
         : `<div class="ov-checks">${SHOW[current].map(([k, label]) =>
           `<label><input type="checkbox" data-show="${k}"${w.show[k] ? ' checked' : ''}> ${esc(label)}</label>`).join('')}</div>`}`;
   }
@@ -298,7 +298,7 @@
     $('ov-bigmap-display-wrap').hidden = !got;
     if (!got) return;
     const sel = $('ov-bigmap-display');
-    const opts = [{ id: 'auto', label: 'Tự động — màn hình đang chơi game' }, ...got.choices];
+    const opts = [{ id: 'auto', label: 'Tự động, màn hình đang chơi game' }, ...got.choices];
     const key = JSON.stringify(opts);
     if (key !== displayChoices) {
       displayChoices = key;

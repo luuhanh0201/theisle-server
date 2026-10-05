@@ -6,7 +6,7 @@ import { config } from './config.js';
 /**
  * The server's status board on Discord (owner's request, 2026-10-03, after
  * another server's): ONE message in the channel the panel picks (Discord →
- * "Bảng trạng thái"), edited in place every minute — not a new post each time:
+ * "Bảng trạng thái"), edited in place every minute, not a new post each time:
  *
  *   **<ServerName from Game.ini>**
  *   🟢 Online

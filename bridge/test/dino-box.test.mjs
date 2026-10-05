@@ -104,8 +104,10 @@ test('the admins\' bags: one of every item given out (not retired, never the din
   assert.deepEqual(new Set(inv.map((o) => o.itemId)), new Set(all.map((i) => i.id)), 'every item given out, one each');
   assert.equal(inv.some((o) => o.itemId === old.id || o.itemId === B.DINO_ITEM_ID), false, 'not a retired one, not the dino item');
   assert.equal(await I.fillBags([ADM]), 0, 'already full: nothing twice');
+  const gift = await I.ensureItem('starter_box', { type: 'dino_box', name: 'Hộp dino tự chọn (tân thủ)', rarity: 'legendary', data: { pick: 'choose' } });
+  assert.equal(await I.fillBags([ADM], [gift.id]), 0, 'the starter gift never (one per account, the same box as "Hộp dino tự chọn")');
   const fresh = await box('random');
-  assert.equal(await I.fillBags([ADM]), 1, 'a new item: in');
+  assert.equal(await I.fillBags([ADM], [gift.id]), 1, 'a new item: in');
   const own = (await I.inventoryOf(ADM)).find((o) => o.itemId === fresh.id);
   await B.openDinoBox(ADM, own.uid, {}, CATALOG, () => 0.1, true);
   const after = await I.inventoryOf(ADM);

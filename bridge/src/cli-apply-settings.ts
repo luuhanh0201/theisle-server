@@ -74,7 +74,7 @@ try {
         event: g.event ? { id: g.event.id, end: g.event.end, note: g.event.note } : null,
         ended: before?.event && !g.event
           ? { id: before.event.id, multiplier: endedEvent?.multiplier ?? before.multiplier, note: before.event.note } : null });
-      if (g.event) console.log(`cli-apply-settings: growth event ${g.event.id} — GrowthMultiplier ${g.multiplier}`);
+      if (g.event) console.log(`cli-apply-settings: growth event ${g.event.id}, GrowthMultiplier ${g.multiplier}`);
     }
   }
 } catch (error) {

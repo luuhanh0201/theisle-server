@@ -6,7 +6,7 @@
 <title>Xóm Gáy overlay</title>
 <style>
   /* No animation here runs forever (3 or 4 rounds, then still; again when the widget changes): the
-     overlay sits over the game, and an endless one redraws it every frame — a prime dino's badge and
+     overlay sits over the game, and an endless one redraws it every frame, a prime dino's badge and
      tier frame cost ~60 % of a core, the game lost FPS (measured 2026-10-04; still: 0.4 %). */
   :root { --bg: rgba(7, 9, 14, .55); --text: #f1f5f9; --muted: #a5b4cb; --ok: #34d399; --ok-soft: rgba(52,211,153,.18); --warn: #fbbf24; --bad: #fca5a5; --gold: #facc15; --scale: 1; }
   * { box-sizing: border-box; }
@@ -86,7 +86,7 @@
     -webkit-background-clip: text; background-clip: text; color: transparent; animation: fShine 1.6s linear 3; }
   @keyframes fShine { to { background-position: -220% 0; } }
   @keyframes fFlame { from { background-position: 0 100%; } to { background-position: 0 0; } }
-  /* One grid for every row — name | bar | number | % — so the bars are the
+  /* One grid for every row, name | bar | number | %, so the bars are the
      same length and the numbers line up, whatever each row's text. */
   .dino { position: relative; display: grid; grid-template-columns: max-content minmax(calc(40px * var(--scale)), 1fr) max-content max-content;
           column-gap: calc(8px * var(--scale)); row-gap: calc(4px * var(--scale)); align-items: center; }

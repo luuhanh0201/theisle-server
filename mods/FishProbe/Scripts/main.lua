@@ -1,4 +1,4 @@
--- FishProbe — read-only: how does this server spawn its fish?
+-- FishProbe, read-only: how does this server spawn its fish?
 --
 -- The world AI spawner (TIAIWorldSpawner, PlantProbe 2026-09-26) has the
 -- ambient fish: AIAmbientFishClasses, MaxAmbientFishPerPlayer,
@@ -8,15 +8,15 @@
 --
 --   1. once, two minutes after load: those settings (numbers only) and the
 --      TYPE of AIAmbientFishClasses; its entries (class names) are read only
---      when it is a plain array of classes — a soft reference crashed this
+--      when it is a plain array of classes, a soft reference crashed this
 --      server (2026-09-24), so anything else is only described
 --   2. while players are online (every minute, 10 times at most): the actors
 --      whose class says "Fish", counted by class, a few locations, and each
 --      new class's parents (names only)
 --
 --   3. once (its own flag, spawnerprobe.flag): EVERY number and boolean of the
---      spawner — Int/Float/Double/Bool properties found in its class (names
---      and types from the class, values read only for those scalar kinds) —
+--      spawner, Int/Float/Double/Bool properties found in its class (names
+--      and types from the class, values read only for those scalar kinds),
 --      to find what limits the land AI around each player. Output:
 --      Mods/AIZones/Saved/spawnerprobe.txt
 --
@@ -147,7 +147,7 @@ local function fishCensus()
             out("         parents: %s", table.concat(chain, " < "))
         end
     end
-    if not any then out("  none — go near a river, a lake or the sea") end
+    if not any then out("  none, go near a river, a lake or the sea") end
     flush()
 end
 
@@ -188,7 +188,7 @@ end
 
 -- (A part 4 listed every loaded class with "Fish" in its name, and the full
 -- path of each AIAmbientFishClasses entry: it CRASHED the server on
--- 2026-09-26 15:47 — enumerating classes / GetFullName on them from Lua is not
+-- 2026-09-26 15:47, enumerating classes / GetFullName on them from Lua is not
 -- safe here. Removed; its flag, fishclasses.flag, stays so it never runs.)
 
 local spDone = io.open(SP_FLAG, "r")
@@ -199,7 +199,7 @@ end
 local already = io.open(FLAG, "r")
 if already then
     already:close()
-    H.log(MOD .. ": settings already probed (delete " .. FLAG .. " to redo) — fish census only")
+    H.log(MOD .. ": settings already probed (delete " .. FLAG .. " to redo), fish census only")
 else
     H.defer(120000, function()
         local f = io.open(FLAG, "w")
@@ -209,4 +209,4 @@ else
     end)
 end
 H.every(60000, MOD .. " census", fishCensus)
-H.log(MOD .. ": loaded — report in " .. OUT)
+H.log(MOD .. ": loaded, report in " .. OUT)

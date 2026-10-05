@@ -1,4 +1,4 @@
-// mutations.html — the list of Evrima mutations with their icons. Its own file:
+// mutations.html, the list of Evrima mutations with their icons. Its own file:
 // the site's CSP runs no inline script. Icons from one bundle (mut-icons.js:
 // one <img> each, all at once, tripped the proxy in front of the site).
 let allMutations = [];

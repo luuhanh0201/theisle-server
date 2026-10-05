@@ -7,7 +7,7 @@ import { adminIds } from './panel-auth.js';
 /**
  * SVip (owner's request, 2026-10-04): players allowed the features still being
  * tried (the bag of items…) before everyone, besides the admins. The panel's
- * Quản trị → SVip: their SteamIDs, and each feature's mode — "testing" (admins
+ * Quản trị → SVip: their SteamIDs, and each feature's mode, "testing" (admins
  * + SVip) or "all" (everyone), switched there without a code change.
  *
  *   DATA_DIR/svip.json  { players: [{ steamId, note, addedAt, by }], features: { bag: 'testing' } }

@@ -6,7 +6,7 @@ import { ValidationError } from './garage.js';
 /**
  * Settings of the PteraCarry mod (mods/PteraCarry): a flying Pteranodon grabs
  * another player's dino with the game's latch key (Z + right mouse) and
- * carries it — up to `maxKg`. Read by the mod every few seconds: no restart.
+ * carries it, up to `maxKg`. Read by the mod every few seconds: no restart.
  */
 export interface PteraSettings {
   enabled: boolean;

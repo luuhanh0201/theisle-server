@@ -1,4 +1,4 @@
--- MutTierLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- MutTierLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy).
 --
 -- The owner wants a mutation item to make ONE mutation stronger (2026-10-02).
@@ -97,7 +97,7 @@ local function readAll(label)
 end
 
 if exists(FLAG) then
-    out("a previous run did not finish (crash?) — not trying again; delete %s to retry", FLAG)
+    out("a previous run did not finish (crash?), not trying again; delete %s to retry", FLAG)
     return
 end
 
@@ -185,4 +185,4 @@ H.every(2000, MOD .. ": step", function()
     end
 end)
 
-out("loaded — %d dinos, starting %d s after load", #CASES, START_AFTER_S)
+out("loaded, %d dinos, starting %d s after load", #CASES, START_AFTER_S)

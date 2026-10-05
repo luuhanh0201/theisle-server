@@ -1,7 +1,7 @@
--- PrimeLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- PrimeLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy). A prime T-Rex taken out of the garage kept a plain one's max
 -- health (9,350 instead of 12,274) on 2026-10-02 20:14 (Quang Tèo): restore.lua
--- step 7b (the same growth once more after prime) did nothing — the same slot
+-- step 7b (the same growth once more after prime) did nothing, the same slot
 -- at 20:23 went 9,350 -> 12,274. The dino taken out at 20:14 had grown one
 -- natural tick (0.25 -> 0.2522) before; the ones that worked were fresh. An
 -- admin's growth to 100 % with prime (several growths before) did nothing too.
@@ -54,7 +54,7 @@ local function call(p, fn) local ok, v = pcall(function() return p[fn](p) end); 
 --- A step run behind a flag file: skipped when the server died during it last time.
 local function guarded(name, fn)
     local flag = DIR .. name .. ".trying"
-    if exists(flag) then out("%s: SKIPPED — the server stopped during it last time (crash)", name); return false end
+    if exists(flag) then out("%s: SKIPPED, the server stopped during it last time (crash)", name); return false end
     write(flag, tostring(os.time()))
     local ok, err = pcall(fn)
     os.remove(flag)
@@ -115,12 +115,12 @@ local function numbers(pawn, label)
         call(pawn, "IsPrimeElder"), call(pawn, "GetIsEligiblePrimeElder"), call(pawn, "GetElderReplicationStacks"))
 end
 
--- Run 2 (2026-10-02): run 1 found the failing case — a dino older than a few
+-- Run 2 (2026-10-02): run 1 found the failing case, a dino older than a few
 -- seconds (S4: 7 min, no growth tick): SetGrowth after prime keeps the plain
 -- max (fresh dinos get prime's). Of the remedies, only SetGrowth(0.25) then the
 -- growth again worked (9,350 -> 12,274, stomach 3,085 -> 4,050). Now: how
 -- small a dip works (0.74 / 0.5 / 0.25), the game's own recomputes
--- (ResetAttributes, UpdateAttributeBaseValues), at 0.89 and at 1.0 — and does
+-- (ResetAttributes, UpdateAttributeBaseValues), at 0.89 and at 1.0, and does
 -- the dino keep its mutations, elder stacks and prime conditions through it.
 local AGE_S = 150
 local SLOTS = { MutationSlot1 = "Reniculate Kidneys", MutationSlot2 = "Gastronomic Regeneration",
@@ -173,7 +173,7 @@ local function job(name, g, remedy)
     for _, s in ipairs(remedy) do steps[#steps + 1] = s end
     return { name = name, steps = steps }
 end
--- Run 3: the fix itself — DinoGarage's own restore.lua (R.regrowKeep with prime = true, which
+-- Run 3: the fix itself, DinoGarage's own restore.lua (R.regrowKeep with prime = true, which
 -- the garage's late prime, an admin's growth / Phiếu Prime and prime fixes call; step 7b calls
 -- R.primeGrowth). Health set to 50 % before it: the share must stay. A fresh dino too (no wait).
 package.path = "Mods/DinoGarage/Scripts/?.lua;" .. package.path
@@ -228,12 +228,12 @@ local function advance()
                 guarded(jb.tag .. "-" .. jb.i, function() finished = s[2](pawn, jb) ~= false end)
                 if finished then
                     if s ~= WAIT_AGE then numbers(pawn, string.format("%s %d after %s", jb.name, jb.i, s[1])) end
-                    if s == MUTS then out("%s: as written — %s", jb.name, keepers(pawn)) end
+                    if s == MUTS then out("%s: as written, %s", jb.name, keepers(pawn)) end
                     jb.i = jb.i + 1
                     if jb.i > #jb.steps then
                         jb.done = true
                         local final, now = num(pawn, "GetMaxHealth"), keepers(pawn)
-                        out("%s: RESULT %s — max health %s -> %s | kept: %s", jb.name,
+                        out("%s: RESULT %s, max health %s -> %s | kept: %s", jb.name,
                             final ~= nil and jb.basis ~= nil and final > jb.basis * 1.02 and "PRIME STATS" or "no prime stats",
                             tostring(jb.basis), tostring(final), now == jb.kept and "all (" .. now .. ")" or "CHANGED " .. tostring(jb.kept) .. " => " .. now)
                     end
@@ -271,4 +271,4 @@ H.every(2000, MOD .. ": step", function()
     end
 end)
 
-out("loaded (run 3) — starts %d s after load", START_AFTER_S)
+out("loaded (run 3), starts %d s after load", START_AFTER_S)

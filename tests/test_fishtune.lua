@@ -1,4 +1,4 @@
--- Functional test: FishTune (only with Mods/FishTune/Saved/ENABLED) — nothing without the marker;
+-- Functional test: FishTune (only with Mods/FishTune/Saved/ENABLED), nothing without the marker;
 -- with it, each apply.json id written once on the spawner, read back, flagged.
 
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end
@@ -173,10 +173,10 @@ local function logged(t) for _, l in ipairs(H.log) do if l:find(t, 1, true) then
 check("200 m away: not announced yet", logged("fish near") == nil, table.concat(H.log, " | "))
 pos.X = pos.X + 20000   -- 200 m in one look
 poll.fn()
-check("a jump is logged as moved by the game", logged("fish moved — BP_Coalecanth_C jumped 200 m") ~= nil, table.concat(H.log, " | "))
+check("a jump is logged as moved by the game", logged("fish moved, BP_Coalecanth_C jumped 200 m") ~= nil, table.concat(H.log, " | "))
 pos.X = 1000500          -- 5 m from the crocodile
 poll.fn()
-local near = logged("fish near — BP_Coalecanth_C size 1.40/1.40/1.40, 5 m from 76561190000000009")
+local near = logged("fish near, BP_Coalecanth_C size 1.40/1.40/1.40, 5 m from 76561190000000009")
 check("near a player: size and the dino logged", near ~= nil and near:find("BP_Deinosuchus_C 0.28, stomach 1.8/13.5", 1, true) ~= nil,
       table.concat(H.log, " | "))
 poll.fn()
@@ -193,7 +193,7 @@ _G.FindAllOf = function(c)
   return {}
 end
 poll.fn()
-local gone = logged("fish gone — BP_Coalecanth_C size 1.40/1.40/1.40")
+local gone = logged("fish gone, BP_Coalecanth_C size 1.40/1.40/1.40")
 check("gone next to the player: logged with the dino", gone ~= nil and gone:find("5 m from 76561190000000009 (BP_Deinosuchus_C", 1, true) ~= nil, gone)
 croc.__props.Hunger = 11.2
 H.advance(2000)

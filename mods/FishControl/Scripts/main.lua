@@ -1,4 +1,4 @@
--- FishControl — the island's fish, as the admin sets them (panel → Server →
+-- FishControl, the island's fish, as the admin sets them (panel → Server →
 -- Cấu hình → Cá).
 --
 -- The game spawns ambient fish around players in the water (TIAIWorldSpawner,
@@ -9,12 +9,12 @@
 --
 --   * density: those three numbers are set on the spawner from settings.json
 --     (written by the bridge); the game's own are remembered and put back when
---     the control is off. Numbers only — nothing else is written.
+--     the control is off. Numbers only, nothing else is written.
 --   * WARNING (2026-09-26): writing a number on the spawner from Lua CRASHED
 --     this server twice (GlobalAISpawnLimit = 15, inside UE4SS.dll, ~30 s after
 --     load). This mod writes the same way when `control` is on, so it is
 --     DISABLED in mods.txt until a write is proven safe. Reading is fine.
---   * species: not here — the bridge adds the species left out to the game's
+--   * species: not here, the bridge adds the species left out to the game's
 --     own DisallowedAIClasses (Game.ini + RCON), the game's mechanism.
 --   * a census, every CENSUS_MS while players are online: live fish counted by
 --     species → Mods/FishControl/Saved/fish.json, so the panel shows what is
@@ -147,4 +147,4 @@ end
 H.every(APPLY_MS, MOD .. " apply", apply)
 H.every(CENSUS_MS, MOD .. " census", count)
 LoopAsync(10000, function() write(); return false end)
-H.log(MOD .. ": loaded — settings from " .. SETTINGS_PATH)
+H.log(MOD .. ": loaded, settings from " .. SETTINGS_PATH)

@@ -1,4 +1,4 @@
-// The starter gift (starter.ts): offered once per account, taken on the home page — only then a
+// The starter gift (starter.ts): offered once per account, taken on the home page, only then a
 // "Hộp dino tự chọn" in the bag (opened and used: dino-box.test.mjs). npm test.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';

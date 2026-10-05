@@ -11,7 +11,7 @@ import type { DropResult } from './ai-drop.js';
  * new ones.
  *
  * The mod kills; it never destroys (a Lua K2_DestroyActor on an actor the
- * game already removed crashes the server — docs/lua-safety-rules.md, and the
+ * game already removed crashes the server, docs/lua-safety-rules.md, and the
  * AIZones header). One reset at a time; the countdown can be cancelled.
  */
 
@@ -149,7 +149,7 @@ export class AiReset {
         await sleep(this.#d.pollMs, new AbortController().signal);
         result = await this.#d.result(id);
       }
-      if (result === null) throw new Error('the AIZones mod did not answer — is it running (it needs a server restart after an update)?');
+      if (result === null) throw new Error('the AIZones mod did not answer, is it running (it needs a server restart after an update)?');
       if (!result.ok) throw new Error(`the mod refused: ${result.error ?? '?'}`);
       op.killed = result.made ?? 0;
       if (result.error) op.message = result.error;

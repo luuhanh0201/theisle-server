@@ -2,7 +2,7 @@
     DinoGarage/keepskin.lua
 
     Colours a player keeps from the web skin editor ("giữ màu cho lần chơi
-    sau"): painted again on every new dino of that species they play — a new
+    sau"): painted again on every new dino of that species they play, a new
     life, a relog, after a server restart.
 
         Saved/skins.json   written by the bridge (bridge/src/kept-skins.ts):
@@ -11,7 +11,7 @@
 
     A dino is looked at once, DELAY_S after it first shows up (the game paints
     it itself first). Skipped: a dino the garage just took out (its slot's own
-    colours win — skin.lua restoredAt), a dead one, one that already has these
+    colours win, skin.lua restoredAt), a dead one, one that already has these
     colours (a relog the game saved). Written by skin.lua (field by field).
 
     Game thread (H.every in main.lua): reads one small file only when a new

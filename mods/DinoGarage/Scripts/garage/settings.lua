@@ -3,7 +3,7 @@
 
     Admin settings written by the panel (bridge/src/garage.ts), read fresh on
     every command so a change needs no restart. A missing or broken file means
-    the defaults — never an error for the player.
+    the defaults, never an error for the player.
 
       { "redeemAt": "current" | "stored" | "choice", "maxSlots": 2,
         "storeCountdown": 30, "cooldown": 60 }

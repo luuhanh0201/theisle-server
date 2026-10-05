@@ -1,4 +1,4 @@
--- PteraCarry — a Pteranodon carries another player's dino, up to a weight the
+-- PteraCarry, a Pteranodon carries another player's dino, up to a weight the
 -- admin sets (panel → Server → Cấu hình → Ptera gắp).
 --
 -- The game (Evrima 0.21) lets a Pteranodon carry only small critters and
@@ -6,8 +6,8 @@
 -- the probe is in git history, commit 764c3e6): flying close to a dino and
 -- holding Z + right mouse (the latch key, while the game's interaction
 -- prompt shows) makes the game call
--- TICharacterBase:GrabPhysicsCharacter(ptera, that dino) — and let go ten
--- seconds later without moving it — but only for AI (a player's dino never
+-- TICharacterBase:GrabPhysicsCharacter(ptera, that dino), and let go ten
+-- seconds later without moving it, but only for AI (a player's dino never
 -- got that call when tried on 2026-09-26 01:30). So the grab is the key
 -- itself: Z + right mouse starts the Gameplay Ability "TIGameplayAbilityTryLatch"
 -- (AbilitySystemComponent:ServerTryActivateAbility / ServerSetInputPressed
@@ -15,18 +15,18 @@
 --
 --   * the nearest other player's dino within `grabMeters`, no heavier than
 --     `maxKg` (its GetWeight), is taken (the game's own grab call, when it
---     happens, is taken too) — unless the carrier is cooling down
+--     happens, is taken too), unless the carrier is cooling down
 --   * every HOLD_MS, on the game thread, the target is put right under the
---     Pteranodon's feet — its top `belowCm` below the carrier's capsule
+--     Pteranodon's feet, its top `belowCm` below the carrier's capsule
 --     bottom (both capsule half-heights read live), facing the same way
---     (K2_SetActorLocationAndRotation, teleport — as !unstuck does) — and
+--     (K2_SetActorLocationAndRotation, teleport, as !unstuck does), and
 --     given the carrier's velocity (LaunchCharacter), so it moves with it
 --     between two updates instead of hanging back; the game's own "being
 --     picked up" flag is set (SetIsBeingPickedUp) so its player cannot walk off
 --   * it ends when the Pteranodon lands, its player types !drop, after
 --     `maxSeconds`, or when either leaves / dies. Let go in the air, the
---     target falls — and takes the game's fall damage
---   * a flying Pteranodon near a light enough player is told it can grab —
+--     target falls, and takes the game's fall damage
+--   * a flying Pteranodon near a light enough player is told it can grab,
 --     a server message (a mod cannot draw the game's own prompt), OFF by
 --     default like every carry message (the popup did not suit; the admin
 --     turns one on in the panel's Thông báo)
@@ -34,7 +34,7 @@
 --     AI only. Whether its "can be picked up" flag is what keeps players out:
 --     every FLAGS_EVERY_S while players are online (FLAGS_RUNS times), the flags bBlockPickUp /
 --     bBeingPickedUp (two booleans, read-only) are logged once per species,
---     player and AI apart — "PteraCarry flags:" in UE4SS.log
+--     player and AI apart, "PteraCarry flags:" in UE4SS.log
 --
 -- Safety (docs/lua-safety-rules.md): the hook only queues the two addresses;
 -- everything else runs on the game thread, re-resolving both players by
@@ -60,7 +60,7 @@ local HINT_AGAIN_S = 30      -- one hint per carrier and target this often
 local SETTINGS_RELOAD_S = 5
 local FLAGS_EVERY_S = 300    -- the pick-up flags census (read-only), while players are online
 local FLAGS_MAX_PAWNS = 400
-local FLAGS_RUNS = 0          -- done (2026-09-26): players have bBlockPickUp=false too, like AI — not what hides the prompt
+local FLAGS_RUNS = 0          -- done (2026-09-26): players have bBlockPickUp=false too, like AI, not what hides the prompt
 local MIN_CARRY_S = 1        -- a carrier "landing" in the first second is the take-off itself
 
 local ASC_CLASS = "/Script/GameplayAbilities.AbilitySystemComponent"
@@ -224,7 +224,7 @@ local function finish(carrierId, reason, players)
     end
     local p = players[carrierId]
     if p then Msg.notify(p.ctrl, "ptera.carry.dropped", "Đã thả {species}.", { species = c.species }) end
-    H.log(string.format("%s: %s let go of %s (%s) after %ds — %s", MOD, carrierId, c.target, c.species,
+    H.log(string.format("%s: %s let go of %s (%s) after %ds, %s", MOD, carrierId, c.target, c.species,
         os.time() - c.startedAt, reason))
 end
 
@@ -294,7 +294,7 @@ local function tryStart(grab, s, players, byAddr)
     local kg = weightOf(target.pawn)
     if kg == nil or not alive(target.pawn) then return end
     if kg > s.maxKg then
-        Msg.notify(carrier.ctrl, "ptera.carry.tooHeavy", "{species} nặng {kg} kg — Pteranodon chỉ gắp được tới {max} kg.",
+        Msg.notify(carrier.ctrl, "ptera.carry.tooHeavy", "{species} nặng {kg} kg, Pteranodon chỉ gắp được tới {max} kg.",
             { species = species, kg = math.floor(kg + 0.5), max = math.floor(s.maxKg) })
         return
     end
@@ -381,7 +381,7 @@ local function hintTick()
                     local kg = o and weightOf(t.pawn)
                     if kg and kg <= s.maxKg and (o.X - at.X) ^ 2 + (o.Y - at.Y) ^ 2 + (o.Z - at.Z) ^ 2 <= reach * reach then
                         hinted[key] = now
-                        Msg.notify(p.ctrl, "ptera.carry.hint", "Có thể gắp {species} ({kg} kg) — đang bay, giữ Z + chuột phải sát nó.",
+                        Msg.notify(p.ctrl, "ptera.carry.hint", "Có thể gắp {species} ({kg} kg), đang bay, giữ Z + chuột phải sát nó.",
                             { species = speciesName(classOf(t.pawn)), kg = math.floor(kg + 0.5) })
                     end
                 end
@@ -465,4 +465,4 @@ end)
 
 H.every(HOLD_MS, MOD .. " hold", holdTick)
 H.every(HINT_MS, MOD .. " hints", function() hintTick(); flagsCensus() end)
-H.log(MOD .. ": loaded — " .. (readSettings().enabled and "on" or "off (turn it on in the panel)"))
+H.log(MOD .. ": loaded, " .. (readSettings().enabled and "on" or "off (turn it on in the panel)"))

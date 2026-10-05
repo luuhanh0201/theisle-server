@@ -10,9 +10,9 @@ import { ValidationError } from './garage.js';
  * 40 pkt/s with nobody on); a flood on the game's UDP port is tens of
  * thousands of packets a second.
  *
- * Over a threshold (packets/s OR Mbit/s) for `sustainSec`: an attack starts —
+ * Over a threshold (packets/s OR Mbit/s) for `sustainSec`: an attack starts,
  * told once (Discord, log kind "ddos"); its peak is kept; below both for
- * CALM_S: it ended — told with how long and how hard. It only tells: stopping
+ * CALM_S: it ended, told with how long and how hard. It only tells: stopping
  * a flood is the provider's job (anti-DDoS on the game's UDP port).
  *
  * When the link is so full that nothing gets out, the Discord queue keeps the
@@ -175,10 +175,10 @@ export function startText(e: Extract<DdosEvent, { kind: 'start' }>, online: numb
     online !== null ? `${online} người online${e.attack.onlineBefore !== null && e.attack.onlineBefore !== online ? ` (trước đó ${e.attack.onlineBefore})` : ''}` : '',
     fps !== null ? `FPS server ${Math.round(fps)}` : '',
   ].filter(Boolean).join(' · ');
-  return `🚨 **Nghi bị DDoS** — lưu lượng vào server **${n(e.now.pps)} gói/s · ${e.now.mbps} Mbit/s** (từ <t:${e.attack.since}:T>, đỉnh ${n(e.attack.peakPps)} gói/s · ${e.attack.peakMbps} Mbit/s)`
+  return `🚨 **Nghi bị DDoS**, lưu lượng vào server **${n(e.now.pps)} gói/s · ${e.now.mbps} Mbit/s** (từ <t:${e.attack.since}:T>, đỉnh ${n(e.attack.peakPps)} gói/s · ${e.attack.peakMbps} Mbit/s)`
     + (game ? `\n${game}` : '');
 }
 
 export function endText(e: Extract<DdosEvent, { kind: 'end' }>): string {
-  return `✅ **Hết lưu lượng bất thường** sau ${dur(e.at - e.attack.since)} — đỉnh **${n(e.attack.peakPps)} gói/s · ${e.attack.peakMbps} Mbit/s** (<t:${e.attack.since}:t>–<t:${e.at}:t>)`;
+  return `✅ **Hết lưu lượng bất thường** sau ${dur(e.at - e.attack.since)}, đỉnh **${n(e.attack.peakPps)} gói/s · ${e.attack.peakMbps} Mbit/s** (<t:${e.attack.since}:t>–<t:${e.at}:t>)`;
 }

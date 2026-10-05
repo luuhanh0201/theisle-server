@@ -105,7 +105,7 @@ after(() => server.close());
 const get = (path, headers = {}, method = 'GET') => fetch(`http://127.0.0.1:${port}${path}`, { method, headers, redirect: 'manual' });
 const cookieFor = (id) => `${auth.COOKIE}=${auth.signSession(auth.sessionSecret(TOKEN), id, Math.floor(Date.now() / 1000) + 3600)}`;
 
-test('check 1: through the web, only allowed addresses get anything — even the login page', async () => {
+test('check 1: through the web, only allowed addresses get anything, even the login page', async () => {
   auth.resetAccessCache();
   const bad = await get('/login', { 'x-real-ip': '8.8.8.8' });
   assert.equal(bad.status, 403);

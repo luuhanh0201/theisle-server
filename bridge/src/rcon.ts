@@ -9,7 +9,7 @@ import { ValidationError } from './garage.js';
  *
  * Responses have no common terminator: GetPlayerList ends with "\n\n",
  * everything else with "\n" or nothing at all. So every read ends on the
- * command's terminator OR after the stream has been idle for a moment — never
+ * command's terminator OR after the stream has been idle for a moment, never
  * by waiting for the socket to close (it does not).
  *
  * One connection per command, and commands are queued: the server is not
@@ -36,18 +36,18 @@ export interface RconCommand {
   args: ArgKind;
   /** Reads do not change the server. */
   read: boolean;
-  /** Toggles flip a setting the game does not report back — the UI says so. */
+  /** Toggles flip a setting the game does not report back, the UI says so. */
   toggle?: boolean;
   terminator?: string;
 }
 
 /**
  * Everything the panel may send. Deliberately absent:
- *   0x60 Pause           — broken upstream, times out
- *   0x70 Command         — arbitrary console command, too much power for a web form
- *   0x22 SetGrowthMultiplier — args documented as "SteamID,value"; whether it is
+ *   0x60 Pause, broken upstream, times out
+ *   0x70 Command, arbitrary console command, too much power for a web form
+ *   0x22 SetGrowthMultiplier, args documented as "SteamID,value"; whether it is
  *                          per-player or global is unverified, so not exposed
- *   0x20/0x30 Ban/Kick   — the in-game admin panel already does these
+ *   0x20/0x30 Ban/Kick, the in-game admin panel already does these
  */
 export const RCON_COMMANDS: Record<string, RconCommand> = {
   serverDetails: { opcode: 0x12, label: 'Thông tin server', args: 'none', read: true },
@@ -180,7 +180,7 @@ export class Rcon {
   /**
    * ONE connection, logged in once and kept: the game never closes its side of
    * an RCON connection the client ends, so a connection per command left one
-   * dead socket (CLOSE-WAIT) in the game per command — 422 after 3 h on
+   * dead socket (CLOSE-WAIT) in the game per command, 422 after 3 h on
    * 2026-09-26, and the server's FPS fell from 30 to 4 with them. It is only
    * replaced when the game closes it (a restart) or it fails.
    */

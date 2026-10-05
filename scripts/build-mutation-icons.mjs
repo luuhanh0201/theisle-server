@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Bundle the mutation icons (portal/public/img/mutations/<slug>.svg) into one
 // file, img/mutations/icons.json { "<slug>": "<svg …>" }: a page loads it ONCE
-// (portal public/mut-icons.js) instead of one request an icon — 40 icons at
+// (portal public/mut-icons.js) instead of one request an icon, 40 icons at
 // once tripped the proxy in front of the site (503 on about half, 2026-10-02).
 // Run after adding or changing an icon:  node scripts/build-mutation-icons.mjs
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';

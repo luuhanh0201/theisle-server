@@ -16,7 +16,7 @@ import type { GroundPoints, Point } from './ground-points.js';
  *
  * The spots are picked here, from the ground points around where the player
  * is now (live file): places something really stood, about `distanceM`
- * away — never a guessed height. Closer than BESIDE_M the ground points
+ * away, never a guessed height. Closer than BESIDE_M the ground points
  * (one per 25 m) are too coarse: the mod puts the AI on a circle around the
  * player's own position at that moment (their height, plus the species'
  * lift), and these spots are only its fallback. A drop is an admin's explicit act: it does
@@ -94,7 +94,7 @@ function serialized<T>(fn: () => Promise<T>): Promise<T> {
 export function queueDrop(req: DropRequest, at: { x: number; y: number }, points: GroundPoints, nowS = Math.floor(Date.now() / 1000)): Promise<Drop> {
   const spots = dropSpots(points, at.x, at.y, req.distanceM);
   if (spots.length === 0 && req.distanceM >= BESIDE_M) {
-    return Promise.reject(new ValidationError(`no known ground within ${req.distanceM * 2} m of the player yet — try a larger distance`));
+    return Promise.reject(new ValidationError(`no known ground within ${req.distanceM * 2} m of the player yet, try a larger distance`));
   }
   const s = AI_BY_KEY.get(req.species);
   if (!s) return Promise.reject(new ValidationError(`unknown AI "${req.species}"`));

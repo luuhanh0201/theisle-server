@@ -5,16 +5,16 @@ import { ValidationError } from './garage.js';
 
 /**
  * What each panel admin may do (panel → Quản trị → Phân quyền), set by the one
- * super admin (SUPER_ADMIN_STEAM_ID — the only one who sees that page).
+ * super admin (SUPER_ADMIN_STEAM_ID, the only one who sees that page).
  *
  * Every /api route of the panel needs one permission (permissionFor); a route
- * not listed there needs "*": the super admin only (fail closed — a new route
+ * not listed there needs "*": the super admin only (fail closed, a new route
  * is nobody's until it is given a key). An admin's permissions are their
  * role's, plus `allow`, minus `deny`. An admin with no entry keeps everything
  * (the panel as it was before this page), so nobody loses access at once.
  *
  * In game: `ingame: false` keeps the admin out of Game.ini's AdminsSteamIDs
- * (from the next restart — the game reads the list when it starts) while they
+ * (from the next restart, the game reads the list when it starts) while they
  * keep the panel, and the AdminGuard mod clears the game's admin flags on them
  * at once if the game lets it (mods/AdminGuard).
  */

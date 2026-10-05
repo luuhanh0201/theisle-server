@@ -3,7 +3,7 @@
 
     Reads a live pawn into the flat table that storage.lua persists.
 
-    Capture is SYNCHRONOUS and read-only — upstream's "synchronous capture,
+    Capture is SYNCHRONOUS and read-only, upstream's "synchronous capture,
     deferred restore". Nothing here mutates the pawn, so a failure costs the
     player a store, never their dino.
 
@@ -64,8 +64,8 @@ local INHERITED_SLOTS = {
 
 -- UFunction getters, tried before the property names: Evrima keeps vitals in
 -- GAS attribute sets, so `pawn.Health` is nil on the live server (0.21.784)
--- while GetHealth() etc. — the counterparts of the SetHealth/SetMaxHunger the
--- restore calls — answer. Same list as StatsLogger's.
+-- while GetHealth() etc. the counterparts of the SetHealth/SetMaxHunger the
+-- restore calls, answer. Same list as StatsLogger's.
 local GETTERS = {
     health = "GetHealth", stamina = "GetStamina", hunger = "GetHunger",
     thirst = "GetThirst", oxygen = "GetOxygen", blood = "GetBlood",
@@ -88,7 +88,7 @@ end
 local function captureMutations(pawn)
     local ok, struct = pcall(function() return pawn.ReplicatedMutationsData end)
     if not ok or struct == nil then
-        H.logError("capture: ReplicatedMutationsData unreadable — mutations not stored")
+        H.logError("capture: ReplicatedMutationsData unreadable, mutations not stored")
         return {}
     end
 
@@ -103,7 +103,7 @@ local loggedNutrientFields = false
 local function captureNutrients(pawn)
     local ok, struct = pcall(function() return pawn.NutrientsStruct end)
     if not ok or struct == nil then
-        H.logError("capture: NutrientsStruct unreadable — nutrients not stored")
+        H.logError("capture: NutrientsStruct unreadable, nutrients not stored")
         return {}
     end
 
@@ -229,7 +229,7 @@ function C.capture(pawn)
     -- Refuse to store a snapshot we cannot put back. Growth drives the whole
     -- restore order; without it the dino would come back as a juvenile.
     if state.growth == nil then
-        return nil, "could not read your growth — nothing was stored"
+        return nil, "could not read your growth, nothing was stored"
     end
 
     return state

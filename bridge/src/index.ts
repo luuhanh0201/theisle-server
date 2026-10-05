@@ -41,7 +41,7 @@ import { DdosWatch, SAMPLE_S, defaultIface, endText, parseNetDev, readDdos, star
 import { readFile } from 'node:fs/promises';
 import { renderMessage } from './messages.js';
 import { audit, auditListeners } from './audit.js';
-import { grantStarters } from './starter.js';
+import { STARTER_ITEM_IDS, grantStarters } from './starter.js';
 import { PlayDays } from './economy.js';
 import { QuestProgress, placesOf, type Place } from './quests.js';
 import { readFileSync } from 'node:fs';
@@ -181,7 +181,7 @@ setInterval(sweepStarters, 60_000);
 // The admins' bags (items.ts fillBags): one of every item given out, at the start and every minute
 // (an admin added in Game.ini / the panel, an item made or given out again).
 const sweepAdminBags = (): void => {
-  adminIds().then((ids) => fillBags(ids))
+  adminIds().then((ids) => fillBags(ids, STARTER_ITEM_IDS))
     .then((n) => { if (n > 0) console.info(`[items] ${n} item(s) put in the admins' bags`); })
     .catch((error: unknown) => console.error('[items] could not fill the admins\' bags:', error));
 };
@@ -206,7 +206,7 @@ const tails = [config.eventsPath, config.snapshotsPath].map(
     if (keep !== null) {
       // The dark screen these relogs brought is not explained yet (2026-10-04: 76 % blood alone does
       // not darken it in combat). Every state the dino has (venom, sick, malnutrition, prime flags,
-      // nutrients — admin.lua probe, read only) before the fix and 30 s after it: UE4SS.log
+      // nutrients, admin.lua probe, read only) before the fix and 30 s after it: UE4SS.log
       // "admin: probe", and the portal_command result in the events.
       const probe = (when: string): void => {
         queueAdminAction(keep.steamId, { action: 'probe' })
@@ -362,7 +362,7 @@ const bans = new BanWatcher((b) => {
   discord.post(banLine(b, vars));
   console.info(`[bans] ${b.name} (${b.steamId}) banned by ${b.by}: ${b.reason}`);
 });
-// A banned player who is in the game anyway (the game let them back in — e.g.
+// A banned player who is in the game anyway (the game let them back in, e.g.
 // an account in AdminsSteamIDs, 2026-09-26) is told why and kicked, every
 // time, at most once in 30 s each.
 const kickedAt = new Map<string, number>();
@@ -378,7 +378,7 @@ async function enforceBans(): Promise<void> {
     const text = renderMessage('ban.player', vars);
     if (text !== null) await rcon.directMessage(p.steamId, text).catch(() => undefined);
     setTimeout(() => { rcon.exec(0x30, p.steamId).catch((error: unknown) => console.error('[bans] kick failed:', error)); }, 2500);
-    discord.post({ kind: 'ban', t: Math.floor(now / 1000), text: `🚫 **${plain(b.name)}** \`${b.steamId}\` đang bị ban (${plain(vars['duration'] ?? '')}, hết ${plain(vars['until'] ?? '')}) mà vẫn vào server — đã kick.` });
+    discord.post({ kind: 'ban', t: Math.floor(now / 1000), text: `🚫 **${plain(b.name)}** \`${b.steamId}\` đang bị ban (${plain(vars['duration'] ?? '')}, hết ${plain(vars['until'] ?? '')}) mà vẫn vào server, đã kick.` });
     console.info(`[bans] ${b.name} (${b.steamId}) is banned but online: kicked`);
   }
 }
@@ -455,7 +455,7 @@ async function zoneCreditTick(): Promise<void> {
   });
   for (const fix of zoneCredit.tick(Math.floor(Date.now() / 1000), players, taskZones(flora.spawners, mapZones))) {
     const made = await addPrimeFix(fix);
-    console.info(`[zone-credit] ${fix.steamId} (${fix.species}): ${fix.conditions} given — ${made.id}`);
+    console.info(`[zone-credit] ${fix.steamId} (${fix.species}): ${fix.conditions} given, ${made.id}`);
   }
 }
 setInterval(() => {
@@ -479,7 +479,7 @@ async function loop(): Promise<void> {
       try {
         await tail.poll();
       } catch (error) {
-        // A read failure must never end the loop — the game may be mid-rotation.
+        // A read failure must never end the loop, the game may be mid-rotation.
         console.error('[bridge] poll failed:', error);
       }
     }
@@ -489,7 +489,7 @@ async function loop(): Promise<void> {
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
-    console.info(`[bridge] ${signal} — shutting down`);
+    console.info(`[bridge] ${signal}, shutting down`);
     stopping = true;
     // The traffic counted in the last few seconds (saved every 5 s otherwise).
     traffic.flush().catch(() => undefined).finally(() => process.exit(0));

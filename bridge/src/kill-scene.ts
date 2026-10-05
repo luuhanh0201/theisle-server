@@ -5,7 +5,7 @@ import type { DamageEvent, DeathEvent, GameEvent, Loc } from './events.js';
 /**
  * The scene of a death, for the panel's log (Chết → 📍): where it happened,
  * who stood within NEAR_M of it then (from their last snapshot), and the
- * fight it ended — the player-on-player hits between the dinos in it.
+ * fight it ended, the player-on-player hits between the dinos in it.
  *
  * Built when the death arrives, from what the bridge saw just before (the
  * snapshots are every 5 s, the hits as they land), and appended to

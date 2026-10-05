@@ -1,7 +1,7 @@
--- Flora — the island's real plants, for the admin map (step 1: read-only).
+-- Flora, the island's real plants, for the admin map (step 1: read-only).
 --
 -- What PlantProbe found (2026-09-26): plants are actors.
---   TIEdibleSpawner  (BP_EdiblePlantsSpawnable_C, ~80) — an area (box, sphere
+--   TIEdibleSpawner  (BP_EdiblePlantsSpawnable_C, ~80), an area (box, sphere
 --                    or spline) that spawns edible plants; the migration and
 --                    mass-migration zones are these (bShouldUseMigration,
 --                    bBecameMassMigration, MigrationSpawnMultiplier…)
@@ -9,17 +9,17 @@
 --                    Carb/Protein/LipidProportion, its Spawner
 --   TIFruitBase      a fruit (mango, banana…): bCanGiveNutri
 --
--- Step 2 — control (off until the panel turns it on, settings.json from the
+-- Step 2, control (off until the panel turns it on, settings.json from the
 -- bridge): nutrient plants only where herbivores migrate.
 --   * a plant / fruit gives nutrients only inside an ACTIVE migration area:
 --     `migrationNutrientPct` of them there, `massNutrientPct` in a mass
---     migration, none outside (SetCanGiveNutrients — the game's own call;
+--     migration, none outside (SetCanGiveNutrients, the game's own call;
 --     which ones is fixed by each actor's address, so it does not flicker)
 --   * how many grow: at most `migrationMaxPerArea` / `massMaxPerArea` /
 --     `outsideMaxPerArea` plants in one area (the game's AmountToBeSpawned and
 --     MinimumZoneAmountToBeSpawned lowered to it; the game put 40, even 70, in
 --     a 25 m area), plus the game's MigrationSpawnMultiplier; plants above the
---     cap are removed with the game's own DestroyPlant — the ones without
+--     cap are removed with the game's own DestroyPlant, the ones without
 --     nutrients first, TRIM_PER_ROUND a round; `outsideAmountPct` of the fruit
 --     trees' fruit counts
 --   * the game's own values are remembered and put back when it is turned off
@@ -30,7 +30,7 @@
 -- its shape, whether it is a migration zone and active / mass now) and every
 -- plant and fruit (class, where, whether it gives nutrients, and its α/β/γ
 -- proportions). The bridge serves it to the panel's map, and reads the
--- spawners for the prime zone tasks (zone-credit.ts) — so they stay fresh.
+-- spawners for the prime zone tasks (zone-credit.ts), so they stay fresh.
 -- The plants and fruits are for the map only: read every PLANTS_EVERY_MS,
 -- CHUNK a tick (all ~1,200 plants in one tick held the game thread up to
 -- 275 ms, 2026-09-27); each export carries the last complete read.
@@ -38,7 +38,7 @@
 -- Read-only, and careful (lessons of 2026-09-24 and 2026-09-26):
 --   * only numbers and booleans are read from these actors, plus the
 --     components the game made for their shape (Box / Sphere / AreaSpline,
---     through their UFunctions) and the plant's Spawner — nothing else
+--     through their UFunctions) and the plant's Spawner, nothing else
 --   * one piece per game-thread tick (the spawners, or CHUNK plants / fruits),
 --     found fresh by FindAllOf in that tick; no actor kept across ticks (a
 --     chunk goes on from an index; an actor seen twice, the list having moved,
@@ -235,7 +235,7 @@ local reading = nil          -- { family, list, seen, from }
 local nextAt, plantsAt = 0, 0
 
 -- The flag is up only for the tick that first reads a kind of actor (the
--- spawners, the plants, the fruits): a stop between ticks — a restart —
+-- spawners, the plants, the fruits): a stop between ticks, a restart,
 -- never leaves it behind.
 local tried = {}
 local function guarded(kind, fn)
@@ -274,7 +274,7 @@ local function step()
     nextAt = 0   -- an export now, with them
     if not firstDone then
         firstDone = true
-        H.log(string.format("%s: first export — %d plants, %d fruits", MOD, #last.plants, #last.fruits))
+        H.log(string.format("%s: first export, %d plants, %d fruits", MOD, #last.plants, #last.fruits))
     end
 end
 
@@ -529,7 +529,7 @@ local function controlStep()
         if controlFirst then
             controlFirst = false
             markRunning(false, CONTROL_FLAG)
-            H.log(string.format("%s: control %s — %d/%d plants and %d/%d fruits give nutrients, %d active areas", MOD,
+            H.log(string.format("%s: control %s, %d/%d plants and %d/%d fruits give nutrients, %d active areas", MOD,
                 on and "on" or "off (game values put back)", stats.plantsNutri, stats.plants, stats.fruitsNutri, stats.fruits, #activeRings))
         end
         if stats.trimmed > 0 then
@@ -543,26 +543,26 @@ local crashed = io.open(FLAG, "r")
 if crashed then
     crashed:close()
     disabled = true
-    H.logError(MOD .. ": the last export did not finish (the server stopped during it) — exports are off. "
+    H.logError(MOD .. ": the last export did not finish (the server stopped during it), exports are off. "
         .. "Delete " .. FLAG .. " to try again.")
 else
     local trimCrashed = io.open(TRIM_FLAG, "r")
     if trimCrashed then
         trimCrashed:close()
         TRIM_PER_ROUND = 0
-        H.logError(MOD .. ": the last trim (DestroyPlant) did not finish — plants are no longer removed, only capped. "
+        H.logError(MOD .. ": the last trim (DestroyPlant) did not finish, plants are no longer removed, only capped. "
             .. "Delete " .. TRIM_FLAG .. " to try again.")
     end
     local controlCrashed = io.open(CONTROL_FLAG, "r")
     if controlCrashed then
         controlCrashed:close()
-        H.logError(MOD .. ": the last control round did not finish (the server stopped during it) — control is off. "
+        H.logError(MOD .. ": the last control round did not finish (the server stopped during it), control is off. "
             .. "Delete " .. CONTROL_FLAG .. " to try again.")
     else
         H.every(CONTROL_MS // 3, MOD .. " control", controlStep)
     end
     H.every(STEP_MS, MOD .. " export", step)
     LoopAsync(WRITE_MS, function() write(); return false end)
-    H.log(MOD .. ": loaded — spawners every " .. (EXPORT_MS // 1000) .. " s, plants every "
+    H.log(MOD .. ": loaded, spawners every " .. (EXPORT_MS // 1000) .. " s, plants every "
         .. (PLANTS_EVERY_MS // 1000) .. " s (" .. CHUNK .. " a tick) to " .. OUT)
 end

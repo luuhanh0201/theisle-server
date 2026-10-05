@@ -3,7 +3,7 @@ import type { GameEvent } from './events.js';
 /**
  * A dino whose max health jumps at a relog (2026-10-02): a prime the mod set
  * (Phiếu Prime, the garage's late prime) gets its prime stats from the game
- * only when it is loaded again — max health 9350 → 12274 on a Rex — while the
+ * only when it is loaded again, max health 9350 → 12274 on a Rex, while the
  * health and blood stay the number they were: 100 % before, 76 % after, the
  * screen darkened by the missing blood. Watched here from the events: the last
  * snapshot before a session ends, then the first snapshot of the next session
@@ -22,7 +22,7 @@ export class RelogShare {
    * A session that ended: when, and the last snapshot before it. The two files are read
    * apart when the bridge starts, so the session's end may come before its snapshots
    * (T-Rex Nổi Loạn, 2026-10-04: left on 02/10, the bridge restarted several times, the
-   * end was read first and the relog went unseen — 76 % blood, dark screen). The
+   * end was read first and the relog went unseen, 76 % blood, dark screen). The
    * snapshots up to the end still fill it in when they come after.
    */
   #left = new Map<string, { end: number; snap: Left | null }>();

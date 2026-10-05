@@ -20,7 +20,7 @@ test('a task done on the same dino: told by name, then eligible', async () => {
   assert.deepEqual(await n.handle(ev(1000, [3, 7, 8, 10])), [], 'the first reading is the baseline');
   const sent = await n.handle(ev(1010, [3, 5, 7, 8, 10], { growth: 0.531 }));
   assert.equal(sent.length, 2);
-  assert.match(sent[0], /Đã hoàn thành nhiệm vụ prime: Vùng di cư \(5\/10 — cần 5/);
+  assert.match(sent[0], /Đã hoàn thành nhiệm vụ prime: Vùng di cư \(5\/10, cần 5/);
   assert.match(sent[1], /đủ điều kiện prime/);
   assert.equal(rcon.sent[0][0], '76561198658463561');
 });

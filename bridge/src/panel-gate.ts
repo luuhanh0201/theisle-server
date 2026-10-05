@@ -12,7 +12,7 @@ import { audit } from './audit.js';
 /**
  * The door of the admin panel (see panel-auth.ts for the rules): the address
  * check, the Steam login pages, then the admin check. Everything of the panel
- * — the page and every /api route — is behind it; /player-api has its own
+ * - the page and every /api route, is behind it; /player-api has its own
  * token and is not.
  */
 
@@ -62,23 +62,23 @@ function page(res: ServerResponse, status: number, title: string, body: string, 
 
 const ERRORS: Record<string, string> = {
   setup: 'Đăng nhập chưa được bật trên máy chủ (thiếu ADMIN_TOKEN, hoặc PANEL_BASE_URL khi vào qua web).',
-  steam: 'Steam không phản hồi để xác nhận đăng nhập — thử lại sau ít phút.',
+  steam: 'Steam không phản hồi để xác nhận đăng nhập, thử lại sau ít phút.',
   refused: 'Đăng nhập Steam không hợp lệ hoặc đã bị huỷ.',
   'not-admin': 'Tài khoản Steam này không có quyền admin.',
-  ip: 'Địa chỉ này không nằm trong danh sách được vào panel — chỉ admin tổng đăng nhập được từ mọi địa chỉ.',
-  expired: 'Phiên đăng nhập đã hết hạn — đăng nhập lại.',
+  ip: 'Địa chỉ này không nằm trong danh sách được vào panel, chỉ admin tổng đăng nhập được từ mọi địa chỉ.',
+  expired: 'Phiên đăng nhập đã hết hạn, đăng nhập lại.',
 };
 
 function loginPage(res: ServerResponse, error: string | null, steamId: string | null, ip: string | null, ipAllowed = true): void {
   const msg = error && ERRORS[error] ? `<p class="err">${esc(ERRORS[error])}${error === 'not-admin' && steamId ? `<br><code>${esc(steamId)}</code>` : ''}</p>` : '';
-  page(res, 200, 'Đăng nhập — Admin panel', `
+  page(res, 200, 'Đăng nhập, Admin panel', `
     <h1>Admin panel</h1>
     <p>Chỉ tài khoản Steam có quyền admin trên server mới vào được.</p>
     ${msg}
     <a class="steam" href="/auth/steam">Đăng nhập bằng Steam</a>
     <div class="steps">
-      <div class="${ipAllowed ? 'ok' : ''}">${ipAllowed ? '✓' : '○'} Lượt 1: ${!ip ? 'vào qua SSH tunnel' : ipAllowed ? `địa chỉ <code>${esc(ip)}</code> được phép` : `địa chỉ <code>${esc(ip)}</code> chưa được phép — chỉ admin tổng vào được từ đây`}</div>
-      <div>○ Lượt 2: đăng nhập Steam — SteamID phải nằm trong danh sách admin</div>
+      <div class="${ipAllowed ? 'ok' : ''}">${ipAllowed ? '✓' : '○'} Lượt 1: ${!ip ? 'vào qua SSH tunnel' : ipAllowed ? `địa chỉ <code>${esc(ip)}</code> được phép` : `địa chỉ <code>${esc(ip)}</code> chưa được phép, chỉ admin tổng vào được từ đây`}</div>
+      <div>○ Lượt 2: đăng nhập Steam, SteamID phải nằm trong danh sách admin</div>
     </div>`);
 }
 
@@ -110,7 +110,7 @@ export async function panelGate(
   if (fwd === 'bad') { page(res, 400, 'Bad request', '<h1>Bad request</h1>'); return null; }
   const ipAllowed = fwd === null || (await readAccess()).ips.some((rule) => ipMatches(fwd, rule));
   // An address not on the list: only the super admin (permissions.ts) comes in
-  // from it — from anywhere. The login pages are shown so they can sign in with
+  // from it, from anywhere. The login pages are shown so they can sign in with
   // Steam; once signed in, anyone else is still refused (here, and at the
   // return from Steam below).
   const superId = config.panel.superAdminId;
@@ -123,7 +123,7 @@ export async function panelGate(
     // A page: to the login page, never a dead end (2026-10-02: the super admin on a new
     // address, the session gone, opened "/" and got only "not allowed"). Steam then
     // decides: the super admin comes in from anywhere, any other admin is refused there.
-    // (No super admin configured: the login page itself is refused too — a 403, no loop.)
+    // (No super admin configured: the login page itself is refused too, a 403, no loop.)
     if (!api && req.method === 'GET' && superId !== null) { redirect(res, '/login'); return null; }
     if (api) {
       res.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -168,7 +168,7 @@ export async function panelGate(
     }
     // From an address not on the list: the super admin only.
     if (!ipAllowed && result.steamId !== superId) {
-      console.warn(`[panel] ${result.steamId} logged in from ${ip} (not on the allow list) — only the super admin may`);
+      console.warn(`[panel] ${result.steamId} logged in from ${ip} (not on the allow list), only the super admin may`);
       await audit({ action: 'panel login refused', detail: `địa chỉ ${ip ?? '?'} không được phép (chỉ admin tổng)`, ok: false, error: 'address not allowed' }, who);
       redirect(res, '/login?e=ip');
       return null;
@@ -176,10 +176,10 @@ export async function panelGate(
     const maxAge = config.panel.sessionHours * 3600;
     const value = signSession(secret, result.steamId, Math.floor(Date.now() / 1000) + maxAge);
     console.info(`[panel] ${result.steamId} logged in from ${ip ?? 'tunnel'}`);
-    await audit({ action: 'panel login', detail: `từ ${ip ?? 'SSH tunnel'}${ipAllowed ? '' : ' (ngoài danh sách IP — admin tổng)'}`, ok: true }, who);
+    await audit({ action: 'panel login', detail: `từ ${ip ?? 'SSH tunnel'}${ipAllowed ? '' : ' (ngoài danh sách IP, admin tổng)'}`, ok: true }, who);
     // Not a redirect: this request came in a chain started by Steam's page, and
     // a browser keeps a SameSite=Strict cookie out of every hop of such a
-    // chain — "/" would arrive without it and send the admin back to the login
+    // chain, "/" would arrive without it and send the admin back to the login
     // page. A page of our own that moves on by itself starts a fresh, same-site
     // navigation, which carries the cookie.
     page(res, 200, 'Đang vào panel…', `<meta http-equiv="refresh" content="0;url=/"><h1>Đăng nhập thành công</h1>

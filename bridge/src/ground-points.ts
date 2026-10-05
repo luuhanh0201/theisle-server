@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 /**
- * Places a player or an AI really stood — where the AIZones mod may put new
+ * Places a player or an AI really stood, where the AIZones mod may put new
  * AI. Taking them from what walked there, not from a guess, means no AI is
  * spawned under the landscape, inside a cliff or at a made-up height (the
  * upstream spawn notes' first trap), and needs no ground trace from Lua.

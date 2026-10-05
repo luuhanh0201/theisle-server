@@ -1,4 +1,4 @@
--- PlantProbe — read-only: how does this server keep its plants?
+-- PlantProbe, read-only: how does this server keep its plants?
 --
 -- Game.ini has bSpawnPlants / PlantSpawnMultiplier: plants are spawned while
 -- the game runs. Before any mod decides where nutrient plants may grow
@@ -7,7 +7,7 @@
 --   1. every actor, counted by class; the plant-looking classes (and the
 --      migration / patrol zone ones) with a few locations
 --   2. for those classes: their properties' NAMES and types and their
---      functions' names — from the class, never a value read from an actor
+--      functions' names, from the class, never a value read from an actor
 --   3. instanced meshes (foliage): per component, its owner class and how
 --      many instances it has (GetInstanceCount, a UFunction)
 --
@@ -77,7 +77,7 @@ local function whereOf(actor)
 end
 
 --- Names and types of a class's properties and functions (its own and its
---- parents' down to Actor) — metadata only, no value is read.
+--- parents' down to Actor), metadata only, no value is read.
 local function describeClass(cls)
     local depth = 0
     while cls ~= nil and depth < 8 do
@@ -146,7 +146,7 @@ local function foliageCensus()
     end
     out("%d components, %d instances", #comps, total)
     for key, e in pairs(byOwner) do
-        out("  %s: %d components, %d instances — %s", key, e.comps, e.inst, table.concat(e.names, ", "))
+        out("  %s: %d components, %d instances, %s", key, e.comps, e.inst, table.concat(e.names, ", "))
     end
 end
 
@@ -166,8 +166,8 @@ end
 local already = io.open(FLAG, "r")
 if already then
     already:close()
-    H.log(MOD .. ": already ran (delete " .. FLAG .. " to run again) — nothing to do")
+    H.log(MOD .. ": already ran (delete " .. FLAG .. " to run again), nothing to do")
 else
     H.defer(AFTER_MS, probe)
-    H.log(MOD .. ": loaded — probing plants in " .. (AFTER_MS // 1000) .. " s, report in " .. OUT)
+    H.log(MOD .. ": loaded, probing plants in " .. (AFTER_MS // 1000) .. " s, report in " .. OUT)
 end

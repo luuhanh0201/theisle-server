@@ -3,7 +3,7 @@
 
     A mutation in one of a dino's slots (active, Parent, Elder) but missing from its unlocked
     list (MutationsRequirementsData.UnlockRequiredMutations) is hidden and
-    does nothing — "Reniculate Kidneys" (drink saltwater) on crocodiles taken
+    does nothing, "Reniculate Kidneys" (drink saltwater) on crocodiles taken
     out of the garage before the list was kept (2026-09-27/28). A slot can
     only hold a mutation the dino was given or picked, so such a mutation is
     given back its unlock here, on every player's dino, online or when they
@@ -58,7 +58,7 @@ function U.poll()
         local added = Restore.applyUnlocks(pawn, missing)
         if added ~= nil and added > 0 then
             H.try("unlockheal: ClientUpdateMutations", function() pawn:ClientUpdateMutations() end)
-            H.log(string.format("unlockheal: %s — unlocked again: %s", id, table.concat(missing, ", ")))
+            H.log(string.format("unlockheal: %s, unlocked again: %s", id, table.concat(missing, ", ")))
         end
     end)
 end

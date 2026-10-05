@@ -27,7 +27,7 @@ export const config = {
 
   /** The bridge, on the same machine. Only its /player-api routes are used. */
   bridgeUrl: env('BRIDGE_URL', 'http://127.0.0.1:8080').replace(/\/+$/, ''),
-  /** x-portal-token for /player-api — the same value as PORTAL_TOKEN in the bridge's env. */
+  /** x-portal-token for /player-api, the same value as PORTAL_TOKEN in the bridge's env. */
   portalToken: env('PORTAL_TOKEN', ''),
 
   /** The proximity voice server players' browsers connect to (wss://…); empty = no voice. Same value as the bridge's VOICE_URL. */

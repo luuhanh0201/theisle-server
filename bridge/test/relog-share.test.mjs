@@ -1,5 +1,5 @@
 // A prime the mod set gets its prime stats only when the dino is loaded again:
-// at a relog the max health jumps and the health stays the number it was —
+// at a relog the max health jumps and the health stays the number it was,
 // the bridge puts health and blood back to the share they had (relog-share.ts). npm test.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,7 +32,7 @@ test('nothing to do: no jump, another species, a fight since, or an old event re
 
 test('the session\'s end read before its snapshots (the two files read apart at a bridge start): the relog is still seen', () => {
   // T-Rex Nổi Loạn, 2026-10-04: left 02/10 at full health (9,350), the bridge restarted since and read
-  // the end before the snapshots; back 31 h later at 9,354 / 12,274 (76 %, dark screen) — nothing was done.
+  // the end before the snapshots; back 31 h later at 9,354 / 12,274 (76 %, dark screen), nothing was done.
   const r = new RelogShare(5000);
   assert.equal(r.onEvent({ type: 'session_end', t: 1000, steamId: ME }), null);
   assert.equal(r.onEvent(snap(900, 6000, 9350)), null);

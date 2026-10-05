@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-voice.sh — the proximity voice server (LiveKit) on the VPS. As root.
+# install-voice.sh, the proximity voice server (LiveKit) on the VPS. As root.
 #
 #   sudo ./scripts/install-voice.sh --domain voice.example.com
 #   sudo ./scripts/install-voice.sh --domain voice.example.com --dry-run
@@ -71,7 +71,7 @@ if [[ "$(/usr/local/bin/livekit-server --version 2>/dev/null || true)" != "livek
     trap 'rm -rf "$TMP"' EXIT
     run curl -fsSL -o "$TMP/lk.tgz" "https://github.com/livekit/livekit/releases/download/v$VERSION/livekit_${VERSION}_linux_amd64.tar.gz"
     if (( ! DRY_RUN )); then
-        echo "$SHA256  $TMP/lk.tgz" | sha256sum -c --quiet - || die "checksum mismatch — not installing"
+        echo "$SHA256  $TMP/lk.tgz" | sha256sum -c --quiet - || die "checksum mismatch, not installing"
         tar xzf "$TMP/lk.tgz" -C "$TMP" livekit-server
         install -o root -g root -m 0755 "$TMP/livekit-server" /usr/local/bin/livekit-server
     fi
@@ -160,7 +160,7 @@ fi
 # --- 3. nginx: wss://DOMAIN -> 127.0.0.1:7880 ------------------------------------------
 
 command -v nginx >/dev/null 2>&1 || die "nginx is not installed (scripts/install-portal.sh sets it up)"
-SITE="# Written by install-voice.sh — voice signalling (WebSocket) for LiveKit.
+SITE="# Written by install-voice.sh, voice signalling (WebSocket) for LiveKit.
 # Straight to this server, never through the anti-DDoS proxy. certbot adds
 # the HTTPS part to this file (certbot --nginx -d $DOMAIN).
 map \$http_upgrade \$isle_voice_connection {
@@ -212,6 +212,6 @@ cat <<NEXT
     1. DNS: $DOMAIN  A  $PUBLIC_IP   (straight to this server, NOT through the anti-DDoS proxy)
     2. in .env on your machine: VOICE_DOMAIN=$DOMAIN, LIVEKIT_API_KEY, LIVEKIT_API_SECRET
     3. ./scripts/deploy.sh --bridge-only && ./scripts/deploy.sh --portal-only   (starts the voice server)
-    4. HTTPS for $DOMAIN: certbot --nginx -d $DOMAIN   (accepts Let's Encrypt's terms — your call)
+    4. HTTPS for $DOMAIN: certbot --nginx -d $DOMAIN   (accepts Let's Encrypt's terms, your call)
     5. the hosting provider's firewall (if any): allow 7881/tcp and 7882/udp
 NEXT

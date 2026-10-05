@@ -6,7 +6,7 @@
     now; game thread, the inbox poll):
 
       heal      health, blood, stamina, oxygen full; fractures (legs, body,
-                head), sickness (vomit) and venom cleared — the fracture /
+                head), sickness (vomit) and venom cleared, the fracture /
                 sick / venom calls tried on the test server (VitalLab,
                 2026-10-02)
       vitals    { values = { health, hunger, thirst, stamina, blood, oxygen,
@@ -18,9 +18,9 @@
                 (restore.lua R.setOriginals)
       teleport  { x, y, z }: the bridge picks a spot something really stood on
 
-    And for the bag's items (main.lua inbox "mutation"): A.feed — the food
+    And for the bag's items (main.lua inbox "mutation"): A.feed, the food
     bar up by a share of its max, nutrients left as they are (Hộp food);
-    A.cure — the sickness after vomiting cleared (Đá muối:
+    A.cure, the sickness after vomiting cleared (Đá muối:
     ResetVomitSickState, the call the Heal above uses), with the pawn's
     vomit / sick values read before and after for the log.
 
@@ -111,7 +111,7 @@ end
 -- Prime: the ten conditions done + ServerSetPrimeEligible, as the garage
 -- restores a prime (restore.lua R.applyPrime); the game adds prime's stats only
 -- when it works them out again, so a few seconds later, once IsPrimeElder says
--- so, the growth is set again (as the garage's step 9) — down below the prime
+-- so, the growth is set again (as the garage's step 9), down below the prime
 -- mark and back when the same growth does not add them (restore.lua R.primeGrowth:
 -- a dino older than a few seconds; before, a Phiếu Prime gave prime's stats only
 -- at the next relog).
@@ -135,7 +135,7 @@ function A.grow(pawn, growth, prime)
             if not (okP and nowPrime == true) then H.log("admin: prime asked, still not prime after " .. PRIME_RECHECK_MS .. " ms"); return end
             local before = num(pawn, "GetMaxHealth")
             Restore.regrowKeep(pawn, 1, true)
-            H.log(string.format("admin: prime — stats worked out again, max health %s -> %s", tostring(before), tostring(num(pawn, "GetMaxHealth"))))
+            H.log(string.format("admin: prime, stats worked out again, max health %s -> %s", tostring(before), tostring(num(pawn, "GetMaxHealth"))))
         end)
         return true, string.format("grow: 100%%, prime asked (prime now: %s; stats again in %d s)", tostring(isPrime), PRIME_RECHECK_MS / 1000),
             "đặt tăng trưởng 100% và prime"
@@ -166,7 +166,7 @@ function A.teleport(pawn, x, y, z)
 end
 
 --- Test (2026-10-02): mutation names into any of the 16 slots ({ field = name | json null }),
--- the maxima read before and after — does where a mutation sits change its strength?
+-- the maxima read before and after, does where a mutation sits change its strength?
 -- Not on the panel; an admin script sends it.
 local MUT_FIELDS = {}
 for _, f in ipairs({ "MutationSlot1", "MutationSlot2", "MutationSlot3", "MutationSlot4",
@@ -205,7 +205,7 @@ end
 
 --- Read only (2026-10-02): a dark screen after a relog with nothing wrong in the
 -- vitals. Every SCALAR property of the pawn and of its attribute set whose name
--- looks like a state (sick, venom, bleeding, prime…), and the nutrients — read
+-- looks like a state (sick, venom, bleeding, prime…), and the nutrients, read
 -- while the screen is dark and while it is not, the difference names the cause.
 -- Scalars only (lua-safety-rules §2); class metadata walked, no value but scalars read.
 local PROBE_WORDS = { "Vomit", "Sick", "Venom", "Poison", "Toxic", "Bleed", "Malnutri", "Fracture", "Broken", "Disease",

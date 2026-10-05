@@ -7,7 +7,7 @@
       * encode: nil/boolean/number/string/table (array or object)
       * decode: the full JSON grammar except \uXXXX surrogate pairs, which are
         decoded per-escape and may produce invalid UTF-8 for astral characters
-      * no NaN / inf (encode raises — catch it with helpers.try)
+      * no NaN / inf (encode raises, catch it with helpers.try)
       * key order is not stable; do not diff encoded output
 
     Both entry points raise on malformed input. Callers must pcall:

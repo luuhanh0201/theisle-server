@@ -108,7 +108,7 @@ test('status from the mod: read back, stale after a minute, null when none', asy
   assert.equal((await readAiZonesStatus(2000)).stale, true);
 });
 
-test('shapes: an ellipse and a polygon — validated, sent to the mod as an outline, spots only inside', async () => {
+test('shapes: an ellipse and a polygon, validated, sent to the mod as an outline, spots only inside', async () => {
   const { insideZone, zoneOutline, boundRadiusCm } = await import('../dist/zone-shape.js');
   // An ellipse 400 m along X, 100 m across, a beach.
   const e = validateAiZones({ enabled: true, globalMax: 150, zones: [zone({ shape: 'ellipse', radiusM: 400, radius2M: 100, angleDeg: 0 })] }).zones[0];

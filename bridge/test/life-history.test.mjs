@@ -28,7 +28,7 @@ const events = [
   { type: 'death', t: 300, steamId: P, species: 'BP_Tyrannosaurus_C', growth: 0.79 },
   { type: 'spawn', t: 400, steamId: P, species: 'BP_Triceratops_C', classPath: 'X.BP_Triceratops_C', growth: 0.25, mutations: {} },
   { type: 'prime', t: 410, steamId: '76561198000000099', species: 'BP_Triceratops_C', growth: 0.9, conditions: conds([1, 2, 3, 4, 5]) },
-  // Q: a prime at 100 % reborn (chuyển sinh) — young again 6 s later, one more elder stack.
+  // Q: a prime at 100 % reborn (chuyển sinh), young again 6 s later, one more elder stack.
   { type: 'spawn', t: 500, steamId: Q, species: 'BP_Tyrannosaurus_C', classPath: REX, growth: 0.25, mutations: {} },
   { type: 'prime', t: 900, steamId: Q, species: 'BP_Tyrannosaurus_C', growth: 1, conditions: conds([3, 5, 6, 8]), eligible: true, prime: true, elderStacks: 2 },
   { type: 'death', t: 1000, steamId: Q, species: 'BP_Tyrannosaurus_C', growth: 1 },
@@ -50,7 +50,7 @@ test('lives: newest first; mutations, the last prime tasks, skin, sex and growth
   assert.equal(lives[0].prime, null, 'another player\'s event is not theirs');
 });
 
-test('restore: into the garage as it was — then never twice; a living dino is refused', async () => {
+test('restore: into the garage as it was, then never twice; a living dino is refused', async () => {
   const { slot } = await restoreLife(P, 100, 'khoiphuc-100');
   const state = JSON.parse(readFileSync(join(process.env.GARAGE_ROOT, 'stored', `${P}__khoiphuc-100.json`), 'utf8'));
   assert.equal(slot, 'khoiphuc-100');

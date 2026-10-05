@@ -97,10 +97,10 @@ test('a UTF-16 file (a Vietnamese name, as the game writes it): read, and writte
   assert.equal(b.endsAt - b.bannedAt, 3600);
   const w = new BanWatcher(() => undefined, { path });
   await w.tick();
-  await w.change({ steamId: '76561199248426579', bannedTime: '2026.09.26-11.20.09', action: 'edit', by: 'x', banReason: 'Thử — đã xong' });
+  await w.change({ steamId: '76561199248426579', bannedTime: '2026.09.26-11.20.09', action: 'edit', by: 'x', banReason: 'Thử, đã xong' });
   const raw = readFileSync(path);
   assert.deepEqual([...raw.subarray(0, 2)], [0xff, 0xfe], 'still UTF-16 with its BOM');
-  assert.equal(JSON.parse(raw.subarray(2).toString('utf16le')).bannedPlayerData[0].banReason, 'Thử — đã xong');
+  assert.equal(JSON.parse(raw.subarray(2).toString('utf16le')).bannedPlayerData[0].banReason, 'Thử, đã xong');
 });
 
 test('edit requests and times', () => {

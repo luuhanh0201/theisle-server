@@ -5,7 +5,7 @@ import { ValidationError } from './garage.js';
 
 /**
  * Server-wide voice settings, set on the admin panel (Server → Voice):
- *   nameMode  what players see of whoever is talking near them —
+ *   nameMode  what players see of whoever is talking near them,
  *             'name' their in-game name, 'id' a short tag (#A3F9, the same
  *             person keeps it), 'none' nothing ("Có người đang nói").
  * Applies to the "who is near" list at once, and to the name inside the voice

@@ -13,7 +13,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
 
 /**
  * Public routes. Every data route is scoped to the SteamID in the signed
- * session cookie — there is no way to ask for someone else's data.
+ * session cookie, there is no way to ask for someone else's data.
  *
  *   GET  /                      the page (public/)
  *   GET  /auth/steam            → Steam login
@@ -27,7 +27,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   POST /api/garage            { action: store|redeem, slot?, where? } (login)
  *        your own store / redeem, run in game like the chat command. The only
  *        write: same-origin only (Origin, or Sec-Fetch-Site), JSON only, a
- *        few per minute per player — and the SteamID is the session's.
+ *        few per minute per player, and the SteamID is the session's.
  *   POST /api/skin              { colors, effects?, pattern?, theme?, variation?, keep? } | { forget } (login, same-origin, JSON)
  *        the colours of the dino you play now, written in game (DinoGarage)
  *   POST /api/items/use         { uid, slot?: 1–4, mutation?: name (a Phiếu đổi mutation) } use an item of your bag on the dino you play (login, same-origin, JSON)
@@ -82,7 +82,7 @@ function securityHeaders(voiceUrl: string): Record<string, string> {
   }
   return {
     // 'wasm-unsafe-eval': the voice noise filter (RNNoise) is WebAssembly; it allows compiling
-    // wasm only — still no eval() and no scripts from anywhere else.
+    // wasm only, still no eval() and no scripts from anywhere else.
     'content-security-policy': "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; " +
       `connect-src 'self'${voice}; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`,
     'x-content-type-options': 'nosniff',
@@ -277,7 +277,7 @@ export function createPortal(opts: PortalOptions): Server {
             redirect(res, `/launcher-done.html?error=${result.steam ? 'steam' : 'refused'}`, clear);
             return;
           }
-          const why = result.steam ? 'Steam không phản hồi — thử đăng nhập lại sau ít phút.' : `Steam từ chối đăng nhập (${result.reason}).`;
+          const why = result.steam ? 'Steam không phản hồi, thử đăng nhập lại sau ít phút.' : `Steam từ chối đăng nhập (${result.reason}).`;
           const [page, hash] = (AFTER_LOGIN[asked] ?? '/').split('#');
           redirect(res, `${page}?login_error=${encodeURIComponent(why)}${hash ? `#${hash}` : ''}`, asked ? clear : {});
           return;

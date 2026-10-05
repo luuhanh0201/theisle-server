@@ -17,10 +17,10 @@ import { boundRadiusCm, centreOf, insideZone, polyArea, zoneOutline, type Point2
  *
  * A zone: a circle (centre in game units, radius in metres), its species, the
  * AI it always keeps (min: topped up within seconds, player or not), how
- * many it fills up to while a player is inside (max) — every `everySec` a
- * random perTurnMin..perTurnMax (1–5) more, each at a different spot — and
- * the growth of the dinos it makes. `globalMax` caps every living AI on the server — the
- * game's own and the zones' — so the zones stop at it and players have to
+ * many it fills up to while a player is inside (max), every `everySec` a
+ * random perTurnMin..perTurnMax (1–5) more, each at a different spot, and
+ * the growth of the dinos it makes. `globalMax` caps every living AI on the server, the
+ * game's own and the zones', so the zones stop at it and players have to
  * hunt some down before more appear.
  */
 
@@ -33,7 +33,7 @@ export interface AiZone {
   y: number;
   /** Circle radius; an ellipse's semi-axis along angleDeg; a polygon's reach from its centre (derived). */
   radiusM: number;
-  /** circle (default), ellipse or polygon — zone-shape.ts. */
+  /** circle (default), ellipse or polygon, zone-shape.ts. */
   shape: ZoneShape;
   /** Ellipse: the other semi-axis (m). */
   radius2M?: number;
@@ -60,7 +60,7 @@ export interface AiZone {
   water: boolean;
   /**
    * The prison (prison.ts, mods/Prison): inmates are dropped on ground spots
-   * inside it. No AI is ever spawned in it — the AIZones mod is not given it,
+   * inside it. No AI is ever spawned in it, the AIZones mod is not given it,
    * and it needs no species. At most one zone is the prison.
    */
   prison: boolean;

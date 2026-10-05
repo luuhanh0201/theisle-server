@@ -1,5 +1,5 @@
 --[[
-    IsleProbe — one-shot diagnostics for a new server / UE4SS build.
+    IsleProbe, one-shot diagnostics for a new server / UE4SS build.
 
     Every other mod here rests on names nobody has documented: property names
     (Health, Growth…), the class-path format DinoGarage compares on !redeem,
@@ -8,7 +8,7 @@
     UE4SS.log, ending with a PROBE SUMMARY block to paste back.
 
     STRICTLY READ-ONLY:
-      * never calls a setter — for Set* functions it only checks they exist
+      * never calls a setter, for Set* functions it only checks they exist
       * writes one file only: Mods/IsleProbe/census-started, just before the
         world census, so a census that crashes the server does not run again
         on every restart (deploy removes the file: one census per deploy)
@@ -155,7 +155,7 @@ local function probeEnvironment()
     if f then f:close() end
     note("relative paths", f ~= nil,
         f and "Mods/... resolves from the working directory"
-          or "Mods/... does NOT resolve — every mod's files would go missing")
+          or "Mods/... does NOT resolve, every mod's files would go missing")
     out("relative path Mods/%s/Scripts/main.lua readable: %s", MOD, tostring(f ~= nil))
 end
 
@@ -178,7 +178,7 @@ local function describeParams(label, redact, ...)
             pcall(function() cls = v:GetClass():GetFName():ToString() end)
             local shown = show(v)
             if redact and cls == nil and type(v) ~= "number" and type(v) ~= "boolean" then
-                shown = "<text, " .. #tostring(shown) .. " chars — redacted>"
+                shown = "<text, " .. #tostring(shown) .. " chars, redacted>"
             end
             out("  param %d: %s%s", i, shown, cls and ("  class=" .. tostring(cls)) or "")
         end
@@ -202,8 +202,8 @@ end
 
 local function probeHooks()
     out("=== hooks ===")
-    note("ApplyDamage param order", nil, "not observed yet — have one player bite another once")
-    note("GetChatMessage params", nil, "not observed yet — type anything in chat once")
+    note("ApplyDamage param order", nil, "not observed yet, have one player bite another once")
+    note("GetChatMessage params", nil, "not observed yet, type anything in chat once")
     -- StatsLogger reads (self = attacker pawn, param 2 = target pawn, param 3 = amount).
     sampleHook("/Script/TheIsle.TICharacterBase:ApplyDamage", "ApplyDamage", function(selfP, targetP, amountP)
         local okT, target = pcall(function() return targetP:get() end)
@@ -397,7 +397,7 @@ local function probePawn(ctrl, pawn)
     local steamOk, steam = pcall(function() return ctrl:GetSteamId():ToString() end)
     out("=== pawn %d: %s (player %s) ===", probedCount, species, steamOk and mask(steam) or "?")
     note("SteamID via ctrl:GetSteamId()", steamOk and steam ~= nil and steam ~= "",
-        steamOk and "ok" or "failed — StatsLogger/garage fall back to PlayerState")
+        steamOk and "ok" or "failed, StatsLogger/garage fall back to PlayerState")
 
     local okName, name = pcall(function() return ctrl.PlayerState:GetPlayerName():ToString() end)
     out("player name via PlayerState:GetPlayerName(): %s",
@@ -421,7 +421,7 @@ local function probePawn(ctrl, pawn)
     out("class GetFullName(): %s", okCP and string.format("%q", tostring(classPath)) or "FAILED")
     out("class GetFName():    %s", okFN and string.format("%q", tostring(fname)) or "FAILED")
     note("classPath (GetClass():GetFullName())", okCP and classPath ~= nil,
-        okCP and string.format("%q", tostring(classPath)) or "unreadable — species list and !redeem break")
+        okCP and string.format("%q", tostring(classPath)) or "unreadable, species list and !redeem break")
 
     for _, key in ipairs(CANDIDATE_ORDER) do
         local found = nil
@@ -486,7 +486,7 @@ local finished = false
 --
 -- Every property the session and game-state classes declare, with its type
 -- and live value, so the admin panel only offers Game.ini keys this build
--- really has — and in the class (= Game.ini section) that owns them. Read-only.
+-- really has, and in the class (= Game.ini section) that owns them. Read-only.
 -- Secrets are masked; arrays are printed as a count (they hold SteamIDs).
 --------------------------------------------------------------------------
 
@@ -589,7 +589,7 @@ end
 --- the engine's own base classes (their properties are the same everywhere).
 --- ONLY scalar properties are read. Reading any property of an arbitrary actor
 --- crashed the server in UE4SS.dll (2026-09-24, right after
---- TIGoreBase.bIsSolid) — a native crash pcall cannot catch. Other kinds are
+--- TIGoreBase.bIsSolid), a native crash pcall cannot catch. Other kinds are
 --- listed by name and type, never read.
 local ENGINE_BASES = { Actor = true, Pawn = true, Character = true, Object = true, Info = true, Volume = true }
 local SCALAR = { BoolProperty = true, IntProperty = true, Int64Property = true, FloatProperty = true,
@@ -775,7 +775,7 @@ LoopAsync(POLL_MS, function()
         if not busy and type(ExecuteInGameThread) ~= "function" then
             -- Without a game thread we must not read pawns at all.
             finished = true
-            out("ExecuteInGameThread missing — pawn probe skipped (it would read off-thread)")
+            out("ExecuteInGameThread missing, pawn probe skipped (it would read off-thread)")
             printSummary()
             return true
         end
@@ -783,5 +783,5 @@ LoopAsync(POLL_MS, function()
     return false
 end)
 
-out("%s loaded — join and spawn a dino; a PROBE SUMMARY prints after each new species "
+out("%s loaded, join and spawn a dino; a PROBE SUMMARY prints after each new species "
     .. "(up to %d). Nothing is changed in the game.", MOD, MAX_SPECIES)

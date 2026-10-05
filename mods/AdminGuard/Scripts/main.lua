@@ -1,4 +1,4 @@
--- AdminGuard — an admin whose rights in the game the super admin switched off
+-- AdminGuard, an admin whose rights in the game the super admin switched off
 -- (panel → Quản trị → Phân quyền, bridge/src/permissions.ts) loses them now,
 -- not only at the next restart.
 --
@@ -83,7 +83,7 @@ local function revoke(ctrl, id)
     cleared[id] = done
     if not reported[id] then
         reported[id] = true
-        H.log(string.format("%s: %s is switched off in game — flags read: %s; cleared: %s", MOD, id,
+        H.log(string.format("%s: %s is switched off in game, flags read: %s; cleared: %s", MOD, id,
             #found > 0 and table.concat(found, ", ") or "none readable",
             next(done) and table.concat((function() local k = {} for n in pairs(done) do k[#k + 1] = n end return k end)(), ", ") or "none"))
     end
@@ -98,7 +98,7 @@ local function restore(ctrl, id)
         end
     end
     cleared[id], reported[id] = nil, nil
-    H.log(string.format("%s: %s is switched on in game again — flags put back", MOD, id))
+    H.log(string.format("%s: %s is switched on in game again, flags put back", MOD, id))
 end
 
 H.every(TICK_MS, MOD .. " tick", function()
@@ -112,4 +112,4 @@ H.every(TICK_MS, MOD .. " tick", function()
     end)
 end)
 
-H.log(MOD .. ": loaded — list from " .. PATH)
+H.log(MOD .. ": loaded, list from " .. PATH)

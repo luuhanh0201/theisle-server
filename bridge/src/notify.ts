@@ -5,7 +5,7 @@ import type { GameEvent } from './events.js';
  *
  * The events file is replayed from the top whenever the bridge starts, so only
  * messages written after this process came up (minus a little slack for the
- * tail's poll interval) are sent — a restart must not re-send an hour of
+ * tail's poll interval) are sent, a restart must not re-send an hour of
  * "Restored 'default'." to everyone.
  */
 export interface DirectMessenger {
@@ -31,7 +31,7 @@ export class Notifier {
     if (!this.#rcon.enabled) {
       if (!this.#warnedDisabled) {
         this.#warnedDisabled = true;
-        this.#log('[notify] RCON is not configured — mod messages to players are not delivered');
+        this.#log('[notify] RCON is not configured, mod messages to players are not delivered');
       }
       return null;
     }

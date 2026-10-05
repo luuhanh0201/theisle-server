@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-server.sh — a second The Isle server on the same VPS, for trying mods
+# test-server.sh, a second The Isle server on the same VPS, for trying mods
 # and game updates without touching the live one. Run ON THE VPS as `isle`
 # (no root needed: it is a plain process, not a systemd unit).
 #
@@ -17,7 +17,7 @@
 #
 # 2026-09-27: the in-game list showed "[TEST] …" with the live server's player
 # count, and joining it landed on the LIVE server (the listing carried port
-# 7777). Being re-checked 2026-10-01 — see docs/NHAT-KY-VAN-HANH.md.
+# 7777). Being re-checked 2026-10-01, see docs/NHAT-KY-VAN-HANH.md.
 
 set -euo pipefail
 
@@ -33,7 +33,7 @@ START_SH=/home/isle/bin/start.sh
 running() { [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
 
 setup() {
-    if running; then echo "test server is running — stop it first: $0 stop" >&2; exit 1; fi
+    if running; then echo "test server is running, stop it first: $0 stop" >&2; exit 1; fi
     mkdir -p "$ROOT/server"
     # Everything but the player data (TheIsle/Saved) and each mod's Saved/.
     rsync -a --delete --exclude 'TheIsle/Saved/' --exclude 'Binaries/Win64/Mods/*/Saved/' --exclude '*.log' \
@@ -59,7 +59,7 @@ for k, v in (("ServerName", "[TEST] XG EVO - server thu nghiem"), ("bServerPassw
     s = setk(s, k, v)
 open(dst, "w").write(s)
 EOF
-    echo "test server ready in $ROOT (no password) — start it with: $0 start"
+    echo "test server ready in $ROOT (no password), start it with: $0 start"
 }
 
 start() {

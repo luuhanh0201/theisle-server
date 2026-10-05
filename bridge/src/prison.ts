@@ -25,7 +25,7 @@ import type { GameEvent } from './events.js';
  *
  * A sentence: an offense from the list (its minutes × 1 + repeatStep × the
  * earlier sentences of that player; the admin may change the number), a
- * reason. It is tied to the SteamID — every dino of theirs goes in. Time runs
+ * reason. It is tied to the SteamID, every dino of theirs goes in. Time runs
  * only while they are online and inside (the mod counts it). Killing a fellow
  * inmate in the prison adds killPenaltyMin to the killer's sentence; whoever
  * kills an escaped inmate is credited as a hunter. Everything said to players
@@ -338,8 +338,8 @@ export class Prison {
       const dm = this.#deps.render('prison.jailed.player', vars);
       if (dm !== null) await this.#deps.directMessage(steamId, dm).catch(() => undefined);
     }
-    this.#deps.discord(`🔒 **${name}** \`${steamId}\` bị bỏ tù ${fmtDuration(s.totalSec)} — ${s.offense}: ${reason}`
-      + `${prior > 0 ? ` (tiền án: ${prior}, ×${multiplier})` : ''} — bởi ${by}`);
+    this.#deps.discord(`🔒 **${name}** \`${steamId}\` bị bỏ tù ${fmtDuration(s.totalSec)}, ${s.offense}: ${reason}`
+      + `${prior > 0 ? ` (tiền án: ${prior}, ×${multiplier})` : ''}, bởi ${by}`);
     this.#log(`[prison] ${name} (${steamId}) jailed ${minutes} min by ${by}: ${reason}`);
     return s;
   }
@@ -354,7 +354,7 @@ export class Prison {
     await this.#save();
     const dm = this.#deps.render('prison.extended.player', { minutes: m, left: fmtDuration(this.remainingOf(s)) });
     if (dm !== null && this.#deps.isOnline(s.steamId)) await this.#deps.directMessage(s.steamId, dm).catch(() => undefined);
-    this.#deps.discord(`⏱️ Án của **${s.name}** \`${s.steamId}\` ${m > 0 ? '+' : ''}${m} phút — còn ${fmtDuration(this.remainingOf(s))} (bởi ${by})`);
+    this.#deps.discord(`⏱️ Án của **${s.name}** \`${s.steamId}\` ${m > 0 ? '+' : ''}${m} phút, còn ${fmtDuration(this.remainingOf(s))} (bởi ${by})`);
     return s;
   }
 
@@ -575,7 +575,7 @@ export class Prison {
     await this.#save();
     const ann = this.#deps.render('prison.bounty.announce', { hunter: name, name: victim.name, count: h.count + 1 });
     if (ann !== null) await this.#deps.announce(ann).catch(() => undefined);
-    this.#deps.discord(`🏹 **${name}** \`${hunterId}\` đã bắt được kẻ vượt ngục **${victim.name}** (thợ săn: ${h.count + 1} lần) — trao thưởng tay`);
+    this.#deps.discord(`🏹 **${name}** \`${hunterId}\` đã bắt được kẻ vượt ngục **${victim.name}** (thợ săn: ${h.count + 1} lần), trao thưởng tay`);
   }
 
   /** Escaped inmates where the mod last saw them (for every player's map). */

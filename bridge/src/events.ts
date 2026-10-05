@@ -2,7 +2,7 @@
  * The NDJSON shapes StatsLogger and DinoGarage emit. Keep in sync with
  * mods/StatsLogger/Scripts/main.lua and mods/DinoGarage/Scripts/main.lua.
  *
- * Everything here is data the game process wrote to disk — treat every field
+ * Everything here is data the game process wrote to disk, treat every field
  * as possibly missing. The Lua side omits a field when a property could not be
  * resolved, which happens until the VITALS names are verified.
  */
@@ -93,7 +93,7 @@ export interface DeathEvent extends BaseEvent {
   loc?: Loc;
   /** Seconds between the spawn we saw and this death. */
   lifeSeconds?: number;
-  /** Absent for environmental, DoT and AI deaths — the game hides those. */
+  /** Absent for environmental, DoT and AI deaths, the game hides those. */
   killer?: string;
   killerName?: string;
   killerSpecies?: string;
@@ -101,7 +101,7 @@ export interface DeathEvent extends BaseEvent {
   /** Amount of the hit that explains the death. */
   lastHit?: number;
   attributed: boolean;
-  /** "pawn_lost": the dino vanished between two polls (e.g. a fall) — no final HP seen. */
+  /** "pawn_lost": the dino vanished between two polls (e.g. a fall), no final HP seen. */
   detectedBy?: 'pawn_lost';
 }
 

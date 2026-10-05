@@ -16,15 +16,15 @@
 export interface PrimeCondition { n: number; label: string; short: string; passive: boolean; verified: boolean }
 
 export const PRIME_CONDITIONS: PrimeCondition[] = [
-  { n: 1, label: 'Ở trong Sanctuary 1 phút (trước 75% growth) — mọi loài', short: 'Sanctuary', passive: false, verified: true },
-  { n: 2, label: 'Chưa rõ — chưa từng thấy đạt trên server (theo hướng dẫn: nở từ tổ của người chơi khác)', short: 'Nhiệm vụ 2 (nở từ tổ)', passive: false, verified: false },
+  { n: 1, label: 'Ở trong Sanctuary 1 phút (trước 75% growth), mọi loài', short: 'Sanctuary', passive: false, verified: true },
+  { n: 2, label: 'Chưa rõ, chưa từng thấy đạt trên server (theo hướng dẫn: nở từ tổ của người chơi khác)', short: 'Nhiệm vụ 2 (nở từ tổ)', passive: false, verified: false },
   { n: 3, label: 'Ăn đủ cả ba chất (carb, protein, lipid)', short: 'Ăn đủ ba chất', passive: false, verified: true },
-  { n: 4, label: 'Chưa rõ — chưa từng thấy đạt trên server (theo hướng dẫn: đi qua 2 vùng di cư khác nhau)', short: 'Nhiệm vụ 4', passive: false, verified: false },
-  { n: 5, label: 'Ở trong vùng di cư đang mở 1 phút — bất kỳ vùng nào, mọi loài kể cả cá sấu', short: 'Vùng di cư', passive: false, verified: true },
-  { n: 6, label: 'Ở trong vùng tuần tra 1 phút — mọi loài', short: 'Vùng tuần tra', passive: false, verified: true },
-  { n: 7, label: 'Chưa từng bị vô sinh — có sẵn, mất nếu để dino thiếu chất lâu', short: 'Chưa từng bị vô sinh', passive: true, verified: true },
-  { n: 8, label: 'Chưa từng bị co giật cơ — có sẵn', short: 'Chưa từng bị co giật cơ', passive: true, verified: true },
-  { n: 9, label: 'Chưa rõ — mới thấy ở Deinosuchus trưởng thành (theo hướng dẫn: nuôi con từ tổ lên subadult)', short: 'Nhiệm vụ 9 (nuôi con)', passive: false, verified: false },
+  { n: 4, label: 'Chưa rõ, chưa từng thấy đạt trên server (theo hướng dẫn: đi qua 2 vùng di cư khác nhau)', short: 'Nhiệm vụ 4', passive: false, verified: false },
+  { n: 5, label: 'Ở trong vùng di cư đang mở 1 phút, bất kỳ vùng nào, mọi loài kể cả cá sấu', short: 'Vùng di cư', passive: false, verified: true },
+  { n: 6, label: 'Ở trong vùng tuần tra 1 phút, mọi loài', short: 'Vùng tuần tra', passive: false, verified: true },
+  { n: 7, label: 'Chưa từng bị vô sinh, có sẵn, mất nếu để dino thiếu chất lâu', short: 'Chưa từng bị vô sinh', passive: true, verified: true },
+  { n: 8, label: 'Chưa từng bị co giật cơ, có sẵn', short: 'Chưa từng bị co giật cơ', passive: true, verified: true },
+  { n: 9, label: 'Chưa rõ, mới thấy ở Deinosuchus trưởng thành (theo hướng dẫn: nuôi con từ tổ lên subadult)', short: 'Nhiệm vụ 9 (nuôi con)', passive: false, verified: false },
   { n: 10, label: 'Loài được tặng sẵn (Beipiaosaurus, Deinosuchus…)', short: 'Loài được tặng sẵn', passive: true, verified: true },
 ];
 

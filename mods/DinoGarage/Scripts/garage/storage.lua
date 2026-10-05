@@ -26,7 +26,7 @@ S.SLOT_VERSION = 1   -- per-slot file version, upstream
 --------------------------------------------------------------------------
 
 -- Slot names come from chat, so they are untrusted. Anything outside this set
--- is rejected rather than sanitised — a silently renamed slot is worse than a
+-- is rejected rather than sanitised, a silently renamed slot is worse than a
 -- refusal the player can see.
 function S.isValidSlot(name)
     return type(name) == "string"
@@ -159,7 +159,7 @@ function S.get(steamId, slot)
     if type(state) ~= "table" then return nil end
     if state.version ~= S.SLOT_VERSION then
         H.logError(string.format(
-            "storage: %s/%s has version %s, expected %d — refusing to apply",
+            "storage: %s/%s has version %s, expected %d, refusing to apply",
             steamId, slot, tostring(state.version), S.SLOT_VERSION))
         return nil
     end

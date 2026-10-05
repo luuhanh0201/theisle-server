@@ -1,5 +1,5 @@
 # Cloudflare Worker: the Discord relay (relay/README.md).
-# Secrets (not here): BRIDGE_SECRET — `wrangler secret put BRIDGE_SECRET`.
+# Secrets (not here): BRIDGE_SECRET: `wrangler secret put BRIDGE_SECRET`.
 name = "theisle-discord-relay"
 main = "src/index.ts"
 compatibility_date = "2026-09-01"

@@ -1,18 +1,18 @@
 'use strict';
 /**
  * The in-game overlay: small transparent, always-on-top, click-through
- * windows over The Isle — one per widget:
+ * windows over The Isle, one per widget:
  *
  *   voice   who is talking near you, your mic, your range (voice.js)
  *   map     a mini map around your dino (position, heading, trail, AI, places)
  *   dino    your dino's numbers (growth, health, stamina, food, water…)
  *   quests  the prime elder conditions and the growth deadline
  *
- * Only windows: nothing is injected into the game, so no anti-cheat concern —
+ * Only windows: nothing is injected into the game, so no anti-cheat concern,
  * which also means they show over the game in Borderless / Windowed mode, not
  * in exclusive fullscreen. Placed with the mouse: on the launcher's layout
  * editor (a small picture of your screens) or on the screen itself in edit
- * mode — drag to move, drag an edge or corner to resize, drop anywhere.
+ * mode, drag to move, drag an edge or corner to resize, drop anywhere.
  */
 
 const WIDGETS = ['voice', 'map', 'dino', 'quests'];
@@ -145,7 +145,7 @@ function snap(r, b, px = 16) {
  * How long a widget stays up after its content went away. The data comes
  * from the portal once a second; a blip (the server restarting, a slow
  * answer, a player briefly seen offline) used to hide the widgets and show
- * them again a moment later — the overlay "turning on and off by itself"
+ * them again a moment later, the overlay "turning on and off by itself"
  * (2026-09-27). Only a longer absence hides them.
  */
 const CONTENT_GRACE_MS = 15_000;
@@ -189,7 +189,7 @@ class Overlay {
     const win = new BrowserWindow({
       ...this.#bounds(id), frame: false, transparent: true, resizable: false, movable: true, focusable: false,
       skipTaskbar: true, alwaysOnTop: true, hasShadow: false, show: false, fullscreenable: false,
-      title: `Xóm Gáy overlay — ${id}`, backgroundColor: '#00000000',
+      title: `Xóm Gáy overlay, ${id}`, backgroundColor: '#00000000',
       webPreferences: { preload: this.preload, contextIsolation: true, sandbox: true, nodeIntegration: false, backgroundThrottling: false },
     });
     win.setAlwaysOnTop(true, 'screen-saver');
@@ -220,7 +220,7 @@ class Overlay {
   /**
    * Clicks through to the game unless editing. On X11 (Linux, XWayland too) the
    * window's input area is put back to the whole window when it is mapped or
-   * resized — a moment AFTER show / setBounds return, so a call right then is
+   * resized, a moment AFTER show / setBounds return, so a call right then is
    * undone (the live overlay took the clicks on all of it, 2026-10-03). Measured
    * with a test window (input shape read back): set at once, or on the window's
    * show / resize / move events, it is lost after the first show and every
@@ -275,7 +275,7 @@ class Overlay {
   /** Is there anything for this widget to show (now, or until a moment ago: CONTENT_GRACE_MS)? */
   #hasContent(id) {
     const now = Date.now();
-    // Game mode: the player is playing — the dino / map / quest widgets stay
+    // Game mode: the player is playing, the dino / map / quest widgets stay
     // up and say what they miss ("no dino of <account> in the game": the
     // launcher logged in on another Steam account than the game's). They
     // only showed while editing, and vanished after (2026-09-28).
@@ -398,7 +398,7 @@ class Overlay {
   edit(on) {
     this.editing = on === true;
     // Placed on screen just now: they are to be seen. A widget hidden by the
-    // overlay key (F8) before went away the moment editing ended — "it does
+    // overlay key (F8) before went away the moment editing ended, "it does
     // not stay, only while editing" (2026-09-28).
     if (!this.editing) this.hiddenByKey = false;
     this.apply();   // editing: a window for every widget; done: only the ones that are on
@@ -415,7 +415,7 @@ class Overlay {
   }
 
   /**
-   * Put a widget at (x, y) — screen coordinates, any screen — at `scale` %.
+   * Put a widget at (x, y), screen coordinates, any screen, at `scale` %.
    * From the layout editor or from dragging an edge on screen; the window
    * follows at once.
    */
@@ -438,7 +438,7 @@ class Overlay {
 
   /**
    * Dragging a widget on screen: its window follows the real pointer (asked of
-   * the OS), keeping the spot where it was grabbed — whatever coordinates the
+   * the OS), keeping the spot where it was grabbed, whatever coordinates the
    * page's events carry while the window moves under them.
    */
   dragStart(id) {
@@ -505,7 +505,7 @@ class Overlay {
     const primary = screen.getPrimaryDisplay().id;
     return screen.getAllDisplays().map((d, i) => ({
       id: d.id === primary ? 'primary' : d.id,
-      label: `Màn hình ${i + 1}${d.id === primary ? ' (chính)' : ''} — ${d.size.width}×${d.size.height}`,
+      label: `Màn hình ${i + 1}${d.id === primary ? ' (chính)' : ''}, ${d.size.width}×${d.size.height}`,
       bounds: d.bounds,
     }));
   }

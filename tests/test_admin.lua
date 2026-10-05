@@ -1,5 +1,5 @@
 -- DinoGarage admin.lua: the /adminpanel actions from the web panel on a live
--- dino — heal (vitals full, fractures / sickness / venom cleared), vitals as
+-- dino, heal (vitals full, fractures / sickness / venom cleared), vitals as
 -- shares of their max, growth with the vitals kept as shares and the
 -- originals written, teleport; bad input refused.
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end

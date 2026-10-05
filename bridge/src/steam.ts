@@ -2,14 +2,14 @@
 // deployed separately; keep the two in step). Used by the admin panel login.
 
 /**
- * "Sign in through Steam" — OpenID 2.0, as Steam implements it.
+ * "Sign in through Steam", OpenID 2.0, as Steam implements it.
  *
  * 1. loginUrl(): send the player to Steam with our return URL.
  * 2. Steam sends them back with signed openid.* parameters.
  * 3. verify(): check the parts we can check locally (endpoint, return URL,
  *    claimed id format, nonce not seen before), then ask STEAM whether the
  *    signature is valid (mode=check_authentication). Only "is_valid:true"
- *    from Steam itself makes the SteamID trusted — the query string alone is
+ *    from Steam itself makes the SteamID trusted, the query string alone is
  *    attacker-controlled.
  */
 

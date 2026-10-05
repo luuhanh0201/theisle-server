@@ -6,7 +6,7 @@
 
     Two rules drive everything here:
 
-      1. Every SetGrowth call WIPES vitals — it recomputes max-stats and refills
+      1. Every SetGrowth call WIPES vitals, it recomputes max-stats and refills
          current to the new max. So vitals are applied twice: once in the first
          pass, and again after the last growth write. Step 5 is not redundant.
 
@@ -14,7 +14,7 @@
          "Lua-string field-writes crash at 0x70; FName(s) field-writes work."
          That is a hard crash, so every write is wrapped even so.
 
-    Do not reorder the steps. Do not call RequestRespawn — it crashes from Lua
+    Do not reorder the steps. Do not call RequestRespawn, it crashes from Lua
     because of its FCustomizerDataBase by-value parameter.
 ]]
 
@@ -36,13 +36,13 @@ do
     if f then
         f:close()
         primeWrites = false
-        H.logError("restore: the last run stopped while writing prime conditions — they are not written. Delete "
+        H.logError("restore: the last run stopped while writing prime conditions, they are not written. Delete "
             .. PRIME_FLAG .. " to try again.")
     end
 end
 
 -- The stored skin goes back on the dino taken out (garage/skin.lua: field by
--- field into CustomizerData — the way the web skin editor writes it, used on
+-- field into CustomizerData, the way the web skin editor writes it, used on
 -- the live server since 2026-09-27; the upstream restore predated the
 -- customizer overhaul of v0.21.720 and stayed off until then).
 local Skin = require("garage.skin")
@@ -82,13 +82,13 @@ do
     if f then
         f:close()
         unlockWrites = false
-        H.logError("restore: the last run stopped while writing unlocked mutations — they are not written. Delete "
+        H.logError("restore: the last run stopped while writing unlocked mutations, they are not written. Delete "
             .. UNLOCK_FLAG .. " to try again.")
     end
 end
 
 --- What to give back as unlocked: the stored list, plus every mutation in the
---- slots (active, Parent, Elder) — a mutation in its slot but not unlocked is
+--- slots (active, Parent, Elder), a mutation in its slot but not unlocked is
 --- what the game hid and switched off. Covers the dinos stored before the
 --- list was kept (2026-09-28) and the admin-made ones, which carry no list.
 function R.unlocksFor(state)
@@ -149,7 +149,7 @@ local NUTRIENTS = {
 }
 
 --- Call a setter if the value is present. Missing values are skipped, not
---- zeroed — writing 0 where we failed to capture would starve the dino.
+--- zeroed, writing 0 where we failed to capture would starve the dino.
 local function set(pawn, method, value)
     if value == nil then return end
     H.try("restore: " .. method, function() pawn[method](pawn, value) end)
@@ -175,7 +175,7 @@ end
 
 --- Apply every vital. Called twice, per rule 1.
 -- The stomach and health go back as the SHARE of the max they had, on the
--- max the game gives this dino now — never the stored absolute numbers. A
+-- max the game gives this dino now, never the stored absolute numbers. A
 -- prime's max health and stomach grow while it stays prime (×1.31 on a
 -- Rex); the dino taken out is a fresh prime with the base prime max. Written
 -- back as numbers, the stomach max stayed the old one until the game
@@ -213,7 +213,7 @@ end
 -- The game keeps "original" maxima in the dino's attribute set
 -- (TIAttributeSetDinosaur: OriginalMaxHunger / OriginalMaxThirst /
 -- OriginalMaxStamina, FGameplayAttributeData) and puts the maxima back to them
--- when it resets the attributes — an admin's Heal (ServerHeal) does. They are
+-- when it resets the attributes, an admin's Heal (ServerHeal) does. They are
 -- set when the dino spawns: for a dino the garage grows, a hatchling's, and
 -- SetGrowth does not move the stomach's (VitalLab on the test server,
 -- 2026-10-02: MaxHunger and OriginalMaxHunger stay 2.0 after SetGrowth(0.78)).
@@ -264,11 +264,11 @@ local SHARES = {
 
 -- Prime's stats on a dino the mod made prime. The game adds them when it works
 -- the stats out from scratch, which SetGrowth does on a dino spawned a few
--- seconds before — and not on one older than that (a garage redeem after
+-- seconds before, and not on one older than that (a garage redeem after
 -- playing the spawned dino a while, an admin's growth, a Phiếu Prime): there
 -- SetGrowth scales the maxima from the growth before, and the same growth
 -- again keeps the plain max (Quang Tèo's T-Rex out of the garage 2026-10-02
--- 20:14: 9,350 instead of 12,274 — light, short of health, until a relog).
+-- 20:14: 9,350 instead of 12,274, light, short of health, until a relog).
 -- Growth taken below the prime mark (75 %) and back makes the game add them:
 -- PrimeLab on the test server (T-Rex 150 s old, prime at 0.89 and at 1.0):
 -- the same growth again 9,350 -> 9,350; down to 0.88 and back, nothing; down to
@@ -293,7 +293,7 @@ end
 
 --- SetGrowth(growth) on a live dino, its vitals kept as the share of their max
 --- they had, the stomach max for the new max health (the species' stomach /
---- health ratio, read before — a ratio far off, as a hatchling's stomach left on
+--- health ratio, read before, a ratio far off, as a hatchling's stomach left on
 --- a grown dino, is not used) and the originals (R.setOriginals). Used for a prime
 --- that turned prime only after the restore, and by an admin's growth (admin.lua).
 --- `prime`: the dino is prime now and should get prime's stats (R.primeGrowth).
@@ -331,7 +331,7 @@ local function logVitals(pawn, state)
         parts[#parts + 1] = string.format("%s %s/%s", v:lower(),
             cur and string.format("%.1f", cur) or "?", max and string.format("%.1f", max) or "?")
     end
-    H.log(string.format("restore: vitals now — %s (stored: health %s/%s, hunger %s/%s, blood %s)",
+    H.log(string.format("restore: vitals now, %s (stored: health %s/%s, hunger %s/%s, blood %s)",
         table.concat(parts, ", "), tostring(state.health), tostring(state.maxHealth),
         tostring(state.hunger), tostring(state.maxHunger), tostring(state.blood)))
 end
@@ -350,7 +350,7 @@ end
 local function applyMutations(pawn, state, slots)
     local ok, struct = pcall(function() return pawn.ReplicatedMutationsData end)
     if not ok or struct == nil then
-        H.logError("restore: ReplicatedMutationsData unreadable — mutations skipped")
+        H.logError("restore: ReplicatedMutationsData unreadable, mutations skipped")
         return
     end
 
@@ -372,7 +372,7 @@ local function applyNutrients(pawn, state)
 
     local ok, struct = pcall(function() return pawn.NutrientsStruct end)
     if not ok or struct == nil then
-        H.logError("restore: NutrientsStruct unreadable — nutrients skipped")
+        H.logError("restore: NutrientsStruct unreadable, nutrients skipped")
         return
     end
 
@@ -408,12 +408,12 @@ local function fillNutrients(pawn, pct, stomach)
     local okMax, max = true, stomach
     if max == nil then okMax, max = pcall(function() return pawn:GetMaxHunger() end) end
     if not (okMax and type(max) == "number" and max > 0) then
-        H.logError("restore: GetMaxHunger unavailable — nutrients not filled")
+        H.logError("restore: GetMaxHunger unavailable, nutrients not filled")
         return
     end
     local ok, struct = pcall(function() return pawn.NutrientsStruct end)
     if not ok or struct == nil then
-        H.logError("restore: NutrientsStruct unreadable — nutrients not filled")
+        H.logError("restore: NutrientsStruct unreadable, nutrients not filled")
         return
     end
     local v = max * math.min(pct, 100) / 100
@@ -496,8 +496,8 @@ function R.apply(pawn, state, onDone)
         return
     end
 
-    -- Step 1 — growth and vitals, plus prime eligibility. `isPrime` is an
-    -- admin's choice (bridge); `prime` is what a stored dino was — before
+    -- Step 1, growth and vitals, plus prime eligibility. `isPrime` is an
+    -- admin's choice (bridge); `prime` is what a stored dino was, before
     -- 2026-09-26 it was saved but never read back, and a prime came out
     -- without it.
     local prime = state.isPrime
@@ -507,7 +507,7 @@ function R.apply(pawn, state, onDone)
     -- Rex at 37 % with 16.5 instead of ~125: it could not eat, 2026-09-26).
     -- Stomach / max health is the species' own ratio at any growth, prime
     -- included (both grow by the same factor): read it from the fresh dino
-    -- here, set the stomach from it after every growth write — for every
+    -- here, set the stomach from it after every growth write, for every
     -- slot, not only the admin-made ones (see applyVitals).
     local stomachRatio = nil
     do
@@ -515,7 +515,7 @@ function R.apply(pawn, state, onDone)
         if mh ~= nil and mhp ~= nil and mh > 0 and mhp > 0 then
             stomachRatio = mh / mhp
         else
-            H.logError("restore: max stomach / health unreadable on the fresh dino — stored stomach max used")
+            H.logError("restore: max stomach / health unreadable on the fresh dino, stored stomach max used")
         end
     end
     set(pawn, "SetGrowth", state.growth)
@@ -526,10 +526,10 @@ function R.apply(pawn, state, onDone)
         end)
     end
 
-    -- Step 3 — inherited slots. Field-write only; no UFunction setters exist.
+    -- Step 3, inherited slots. Field-write only; no UFunction setters exist.
     applyMutations(pawn, state, INHERITED_SLOTS)
 
-    -- Step 4 — nutrients.
+    -- Step 4, nutrients.
     applyNutrients(pawn, state)
 
     -- Steps 2, 5 and 6 need the settle window. Anything written before it has
@@ -542,13 +542,13 @@ function R.apply(pawn, state, onDone)
             return
         end
 
-        -- Step 2 — the unlocked quest mutations, then the active mutation
+        -- Step 2, the unlocked quest mutations, then the active mutation
         -- slots, then the player's mutation list redrawn.
         R.applyUnlocks(pawn, R.unlocksFor(state))
         applyMutations(pawn, state, ACTIVE_SLOTS)
         H.try("restore: ClientUpdateMutations", function() pawn:ClientUpdateMutations() end)
 
-        -- Step 5 — re-apply vitals. Rule 1: SetGrowth above wiped them. A
+        -- Step 5, re-apply vitals. Rule 1: SetGrowth above wiped them. A
         -- function: a prime dino goes through it twice (step 7b).
         local function settleVitals()
             -- The stomach for this growth (see stomachRatio above).
@@ -566,7 +566,7 @@ function R.apply(pawn, state, onDone)
                 if okMax and type(max) == "number" and max > 0 then
                     set(pawn, "SetHunger", max)
                 else
-                    H.logError("restore: GetMaxHunger unavailable — stomach not filled")
+                    H.logError("restore: GetMaxHunger unavailable, stomach not filled")
                 end
             end
             -- …and no captured nutrients either: `nutrientPct` % of each. Pushed
@@ -577,47 +577,47 @@ function R.apply(pawn, state, onDone)
         end
         settleVitals()
 
-        -- Step 6 — elder replication stacks, the lineage-tier counter.
+        -- Step 6, elder replication stacks, the lineage-tier counter.
         if state.elderStacks ~= nil and state.elderStacks > 0 then
             H.try("restore: SetElderReplicationStacks", function()
                 pawn:SetElderReplicationStacks(state.elderStacks)
             end)
         end
 
-        -- Step 7 — the prime conditions, and prime once more on top of them.
+        -- Step 7, the prime conditions, and prime once more on top of them.
         local isPrime = false
         if state.primeData ~= nil or prime == true then
             local _, p = R.applyPrime(pawn, state.primeData, prime == true)
             isPrime = p == true
         end
 
-        -- Step 7b — prime's own stats. The game adds them when it recomputes
+        -- Step 7b, prime's own stats. The game adds them when it recomputes
         -- the dino's stats, which SetGrowth does; the growth was set before
         -- prime, so a prime dino came out with a plain one's max health (a
         -- Deinosuchus at 88 %: 8,799 instead of 10,931) until the player
         -- logged in again (2026-09-28). The same growth once more (StatLab on
-        -- a test server: 8,780 -> 10,860) — on a dino spawned a while before
+        -- a test server: 8,780 -> 10,860), on a dino spawned a while before
         -- the redeem that did nothing, so down below the prime mark and back
-        -- when needed (R.primeGrowth) — then, rule 1, everything it wiped.
+        -- when needed (R.primeGrowth), then, rule 1, everything it wiped.
         if isPrime then
             local before, after, dipped = R.primeGrowth(pawn, state.growth)
             settleVitals()
             if state.elderStacks ~= nil and state.elderStacks > 0 then
                 H.try("restore: SetElderReplicationStacks", function() pawn:SetElderReplicationStacks(state.elderStacks) end)
             end
-            H.log(string.format("restore: prime stats — max health %s -> %s%s", tostring(before), tostring(after),
+            H.log(string.format("restore: prime stats, max health %s -> %s%s", tostring(before), tostring(after),
                 dipped and " (growth down to " .. R.PRIME_DIP .. " and back)" or ""))
         end
 
-        -- Step 7c — the maxima a reset (an admin's Heal) goes back to: this
+        -- Step 7c, the maxima a reset (an admin's Heal) goes back to: this
         -- dino's, not the hatchling's it was spawned as.
         do
             local wrote, why = R.setOriginals(pawn)
             if wrote ~= nil then H.log("restore: originals " .. (#wrote > 0 and table.concat(wrote, ", ") or "none written"))
-            else H.logError("restore: originals not written — " .. tostring(why)) end
+            else H.logError("restore: originals not written, " .. tostring(why)) end
         end
 
-        -- Step 8 — the colours it had when stored.
+        -- Step 8, the colours it had when stored.
         if state.skin ~= nil then
             local sk = Skin.fromCaptured(state.skin)
             if sk ~= nil then
@@ -630,9 +630,9 @@ function R.apply(pawn, state, onDone)
 
         if onDone then onDone(true) end
 
-        -- Step 9 — a prime the game turned prime only after step 7 (it said
+        -- Step 9, a prime the game turned prime only after step 7 (it said
         -- not yet at once): its stats were worked out as a plain dino's, and
-        -- came only at the next login — max health 1,300 -> 1,800 on a
+        -- came only at the next login, max health 1,300 -> 1,800 on a
         -- Carnotaurus, 9,500 -> 13,500 on a Deinosuchus (2026-10-01; the
         -- prime event a few seconds later said prime). Once more when it is.
         if prime == true and not isPrime then
@@ -641,12 +641,12 @@ function R.apply(pawn, state, onDone)
                 if addr == nil or not H.isValid(pawn) or pawn:GetAddress() ~= addr then return end
                 local okP, nowPrime = pcall(function() return pawn:IsPrimeElder() end)
                 if not (okP and nowPrime == true) then
-                    H.log("restore: prime asked, still not prime after " .. PRIME_RECHECK_MS .. " ms — stats left as they are")
+                    H.log("restore: prime asked, still not prime after " .. PRIME_RECHECK_MS .. " ms, stats left as they are")
                     return
                 end
                 local before = readNumber(pawn, "GetMaxHealth")
                 local ok, stomach = R.regrowKeep(pawn, state.growth, true)
-                H.log(string.format("restore: prime came late — stats worked out again: %s, max health %s -> %s, stomach max %s",
+                H.log(string.format("restore: prime came late, stats worked out again: %s, max health %s -> %s, stomach max %s",
                     ok and "ok" or "failed", tostring(before), tostring(readNumber(pawn, "GetMaxHealth")), tostring(stomach)))
             end)
         end

@@ -1,5 +1,5 @@
 // The Discord log (discord.ts): settings (URLs never shown whole), what each
-// event says, and the sender — batching, a replay not re-sent, 429 / outage
+// event says, and the sender, batching, a replay not re-sent, 429 / outage
 // waits, a dead webhook dropped, the queue kept on disk.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -36,7 +36,7 @@ test('lines: what each event says; player text cannot format or ping', () => {
   const kill = lineOf({ type: 'death', t: 5, id: 1, steamId: '2', name: 'Bé', species: 'BP_Troodon_C', growth: 0.45, attributed: true,
     killer: '1', killerName: 'Rex', killerSpecies: 'BP_Tyrannosaurus_C', killerGrowth: 1, lifeSeconds: 600 });
   assert.equal(kill.kind, 'kill');
-  assert.equal(kill.text, '⚔️ **Rex** (Tyrannosaurus 100%) đã giết **Bé** (Troodon 45%) — sống được 10 phút');
+  assert.equal(kill.text, '⚔️ **Rex** (Tyrannosaurus 100%) đã giết **Bé** (Troodon 45%), sống được 10 phút');
   assert.equal(lineOf({ type: 'death', t: 5, id: 1, steamId: '2', species: 'BP_Troodon_C', growth: 0.5, attributed: false }).kind, 'death');
   assert.equal(lineOf({ type: 'death', t: 5, id: 1, steamId: '2', species: 'BP_Troodon_C', growth: 0.5, attributed: false, cause: 'garage' }), null,
     'stored in the garage is not a death');

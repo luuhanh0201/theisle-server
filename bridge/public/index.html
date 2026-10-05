@@ -249,7 +249,7 @@
   /* ---- feed ----------------------------------------------------------- */
   .feed { list-style: none; margin: 0; padding: 0 12px 0 0; max-height: 620px; overflow-y: auto; scrollbar-gutter: stable; }
   .feed.tall { max-height: none; }
-  /* Every log as columns: time | kind | what happened | value — one line per event, easy to scan and compare. */
+  /* Every log as columns: time | kind | what happened | value, one line per event, easy to scan and compare. */
   .feed li { display: grid; grid-template-columns: 66px 30px 96px minmax(0, 1fr) minmax(72px, auto); column-gap: 10px;
              padding: 8px 0; border-top: 1px solid var(--border); align-items: center; }
   .feed li:first-child { border-top: 0; }
@@ -1555,12 +1555,12 @@
   <main>
     <!-- Tổng quan -->
     <div data-view="overview">
-      <div class="page-head"><div><h1>Tổng quan</h1><p>Tình trạng server, hiệu năng và mọi diễn biến — cập nhật mỗi 2 giây.</p></div></div>
+      <div class="page-head"><div><h1>Tổng quan</h1><p>Tình trạng server, hiệu năng và mọi diễn biến, cập nhật mỗi 2 giây.</p></div></div>
       <div class="kpis" id="kpis"></div>
       <div class="ov-alerts" id="ov-alerts"></div>
         <section class="card">
           <div class="card-head perf-head"><h2>Hiệu năng server</h2>
-            <span class="sub">ServerFPS (tick của game), CPU và RAM theo thời gian — đo mỗi 10 giây, giữ 7 ngày</span>
+            <span class="sub">ServerFPS (tick của game), CPU và RAM theo thời gian, đo mỗi 10 giây, giữ 7 ngày</span>
             <div class="seg" id="perf-range" role="group" aria-label="Khoảng thời gian" style="margin-left:auto">
               <button type="button" data-range="1h">1 giờ</button><button type="button" data-range="6h" class="on">6 giờ</button>
               <button type="button" data-range="24h">24 giờ</button><button type="button" data-range="7d">7 ngày</button>
@@ -1574,7 +1574,7 @@
         </section>
         <section class="card" style="margin-top:18px">
           <div class="card-head"><h2>Sức chứa theo số người online</h2>
-            <span class="sub">server đã chạy thế nào ở từng mức người chơi (7 ngày gần nhất) — FPS thấp là mức 5 % tệ nhất</span></div>
+            <span class="sub">server đã chạy thế nào ở từng mức người chơi (7 ngày gần nhất), FPS thấp là mức 5 % tệ nhất</span></div>
           <div class="card-body table-wrap"><table class="cap-table" id="perf-capacity"></table>
             <p class="step-hint" style="margin-top:10px" id="perf-cap-hint"></p></div>
         </section>
@@ -1769,7 +1769,7 @@
       <div data-sub="players:list">
       <details class="notice">
         <summary><svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-          Giới hạn của game — số liệu nào có thể thiếu</summary>
+          Giới hạn của game, số liệu nào có thể thiếu</summary>
         <p>Chỉ đếm được damage do người chơi đánh trực tiếp người chơi. Ngã, chết đuối, chảy máu và damage
           từ AI không sinh hook nào trong game nên <b>không thể ghi nhận</b>.</p>
         <p>Chết, spawn, phiên chơi và mốc growth được suy ra từ trạng thái giữa hai lần chụp (mỗi 5 giây),
@@ -1899,8 +1899,8 @@
               <div class="ban-preview" id="ban-preview"></div>
               <div class="row"><button type="button" class="btn-danger solid" id="ban-go">Ban</button></div>
               <div class="step-hint">Người đang online nhận tin riêng (lý do, thời hạn) rồi bị kick sau ~3 giây. Ai còn hạn ban mà vẫn vào được
-                server (vd. tài khoản admin) sẽ bị panel tự kick lại mỗi lần vào. Mọi lần ban — kể cả ban trong
-                bảng admin của game — đều được báo cho cả server và ghi lên Discord (loại log "Ban"). Nội dung tin sửa ở
+                server (vd. tài khoản admin) sẽ bị panel tự kick lại mỗi lần vào. Mọi lần ban, kể cả ban trong
+                bảng admin của game, đều được báo cho cả server và ghi lên Discord (loại log "Ban"). Nội dung tin sửa ở
                 <a href="#mods/messages">Tính năng mod → Thông báo → Ban người chơi</a>.</div>
             </div></section>
           <section class="card"><div class="card-head"><h2>Mẫu lý do</h2><span class="sub">mỗi dòng một mẫu</span></div>
@@ -1927,7 +1927,7 @@
               <tbody id="ban-list"></tbody></table></div>
             <div class="players-pager" id="bans-pager"></div>
             <div class="step-hint" style="margin-top:8px">Lấy từ danh sách ban của game (PlayerBans.json). Gỡ ban / sửa: RCON không có lệnh này nên panel sửa
-              thẳng danh sách của game (có sao lưu trước, và tự áp lại nếu game ghi đè). Game có áp dụng ngay khi đang chạy hay không <b>chưa kiểm chứng</b> —
+              thẳng danh sách của game (có sao lưu trước, và tự áp lại nếu game ghi đè). Game có áp dụng ngay khi đang chạy hay không <b>chưa kiểm chứng</b>,
               chắc chắn có hiệu lực sau lần khởi động lại server kế tiếp.</div>
           </div></section>
       </div>
@@ -1966,9 +1966,9 @@
                 <div class="cfg-field"><label for="prs-pct">% máu mỗi lần</label><input id="prs-pct" type="number" min="1" max="100"></div>
               </div>
               <div class="cfg-field"><label for="prs-caught">Kẻ vượt ngục bị hạ</label><select id="prs-caught">
-                <option value="teleport">Không chết — tụt tới ngưỡng máu thì bay về nhà tù</option>
-                <option value="respawn">Chết — spawn lại đúng loài thì tạo lại chính con đó trong tù</option></select>
-                <div class="step-hint">Bị một đòn chết ngay (cả ở chế độ đầu): coi như đã chết — con spawn lại đúng loài được tạo lại y nguyên trong tù,
+                <option value="teleport">Không chết, tụt tới ngưỡng máu thì bay về nhà tù</option>
+                <option value="respawn">Chết, spawn lại đúng loài thì tạo lại chính con đó trong tù</option></select>
+                <div class="step-hint">Bị một đòn chết ngay (cả ở chế độ đầu): coi như đã chết, con spawn lại đúng loài được tạo lại y nguyên trong tù,
                   loài khác thì con mới vào tù tiếp tục án. Ai đánh hạ / bắt được đều được ghi công Thợ săn.</div></div>
               <div class="cfg-field" id="prs-catch-wrap"><label for="prs-catch">Ngưỡng máu để bắt (%)</label><input id="prs-catch" type="number" min="1" max="90"></div>
               <div class="cfg-field"><label>Danh mục lỗi (tên · phút)</label><div id="prs-offenses" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -1987,7 +1987,7 @@
             <div class="card-body"><div class="audit-table-wrap"><table class="audit-table">
               <thead><tr><th>Người chơi</th><th>Lỗi / lý do</th><th>Án</th><th>Kết thúc</th><th>Trốn</th></tr></thead>
               <tbody id="pr-history"></tbody></table></div></div></section>
-          <section class="card"><div class="card-head"><h2>🏹 Thợ săn</h2><span class="sub">hạ kẻ vượt ngục — trao thưởng tay nếu muốn</span></div>
+          <section class="card"><div class="card-head"><h2>🏹 Thợ săn</h2><span class="sub">hạ kẻ vượt ngục, trao thưởng tay nếu muốn</span></div>
             <div class="card-body"><ul class="rank-list" id="pr-hunters"></ul></div></section>
         </div>
       </div>
@@ -2078,9 +2078,9 @@
                   <label>…đến (con)<input id="az-ptmax" type="number" min="1" max="5"></label>
                   <label>Mỗi lượt cách (giây)<input id="az-every" type="number" min="10" max="3600" step="10"></label>
                 </div></details>
-              <label class="az-row"><input type="checkbox" class="switch" id="az-water"> <span>Vùng nước <span class="muted">— ven hồ/sông: cá sấu (và loài "không kích vùng") cũng kích vùng này</span></span></label>
-              <label class="az-row"><input type="checkbox" class="switch" id="az-small"> <span>Chỉ dino nhỏ <span class="muted">— dino lớn bị cảnh báo rồi ong đốt (luật ở tab <b>Dino nhỏ</b>)</span></span></label>
-              <label class="az-row"><input type="checkbox" class="switch" id="az-prison"> <span>🔒 Nhà tù <span class="muted">— không sinh AI; tù nhân được thả ở các điểm mặt đất trong vùng (chỉ 1 vùng; cài đặt ở <a href="#players/prison">Người chơi → Nhà tù</a>)</span></span></label>
+              <label class="az-row"><input type="checkbox" class="switch" id="az-water"> <span>Vùng nước <span class="muted">, ven hồ/sông: cá sấu (và loài "không kích vùng") cũng kích vùng này</span></span></label>
+              <label class="az-row"><input type="checkbox" class="switch" id="az-small"> <span>Chỉ dino nhỏ <span class="muted">, dino lớn bị cảnh báo rồi ong đốt (luật ở tab <b>Dino nhỏ</b>)</span></span></label>
+              <label class="az-row"><input type="checkbox" class="switch" id="az-prison"> <span>🔒 Nhà tù <span class="muted">, không sinh AI; tù nhân được thả ở các điểm mặt đất trong vùng (chỉ 1 vùng; cài đặt ở <a href="#players/prison">Người chơi → Nhà tù</a>)</span></span></label>
               <details class="az-sec"><summary>Nâng cao</summary>
                 <div class="az-grid">
                   <label>AI cách nhau tối thiểu (m)<input id="az-spacing" type="number" min="0" max="300" step="5"></label>
@@ -2150,7 +2150,7 @@
             <button type="button" class="btn" id="gd-save">Lưu luật dino nhỏ</button>
             <details class="howto"><summary>Cách dùng</summary>
               <p>Dino của người chơi lớn hơn mức cho phép đi vào vùng được chọn: nhận cảnh báo giữa màn hình, sau thời gian cảnh báo
-                mà vẫn ở trong vùng thì bị <b>ong đốt</b> — mỗi lần mất % máu tối đa, ở lì thì chết. Ra khỏi vùng là dừng; quay lại
+                mà vẫn ở trong vùng thì bị <b>ong đốt</b>, mỗi lần mất % máu tối đa, ở lì thì chết. Ra khỏi vùng là dừng; quay lại
                 trong vòng 1 phút thì bị đốt ngay, không được cảnh báo lại. Nội dung tin nhắn sửa ở
                 <a href="#mods/messages">Tính năng mod → Thông báo</a>. Có hiệu lực trong vài giây, không cần khởi động lại.</p>
               <p>Hình khu bảo tồn lấy từ lớp Sanctuary của bản đồ (VulnonaMAP). AI không bị ảnh hưởng.</p>
@@ -2169,7 +2169,7 @@
 
     <!-- Thế giới -->
     <div data-view="world" hidden>
-      <div class="page-head"><div><h1>Thế giới</h1><p>AI, di cư, ngày đêm, thực vật và cá trên đảo — tóm tắt, và nơi chỉnh từng thứ.</p></div></div>
+      <div class="page-head"><div><h1>Thế giới</h1><p>AI, di cư, ngày đêm, thực vật và cá trên đảo, tóm tắt, và nơi chỉnh từng thứ.</p></div></div>
       <nav class="subtabs" data-subnav="world" aria-label="Mục của Thế giới"></nav>
 
       <div data-sub="world:overview">
@@ -2180,7 +2180,7 @@
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🌿</span>
         <h2>Cấu hình · Thực vật</h2><span class="sub">mod Flora · có hiệu lực trong ~15 giây, không cần restart</span></div>
       <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
-        <div class="step-hint">Cây và quả chỉ <b>có chất (α β γ)</b> trong các vùng di cư <b>đang hoạt động</b> — ít ở di cư thường, nhiều ở
+        <div class="step-hint">Cây và quả chỉ <b>có chất (α β γ)</b> trong các vùng di cư <b>đang hoạt động</b>, ít ở di cư thường, nhiều ở
           <b>đại di cư</b>. Ngoài vùng: ít cây hơn và chỉ là lá, <b>không có chất</b>. Game tự chọn vùng nào di cư; tắt mục này thì mọi
           giá trị về như game gốc. Xem cây thật trên tab <a href="#map">Bản đồ</a> (lớp "Thực vật (live)").</div>
         <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" class="switch" id="fl-control"> <b>Bật điều khiển thực vật</b></label>
@@ -2564,23 +2564,23 @@
 
       <div data-sub="mods:commands">
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⌨</span>
-        <h2>Cấu hình · Lệnh người chơi</h2><span class="sub">lưu riêng, có hiệu lực ngay — không cần khởi động lại</span></div>
+        <h2>Cấu hình · Lệnh người chơi</h2><span class="sub">lưu riêng, có hiệu lực ngay, không cần khởi động lại</span></div>
       <section class="card"><div class="card-body" style="display:flex;flex-direction:column;gap:14px">
         <div class="cfg-grid">
           <div class="cfg-field"><label for="pc-slay-cd">Chờ giữa hai lần !slay (giây)<span class="mono">slayCooldown</span></label>
             <input id="pc-slay-cd" type="number" min="0" max="86400" step="1">
-            <div class="step-hint"><span class="mono">!slay</span> — chết ngay dino đang chơi. Mặc định 300.</div></div>
+            <div class="step-hint"><span class="mono">!slay</span>, chết ngay dino đang chơi. Mặc định 300.</div></div>
           <div class="cfg-field"><label for="pc-unstuck-cd">Chờ giữa hai lần !unstuck (giây)<span class="mono">unstuckCooldown</span></label>
             <input id="pc-unstuck-cd" type="number" min="0" max="86400" step="1">
-            <div class="step-hint"><span class="mono">!unstuck</span> — về điểm gần nhất dino vừa đứng trên mặt đất (cách ≥ 3 m, nâng 0,5 m — không thả từ trên cao). Mặc định 600.</div></div>
+            <div class="step-hint"><span class="mono">!unstuck</span>, về điểm gần nhất dino vừa đứng trên mặt đất (cách ≥ 3 m, nâng 0,5 m, không thả từ trên cao). Mặc định 600.</div></div>
           <div class="cfg-field"><label for="pc-food-cd">Chờ giữa hai lần !food (giây)<span class="mono">foodCooldown</span></label>
             <input id="pc-food-cd" type="number" min="0" max="86400" step="1">
-            <div class="step-hint"><span class="mono">!food</span> — nhả thứ đang kẹt trong mồm (con mồi đang gắp, miếng thịt / quả đang ngậm hay kéo). Mặc định 30.</div></div>
+            <div class="step-hint"><span class="mono">!food</span>, nhả thứ đang kẹt trong mồm (con mồi đang gắp, miếng thịt / quả đang ngậm hay kéo). Mặc định 30.</div></div>
         </div>
         <div>
           <label>Lệnh đang bật</label>
           <div class="check-grid" id="pc-enabled"></div>
-          <div class="step-hint" style="margin-top:6px"><span class="mono">!prime</span> — dino có phải prime elder / đủ điều kiện prime không · <span class="mono">!status</span> — loài, growth, máu, stamina, đói, khát, huyết, oxy.</div>
+          <div class="step-hint" style="margin-top:6px"><span class="mono">!prime</span>, dino có phải prime elder / đủ điều kiện prime không · <span class="mono">!status</span>, loài, growth, máu, stamina, đói, khát, huyết, oxy.</div>
         </div>
         <div class="row"><button type="button" class="btn" id="pc-save">Lưu cài đặt</button></div>
       </div></section>
@@ -2653,7 +2653,7 @@
         <div class="card-head"><h2>Nội dung</h2><span class="sub" id="msg-count"></span>
           <input type="search" id="msg-q" placeholder="Tìm tin…" style="margin-left:auto;max-width:220px"></div>
         <div class="card-body">
-          <div class="step-hint" style="margin-bottom:10px">Bỏ tích <b>Gửi</b> để tắt hẳn một tin. <span class="mono">{tên}</span> được điền khi gửi — bấm để chèn.
+          <div class="step-hint" style="margin-bottom:10px">Bỏ tích <b>Gửi</b> để tắt hẳn một tin. <span class="mono">{tên}</span> được điền khi gửi, bấm để chèn.
             Tin của mod đổi trong vòng vài giây, không cần restart. Ban/kick làm trong admin panel của game nên không có tin ở đây.</div>
           <div id="msg-groups"></div>
         </div>
@@ -2686,7 +2686,7 @@
               <div id="rd-verdict" class="rd-verdict"></div>
               <ul class="rd-list" id="rd-checks"></ul>
               <div class="step-hint" id="rd-join" style="margin-top:10px"></div>
-              <div class="step-hint" style="margin-top:6px">Danh sách server trong game do máy chủ của Warp Hosting (<span class="mono">api.warphosting.com.au</span>) cung cấp và chỉ trả cho game client có vé Steam — panel không đọc được danh sách đó. Thay vào đó panel kiểm tra mọi điều kiện để server được liệt kê và vào được: tiến trình, mod, map, đăng nhập EOS, các cổng, và máy chủ danh sách còn hoạt động. Đủ hết = server hiện trong game (sau khi khởi động có thể mất 2–5 phút để danh sách cập nhật). Người chơi vào được là bằng chứng chắc chắn nhất.</div>
+              <div class="step-hint" style="margin-top:6px">Danh sách server trong game do máy chủ của Warp Hosting (<span class="mono">api.warphosting.com.au</span>) cung cấp và chỉ trả cho game client có vé Steam, panel không đọc được danh sách đó. Thay vào đó panel kiểm tra mọi điều kiện để server được liệt kê và vào được: tiến trình, mod, map, đăng nhập EOS, các cổng, và máy chủ danh sách còn hoạt động. Đủ hết = server hiện trong game (sau khi khởi động có thể mất 2–5 phút để danh sách cập nhật). Người chơi vào được là bằng chứng chắc chắn nhất.</div>
             </div>
           </section>
       </div>
@@ -2746,16 +2746,16 @@
               <div class="step-hint">Bridge đo lưu lượng vào card mạng của VPS mỗi 5 giây. Vượt ngưỡng đủ lâu → tin <b>"🚨 Nghi bị DDoS"</b> lên Discord
                 (loại log "DDoS", chọn kênh ở <a href="#admin/discord">Quản trị → Discord</a>), hết → <b>"✅ Hết lưu lượng bất thường"</b> kèm thời gian và đỉnh;
                 lệnh <b>/status</b> cũng báo đang bị tấn công. Mạng nghẽn tới mức VPS không gửi được: tin được gửi bù, trạm ngoài VPS báo "Mất kết nối".
-                Cảnh báo không chặn được tấn công — chặn là việc của nhà cung cấp VPS (chống DDoS cho cổng game UDP).</div>
+                Cảnh báo không chặn được tấn công, chặn là việc của nhà cung cấp VPS (chống DDoS cho cổng game UDP).</div>
             </div>
           </section>
       </div>
 
       <div id="ops-rcon" class="ops-sec">
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚡</span>
-        <h2>RCON trực tiếp</h2><span class="sub">có hiệu lực ngay, không cần khởi động lại — mất khi server khởi động lại</span></div>
+        <h2>RCON trực tiếp</h2><span class="sub">có hiệu lực ngay, không cần khởi động lại, mất khi server khởi động lại</span></div>
       <section class="card"><div class="card-body">
-        <div id="rcon-off" class="banner tone-dmg" hidden style="margin-bottom:14px">RCON chưa được cấu hình trên bridge (RCON_PASSWORD trống) — các thao tác dưới đây sẽ không chạy.</div>
+        <div id="rcon-off" class="banner tone-dmg" hidden style="margin-bottom:14px">RCON chưa được cấu hình trên bridge (RCON_PASSWORD trống), các thao tác dưới đây sẽ không chạy.</div>
         <div class="rcon-grid">
           <div>
             <h3>Thông báo toàn server</h3>
@@ -2770,7 +2770,7 @@
           </div>
           <div>
             <h3>Bật / tắt</h3>
-            <div class="step-hint" style="margin-bottom:8px">Game không báo trạng thái hiện tại — mỗi lần bấm là <b>đảo</b> trạng thái. Kiểm tra lại bằng "Thông tin server".</div>
+            <div class="step-hint" style="margin-bottom:8px">Game không báo trạng thái hiện tại, mỗi lần bấm là <b>đảo</b> trạng thái. Kiểm tra lại bằng "Thông tin server".</div>
             <div class="row" id="rc-toggles"></div>
           </div>
           <div>
@@ -2782,7 +2782,7 @@
             <h3>Loài được chơi (tạm thời)</h3>
             <div class="row"><input id="rc-class" placeholder="vd: Carnotaurus"><button type="button" class="btn-soft" data-rcon="addPlayable" data-arg="rc-class">Cho phép</button>
               <button type="button" class="btn-soft" data-rcon="removePlayable" data-arg="rc-class">Cấm</button></div>
-            <div class="step-hint" style="margin-top:6px">Mất khi server khởi động lại — muốn giữ lâu dài thì đặt ở <a href="#server/cfg%3Aspawn">Cấu hình game → Loài &amp; điểm spawn</a>.</div>
+            <div class="step-hint" style="margin-top:6px">Mất khi server khởi động lại, muốn giữ lâu dài thì đặt ở <a href="#server/cfg%3Aspawn">Cấu hình game → Loài &amp; điểm spawn</a>.</div>
           </div>
           <div>
             <h3>Whitelist</h3>
@@ -2825,7 +2825,7 @@
           <div class="card-head"><h2>Chuyển sang VPS khác</h2></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
             <div class="row" style="align-items:center"><button type="button" class="btn-soft" id="bk-export" style="flex:none">Xuất cài đặt</button>
-              <span class="step-hint" style="margin:0">Cài đặt panel, mod, Game.ini/Engine.ini và các file <span class="mono">.env</span> (mật khẩu, token, webhook) —
+              <span class="step-hint" style="margin:0">Cài đặt panel, mod, Game.ini/Engine.ini và các file <span class="mono">.env</span> (mật khẩu, token, webhook),
                 <b>giữ kín như mật khẩu</b>.</span></div>
             <div class="row" style="align-items:center"><input type="file" id="bk-file" accept=".tar.gz,.gz,application/gzip" style="flex:1">
               <button type="button" class="btn-soft" id="bk-upload" style="flex:none">Khôi phục từ file</button></div>
@@ -2845,10 +2845,10 @@
 
       <div data-sub-panel="cfg" hidden>
       <div class="section-title" style="margin-top:0"><span class="ev-ico tone-grow" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">⚙</span>
-        <h2 id="cfg-title">Cấu hình</h2><span class="sub">ghi vào Game.ini — có hiệu lực từ lần khởi động sau</span></div>
+        <h2 id="cfg-title">Cấu hình</h2><span class="sub">ghi vào Game.ini, có hiệu lực từ lần khởi động sau</span></div>
       <nav class="subtabs subtabs-inner" id="cfg-groups" aria-label="Nhóm cấu hình game"></nav>
       <section class="card"><div class="card-body">
-        <div id="cfg-pending" class="banner tone-dmg" hidden style="margin-bottom:14px">Cấu hình đã đổi sau lần khởi động gần nhất — cần <b>khởi động lại</b> để có hiệu lực.</div>
+        <div id="cfg-pending" class="banner tone-dmg" hidden style="margin-bottom:14px">Cấu hình đã đổi sau lần khởi động gần nhất, cần <b>khởi động lại</b> để có hiệu lực.</div>
         <div id="cfg-error" class="warnbox" hidden style="margin-bottom:14px"></div>
         <form id="cfg-form" autocomplete="off" style="display:flex;flex-direction:column;gap:16px">
           <div id="cfg-fields" style="display:flex;flex-direction:column;gap:12px"></div>
@@ -2857,7 +2857,7 @@
             <button type="button" class="btn-soft" id="cfg-save-restart">Lưu &amp; khởi động lại…</button>
             <button type="button" class="link-btn" id="cfg-reset">Bỏ thay đổi</button>
           </div>
-          <div class="step-hint">Nút Lưu ghi <b>mọi nhóm</b> cấu hình cùng lúc (nhóm có chấm cam là nhóm đang có thay đổi chưa lưu). Mật khẩu server, RCON, các cổng, map, EOS và danh sách admin vẫn do file <span class="mono">.env</span> quản lý (deploy) — sửa sai những mục đó có thể khoá mất panel. Mọi mục trong các nhóm do panel quản lý: deploy và mỗi lần server khởi động đều giữ đúng giá trị panel đã lưu.
+          <div class="step-hint">Nút Lưu ghi <b>mọi nhóm</b> cấu hình cùng lúc (nhóm có chấm cam là nhóm đang có thay đổi chưa lưu). Mật khẩu server, RCON, các cổng, map, EOS và danh sách admin vẫn do file <span class="mono">.env</span> quản lý (deploy), sửa sai những mục đó có thể khoá mất panel. Mọi mục trong các nhóm do panel quản lý: deploy và mỗi lần server khởi động đều giữ đúng giá trị panel đã lưu.
             Danh sách key lấy từ chính server (bản 0.21.784). Nhãn <span class="cfg-unverified">chưa xác minh</span> = game đọc key này theo tên nhưng panel chưa đọc ngược được giá trị để kiểm chứng.</div>
         </form>
       </div></section>
@@ -2866,7 +2866,7 @@
 
     <!-- Vật phẩm -->
     <div data-view="items" hidden>
-      <div class="page-head"><div><h1>Vật phẩm</h1><p>Vật phẩm của server: admin tạo, đặt tên, tặng vào kho của người chơi. Hiện có <b>Skin dino</b>, <b>Mutation</b> và <b>Phiếu &amp; hộp</b> (đổi / bỏ mutation, Prime, hộp dino, túi tăng trưởng, hộp food) — người chơi dùng từ Túi đồ; sau này thêm quay hòm, cửa hàng.</p></div></div>
+      <div class="page-head"><div><h1>Vật phẩm</h1><p>Vật phẩm của server: admin tạo, đặt tên, tặng vào kho của người chơi. Hiện có <b>Skin dino</b>, <b>Mutation</b> và <b>Phiếu &amp; hộp</b> (đổi / bỏ mutation, Prime, hộp dino, túi tăng trưởng, hộp food), người chơi dùng từ Túi đồ; sau này thêm quay hòm, cửa hàng.</p></div></div>
       <nav class="subtabs" data-subnav="items" aria-label="Loại vật phẩm"></nav>
       <div data-sub="items:skins">
         <div class="itm-layout">
@@ -2887,7 +2887,7 @@
                 <div>
                   <div class="itm-3d" id="itm-3d"><div class="sex" id="itm-sex"><button type="button" data-g="m" class="on">Đực</button><button type="button" data-g="f">Cái</button></div>
                     <div class="note" id="itm-3d-note"></div></div>
-                  <div class="step-hint" style="margin-top:8px">Xem trước gần đúng: màu, độ tối và độ sáng nhân như game (mỗi kênh tối đa ×4). Skin chỉ đổi màu (và sáng / tối từng vùng): kiểu hoa văn của dino giữ như người chơi đã chọn trong game — kiểu đó có thể đặt Thân / Hông / Hoa văn khác chỗ so với xem trước.</div>
+                  <div class="step-hint" style="margin-top:8px">Xem trước gần đúng: màu, độ tối và độ sáng nhân như game (mỗi kênh tối đa ×4). Skin chỉ đổi màu (và sáng / tối từng vùng): kiểu hoa văn của dino giữ như người chơi đã chọn trong game, kiểu đó có thể đặt Thân / Hông / Hoa văn khác chỗ so với xem trước.</div>
                   <div class="step-hint" id="itm-warn" hidden style="margin-top:6px;border-color:rgba(245,158,11,.5)"></div>
                 </div>
                 <div>
@@ -3004,11 +3004,11 @@
     </div>
 
     <!-- Quản trị -->
-    <!-- Thành viên: admin, phân quyền, whitelist, VIP, SVip — one page (owner, 2026-10-04) -->
+    <!-- Thành viên: admin, phân quyền, whitelist, VIP, SVip, one page (owner, 2026-10-04) -->
     <div data-view="members" hidden>
       <div class="page-head"><div><h1>Thành viên</h1><p>Ai là admin, quyền của từng admin, whitelist, VIP và SVip.</p></div></div>
       <nav class="subtabs" data-subnav="members" aria-label="Mục của Thành viên"></nav>
-      <div class="banner" id="mb-pending" hidden style="margin-bottom:12px">Danh sách đã lưu vào Game.ini — game áp dụng từ <b>lần khởi động lại tới</b>.</div>
+      <div class="banner" id="mb-pending" hidden style="margin-bottom:12px">Danh sách đã lưu vào Game.ini, game áp dụng từ <b>lần khởi động lại tới</b>.</div>
       <div data-sub="members:admins" hidden>
         <section class="card">
           <div class="card-head"><h2>Admin</h2><span class="sub">admin trong game và trên panel</span></div>
@@ -3028,7 +3028,7 @@
         <section class="card">
           <div class="card-head"><h2>Whitelist</h2><span class="sub">chỉ những SteamID này mới vào được server khi bật</span></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-            <div class="dc-route"><span><b>Chỉ cho whitelist vào</b> — tắt: ai cũng vào được</span>
+            <div class="dc-route"><span><b>Chỉ cho whitelist vào</b>, tắt: ai cũng vào được</span>
               <select id="mb-wl-on" aria-label="Chỉ cho whitelist vào"><option value="false">Tắt</option><option value="true">Bật</option></select></div>
             <div class="step-hint">Thêm / bỏ có hiệu lực ngay (gửi lệnh RCON cho game) và được lưu vào Game.ini; bật / tắt whitelist có hiệu lực từ lần khởi động lại tới.</div>
             <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -3044,7 +3044,7 @@
         <section class="card">
           <div class="card-head"><h2>VIP</h2><span class="sub">được ưu tiên vào khi server đầy</span></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-            <div class="step-hint">Lưu vào Game.ini — có hiệu lực từ lần khởi động lại tới.</div>
+            <div class="step-hint">Lưu vào Game.ini, có hiệu lực từ lần khởi động lại tới.</div>
             <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
               <div class="cfg-field" style="flex:1 1 240px"><label for="mb-vips-id">SteamID</label>
                 <input id="mb-vips-id" type="text" inputmode="numeric" maxlength="17" placeholder="7656119…" class="mono" autocomplete="off"></div>
@@ -3058,7 +3058,7 @@
         <div class="section-title" style="margin-top:0"><span class="ev-ico tone-chat" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center">🛡️</span>
           <h2>Phân quyền admin</h2><span class="sub">chỉ admin tổng thấy trang này · quyền trên panel có hiệu lực ngay</span></div>
         <div class="step-hint" style="margin-bottom:14px">Chọn <b>vai trò</b> để gán nhanh, rồi bật / tắt từng quyền nếu cần.
-          <b>Admin trong game</b> (/adminpanel, bay, kéo / dịch chuyển, hồi máu, growth, thời tiết…): tắt thì người đó bị bỏ khỏi danh sách admin của game —
+          <b>Admin trong game</b> (/adminpanel, bay, kéo / dịch chuyển, hồi máu, growth, thời tiết…): tắt thì người đó bị bỏ khỏi danh sách admin của game,
           có hiệu lực hoàn toàn từ <b>lần khởi động lại tới</b>; trước đó mod cố gỡ quyền ngay, và mọi lệnh admin họ còn dùng được ghi đỏ trong Nhật ký admin.
           Mọi lệnh admin trong game của mọi người đều được ghi vào Nhật ký admin.</div>
         <div class="perm-list" id="perm-list"></div>
@@ -3067,7 +3067,7 @@
       <!-- SVip: players who try the features being tested (bridge svip.ts) -->
       <div data-sub="members:svip" hidden>
         <section class="card">
-          <div class="card-head"><h2>SVip</h2><span class="sub">dùng trước các chức năng đang thử nghiệm (cùng admin) — có hiệu lực ngay</span></div>
+          <div class="card-head"><h2>SVip</h2><span class="sub">dùng trước các chức năng đang thử nghiệm (cùng admin), có hiệu lực ngay</span></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
             <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
               <div class="cfg-field" style="flex:1 1 220px"><label for="sv-id">SteamID</label>
@@ -3088,9 +3088,9 @@
     </div>
 
     <!-- Truy cập: site / launcher traffic (bridge traffic.ts, counted by the portal) -->
-    <!-- Nhiệm vụ: Hổ phách and the daily check-in (bridge economy.ts) — the daily quests next -->
+    <!-- Nhiệm vụ: Hổ phách and the daily check-in (bridge economy.ts), the daily quests next -->
     <div data-view="quests" hidden>
-      <div class="page-head"><div><h1>Nhiệm vụ</h1><p>Hổ phách — tiền của server, kiếm bằng cách chơi (không bán bằng tiền thật) — và điểm danh hằng ngày (giờ Việt Nam). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b>.</p></div></div>
+      <div class="page-head"><div><h1>Nhiệm vụ</h1><p>Hổ phách, tiền của server, kiếm bằng cách chơi (không bán bằng tiền thật), và điểm danh hằng ngày (giờ Việt Nam). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b>.</p></div></div>
       <section class="card">
         <div class="card-head"><h2>📅 Điểm danh hằng ngày</h2><span class="sub">người chơi chơi đủ phút trong ngày rồi bấm điểm danh trên trang chủ; bỏ lỡ 1 ngày là quay về ngày 1</span></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
@@ -3145,7 +3145,7 @@
           </span>
           <span class="sub" id="tr-range-label" style="margin-left:auto"></span></div>
         <div class="card-body"><div class="perf-tiles" id="tr-tiles"></div>
-          <p class="tr-note">Tải file cài đặt: proxy trước web lưu cache file cài nên phần lớn lượt tải không tới server — số "từ server" luôn thấp hơn thật;
+          <p class="tr-note">Tải file cài đặt: proxy trước web lưu cache file cài nên phần lớn lượt tải không tới server, số "từ server" luôn thấp hơn thật;
             xem <b>Bấm tải</b> (nút trên trang tải) và <b>Cài mới</b> (launcher mở lần đầu, từ bản 1.0.33).</p></div>
       </section>
       <section class="card" style="margin-top:16px">
@@ -3201,7 +3201,7 @@
           <div class="card-body"><div class="dc-channels" id="dc-channels"></div>
             <details class="howto" style="margin-top:10px"><summary>Lấy URL webhook thế nào?</summary>
               <p>Trong Discord: vào <b>đúng kênh muốn nhận log</b>, bấm ⚙ <b>Chỉnh sửa kênh</b> → <b>Tích hợp</b> → <b>Webhook</b> → <b>Webhook mới</b> → đặt tên
-                (và ảnh) cho webhook — tin log sẽ hiện bằng tên đó → <b>Sao chép URL webhook</b>, rồi dán vào ô ở trên. Mỗi kênh Discord một webhook
+                (và ảnh) cho webhook, tin log sẽ hiện bằng tên đó → <b>Sao chép URL webhook</b>, rồi dán vào ô ở trên. Mỗi kênh Discord một webhook
                 riêng: dán cùng một URL cho hai kênh thì cả hai đều về một chỗ.
                 Mỗi kênh (vd. #killfeed, #chat-log, #admin-log) một webhook. URL là bí mật: panel chỉ lưu trên server, không bao giờ hiện lại đầy đủ.</p>
               <p>Log được xếp hàng trên server: Discord hoặc mạng gặp sự cố (kể cả khi VPS bị DDoS) thì log gửi bù sau, giữ đúng giờ gốc.</p>
@@ -3213,7 +3213,7 @@
               <select id="dc-all" style="width:180px"></select></span></div>
           <div class="card-body">
             <!-- One message kept up to date in this channel (bridge discord-board.ts) -->
-            <div class="dc-route" style="margin-bottom:10px"><span><b>Bảng trạng thái server</b> — một tin tự sửa mỗi phút: Online, người chơi,
+            <div class="dc-route" style="margin-bottom:10px"><span><b>Bảng trạng thái server</b>, một tin tự sửa mỗi phút: Online, người chơi,
               lần khởi động lại tới / trước</span><select id="dc-board" aria-label="Kênh của bảng trạng thái"></select></div>
             <div class="dc-routes" id="dc-routes"></div>
             <div class="step-hint" style="margin-top:10px">Tag: tin loại đó được gửi riêng kèm <b>@everyone</b> / <b>@here</b> / role. ID role: trong Discord bật
@@ -3485,7 +3485,7 @@ async function adminFetch(url, method, token, body) {
     headers: { 'content-type': 'application/json', 'x-admin-token': token },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (res.status === 401) { toLogin(); throw new Error('Phiên đăng nhập đã hết — đăng nhập lại'); }
+  if (res.status === 401) { toLogin(); throw new Error('Phiên đăng nhập đã hết, đăng nhập lại'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   return data;
@@ -3514,7 +3514,7 @@ const KILL_ERRORS = {
   offline: 'người chơi đã offline',
   no_dino: 'người chơi không có dino lúc lệnh chạy',
   expired: 'server không nhận lệnh trong 60 giây',
-  no_game_thread: 'UE4SS thiếu ExecuteInGameThread — lệnh bị từ chối để an toàn',
+  no_game_thread: 'UE4SS thiếu ExecuteInGameThread, lệnh bị từ chối để an toàn',
   set_health_failed: 'game từ chối SetHealth',
   unknown_command: 'mod không hiểu lệnh',
 };
@@ -3530,7 +3530,7 @@ function askKill(p) {
     run: async (token, reason) => {
       const { command } = await adminFetch(`/api/player/${encodeURIComponent(p.steamId)}/kill`, 'POST', token, { reason });
       pendingKills.set(p.steamId, { id: command.id, at: Date.now() });
-      toast(`Đã gửi lệnh #${command.id} — chờ server thực hiện (vài giây).`);
+      toast(`Đã gửi lệnh #${command.id}, chờ server thực hiện (vài giây).`);
       refresh();
     },
   });
@@ -3539,7 +3539,7 @@ function askKill(p) {
 // --- player identity: a stable colour and initials per SteamID ---------------
 
 // FNV-1a: SteamIDs share their first 15 digits, so a weak hash (h*31+c) puts
-// neighbouring IDs one degree apart — every avatar the same colour.
+// neighbouring IDs one degree apart, every avatar the same colour.
 function hue(id) {
   let h = 0x811c9dc5;
   for (const c of String(id)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193);
@@ -3598,7 +3598,7 @@ function describe(e) {
         return [`${who(e.steamId, e.name)} cất dino vào gara`, 'cái chết này không được tính'];
       }
       if (e.cause === 'admin') {
-        return [`${who(e.steamId, e.name)} — dino bị admin xoá`, 'cái chết này không được tính'];
+        return [`${who(e.steamId, e.name)}, dino bị admin xoá`, 'cái chết này không được tính'];
       }
       const life = e.lifeSeconds !== undefined ? ` · sống ${dur(e.lifeSeconds)}` : '';
       // Chuyển sinh (a prime at 100 % reborn, +1 đời): not a death nor a kill (bridge store.ts #rebirth).
@@ -3646,20 +3646,20 @@ function describe(e) {
       if (e.action === 'admin') {
         // An admin's /adminpanel action from the panel (garage/admin.lua): the mod's own line.
         const line = Array.isArray(e.messages) && e.messages.length ? e.messages[e.messages.length - 1] : '';
-        return [`Admin thao tác lên dino của ${who(e.steamId, e.name)}${e.ok ? '' : ' — <span class="kill">không thực hiện được</span>'}`,
+        return [`Admin thao tác lên dino của ${who(e.steamId, e.name)}${e.ok ? '' : ', <span class="kill">không thực hiện được</span>'}`,
           esc(e.ok ? line : (WEB_CMD_ERRORS[e.error] ?? (e.error || line)))];
       }
       if (e.action === 'mutation') {
         // A mutation item from the player's bag (garage/mutation.lua): the mod's own line.
         const line = Array.isArray(e.messages) && e.messages.length ? e.messages[e.messages.length - 1] : '';
-        return [`${who(e.steamId, e.name)} dùng vật phẩm mutation trên web${e.ok ? '' : ' — <span class="kill">không dùng được</span>'}`,
+        return [`${who(e.steamId, e.name)} dùng vật phẩm mutation trên web${e.ok ? '' : ', <span class="kill">không dùng được</span>'}`,
           esc(e.ok ? line : (WEB_CMD_ERRORS[e.error] ?? (line || e.error || '')))];
       }
       const what = e.action === 'store' ? 'cất dino' : e.action === 'skin' ? 'đổi màu dino' : 'lấy dino ra';
       const reply = Array.isArray(e.messages) && e.messages.length ? ` · ${esc(e.messages[e.messages.length - 1])}` : '';
       return e.ok
         ? [`${who(e.steamId, e.name)} ${what} trên web`, `game đã nhận${reply}`]
-        : [`${who(e.steamId, e.name)} ${what} trên web — bị từ chối`,
+        : [`${who(e.steamId, e.name)} ${what} trên web, bị từ chối`,
            `${esc(WEB_CMD_ERRORS[e.error] ?? (e.error || 'theo luật gara'))}${reply}`];
     }
     case 'mutation':
@@ -3913,7 +3913,7 @@ function renderSceneFight() {
   const s = sc.scene;
   const el = $('scene-fight');
   if (!s.fight) {
-    el.innerHTML = `<div class="muted">${s.missing ? 'Lần chết này có trước khi panel lưu hiện trường.' : 'Không có đòn PvP nào ngay trước khi chết (chết vì AI, ngã, đói, chảy máu… — game không báo những thứ đó).'}</div>`;
+    el.innerHTML = `<div class="muted">${s.missing ? 'Lần chết này có trước khi panel lưu hiện trường.' : 'Không có đòn PvP nào ngay trước khi chết (chết vì AI, ngã, đói, chảy máu…, game không báo những thứ đó).'}</div>`;
     return;
   }
   const f = s.fight;
@@ -4147,7 +4147,7 @@ function renderItmList() {
       <span class="top"><b>${esc(i.name)}</b><span class="rar ${esc(i.rarity)}">${esc(rar[i.rarity] ?? i.rarity)}</span></span>
       <span class="top"><span class="itm-sw">${['Body', 'Flank', 'Underbelly', 'Markings', 'Eyes'].filter((k) => i.data.colors[k]).map((k) => `<i style="background:${itmHex(i.data.colors[k])}"></i>`).join('')}</span>
         <span class="sub">${esc(i.data.species)} · ${i.owners} người có${i.retired ? ' · <span class="kill">ngừng phát hành</span>' : ''}</span></span>
-    </button>`).join('') || `<div class="empty">${q ? 'Không có skin nào khớp' : 'Chưa có skin nào — bấm “+ Skin mới”.'}</div>`;
+    </button>`).join('') || `<div class="empty">${q ? 'Không có skin nào khớp' : 'Chưa có skin nào, bấm “+ Skin mới”.'}</div>`;
   $('itm-new').hidden = !can('items.edit');
 }
 
@@ -4229,7 +4229,7 @@ function renderItmValues() {
     return Math.max(c.r, c.g, c.b) * (d.data.light[id] ?? 1) * d.data.brightness > 4.001;
   }).map(([, label]) => label);
   const warn = [];
-  if (over.length) warn.push(`⚠ ${over.join(', ')}: vượt ×4 — game chỉ nhận tới ×4, kéo thêm không sáng hơn.`);
+  if (over.length) warn.push(`⚠ ${over.join(', ')}: vượt ×4, game chỉ nhận tới ×4, kéo thêm không sáng hơn.`);
   $('itm-warn').hidden = warn.length === 0;
   $('itm-warn').innerHTML = warn.map(esc).join('<br>');
   $('itm-dirty').textContent = itmDirty() ? '● Có thay đổi chưa lưu' : itm.sel ? 'Đã lưu' : '';
@@ -4301,7 +4301,7 @@ $('itm-retire').addEventListener('click', async () => {
   if (!item) return;
   try {
     await saveItem({ type: item.type, name: item.name, rarity: item.rarity, data: item.data, retired: !item.retired }, item.id);
-    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành — người đã có vẫn giữ');
+    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành, người đã có vẫn giữ');
   } catch (e) { toast(e.message ?? String(e), 'err'); }
 });
 
@@ -4322,7 +4322,7 @@ async function loadItmOwners() {
 async function itmApply(steamId) {
   try {
     await adminFetch(`/api/items/${itm.sel}/apply`, 'POST', adminToken, { steamId });
-    toast('Đã gửi skin vào game — đổi màu sau vài giây');
+    toast('Đã gửi skin vào game, đổi màu sau vài giây');
   } catch (e) { toast(e.message ?? String(e), 'err'); }
 }
 $('itm-grant').addEventListener('click', async () => {
@@ -4380,7 +4380,7 @@ function renderMitList() {
   $('mit-list').innerHTML = shown.map((i) => `<button type="button" class="itm-row r-${esc(i.rarity)} ${i.id === mit.sel ? 'on' : ''}" data-mit="${esc(i.id)}">
       <span class="top">${mutIco(i.data.mutation, 'md', true)}<b>${esc(i.name)}</b><span class="rar ${esc(i.rarity)}">${esc(rar[i.rarity] ?? i.rarity)}</span></span>
       <span class="sub">${esc(i.data.mutation)} · ${esc(MIT_DIET[i.data.diet] ?? i.data.diet)} · ${i.owners} cái trong kho${i.retired ? ' · <span class="kill">ngừng phát hành</span>' : ''}</span>
-    </button>`).join('') || `<div class="empty">${q ? 'Không có mutation nào khớp' : 'Chưa có mutation nào — bấm “+ Mutation mới”.'}</div>`;
+    </button>`).join('') || `<div class="empty">${q ? 'Không có mutation nào khớp' : 'Chưa có mutation nào, bấm “+ Mutation mới”.'}</div>`;
   $('mit-new').hidden = !can('items.edit');
 }
 function mitSelect(id, force = false) {
@@ -4419,9 +4419,9 @@ function renderMitInfo() {
     $('mit-rarity').value = mit.draft.rarity;
     $('mit-rarity').disabled = quest || !can('items.edit');
   }
-  $('mit-info').innerHTML = m ? `${mutIco(m.name, 'lg', true)}<b>${esc(m.name)}</b> — ${esc(m.description)}<br>
+  $('mit-info').innerHTML = m ? `${mutIco(m.name, 'lg', true)}<b>${esc(m.name)}</b>, ${esc(m.description)}<br>
     Chế độ ăn: <b>${esc(MIT_DIET[m.diet] ?? m.diet)}</b>${m.kind === 'slot2' ? ' · chỉ đặt ở <b>ô 2 hoặc 4</b>' : ''}${m.kind === 'unlock' ? ` · mutation nhiệm vụ (mod tự mở khoá trước khi gắn${m.unlock ? `; trong game: ${esc(m.unlock)}` : ''})` : ''}${m.femaleOnly ? ' · chỉ có tác dụng với con cái' : ''}${m.status === 'test' ? ' · <span class="kill">đang thử nghiệm trong game</span>' : ''}
-    ${quest ? '<br>Độ hiếm: <b>Đặc biệt</b> — cố định cho mutation nhiệm vụ.' : ''}
+    ${quest ? '<br>Độ hiếm: <b>Đặc biệt</b>, cố định cho mutation nhiệm vụ.' : ''}
     ${m.tiers ? `<br>Mức theo đời${m.stat ? ` (${esc(m.stat)})` : ''}: ${esc(m.tiers)} (theo đời của cả dino)` : '<br>Không có số liệu theo đời.'}<div style="clear:both"></div>` : '';
   $('mit-dirty').textContent = mitDirty() ? '● Có thay đổi chưa lưu' : mit.sel ? 'Đã lưu' : '';
 }
@@ -4456,7 +4456,7 @@ $('mit-retire').addEventListener('click', async () => {
   if (!item) return;
   try {
     await mitSave({ type: 'mutation', name: item.name, rarity: item.rarity, data: { mutation: item.data.mutation }, retired: !item.retired }, item.id);
-    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành — người đã có vẫn giữ');
+    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành, người đã có vẫn giữ');
   } catch (e) { toast(e.message ?? String(e), 'err'); }
 });
 async function loadMitOwners() {
@@ -4474,7 +4474,7 @@ async function loadMitOwners() {
   $('mit-owners').innerHTML = mit.owners.map((o) => `<div class="itm-owner"><div class="who"><b>${esc(o.name ?? 'Chưa rõ tên')} × ${o.n}</b><span class="mono">${esc(o.steamId)}</span></div>
       <span class="muted">${esc(SRC[o.source] ?? o.source)} · ${esc(dateTime(o.grantedAt))}${o.note ? ` · ${esc(o.note)}` : ''}</span>
       ${can('items.grant') ? `<select data-mit-slot="${esc(o.steamId)}" aria-label="Ô mutation" style="width:auto">${slots.map((n) => `<option value="${n}">Ô ${n}</option>`).join('')}</select>
-      <button type="button" class="btn-ghost sm" data-mit-use="${esc(o.steamId)}" title="Dùng 1 cái trong kho người đó lên dino họ đang chơi — như người chơi tự dùng (đúng chế độ ăn, đang online)">Dùng lên dino</button>
+      <button type="button" class="btn-ghost sm" data-mit-use="${esc(o.steamId)}" title="Dùng 1 cái trong kho người đó lên dino họ đang chơi, như người chơi tự dùng (đúng chế độ ăn, đang online)">Dùng lên dino</button>
       <button type="button" class="btn-danger sm" data-mit-revoke="${esc(o.steamId)}">Thu hồi hết</button>` : ''}</div>`).join('')
     || '<div class="muted" style="font-size:13px">Chưa ai có mutation này trong kho.</div>';
 }
@@ -4496,7 +4496,7 @@ $('mit-owners').addEventListener('click', async (e) => {
     const body = pick === 'up' ? { steamId, upgrade: true } : { steamId, slot: Number(pick) };
     try {
       await adminFetch(`/api/items/${mit.sel}/apply`, 'POST', adminToken, body);
-      toast(`Đã gửi vào game (${pick === 'up' ? 'nâng cấp +1 đời' : `ô ${pick}`}) — kho trừ 1 khi game xác nhận`);
+      toast(`Đã gửi vào game (${pick === 'up' ? 'nâng cấp +1 đời' : `ô ${pick}`}), kho trừ 1 khi game xác nhận`);
       setTimeout(() => { void loadItemsPage(true).then(loadMitOwners); }, 6000);
     } catch (err) { toast(err.message ?? String(err), 'err'); }
     return;
@@ -4522,10 +4522,10 @@ const TKT_INFO = {
   mutation_ticket: 'Người chơi tự chọn một mutation khi dùng: mọi mutation còn trong game, đúng chế độ ăn của loài. Phiếu <b>Đặc biệt</b> đổi được cả mutation nhiệm vụ; độ hiếm khác chỉ để hiển thị. Chỉ vào ô đã mở theo tăng trưởng như game (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%).',
   mutation_clear: 'Bỏ mutation ở một ô (1–4) để người chơi chọn lại trong game.',
   prime_ticket: 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện, chỉ số prime sau vài giây). Dùng cho trường hợp lỡ prime.',
-  dino_box: 'Người chơi <b>mở hộp</b>: loài <b>ngẫu nhiên</b> (có hiệu ứng roll) hoặc <b>tự chọn</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới — ra <b>vật phẩm Dino</b> trong túi. Dùng vật phẩm Dino: chọn giới tính và mutation (ô mở theo tăng trưởng như game: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%; đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>. Quà tân thủ <span class="mono">starter_box</span> (hộp tự chọn) được nhận ở trang chủ, mỗi tài khoản 1 lần. Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Hộp dino).',
+  dino_box: 'Người chơi <b>mở hộp</b>: loài <b>ngẫu nhiên</b> (có hiệu ứng roll) hoặc <b>tự chọn</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới, ra <b>vật phẩm Dino</b> trong túi. Dùng vật phẩm Dino: chọn giới tính và mutation (ô mở theo tăng trưởng như game: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%; đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>. Quà tân thủ <span class="mono">starter_box</span> (hộp tự chọn) được nhận ở trang chủ, mỗi tài khoản 1 lần. Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Hộp dino).',
   salt_lick: 'Dùng lên dino <b>đang chơi</b>: hết trạng thái ốm sau khi nôn (hàm game <span class="mono">ResetVomitSickState</span>, như nút Hồi máu của admin). Không hồi máu / thức ăn / nước. Người chơi thấy: “Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay”.',
   growth_bag: 'Dùng lên dino <b>đang chơi</b>: cộng thêm tăng trưởng, chỉ khi dino dưới mốc (vd +10% khi dưới 60%: 55% → 65%; mốc 100% = mọi dino chưa trưởng thành). Chỉ số giữ theo tỉ lệ. Vật phẩm chỉ mất khi game xác nhận.',
-  food_box: 'Dùng lên dino <b>đang chơi</b>: thanh thức ăn cộng thêm (tối đa đầy) — chống đói, <b>không tăng chất dinh dưỡng</b>. Dino đang no: vật phẩm vẫn còn.',
+  food_box: 'Dùng lên dino <b>đang chơi</b>: thanh thức ăn cộng thêm (tối đa đầy), chống đói, <b>không tăng chất dinh dưỡng</b>. Dino đang no: vật phẩm vẫn còn.',
 };
 const tkt = { sel: null, draft: null, saved: null };
 const tktDirty = () => tkt.draft !== null && JSON.stringify(tkt.draft) !== tkt.saved;
@@ -4539,7 +4539,7 @@ function renderTkt() {
   $('tkt-list').innerHTML = all.map((i) => `<button type="button" class="itm-row r-${esc(i.rarity)} ${i.id === tkt.sel ? 'on' : ''}" data-tkt="${esc(i.id)}">
       <span class="top"><b>${esc(i.name)}</b><span class="rar ${esc(i.rarity)}">${esc(rar[i.rarity] ?? i.rarity)}</span></span>
       <span class="sub">${esc(TKT_TYPES[i.type])} · ${i.owners} cái trong kho${i.retired ? ' · <span class="kill">ngừng phát hành</span>' : ''}</span></button>`).join('')
-    || '<div class="empty">Chưa có phiếu nào — bấm “+ Phiếu mới”.</div>';
+    || '<div class="empty">Chưa có phiếu nào, bấm “+ Phiếu mới”.</div>';
   $('tkt-new').hidden = !can('items.edit');
 }
 function tktSelect(id, force = false) {
@@ -4624,7 +4624,7 @@ $('tkt-retire').addEventListener('click', async () => {
   if (!item) return;
   try {
     await tktSave({ type: item.type, name: item.name, rarity: item.rarity, data: item.data, retired: !item.retired }, item.id);
-    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành — người đã có vẫn giữ');
+    toast(item.retired ? 'Đã phát hành lại' : 'Đã ngừng phát hành, người đã có vẫn giữ');
   } catch (e) { toast(e.message ?? String(e), 'err'); }
 });
 let tktOwners = [];
@@ -4764,7 +4764,7 @@ async function padmSend(body, label) {
     $('padm-status').textContent = `Đang gửi lệnh “${label}”…`;
     const { command } = await adminFetch(`/api/player/${encodeURIComponent(padm.id)}/admin`, 'POST', adminToken, body);
     $('padm-status').className = 'padm-status ok';
-    $('padm-status').textContent = `Đã gửi “${label}” (lệnh #${command.id}) — game thực hiện trong vài giây.`;
+    $('padm-status').textContent = `Đã gửi “${label}” (lệnh #${command.id}), game thực hiện trong vài giây.`;
     toast(`Đã gửi: ${label}`);
   } catch (e) {
     $('padm-status').className = 'padm-status err';
@@ -5056,7 +5056,7 @@ function applyPlayersView() {
         <td><div class="who">${avatar(p.steamId, p.name)}
           <div class="meta"><div class="nm">${esc(p.name ?? shortId(p.steamId))}
             ${p.online ? '<span class="chip tone-accent"><span class="d"></span>online</span>' : ''}
-            ${p.prison ? `<span class="chip tone-kill" title="Đang ở tù: ${esc(p.prison.offense)} — còn ${esc(prDur(p.prison.remainingSec))}">${p.prison.escaped ? '🚨 trốn' : '🔒 Tù'}</span>` : ''}</div>
+            ${p.prison ? `<span class="chip tone-kill" title="Đang ở tù: ${esc(p.prison.offense)}, còn ${esc(prDur(p.prison.remainingSec))}">${p.prison.escaped ? '🚨 trốn' : '🔒 Tù'}</span>` : ''}</div>
             <div class="sp">${esc(dino(p.species))}</div></div></div></td>
         <td style="white-space:nowrap">
           <span class="mono" style="font-size:12px;user-select:all">${esc(p.steamId)}</span>
@@ -5361,7 +5361,7 @@ function renderKillStatus(steamId, timeline) {
   const waited = Math.floor((Date.now() - pending.at) / 1000);
   el.innerHTML = waited < 70
     ? `<span class="muted">lệnh #${pending.id} đang chờ server… ${waited}s</span>`
-    : `<span class="chip tone-dmg">lệnh #${pending.id} chưa có phản hồi — DinoGarage có đang chạy không?</span>`;
+    : `<span class="chip tone-dmg">lệnh #${pending.id} chưa có phản hồi, DinoGarage có đang chạy không?</span>`;
 }
 
 // --- a stored dino: everything in its slot file ---------------------------------
@@ -5542,7 +5542,7 @@ function storedDinoCard({ slot, meta, state }, { owner = null } = {}) {
       ${owner ? `<button type="button" class="icon-btn" title="Xoá khỏi gara" data-del-steam="${esc(owner)}"
           data-del-slot="${esc(slot)}" data-del-label="${esc(species)}">${icon('trash')}</button>` : ''}
     </div>
-    ${state === null ? '<div class="warnbox">Không đọc được file slot — chỉ còn thông tin trong index.</div>' : ''}
+    ${state === null ? '<div class="warnbox">Không đọc được file slot, chỉ còn thông tin trong index.</div>' : ''}
     ${s.createdBy === 'admin' ? '<div class="muted" style="font-size:12px">Chỉ số để trống sẽ giữ nguyên giá trị của dino lúc người chơi lấy ra.</div>' : ''}
     <div class="vitals">
       ${vitalsList}
@@ -5824,7 +5824,7 @@ function renderLives(lives, online, steamId) {
     .catch(() => { lifeDetailCache.at = 0; });
 }
 
-/** "6/10 · 👑" — the prime tasks a life had done when last read. */
+/** "6/10 · 👑", the prime tasks a life had done when last read. */
 function lifeTasks(d) {
   if (!d?.prime) return '<span class="muted">–</span>';
   const p = d.prime;
@@ -6088,7 +6088,7 @@ function fromScr(sx, sy) {
   return [iy / lm.img.naturalHeight * (b.maxX - b.minX) + b.minX, ix / lm.img.naturalWidth * (b.maxY - b.minY) + b.minY];
 }
 // Checked against a live player (2026-09-24): pawn (x 148697, y 349211) is the
-// in-game location "349,211.187, 148,696.686" — the game lists Y first.
+// in-game location "349,211.187, 148,696.686", the game lists Y first.
 const unitsOf = (loc) => [loc.y / 1000, loc.x / 1000];
 
 const TWEEN_MS = 900;
@@ -6593,7 +6593,7 @@ function inPolyGame(poly, x, y) {
   }
   return inside;
 }
-/** Is the game point (x, y) inside the zone — as the mod decides. */
+/** Is the game point (x, y) inside the zone, as the mod decides. */
 function zoneHas(zn, x, y) {
   const o = zoneOutline(zn);
   return o ? inPolyGame(o, x, y) : Math.hypot(x - zn.x, y - zn.y) <= zn.radiusM * 100;
@@ -6774,8 +6774,8 @@ function renderAiZones() {
   const st = az.status;
   $('az-status').innerHTML = [
     !st ? 'Mod AIZones chưa báo trạng thái (chưa cài, hoặc server chưa chạy lại).'
-      : st.stale ? `Mod AIZones không báo từ ${ago(st.t)} — server tắt hoặc mod lỗi.`
-      : `AI đang sống trên server: <b>${st.total ?? '?'}</b> / ${st.cap ?? d.globalMax} (cả AI game tự sinh). Chạm mức này thì vùng ngừng sinh — người chơi phải săn bớt.`,
+      : st.stale ? `Mod AIZones không báo từ ${ago(st.t)}, server tắt hoặc mod lỗi.`
+      : `AI đang sống trên server: <b>${st.total ?? '?'}</b> / ${st.cap ?? d.globalMax} (cả AI game tự sinh). Chạm mức này thì vùng ngừng sinh, người chơi phải săn bớt.`,
     `Điểm đứng đã biết trên đảo: ${az.data.groundPoints} ô 25 m.`,
     az.dirty ? '<b style="color:#fb923c">Có thay đổi chưa lưu.</b>' : '',
   ].filter(Boolean).join('<br>');
@@ -6828,7 +6828,7 @@ function renderAiZoneForm() {
   const pts = az.points[zn.id];
   $('az-points').textContent = pts === undefined ? 'Điểm spawn: tính khi lưu.'
     : pts === 0 ? '⚠ Chưa có điểm spawn: chưa người chơi hay AI nào từng đứng trong vùng này. Vùng sẽ bắt đầu sinh khi có người đi qua (điểm cập nhật 10 phút/lần).'
-    : `Điểm spawn: ${pts} chỗ người chơi / AI đã từng đứng trong vùng (AI chỉ được đặt ở đó — không bao giờ dưới đất hay giữa không trung).`;
+    : `Điểm spawn: ${pts} chỗ người chơi / AI đã từng đứng trong vùng (AI chỉ được đặt ở đó, không bao giờ dưới đất hay giữa không trung).`;
 }
 
 function markAz() { az.dirty = true; renderAiZones(); requestDraw(); }
@@ -6965,7 +6965,7 @@ $('az-ambient').addEventListener('change', () => {
     okLabel: on ? 'Bật' : 'Tắt', withReason: false, danger: !on,
     run: async (token) => {
       const a = await adminFetch('/api/ai-ambient', 'PUT', token, { on });
-      toast(a.live === null ? 'Đã lưu vào Game.ini (RCON không trả lời — áp dụng ở lần restart).' : `AI game tự sinh: ${a.live ? 'bật' : 'tắt'}.`);
+      toast(a.live === null ? 'Đã lưu vào Game.ini (RCON không trả lời, áp dụng ở lần restart).' : `AI game tự sinh: ${a.live ? 'bật' : 'tắt'}.`);
       await loadAmbient(true);
     },
   });
@@ -6974,7 +6974,7 @@ $('az-ambient').addEventListener('change', () => {
 $('az-save').addEventListener('click', () => withToken('lưu vùng AI', async (token) => {
   await adminFetch('/api/ai-zones', 'PUT', token, az.draft);
   az.dirty = false;
-  toast('Đã lưu vùng AI — mod đọc lại trong vòng 10 giây.');
+  toast('Đã lưu vùng AI, mod đọc lại trong vòng 10 giây.');
   await refreshAiZones();
   renderGuard();
 }));
@@ -7013,11 +7013,11 @@ function renderGuard() {
     + `<span>${esc(n.replace(/^Sanctuary\s*/, 'Khu '))}</span><button type="button" class="go" data-gd-go="${esc(n)}" title="Tới trên bản đồ">↗</button></label>`).join('')
     || '<span class="step-hint">Bản đồ không có khu bảo tồn nào.</span>';
   const small = (az.draft?.zones ?? []).filter((zn) => zn.smallOnly);
-  $('gd-zones').innerHTML = small.length ? `${small.map((zn) => `<b>${esc(zn.name)}</b>`).join(', ')} — bật/tắt bằng ô "Chỉ dino nhỏ" trong từng vùng (tab Vùng AI).`
+  $('gd-zones').innerHTML = small.length ? `${small.map((zn) => `<b>${esc(zn.name)}</b>`).join(', ')}, bật/tắt bằng ô "Chỉ dino nhỏ" trong từng vùng (tab Vùng AI).`
     : 'Chưa vùng AI nào. Mở một vùng ở tab <b>Vùng AI</b> và tick "Chỉ dino nhỏ".';
   const count = d.sanctuaries.length + small.length;
   $('gd-status').innerHTML = !d.enabled ? 'Đang tắt.' : count === 0 ? 'Đang bật nhưng chưa chọn vùng nào.'
-    : `Đang áp dụng ở ${count} vùng${gd.dirty ? ' — <b style="color:#fb923c">chưa lưu</b>' : ''}.`;
+    : `Đang áp dụng ở ${count} vùng${gd.dirty ? ', <b style="color:#fb923c">chưa lưu</b>' : ''}.`;
 }
 $('gd-card').addEventListener('input', (e) => {
   const d = gd.draft;
@@ -7051,7 +7051,7 @@ $('gd-sanct').addEventListener('click', (e) => {
 $('gd-save').addEventListener('click', () => withToken('lưu luật dino nhỏ', async (token) => {
   await adminFetch('/api/zone-guard', 'PUT', token, gd.draft);
   gd.dirty = false;
-  toast('Đã lưu luật dino nhỏ — mod áp dụng trong vài giây.');
+  toast('Đã lưu luật dino nhỏ, mod áp dụng trong vài giây.');
   await loadGuard();
 }));
 
@@ -7070,7 +7070,7 @@ function renderReset(st) {
   if (!op) { $('reset-status').textContent = ''; return; }
   const what = op.species.length ? op.species.map((k) => az.speciesLabel[k] ?? k).join(', ') : op.keepZoneSpecies ? 'AI ngoài loài của vùng' : 'mọi AI';
   const left = op.step === 'countdown' ? ` · còn ${Math.max(0, Math.round((op.runAt - Date.now()) / 1000))} s` : '';
-  $('reset-status').innerHTML = `${st.current ? 'Đang chạy' : 'Lần gần nhất'}: làm mới ${esc(what)} — <b>${RESET_STEP[op.step] ?? op.step}</b>${left}`
+  $('reset-status').innerHTML = `${st.current ? 'Đang chạy' : 'Lần gần nhất'}: làm mới ${esc(what)}, <b>${RESET_STEP[op.step] ?? op.step}</b>${left}`
     + `${typeof op.killed === 'number' ? ` · ${op.killed} con` : ''}${op.message ? ` · <span style="color:var(--kill,#ef4444)">${esc(op.message)}</span>` : ''}`;
 }
 
@@ -7110,8 +7110,8 @@ $('reset-cancel').addEventListener('click', () => withToken('huỷ làm mới AI
 // --- messages: every text players get, and how often (bridge/src/messages.ts) ---
 
 const MSG_GROUPS = [
-  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ban', 'Ban người chơi'], ['prison', 'Nhà tù'], ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ / ong đốt khu tù'], ['garage', 'Gara — cất dino'],
-  ['redeem', 'Gara — lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
+  ['server', 'Khởi động lại / tắt server'], ['corpses', 'Dọn xác'], ['ai', 'Làm mới AI'], ['ban', 'Ban người chơi'], ['prison', 'Nhà tù'], ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ / ong đốt khu tù'], ['garage', 'Gara, cất dino'],
+  ['redeem', 'Gara, lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
   ['admin', 'Admin'], ['hello', 'Chào mừng'], ['prime', 'Nhiệm vụ prime'], ['skin', 'Đổi màu dino (web)'],
 ];
 const msgs = { data: null, draft: null, dirty: false, loadedAt: 0 };
@@ -7278,7 +7278,7 @@ $('msg-periodic-add').addEventListener('click', () => {
 });
 $('msg-save').addEventListener('click', () => withToken('lưu thông báo', async (token) => {
   await adminFetch('/api/messages', 'PUT', token, msgs.draft);
-  toast('Đã lưu thông báo — tin của mod đổi trong vòng 5 giây.');
+  toast('Đã lưu thông báo, tin của mod đổi trong vòng 5 giây.');
   bans.texts = null;    // the ban page's preview uses the new text
   await loadMessagesTab();
 }));
@@ -7326,7 +7326,7 @@ $('drop-go').addEventListener('click', () => {
   const what = `${body.count} × ${az.speciesLabel[body.species] ?? body.species}`;
   withToken('thả AI', async (token) => {
     const { id } = await adminFetch('/api/ai-drop', 'POST', token, body);
-    toast(`Đã gửi lệnh thả ${what} — chờ server…`);
+    toast(`Đã gửi lệnh thả ${what}, chờ server…`);
     for (let i = 0; i < 16; i++) {
       await new Promise((r) => setTimeout(r, 2000));
       const { result } = await getJson(`/api/ai-drop?id=${id}`);
@@ -7336,7 +7336,7 @@ $('drop-go').addEventListener('click', () => {
       requestDraw();
       return;
     }
-    toast('Server chưa nhận lệnh sau 30 giây — mod AIZones có đang chạy không?', 'err');
+    toast('Server chưa nhận lệnh sau 30 giây, mod AIZones có đang chạy không?', 'err');
   });
 });
 
@@ -7413,7 +7413,7 @@ function tipHtml(h) {
     const zn = h.azone;
     const st = az.status?.zones?.[zn.id];
     const names = zn.species.map((k) => az.speciesLabel[k] ?? k).join(', ');
-    return `<b>${esc(zn.name)}</b> — vùng AI${zn.enabled && az.draft.enabled ? '' : ' (tắt)'}<br>${esc(names)}<br>`
+    return `<b>${esc(zn.name)}</b>, vùng AI${zn.enabled && az.draft.enabled ? '' : ' (tắt)'}<br>${esc(names)}<br>`
       + `<span class="m">${zoneSize(zn)} · tối thiểu ${zn.min} · tối đa ${zn.max} khi có người<br>`
       + `mỗi lượt ${zn.perTurnMin === zn.perTurnMax ? zn.perTurnMin : `${zn.perTurnMin}–${zn.perTurnMax}`} con / ${zn.everySec} s · cách nhau ≥ ${zn.spacingM} m`
       + `${st && typeof st.count === 'number' ? `<br>đang có ${st.count} · ${st.occupied ? `có người${typeof st.nextTurn === 'number' ? `, lượt sau ${st.nextTurn} s` : ''}` : 'vắng người'}` : ''}`
@@ -7626,7 +7626,7 @@ function turnOn(layer) {
 
 /**
  * Coordinates typed the way the game (and this map's readout) shows them: Y
- * first, then X — "349,211.187, 148,696.686", "349211 148696" or
+ * first, then X, "349,211.187, 148,696.686", "349211 148696" or
  * "349211,148696". Small numbers (|n| <= 1000) are taken as map units.
  * Returns the map point [Y/1000, X/1000], or null.
  */
@@ -7768,7 +7768,7 @@ function renderAiStatus() {
   const ai = lm.ai;
   if ($('ai-count')) $('ai-count').textContent = ai && !ai.stale ? String(ai.count) : '';
   if ($('fish-count')) $('fish-count').textContent = ai && !ai.stale ? String(ai.fish ?? 0) : '';
-  el.textContent = ai === null ? 'AI live: chưa có dữ liệu — StatsLogger mới ghi sau lần khởi động tới.'
+  el.textContent = ai === null ? 'AI live: chưa có dữ liệu, StatsLogger mới ghi sau lần khởi động tới.'
     : ai.stale ? `AI live: không có dữ liệu mới từ ${dateTime(ai.t)} (server tắt hoặc mod không chạy).`
     : `AI live: ${ai.count} con${ai.aiAlive !== null ? ` (game đếm ${ai.aiAlive})` : ''}${ai.fish ? ` · ${ai.fish} cá` : ''}${ai.dead ? ` · ${ai.dead} xác` : ''} · đọc lúc ${new Date(ai.t * 1000).toLocaleTimeString('vi-VN', { hour12: false })}. Các lớp "(tham khảo)" và vùng/địa danh lấy từ VulnonaMAP, không phải dữ liệu live.`;
 }
@@ -8134,13 +8134,13 @@ function referenceHtml(r) {
     r.kind === 'slot2' ? 'Chỉ slot 2 / 4' : '',
     r.kind === 'unlock' ? `Mở khoá: ${r.unlock ?? 'nhiệm vụ trong game'}` : '',
     r.slots ? `Slot: ${r.slots}` : '',
-    r.tiers ? `Theo đời (trùng sinh): ${tierList(r).map((v, i) => `${GEN_LABEL[i] ?? i + 1} ${v}`).join(' · ')}${r.stat ? ` — ${r.stat}` : ''}` : '',
+    r.tiers ? `Theo đời (trùng sinh): ${tierList(r).map((v, i) => `${GEN_LABEL[i] ?? i + 1} ${v}`).join(' · ')}${r.stat ? `, ${r.stat}` : ''}` : '',
   ].filter(Boolean);
   const hosts = r.sources.map((k) => {
     try { return new URL(mutationRef.sources[k]).hostname.replace(/^www\./, ''); } catch { return k; }
   });
   return `<div class="t-meta">${chips.map((c) => `<span class="t-chip">${esc(c)}</span>`).join('')}</div>
-    ${r.status !== 'active' ? `<div class="t-alert">${esc(STATUS_VN[r.status])}${r.statusNote ? ` — ${esc(r.statusNote)}` : ''}</div>` : ''}
+    ${r.status !== 'active' ? `<div class="t-alert">${esc(STATUS_VN[r.status])}${r.statusNote ? `, ${esc(r.statusNote)}` : ''}</div>` : ''}
     <div class="t-src">Nguồn: ${esc(hosts.join(', '))}${mutationRef.checked ? ` · kiểm tra ${esc(mutationRef.checked)}` : ''}</div>`;
 }
 
@@ -8158,7 +8158,7 @@ function mutDescHtml(name) {
   const note = mutationNotes[name];
   if (!r) {
     return note ? `<div class="vi"><span class="lang">VI</span>${esc(note.description)}</div>`
-      : '<div class="meta">Chưa có mô tả cho tên này — bấm ✎ mô tả để thêm.</div>';
+      : '<div class="meta">Chưa có mô tả cho tên này, bấm ✎ mô tả để thêm.</div>';
   }
   const meta = [
     r.kind === 'slot2' ? 'Chỉ slot 2 / 4' : '',
@@ -8213,7 +8213,7 @@ function renderGenHint() {
     ? `<span style="color:var(--dmg)">⚠ Đã chọn mutation elder tới cặp ${want} (người chơi thật cần trùng sinh ${want} lần) nhưng Elder stacks = ${stacks}:
        mọi mutation sẽ chỉ ở mức <b>${GEN_LABEL[Math.min(stacks, 3)]}</b>.</span>
        <button type="button" class="btn-soft sm" id="f-gen-fix">Đặt Elder stacks = ${want}</button>`
-    : `Chỉ số mutation tính theo <b>${GEN_LABEL[Math.min(stacks, 3)]}</b> (Elder stacks = ${stacks} lần trùng sinh) — áp dụng cho mọi mutation của dino.`;
+    : `Chỉ số mutation tính theo <b>${GEN_LABEL[Math.min(stacks, 3)]}</b> (Elder stacks = ${stacks} lần trùng sinh), áp dụng cho mọi mutation của dino.`;
 }
 
 /** Catalog entry for a short species name (BP_X_C), or null. */
@@ -8246,7 +8246,7 @@ function mutationTipHtml(name, species) {
     ? `<div class="t-label">Mô tả của admin</div><div class="t-desc">${esc(note.description)}</div>${wiki}`
     : ref
       ? wiki
-      : '<div class="t-desc none">Chưa có mô tả — tên này không có trong bảng tham chiếu. Admin bấm ✎ cạnh ô chọn để thêm.</div>';
+      : '<div class="t-desc none">Chưa có mô tả, tên này không có trong bảng tham chiếu. Admin bấm ✎ cạnh ô chọn để thêm.</div>';
   return `<div class="t-name">${mutIco(name, 'md')}${esc(ref ? ref.name : mutName(name))}</div><div class="t-id">${esc(name)}</div>
     ${body}
     ${proof ? `<div class="t-label">Trên server này</div><div class="t-proof">${proof}</div>` : ''}`;
@@ -8295,7 +8295,7 @@ window.addEventListener('scroll', hideTip, { passive: true });
 function editMutationNote(name) {
   confirmAction({
     title: `Mô tả mutation ${mutName(name)}`,
-    body: `<span class="mono">${esc(name)}</span> — hiện khi rê chuột vào <b>!</b>, ưu tiên hơn mô tả theo wiki.
+    body: `<span class="mono">${esc(name)}</span>, hiện khi rê chuột vào <b>!</b>, ưu tiên hơn mô tả theo wiki.
       Để trống để xoá và quay về mô tả theo wiki. Chỉ admin thấy, người chơi không thấy.`,
     okLabel: 'Lưu mô tả',
     withReason: false,
@@ -8342,15 +8342,15 @@ function renderMutationOptions() {
       const current = picked[i];
       const takenElsewhere = new Set(picked.filter((v, j) => j !== i && v));
       const label = (n) => refFor(n)?.name ?? mutName(n);
-      const optTitle = (n) => { const r = refFor(n); return r ? ` title="${esc(`${r.en} — ${r.description}`)}"` : ''; };
+      const optTitle = (n) => { const r = refFor(n); return r ? ` title="${esc(`${r.en}, ${r.description}`)}"` : ''; };
       const opt = (n, prefix = '') => `<option value="${esc(n)}"${optTitle(n)}${takenElsewhere.has(n) ? ' disabled' : ''}${n === current ? ' selected' : ''}>${prefix}${esc(label(n))}${refAlert(n) ? ' ⚠' : ''}${takenElsewhere.has(n) ? ' (đã chọn)' : ''}</option>`;
       const none = own.length === 0 && others.length === 0;
       const emptyLabel = !species ? 'chọn loài trước'
-        : none ? `chưa có mutation nào được xác nhận trên ${speciesName}` : '— trống —';
+        : none ? `chưa có mutation nào được xác nhận trên ${speciesName}` : 'trống';
       const warnOpt = (n) => opt(n, '⚠ ');
       sel.innerHTML = `<option value="">${esc(emptyLabel)}</option>`
         + (own.length ? `<optgroup label="${esc(`✓ Đã xác nhận trên ${speciesName}`)}">${own.map((n) => opt(n)).join('')}</optgroup>` : '')
-        + (others.length ? `<optgroup label="⚠ Chưa xác nhận — chỉ thấy trên loài khác">${others.map(warnOpt).join('')}</optgroup>` : '');
+        + (others.length ? `<optgroup label="⚠ Chưa xác nhận, chỉ thấy trên loài khác">${others.map(warnOpt).join('')}</optgroup>` : '');
       sel.disabled = none;
       // A choice no longer offered (species changed, toggle off) falls back to empty.
       if (current && ![...own, ...others].includes(current)) sel.value = '';
@@ -8392,7 +8392,7 @@ function renderPreview() {
   const known = knownPlayers.find((p) => p.steamId === steamId);
   $('f-steam-hint').innerHTML = known
     ? `Gửi cho <b>${esc(known.name ?? shortId(known.steamId))}</b>${known.online ? ' · đang online' : ''}`
-    : /^\d{17}$/.test(steamId) ? 'Người này chưa từng xuất hiện trong log — vẫn tạo được.' : '';
+    : /^\d{17}$/.test(steamId) ? 'Người này chưa từng xuất hiện trong log, vẫn tạo được.' : '';
 
   const classPath = selectedClassPath();
   if (!classPath) {
@@ -8554,21 +8554,21 @@ function renderGrowthStats() {
   ].join('');
 }
 function expectedCard(data, g) {
-  const fmt = (v) => (isNum(v) ? Math.round(v).toLocaleString('vi-VN') : '—');
+  const fmt = (v) => (isNum(v) ? Math.round(v).toLocaleString('vi-VN') : '-');
   // The lab's numbers first: a fresh dino with its growth set, as the garage restores it.
   const lab = data.lab && data.lab.at ? data.lab : null;
   const at = lab ? lab.at : data.at;
   if (!at) {
     return `<section class="card" style="margin-bottom:12px"><div class="card-body">
       <div class="group-label">Thông số dự kiến</div>
-      <div class="muted" style="font-size:12.5px">Chưa có số đo nào của loài này trên server — thông số sẽ là của game khi người chơi lấy ra.</div></div></section>`;
+      <div class="muted" style="font-size:12.5px">Chưa có số đo nào của loài này trên server, thông số sẽ là của game khi người chơi lấy ra.</div></div></section>`;
   }
   const pct = (x) => `${Math.round(x * 100)}%`;
   const where = at.exact ? `đo trực tiếp ở ${pct(at.from === at.to ? at.from : g)}`
     : at.from === at.to ? `gần nhất đã đo: ${pct(at.from)} (chưa có số đo ở ${pct(g)})`
     : `ước tính giữa hai mức đã đo ${pct(at.from)} và ${pct(at.to)}`;
   const source = lab
-    ? `Số gốc của game khi đặt growth — đúng số dino có khi lấy ra từ gara (đo trên server test ${lab.measured}, ${where}). Dino người chơi có thể cao hơn nhờ đột biến, prime.`
+    ? `Số gốc của game khi đặt growth, đúng số dino có khi lấy ra từ gara (đo trên server test ${lab.measured}, ${where}). Dino người chơi có thể cao hơn nhờ đột biến, prime.`
     : `Số tối đa game báo cho loài này trên server (${where}).`;
   // Prime: how much the maxima rose on prime elders of this species here.
   let primeNote = '';
@@ -8578,11 +8578,11 @@ function expectedCard(data, g) {
     if (pm && isNum(pm.max.health)) {
       const base = (data.points.find((p) => Math.abs(p.growth - pm.growth) < 0.011) ?? data.points[data.points.length - 1])?.max;
       factor = base && isNum(base.health) && base.health > 0 ? pm.max.health / base.health : null;
-      primeNote = `👑 Prime trên server này: máu và dạ dày tối đa <b>tăng dần</b> khi dino giữ trạng thái prime —
+      primeNote = `👑 Prime trên server này: máu và dạ dày tối đa <b>tăng dần</b> khi dino giữ trạng thái prime,
         cao nhất đã thấy <b>${fmt(pm.max.health)} máu</b>${factor ? ` (×${factor.toFixed(2).replace('.', ',')})` : ''}
         ở growth ${pct(pm.growth)} (${pm.readings} lần đọc). Lấy ra từ gara là có ngay chỉ số prime.`;
     } else {
-      primeNote = '👑 Chưa từng thấy dino prime của loài này trên server — chưa biết prime tăng bao nhiêu.';
+      primeNote = '👑 Chưa từng thấy dino prime của loài này trên server, chưa biết prime tăng bao nhiêu.';
     }
   }
   const rows = STAT_ROWS.filter(([k]) => isNum(at.max[k])).map(([k, label]) => {
@@ -8761,7 +8761,7 @@ $('create').addEventListener('submit', async (ev) => {
   }
   if (primeWanted() && [...primeCode()].filter((c) => c === '1').length < 5) {
     out.className = 'result err';
-    out.textContent = 'Prime cần ít nhất 5/10 nhiệm vụ — game không cho prime nếu thiếu. Tick thêm nhiệm vụ hoặc bỏ Prime.';
+    out.textContent = 'Prime cần ít nhất 5/10 nhiệm vụ, game không cho prime nếu thiếu. Tick thêm nhiệm vụ hoặc bỏ Prime.';
     return;
   }
   btn.disabled = true;
@@ -8804,7 +8804,7 @@ $('create').addEventListener('submit', async (ev) => {
 
 const PHASE_VN = {
   running: 'Đang chạy', starting: 'Đang khởi động', stopping: 'Đang tắt',
-  stopped: 'Đã tắt', failed: 'Lỗi — unit failed', unknown: 'Không rõ trạng thái',
+  stopped: 'Đã tắt', failed: 'Lỗi, unit failed', unknown: 'Không rõ trạng thái',
 };
 const STEP_VN = {
   countdown: 'Đếm ngược', saving: 'Lưu game', stopping: 'Đang tắt', restarting: 'Khởi động lại', backup: 'Backup dữ liệu',
@@ -8857,7 +8857,7 @@ function askPower(kind) {
   const stop = kind === 'stop';
   confirmAction({
     title: stop ? 'Tắt server?' : 'Khởi động lại server?',
-    body: `${stop ? 'Server sẽ <b>tắt hẳn</b> — không ai vào được cho tới khi bật lại.'
+    body: `${stop ? 'Server sẽ <b>tắt hẳn</b>, không ai vào được cho tới khi bật lại.'
                   : 'Mọi người chơi sẽ bị ngắt kết nối trong lúc server khởi động lại.'}
       Nếu có RCON: người chơi được báo đếm ngược và game được <b>lưu</b> trước khi tắt.
       ${countdownSelect('pw-cd', stop ? 300 : 300)}`,
@@ -8995,7 +8995,7 @@ async function loadGrowthEvents() {
     const done = e.end <= nowS;
     const state = done ? 'đã kết thúc'
       : live ? `đang áp dụng · kết thúc ở lần khởi động ${e.endsAt ? geTime(e.endsAt) : 'tay sau giờ kết thúc (chưa có lịch)'}`
-        : e.appliesAt ? `bắt đầu ở lần khởi động ${geTime(e.appliesAt)}` : 'chưa có lịch khởi động lại — chỉ áp khi khởi động lại tay';
+        : e.appliesAt ? `bắt đầu ở lần khởi động ${geTime(e.appliesAt)}` : 'chưa có lịch khởi động lại, chỉ áp khi khởi động lại tay';
     return `<div class="ge-row${live ? ' live' : ''}"><span class="x">×${esc(e.multiplier)}</span>
       <span class="when"><b>${esc(geTime(e.start))} → ${esc(geTime(e.end))}</b><small>${esc(state)}${e.note ? ` · ${esc(e.note)}` : ''}</small></span>
       ${edit ? `<button type="button" class="btn-danger sm" data-ge-del="${esc(e.id)}">Xoá</button>` : ''}</div>`;
@@ -9008,7 +9008,7 @@ $('ge-add').addEventListener('click', () => withToken('thêm sự kiện tốc �
     start: Math.floor(start / 1000), end: Math.floor(end / 1000), multiplier: Number($('ge-mult').value), note: $('ge-note').value,
   });
   $('ge-note').value = '';
-  toast('Đã thêm sự kiện — áp dụng ở lần khởi động lại sau giờ bắt đầu.');
+  toast('Đã thêm sự kiện, áp dụng ở lần khởi động lại sau giờ bắt đầu.');
   await loadGrowthEvents();
 }));
 $('ge-list').addEventListener('click', (e) => {
@@ -9215,7 +9215,7 @@ $('mb-wl-on').addEventListener('change', (e) => {
   withToken(on ? 'bật whitelist' : 'tắt whitelist', async (token) => {
     await adminFetch('/api/game-config', 'PUT', token, { settings: { bServerWhitelist: on } });
     await loadMembers(true);
-    toast(on ? 'Đã bật whitelist — có hiệu lực từ lần khởi động lại tới.' : 'Đã tắt whitelist — có hiệu lực từ lần khởi động lại tới.');
+    toast(on ? 'Đã bật whitelist, có hiệu lực từ lần khởi động lại tới.' : 'Đã tắt whitelist, có hiệu lực từ lần khởi động lại tới.');
   });
 });
 
@@ -9236,7 +9236,7 @@ function renderSvip() {
       <tr><td>${p.name ? who(p.steamId, p.name) : '<span class="muted">chưa vào game</span>'}</td><td class="mono">${esc(p.steamId)}</td>
         <td>${esc(p.note || '')}</td><td class="muted">${p.addedAt ? dateTime(p.addedAt) : ''}${p.by ? ` · ${esc(p.by)}` : ''}</td>
         <td style="text-align:right"><button type="button" class="btn-ghost sm" data-sv-del="${esc(p.steamId)}" style="color:var(--kill,#ef4444)">Bỏ</button></td></tr>`).join('')}</tbody></table>`;
-  // Released or being tried: one button each (owner, 2026-10-05: "nút phát hành — click là phát hành cho tất cả").
+  // Released or being tried: one button each (owner, 2026-10-05: "nút phát hành, click là phát hành cho tất cả").
   $('sv-features').innerHTML = d.features.map((f) => `<div class="dc-route"><span>${esc(f.label)}</span>
     <span style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap">
       ${f.mode === 'all' ? '<span class="chip tone-grow">✓ Đã phát hành cho tất cả</span>' : '<span class="chip tone-accent">🧪 Đang thử nghiệm: admin + SVip</span>'}
@@ -9360,7 +9360,7 @@ function renderQuests() {
   if (!d) return;
   const edit = can('economy.edit');
   $('qs-min').value = String(d.checkinMinutes);
-  const bonus = [{ id: '', name: '— Không tặng —' }, ...qs.items.filter((i) => !i.retired && i.type !== 'dino'), ...(d.checkinBonusItem && !qs.items.some((i) => i.id === d.checkinBonusItem) ? [{ id: d.checkinBonusItem, name: d.checkinBonusItem }] : [])];
+  const bonus = [{ id: '', name: 'Không tặng' }, ...qs.items.filter((i) => !i.retired && i.type !== 'dino'), ...(d.checkinBonusItem && !qs.items.some((i) => i.id === d.checkinBonusItem) ? [{ id: d.checkinBonusItem, name: d.checkinBonusItem }] : [])];
   $('qs-bonus').innerHTML = bonus.map((i) => `<option value="${esc(i.id)}"${(d.checkinBonusItem ?? '') === i.id ? ' selected' : ''}>${esc(i.name)}</option>`).join('');
   if (!$('qs-days').children.length) {
     $('qs-days').innerHTML = d.checkinRewards.map((_, i) => `<label>Ngày ${i + 1} (${esc(cur)})<input type="number" min="0" max="100000" step="1" data-qs-day="${i}"></label>`).join('');
@@ -9437,7 +9437,7 @@ function renderDiscordStatus() {
   $('dc-relay-status').innerHTML = !dc.draft.relay?.url ? 'Chưa đặt trạm.'
     : rs.lastError ? `<span style="color:var(--kill)">Lỗi: ${esc(rs.lastError)}</span>`
     : rs.lastOkAt ? `Nhịp tim gửi được lúc ${esc(dateTime(rs.lastOkAt))}.` : 'Chưa gửi nhịp tim nào (gửi mỗi 2 phút sau khi lưu).';
-  $('dc-status').innerHTML = !dc.draft.enabled ? 'Đang tắt — không gửi gì.'
+  $('dc-status').innerHTML = !dc.draft.enabled ? 'Đang tắt, không gửi gì.'
     : dc.draft.channels.length === 0 ? 'Chưa có kênh nào: thêm webhook ở dưới.'
     : `Đang gửi · ${st.queued} tin đang chờ${st.dropped ? ` · đã bỏ ${st.dropped} tin (hàng chờ đầy)` : ''}.`;
   // Two panel channels on one Discord channel: both lists land in the same place.
@@ -9456,7 +9456,7 @@ function renderDiscordStatus() {
     el.className = `st${cs.lastError || wh?.error || same.length ? ' err' : ''}`;
     el.textContent = [
       wh?.error ? `Webhook: ${wh.error}` : wh?.name ? `Webhook trong Discord: “${wh.name}” · kênh …${String(wh.channelId).slice(-4)}` : '',
-      same.length ? `trùng kênh Discord với “${same.map(nameOf).join('”, “')}” — tạo webhook mới trong kênh kia` : '',
+      same.length ? `trùng kênh Discord với “${same.map(nameOf).join('”, “')}”, tạo webhook mới trong kênh kia` : '',
       cs.lastError ? `Lỗi: ${cs.lastError}` : cs.lastOkAt ? `Gửi được lúc ${dateTime(cs.lastOkAt)}` : 'Chưa gửi gì',
       cs.queued ? `${cs.queued} tin đang chờ` : ''].filter(Boolean).join(' · ');
   }
@@ -9466,19 +9466,19 @@ function renderDiscord() {
   if (!d || !dc.data) return;
   $('dc-enabled').checked = d.enabled;
   if (document.activeElement !== $('dc-relay-url')) $('dc-relay-url').value = d.relay.url;
-  $('dc-relay-secret').placeholder = d.relay.hasSecret ? 'đã đặt — dán mã mới để đổi' : 'dán mã bí mật (24+ ký tự)';
+  $('dc-relay-secret').placeholder = d.relay.hasSecret ? 'đã đặt, dán mã mới để đổi' : 'dán mã bí mật (24+ ký tự)';
   $('dc-channels').innerHTML = d.channels.map((c) => `<div class="dc-ch" data-dc="${esc(c.id)}">
       <input class="nm" data-f="name" maxlength="40" value="${esc(c.name)}" placeholder="Tên kênh (vd. killfeed)" aria-label="Tên kênh">
       <span class="dc-url-wrap">
         <input data-f="url" class="dc-url masked" type="text" name="dc-webhook-${esc(c.id)}" autocomplete="off" spellcheck="false"
           data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" value="${esc(c.url)}"
-          placeholder="${esc(c.hint ? `${c.hint} — dán URL mới để đổi` : 'Dán URL webhook: https://discord.com/api/webhooks/…')}" aria-label="URL webhook">
+          placeholder="${esc(c.hint ? `${c.hint}, dán URL mới để đổi` : 'Dán URL webhook: https://discord.com/api/webhooks/…')}" aria-label="URL webhook">
         <button type="button" class="dc-eye" data-f="eye" title="Hiện / ẩn URL" aria-label="Hiện / ẩn URL">👁</button></span>
       <button type="button" class="btn-soft sm" data-f="test">Thử</button>
       <button type="button" class="btn-ghost sm" data-f="del" style="color:var(--kill,#ef4444)">Xoá</button>
       <div class="st"></div></div>`).join('') || '<p class="step-hint">Chưa có kênh. Bấm <b>+ Thêm kênh</b>.</p>';
-  const opts = (cur) => `<option value="">— không gửi —</option>${d.channels.map((c) => `<option value="${esc(c.id)}"${c.id === cur ? ' selected' : ''}>${esc(c.name || '(chưa đặt tên)')}</option>`).join('')}`;
-  $('dc-board').innerHTML = opts(d.board).replace('— không gửi —', '— không có bảng —');
+  const opts = (cur) => `<option value="">không gửi</option>${d.channels.map((c) => `<option value="${esc(c.id)}"${c.id === cur ? ' selected' : ''}>${esc(c.name || '(chưa đặt tên)')}</option>`).join('')}`;
+  $('dc-board').innerHTML = opts(d.board).replace('không gửi', 'không có bảng');
   $('dc-all').innerHTML = `<option value="">Chọn kênh…</option>${d.channels.map((c) => `<option value="${esc(c.id)}">${esc(c.name || '(chưa đặt tên)')}</option>`).join('')}`;
   let group = null;
   $('dc-routes').innerHTML = dc.data.kinds.map((k) => {
@@ -9509,7 +9509,7 @@ for (const b of document.querySelectorAll('[data-eye]')) {
 $('dc-register').addEventListener('click', () => withToken('đăng ký lệnh Discord', async (token) => {
   const r = await adminFetch('/api/discord/register-commands', 'POST', token, { appId: $('dc-app-id').value.trim(), botToken: $('dc-bot-token').value.trim() });
   $('dc-bot-token').value = '';
-  toast(`Đã đăng ký ${r.commands.join(', ')} — vài phút sau sẽ hiện trong Discord.`);
+  toast(`Đã đăng ký ${r.commands.join(', ')}, vài phút sau sẽ hiện trong Discord.`);
 }));
 $('dc-add').addEventListener('click', () => {
   if (!dc.draft) return;
@@ -9558,7 +9558,7 @@ $('dc-channels').addEventListener('click', (e) => {
   if (dc.dirty) { toast('Lưu trước rồi mới thử (kênh này chưa lưu).', 'err'); return; }
   withToken('thử kênh Discord', async (token) => {
     await adminFetch('/api/discord/test', 'POST', token, { channel: id });
-    toast('Đã gửi tin thử — xem trong kênh Discord.');
+    toast('Đã gửi tin thử, xem trong kênh Discord.');
     await loadDiscord();
   });
 });
@@ -9651,7 +9651,7 @@ function applyBansView() {
     tbody.innerHTML = pageRows.map((b) => `<tr class="${b.active ? '' : 'ban-off'}">
       <td><b>${esc(b.name)}</b>${(bans.data?.admins ?? []).includes(b.steamId) ? ' <span class="tag" title="Game không chặn admin vào lại; panel tự kick">admin</span>' : ''}<br><span class="mono muted" style="font-size:11.5px">${esc(b.steamId)}</span></td>
       <td>${esc(b.reason || '(không ghi)')}</td><td>${esc(b.duration)}${b.active ? '' : ' · <i>hết hạn</i>'}</td>
-      <td>${b.bannedAt ? esc(dateTime(b.bannedAt)) : '—'}</td><td>${b.permanent ? 'không' : b.endsAt ? esc(dateTime(b.endsAt)) : '—'}</td>
+      <td>${b.bannedAt ? esc(dateTime(b.bannedAt)) : '-'}</td><td>${b.permanent ? 'không' : b.endsAt ? esc(dateTime(b.endsAt)) : '-'}</td>
       <td>${esc(b.by === 'Rcon' ? 'panel / RCON' : b.by)}</td>
       <td style="white-space:nowrap">${b.active ? `<button type="button" class="btn-soft sm" data-ban-edit="${esc(b.steamId)}|${esc(b.bannedTime)}">Sửa</button>
         <button type="button" class="btn-ghost sm" data-ban-unban="${esc(b.steamId)}|${esc(b.bannedTime)}" style="color:var(--kill,#ef4444)">Gỡ ban</button>` : ''}</td></tr>`).join('');
@@ -9738,7 +9738,7 @@ function renderBanPreview() {
     duration: f.perm ? 'vĩnh viễn' : $('ban-hours').selectedOptions[0]?.textContent ?? '', until: '' };
   const admin = (bans.data?.admins ?? []).includes(f.steamId);
   $('ban-preview').innerHTML = `<span class="muted">Cả server sẽ thấy:</span><br>${esc(String(tpl).replace(/\{(\w+)\}/g, (all, k) => vars[k] ?? all))}`
-    + (admin ? '<br><b style="color:var(--dmg)">⚠ Tài khoản này là admin server (AdminsSteamIDs): game không chặn admin vào lại — panel sẽ tự kick mỗi lần họ vào khi còn hạn ban.</b>' : '');
+    + (admin ? '<br><b style="color:var(--dmg)">⚠ Tài khoản này là admin server (AdminsSteamIDs): game không chặn admin vào lại, panel sẽ tự kick mỗi lần họ vào khi còn hạn ban.</b>' : '');
 }
 $('ban-player').addEventListener('change', () => { $('ban-manual').hidden = $('ban-player').value !== ''; renderBanPreview(); });
 $('ban-reason-pick').addEventListener('change', () => {
@@ -9755,7 +9755,7 @@ $('ban-go').addEventListener('click', () => {
   const dur = f.perm ? 'vĩnh viễn' : $('ban-hours').selectedOptions[0]?.textContent;
   confirmAction({
     title: `Ban ${f.name || f.steamId}?`,
-    body: `<p>Ban <b>${esc(f.name || f.steamId)}</b> <span class="mono">${esc(f.steamId)}</span> — <b>${esc(dur)}</b>.</p><p>Lý do: ${esc(f.reason)}</p>
+    body: `<p>Ban <b>${esc(f.name || f.steamId)}</b> <span class="mono">${esc(f.steamId)}</span>, <b>${esc(dur)}</b>.</p><p>Lý do: ${esc(f.reason)}</p>
       <p class="muted">Gỡ hoặc sửa sau ở danh sách ban bên dưới.</p>`,
     okLabel: 'Ban', withReason: false, danger: true,
     run: async (token) => {
@@ -9790,7 +9790,7 @@ $('ban-list').addEventListener('click', (e) => {
     ['720', '30 ngày nữa'], ['perm', 'Vĩnh viễn'], ['at', 'Chọn ngày giờ…']];
   confirmAction({
     title: `Sửa ban ${b.name}`,
-    body: `<p><b>${esc(b.name)}</b> <span class="mono">${esc(b.steamId)}</span> — ban lúc ${esc(dateTime(b.bannedAt))}, hiện: <b>${esc(b.duration)}</b>${b.permanent ? '' : ` (hết ${esc(dateTime(b.endsAt))})`}</p>
+    body: `<p><b>${esc(b.name)}</b> <span class="mono">${esc(b.steamId)}</span>, ban lúc ${esc(dateTime(b.bannedAt))}, hiện: <b>${esc(b.duration)}</b>${b.permanent ? '' : ` (hết ${esc(dateTime(b.endsAt))})`}</p>
       <div class="cfg-field" style="margin-top:10px"><label for="be-mode">Hết hạn</label><select id="be-mode">${opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
         <input id="be-at" type="datetime-local" hidden style="margin-top:6px"></div>
       <div class="cfg-field" style="margin-top:10px"><label for="be-reason">Lý do</label><textarea id="be-reason" rows="2" maxlength="200">${esc(b.reason)}</textarea></div>`,
@@ -9826,7 +9826,7 @@ $('ban-reasons-save').addEventListener('click', () => withToken('lưu mẫu lý 
 
 // --- prison (bridge prison.ts, mods/Prison): Người chơi → Nhà tù ---------------
 const pr = { data: null, texts: null, playersKey: '', offKey: '', settingsDirty: false, minutesEdited: false };
-/** "1 giờ 5 phút" / "45 phút" — as the bridge says it to players. */
+/** "1 giờ 5 phút" / "45 phút", as the bridge says it to players. */
 function prDur(sec) {
   const s = Math.max(0, Math.round(sec));
   if (s < 60) return `${s} giây`;
@@ -9843,7 +9843,7 @@ async function loadPrison() {
     ? '⚠ Chưa có vùng nhà tù: vào <a href="#map">Bản đồ</a>, chọn (hoặc tạo) một vùng, tick <b>🔒 Nhà tù</b> rồi lưu các vùng.'
     : !z.enabled ? `⚠ Vùng nhà tù “${esc(z.name)}” đang tắt (bật lại ở <a href="#map">Bản đồ</a>).`
     : z.drops === 0 ? `⚠ Vùng “${esc(z.name)}” chưa có điểm thả: cần một người chơi hoặc AI đi qua vùng này (điểm mặt đất cập nhật 10 phút/lần).`
-    : !d.settings.enabled ? `<b style="color:var(--dmg)">⚠ Nhà tù đang TẮT — không ai bị đưa vào tù.</b> Tick "Bật nhà tù" ở Cài đặt nhà tù bên phải rồi bấm Lưu. (Vùng: ${esc(z.name)}, ${z.drops} điểm thả.)`
+    : !d.settings.enabled ? `<b style="color:var(--dmg)">⚠ Nhà tù đang TẮT, không ai bị đưa vào tù.</b> Tick "Bật nhà tù" ở Cài đặt nhà tù bên phải rồi bấm Lưu. (Vùng: ${esc(z.name)}, ${z.drops} điểm thả.)`
     : `Nhà tù: <b>${esc(z.name)}</b> · ${z.drops} điểm thả · đang <b>bật</b>`
       + ` · mod ${d.modState.t ? `báo ${esc(ago(d.modState.t))}` : 'chưa báo (mod nạp ở lần khởi động lại server kế tiếp)'}.`;
 
@@ -9861,7 +9861,7 @@ async function loadPrison() {
   if (offKey !== pr.offKey) {
     pr.offKey = offKey;
     const cur = $('pr-offense').value;
-    $('pr-offense').innerHTML = d.settings.offenses.map((o) => `<option value="${esc(o.id)}">${esc(o.name)} — ${o.minutes} phút</option>`).join('')
+    $('pr-offense').innerHTML = d.settings.offenses.map((o) => `<option value="${esc(o.id)}">${esc(o.name)}, ${o.minutes} phút</option>`).join('')
       + '<option value="">Khác (tự nhập phút)</option>';
     if ([...$('pr-offense').options].some((o) => o.value === cur)) $('pr-offense').value = cur;
   }
@@ -9875,7 +9875,7 @@ async function loadPrison() {
         : s.escaped ? '<b style="color:var(--dmg)">🚨 đang trốn</b>'
         : !s.online ? '<span class="muted">offline · dừng đếm</span>'
         : !s.jailed ? '<span class="muted">chưa vào tù</span>'
-        : s.inside ? '🔒 trong tù' : '<span class="muted">—</span>';
+        : s.inside ? '🔒 trong tù' : '<span class="muted">-</span>';
       const log = s.log?.length ? `<div class="muted" style="font-size:11.5px">${s.log.map((l) => esc(l.text)).join(' · ')}</div>` : '';
       return `<tr><td>${who(s.steamId, s.name)}<div class="mono muted" style="font-size:11.5px">${esc(s.steamId)}</div></td>
         <td><b>${esc(s.offense)}</b><div class="muted">${esc(s.reason)}</div>${s.prior ? `<div class="muted" style="font-size:11.5px">tiền án ${s.prior} · ×${s.multiplier}</div>` : ''}</td>
@@ -9911,8 +9911,8 @@ function renderPrisonCalc() {
   const mult = Math.round((1 + d.settings.repeatStep * prior) * 100) / 100;
   if (f.off && !pr.minutesEdited) $('pr-minutes').value = Math.max(1, Math.round(f.off.minutes * mult));
   const active = d.active.find((s) => s.steamId === f.steamId);
-  $('pr-calc').innerHTML = active ? '<b style="color:var(--dmg)">Người này đang ở tù — dùng "Đổi án" ở danh sách bên dưới.</b>'
-    : f.off ? `${f.off.minutes} phút × ${mult} (tiền án: ${prior})${pr.minutesEdited ? ' — đã sửa tay' : ''}`
+  $('pr-calc').innerHTML = active ? '<b style="color:var(--dmg)">Người này đang ở tù, dùng "Đổi án" ở danh sách bên dưới.</b>'
+    : f.off ? `${f.off.minutes} phút × ${mult} (tiền án: ${prior})${pr.minutesEdited ? ', đã sửa tay' : ''}`
     : `Tiền án: ${prior}. Nhập số phút.`;
   const t = pr.texts;
   if (!t) return;
@@ -9935,7 +9935,7 @@ $('pr-go').addEventListener('click', () => {
   if (!f.off && !f.reason) { toast('Lỗi "Khác" cần ghi lý do.', 'err'); $('pr-reason').focus(); return; }
   confirmAction({
     title: `Bỏ tù ${f.name || f.steamId}?`,
-    body: `<p>Bỏ tù <b>${esc(f.name || f.steamId)}</b> <span class="mono">${esc(f.steamId)}</span> — <b>${esc(prDur(f.minutes * 60))}</b>.</p>
+    body: `<p>Bỏ tù <b>${esc(f.name || f.steamId)}</b> <span class="mono">${esc(f.steamId)}</span>, <b>${esc(prDur(f.minutes * 60))}</b>.</p>
       <p>${esc(f.off?.name ?? 'Khác')}${f.reason ? `: ${esc(f.reason)}` : ''}</p>
       <p class="muted">Án chỉ trừ khi người chơi online và ở trong nhà tù. Đổi án / thả sớm ở danh sách bên dưới.</p>`,
     okLabel: 'Bỏ tù', withReason: false, danger: true,
@@ -9968,7 +9968,7 @@ $('pr-list').addEventListener('click', (e) => {
   }
   confirmAction({
     title: `Đổi án ${s.name}`,
-    body: `<p><b>${esc(s.name)}</b> — còn ${esc(prDur(s.remainingSec))} / ${esc(prDur(s.totalSec))}.</p>
+    body: `<p><b>${esc(s.name)}</b>, còn ${esc(prDur(s.remainingSec))} / ${esc(prDur(s.totalSec))}.</p>
       <div class="cfg-field" style="margin-top:10px"><label for="pr-x-min">Cộng thêm (phút, số âm để giảm)</label><input id="pr-x-min" type="number" value="10" min="-100000" max="100000"></div>`,
     okLabel: 'Đổi án', withReason: false, danger: false,
     run: async (token) => {
@@ -10060,7 +10060,7 @@ async function buildToggles() {
 
 async function rconCall(name, args, token) {
   const res = await adminFetch(`/api/rcon/${name}`, 'POST', token, args === undefined ? {} : { args });
-  $('rc-out').textContent = `> ${name}${args !== undefined ? ' ' + args : ''}\n${res.response || '(server không trả lời gì — với lệnh này là bình thường)'}`;
+  $('rc-out').textContent = `> ${name}${args !== undefined ? ' ' + args : ''}\n${res.response || '(server không trả lời gì, với lệnh này là bình thường)'}`;
   return res.response;
 }
 
@@ -10174,7 +10174,7 @@ function cfgFieldHtml(key, spec, value, known) {
       : [...new Set([...(spec.suggest ?? []), ...selected])].sort();
     const grid = options.map((n) => {
       const odd = key === 'AllowedClasses' && !known.has(n);
-      return `<label${odd ? ' title="Không có trong danh sách loài server chấp nhận — kiểm tra lại tên"' : ''}><input type="checkbox" data-list="${key}" value="${esc(n)}"${selected.includes(n) ? ' checked' : ''}>${esc(n)}${odd ? ' <span class="kill">?</span>' : ''}</label>`;
+      return `<label${odd ? ' title="Không có trong danh sách loài server chấp nhận, kiểm tra lại tên"' : ''}><input type="checkbox" data-list="${key}" value="${esc(n)}"${selected.includes(n) ? ' checked' : ''}>${esc(n)}${odd ? ' <span class="kill">?</span>' : ''}</label>`;
     }).join('') || '<span class="muted" style="font-size:12.5px">Chưa có mục nào.</span>';
     const extra = key === 'AllowedClasses'
       ? '<div class="row" style="margin-top:8px"><button type="button" class="link-btn" id="cfg-load-playables">Tải danh sách loài từ server (RCON)</button></div>'
@@ -10212,10 +10212,10 @@ function renderConfig(data) {
   $('cfg-error').hidden = !data.error;
   $('cfg-error').textContent = data.error ?? '';
 }
-// Which groups hold unsaved edits — only their sub-tabs get the dot.
+// Which groups hold unsaved edits, only their sub-tabs get the dot.
 const dirtyGroups = new Set();
 // Quick add to a SteamID list: validates the ID, appends it once, marks the
-// group dirty. Nothing is saved until "Lưu cấu hình" — like every other field.
+// group dirty. Nothing is saved until "Lưu cấu hình", like every other field.
 $('cfg-fields').addEventListener('click', (ev) => {
   const btn = ev.target.closest('[data-add-btn]');
   if (!btn) return;
@@ -10229,7 +10229,7 @@ $('cfg-fields').addEventListener('click', (ev) => {
   area.value = [...ids, id].join('\n');
   input.value = '';
   area.dispatchEvent(new Event('input', { bubbles: true }));
-  toast('Đã thêm — bấm "Lưu cấu hình" (hoặc Lưu & khởi động lại) để áp dụng.');
+  toast('Đã thêm, bấm "Lưu cấu hình" (hoặc Lưu & khởi động lại) để áp dụng.');
 });
 $('cfg-fields').addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter' && ev.target.matches('[data-add]')) {
@@ -10257,7 +10257,7 @@ function loadPlayables() {
   });
 }
 
-/** Every field as the form shows it — the panel always saves the full set. */
+/** Every field as the form shows it, the panel always saves the full set. */
 function collectSettings() {
   const out = {};
   const schema = cfgData?.schema ?? {};
@@ -10286,7 +10286,7 @@ $('cfg-form').addEventListener('submit', (ev) => {
     await adminFetch('/api/game-config', 'PUT', token, { settings: collectSettings() });
     cfgDirty = false;
     dirtyGroups.clear();
-    toast('Đã lưu cấu hình — có hiệu lực từ lần khởi động sau.');
+    toast('Đã lưu cấu hình, có hiệu lực từ lần khởi động sau.');
     refresh();
   });
 });
@@ -10302,7 +10302,7 @@ $('cfg-save-restart').addEventListener('click', () => {
       });
       cfgDirty = false;
       dirtyGroups.clear();
-      toast('Đã lưu — server sẽ khởi động lại.');
+      toast('Đã lưu, server sẽ khởi động lại.');
       refresh();
     },
   });
@@ -10316,7 +10316,7 @@ function renderReadiness(r) {
   $('rd-checks').innerHTML = r.checks.map((c) => `<li class="${c.state}"><span class="ic">${RD_ICON[c.state]}</span>
     <div><b>${esc(c.label)}</b><small>${esc(c.detail)}${c.at ? ` · từ ${clock(c.at)} (${ago(c.at)})` : ''}</small></div></li>`).join('');
   $('rd-join').innerHTML = r.lastJoin
-    ? `Người chơi vào gần nhất: <b>${esc(r.lastJoin.name ?? '?')}</b> lúc ${clock(r.lastJoin.t)} (${ago(r.lastJoin.t)}) — bằng chứng chắc chắn server đã hiện và vào được.`
+    ? `Người chơi vào gần nhất: <b>${esc(r.lastJoin.name ?? '?')}</b> lúc ${clock(r.lastJoin.t)} (${ago(r.lastJoin.t)}), bằng chứng chắc chắn server đã hiện và vào được.`
     : 'Chưa có người chơi nào vào kể từ khi bridge chạy.';
 }
 
@@ -10331,7 +10331,7 @@ async function loadDdos() {
   const a = d.attack;
   $('dd-state').className = `dd-state${a ? ' hit' : ''}`;
   $('dd-state').innerHTML = a
-    ? `🚨 Đang có lưu lượng bất thường từ ${esc(dateTime(a.since))} — đỉnh ${fmtN(a.peakPps)} gói/s · ${a.peakMbps} Mbit/s`
+    ? `🚨 Đang có lưu lượng bất thường từ ${esc(dateTime(a.since))}, đỉnh ${fmtN(a.peakPps)} gói/s · ${a.peakMbps} Mbit/s`
     : last ? `Bình thường · vào ${fmtN(last.pps)} gói/s · ${last.mbps} Mbit/s · ra ${last.outMbps} Mbit/s` : 'Đang đo…';
   // The last 5 minutes of incoming packets/s, the threshold as a dashed line.
   const hs = d.history;
@@ -10366,7 +10366,7 @@ async function loadBackups() {
   const d = await getJson('/api/backups');
   const stopped = d.phase === 'stopped';
   $('bk-phase').hidden = stopped;
-  $('bk-phase').innerHTML = 'Xoá dữ liệu và khôi phục chỉ làm được khi <b>server đã tắt</b> — tắt ở <a href="#server/ops">Server → Vận hành</a>.';
+  $('bk-phase').innerHTML = 'Xoá dữ liệu và khôi phục chỉ làm được khi <b>server đã tắt</b>, tắt ở <a href="#server/ops">Server → Vận hành</a>.';
   for (const id of ['bk-wipe', 'bk-upload']) $(id).disabled = !stopped;
   if (!bkLoaded) {
     $('bk-auto').checked = d.settings.atScheduledRestart;
@@ -10401,7 +10401,7 @@ $('bk-export').addEventListener('click', () => withToken('xuất cài đặt', a
 }));
 async function doRestore(token, url, body) {
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/gzip', 'x-admin-token': token }, body });
-  if (res.status === 401) { toLogin(); throw new Error('Phiên đăng nhập đã hết — đăng nhập lại'); }
+  if (res.status === 401) { toLogin(); throw new Error('Phiên đăng nhập đã hết, đăng nhập lại'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   toast(`Đã khôi phục ${data.kind === 'settings' ? 'cài đặt' : 'dữ liệu'} (${data.files} file). Panel khởi động lại trong vài giây…`);
@@ -10606,7 +10606,7 @@ $('tr-charts').addEventListener('mouseleave', () => { tr.hover = null; if (tr.da
 
 // --- performance (Server → Hiệu năng) ---------------------------------------------
 // /api/metrics: samples every 10 s (bridge/src/metrics.ts). Small multiples on
-// one shared time axis — FPS, players, game CPU, RAM — never a dual axis; one
+// one shared time axis, FPS, players, game CPU, RAM, never a dual axis; one
 // crosshair + tooltip across all four. Colours: --series-1/2 (validated), and
 // the reserved status colours only for the FPS state, always with icon + label.
 
@@ -10648,7 +10648,7 @@ function perfTiles(d) {
   const s = d.now;
   const st = fpsState(s?.fps);
   const tile = (k, v, extra = '') => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div>${extra}</div>`;
-  $('perf-tiles').innerHTML = !s ? '<div class="perf-empty">Chưa có mẫu nào — bridge đo 10 giây một lần.</div>' : [
+  $('perf-tiles').innerHTML = !s ? '<div class="perf-empty">Chưa có mẫu nào, bridge đo 10 giây một lần.</div>' : [
     tile('ServerFPS (tick game)', `${n1(s.fps)}`,
       `<div class="perf-state" style="color:${st.color}"><i style="background:${st.color}"></i>${st.icon} ${st.label}</div>`),
     tile('Người online', `${s.online ?? '–'}`, s.ai !== null && s.ai !== undefined ? `<div class="k" style="margin-top:4px">AI đang có: ${s.ai}</div>` : ''),
@@ -10657,7 +10657,7 @@ function perfTiles(d) {
     tile('RAM máy', `${gb(s.memUsed)}<small>/ ${gb(s.memTotal)} GB</small>`,
       s.memTotal ? `<div class="k" style="margin-top:4px">${Math.round((s.memUsed / s.memTotal) * 100)}% đã dùng</div>` : ''),
     tile('Swap', `${gb(s.swapUsed)}<small>GB</small>`,
-      s.swapUsed > 256 ? '<div class="perf-state" style="color:var(--status-warning)"><i style="background:var(--status-warning)"></i>⚠ Đang dùng swap — sẽ lag</div>' : ''),
+      s.swapUsed > 256 ? '<div class="perf-state" style="color:var(--status-warning)"><i style="background:var(--status-warning)"></i>⚠ Đang dùng swap, sẽ lag</div>' : ''),
   ].join('');
 }
 
@@ -10722,13 +10722,13 @@ function renderPerf() {
   if (!d) return;
   perfTiles(d);
   if (d.points.length === 0) {
-    $('perf-charts').innerHTML = '<div class="perf-empty">Chưa có số liệu trong khoảng này — bridge vừa bắt đầu đo, quay lại sau vài phút.</div>';
+    $('perf-charts').innerHTML = '<div class="perf-empty">Chưa có số liệu trong khoảng này, bridge vừa bắt đầu đo, quay lại sau vài phút.</div>';
   } else {
     const memTotal = d.now?.memTotal;
     $('perf-charts').innerHTML = [
       perfChart({ id: 'fps', title: 'ServerFPS', unit: 'khung/giây (trung bình mỗi điểm)', series: [{ key: 'fps', label: 'ServerFPS', color: 'var(--series-1)' }], max: 30, ref: { value: 20, label: 'dưới 20: người chơi thấy giật' } }),
       perfChart({ id: 'online', title: 'Người online', unit: 'người', series: [{ key: 'online', label: 'Người online', color: 'var(--series-1)' }], fmt: (v) => String(Math.round(v)) }),
-      perfChart({ id: 'cpu', title: 'CPU của game', unit: '% một nhân — luồng game là giới hạn', series: [{ key: 'gameCpu', label: 'CPU game', color: 'var(--series-1)' }], max: 100, ref: { value: 100, label: '100% = 1 nhân đầy' } }),
+      perfChart({ id: 'cpu', title: 'CPU của game', unit: '% một nhân, luồng game là giới hạn', series: [{ key: 'gameCpu', label: 'CPU game', color: 'var(--series-1)' }], max: 100, ref: { value: 100, label: '100% = 1 nhân đầy' } }),
       perfChart({ id: 'ram', title: 'RAM', unit: 'GB', div: 1024, series: [{ key: 'gameRss', label: 'Game', color: 'var(--series-1)' }, { key: 'memUsed', label: 'Cả máy', color: 'var(--series-2)' }],
         ref: memTotal ? { value: memTotal / 1024, label: `tổng ${gb(memTotal)} GB` } : undefined }),
     ].join('') + '<div class="perf-tip" id="perf-tip" hidden></div>';
@@ -10748,8 +10748,8 @@ function renderPerf() {
     }).join('')) + '</tbody>';
   const worst = rows.filter((r) => typeof r.fpsLow === 'number' && r.fpsLow < 20 && r.minutes >= 10);
   $('perf-cap-hint').textContent = worst.length
-    ? `FPS bắt đầu tụt dưới 20 từ mức ${worst[0].band} người — đó là sức chứa thực tế hiện tại của máy.`
-    : 'Chưa thấy mức người chơi nào làm FPS tụt dưới 20 (cần đủ thời gian đo ở mỗi mức — ít nhất 10 phút).';
+    ? `FPS bắt đầu tụt dưới 20 từ mức ${worst[0].band} người, đó là sức chứa thực tế hiện tại của máy.`
+    : 'Chưa thấy mức người chơi nào làm FPS tụt dưới 20 (cần đủ thời gian đo ở mỗi mức, ít nhất 10 phút).';
 }
 
 // One crosshair + tooltip for all four charts.
@@ -10781,8 +10781,8 @@ $('perf-charts').addEventListener('pointerleave', () => { perfHoverT = null; if 
 
 // --- garage settings ------------------------------------------------------------
 const GS_HELP = {
-  current: 'Người chơi respawn đúng loài đã cất rồi bấm Lấy ra trên web — dino được khôi phục ngay tại chỗ đang đứng.',
-  stored: 'Người chơi respawn đúng loài rồi bấm Lấy ra trên web — dino được đưa về đúng chỗ lúc bắt đầu cất. Slot tạo từ panel không có điểm cất nên khôi phục tại chỗ.',
+  current: 'Người chơi respawn đúng loài đã cất rồi bấm Lấy ra trên web, dino được khôi phục ngay tại chỗ đang đứng.',
+  stored: 'Người chơi respawn đúng loài rồi bấm Lấy ra trên web, dino được đưa về đúng chỗ lúc bắt đầu cất. Slot tạo từ panel không có điểm cất nên khôi phục tại chỗ.',
   choice: 'Trên web người chơi chọn "chỗ đang đứng" hoặc "chỗ đã cất" trước khi bấm Lấy ra.',
 };
 let gsDirty = false;
@@ -10811,7 +10811,7 @@ $('gs-save').addEventListener('click', () => withToken('lưu cài đặt gara', 
     minGrowthPct: Number($('gs-min-growth').value),
   });
   gsDirty = false;
-  toast('Đã lưu — áp dụng ngay cho lần cất / lấy ra kế tiếp.');
+  toast('Đã lưu, áp dụng ngay cho lần cất / lấy ra kế tiếp.');
   refresh();
 }));
 
@@ -10840,7 +10840,7 @@ $('pc-save').addEventListener('click', () => withToken('lưu cài đặt lệnh'
     enabled,
   });
   pcDirty = false;
-  toast('Đã lưu — có hiệu lực ngay.');
+  toast('Đã lưu, có hiệu lực ngay.');
   refresh();
 }));
 
@@ -10865,7 +10865,7 @@ $('pt-save').addEventListener('click', () => withToken('lưu cài đặt Ptera g
     enabled: $('pt-enabled').checked, maxKg: n('pt-maxkg'), maxSeconds: n('pt-maxsec'), cooldown: n('pt-cooldown'), hintMeters: n('pt-hint'), grabMeters: n('pt-grab'),
   });
   ptDirty = false;
-  toast('Đã lưu — mod đọc lại trong vài giây.');
+  toast('Đã lưu, mod đọc lại trong vài giây.');
   refresh();
 }));
 
@@ -10897,7 +10897,7 @@ $('fl-save').addEventListener('click', () => withToken('lưu cài đặt thực 
     migrationMaxPerArea: n('fl-mig-max'), massMaxPerArea: n('fl-mass-max'), outsideMaxPerArea: n('fl-out-max'),
   });
   flDirty = false;
-  toast('Đã lưu — mod áp dụng trong ~15 giây.');
+  toast('Đã lưu, mod áp dụng trong ~15 giây.');
   refresh();
 }));
 
@@ -10906,7 +10906,7 @@ let fsDirty = false;
 function renderFishSettings({ settings: s, species, census: c, disallowed }) {
   const label = Object.fromEntries(species.map((f) => [f.cls, f.label]));
   $('fs-census').innerHTML = c
-    ? `Đếm lúc ${esc(ago(c.t))} (${c.online} người online): <b>${c.total}</b> cá — `
+    ? `Đếm lúc ${esc(ago(c.t))} (${c.online} người online): <b>${c.total}</b> cá, `
       + (Object.entries(c.species).map(([k, n]) => `${esc(label[k] ?? k)} ${n}`).join(' · ') || 'không có con nào gần người chơi')
       + ` · game đang đặt ${c.perPlayer ?? '?'} / người, ${c.perWater ?? '?'} / vùng nước, ${c.cooldownSec ?? '?'} s.`
       + `<br>Đang cấm: ${esc(disallowed.join(', ') || '(không)')}`
@@ -10928,22 +10928,22 @@ $('fs-save').addEventListener('click', () => withToken('lưu cài đặt cá', a
     perWater: Math.round(Number($('fs-water').value)), cooldownSec: Number($('fs-cool').value), species,
   });
   fsDirty = false;
-  toast(r.rcon === 'restart needed' ? 'Đã lưu — loài vừa mở lại sẽ có sau lần restart tới.'
-    : r.rcon.startsWith('failed') ? `Đã lưu, nhưng RCON lỗi (${r.rcon}) — loài áp dụng ở lần restart tới.` : 'Đã lưu — mật độ áp dụng trong ~30 giây.');
+  toast(r.rcon === 'restart needed' ? 'Đã lưu, loài vừa mở lại sẽ có sau lần restart tới.'
+    : r.rcon.startsWith('failed') ? `Đã lưu, nhưng RCON lỗi (${r.rcon}), loài áp dụng ở lần restart tới.` : 'Đã lưu, mật độ áp dụng trong ~30 giây.');
   refresh();
 }));
 
 // --- voice settings ----------------------------------------------------------------
 const VS_HELP = {
   name: 'Danh sách "Đang nói gần bạn" hiện tên trong game của người nói.',
-  id: 'Chỉ hiện một mã ngắn (ví dụ #A3F9) — cùng một người luôn cùng mã, nên vẫn tắt tiếng / chỉnh âm lượng từng người được, nhưng không biết là ai.',
-  none: 'Chỉ hiện "Có người đang nói" kèm gần / xa, trái / phải — không tên, không mã. Hợp với server nhập vai.',
+  id: 'Chỉ hiện một mã ngắn (ví dụ #A3F9), cùng một người luôn cùng mã, nên vẫn tắt tiếng / chỉnh âm lượng từng người được, nhưng không biết là ai.',
+  none: 'Chỉ hiện "Có người đang nói" kèm gần / xa, trái / phải, không tên, không mã. Hợp với server nhập vai.',
 };
 let vsDirty = false;
 function renderVoiceSettings(vs) {
   $('vs-status').innerHTML = vs.enabled
     ? `Voice đang bật · máy chủ <span class="mono">${esc(vs.url ?? '')}</span>. Tên trong kênh đổi theo cài đặt này từ lần vào kênh kế tiếp của mỗi người; danh sách "đang nói" đổi ngay.`
-    : 'Voice chưa bật trên bridge (thiếu LIVEKIT_API_KEY / LIVEKIT_API_SECRET) — cài đặt vẫn lưu được.';
+    : 'Voice chưa bật trên bridge (thiếu LIVEKIT_API_KEY / LIVEKIT_API_SECRET), cài đặt vẫn lưu được.';
   if (vsDirty) return;
   $('vs-name-mode').value = vs.nameMode;
   $('vs-help').textContent = VS_HELP[vs.nameMode] ?? '';
@@ -10955,7 +10955,7 @@ $('vs-name-mode').addEventListener('change', () => {
 $('vs-save').addEventListener('click', () => withToken('lưu cài đặt voice', async (token) => {
   await adminFetch('/api/voice-settings', 'PUT', token, { nameMode: $('vs-name-mode').value });
   vsDirty = false;
-  toast('Đã lưu — danh sách người đang nói đổi ngay.');
+  toast('Đã lưu, danh sách người đang nói đổi ngay.');
   refresh();
 }));
 
@@ -10966,10 +10966,10 @@ function renderPanelAccess(pa) {
   paYourRule = pa.yourRule;
   const list = pa.ips.length ? pa.ips.map((ip) => `<span class="mono">${esc(ip)}</span>`).join(', ') : '<b>(trống)</b>';
   $('pa-status').innerHTML = [
-    'Vào panel phải qua <b>2 lượt</b>: (1) địa chỉ IP nằm trong danh sách dưới đây — vào qua SSH tunnel thì luôn qua lượt này; (2) đăng nhập Steam bằng tài khoản có trong danh sách Admin (Cấu hình → Máy chủ → Admin).',
-    pa.webEnabled ? 'Panel đang mở qua web.' : 'Panel chưa mở qua web (chưa đặt PANEL_BASE_URL) — hiện chỉ vào được qua SSH tunnel; danh sách này dùng khi mở.',
+    'Vào panel phải qua <b>2 lượt</b>: (1) địa chỉ IP nằm trong danh sách dưới đây, vào qua SSH tunnel thì luôn qua lượt này; (2) đăng nhập Steam bằng tài khoản có trong danh sách Admin (Cấu hình → Máy chủ → Admin).',
+    pa.webEnabled ? 'Panel đang mở qua web.' : 'Panel chưa mở qua web (chưa đặt PANEL_BASE_URL), hiện chỉ vào được qua SSH tunnel; danh sách này dùng khi mở.',
     `Đang cho phép: ${list}${pa.saved ? '' : ' (từ PANEL_ALLOWED_IPS trong .env, chưa lưu trên panel)'}.`,
-    pa.yourIp ? `Bạn đang vào từ <span class="mono">${esc(pa.yourIp)}</span> — không thể bỏ địa chỉ này khỏi danh sách. Mạng nhà dùng IPv6 thì phần cuối địa chỉ đổi vài giờ một lần: hãy cho cả dải /64 (nút bên dưới).` : 'Bạn đang vào qua SSH tunnel.',
+    pa.yourIp ? `Bạn đang vào từ <span class="mono">${esc(pa.yourIp)}</span>, không thể bỏ địa chỉ này khỏi danh sách. Mạng nhà dùng IPv6 thì phần cuối địa chỉ đổi vài giờ một lần: hãy cho cả dải /64 (nút bên dưới).` : 'Bạn đang vào qua SSH tunnel.',
   ].map((l) => `<div>${l}</div>`).join('');
   $('pa-add-me').hidden = !pa.yourRule || pa.ips.includes(pa.yourRule);
   $('pa-add-me').textContent = pa.yourRule?.includes('/') ? `Thêm mạng của tôi (${pa.yourRule})` : 'Thêm IP của tôi';
@@ -10986,7 +10986,7 @@ $('pa-save').addEventListener('click', () => withToken('lưu danh sách IP', asy
   const ips = $('pa-ips').value.split(/[\s,]+/).map((l) => l.trim()).filter(Boolean);
   await adminFetch('/api/panel-access', 'PUT', token, { ips });
   paDirty = false;
-  toast('Đã lưu danh sách IP — có hiệu lực ngay.');
+  toast('Đã lưu danh sách IP, có hiệu lực ngay.');
   refresh();
 }));
 
@@ -11074,7 +11074,7 @@ async function renderOverviewExtras() {
       alerts.push(['warning', `Khởi động lại định kỳ lúc ${new Date(st.schedule.next * 1000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`, '#server/schedule', 'Lịch']);
     }
     if (health.lastEventAt && Date.now() / 1000 - health.lastEventAt > 600 && st.phase === 'running' && health.online > 0) {
-      alerts.push(['warning', `Mod chưa ghi sự kiện nào từ ${esc(ago(health.lastEventAt))} — mod có thể lỗi.`, '#server/status', 'Kiểm tra']);
+      alerts.push(['warning', `Mod chưa ghi sự kiện nào từ ${esc(ago(health.lastEventAt))}, mod có thể lỗi.`, '#server/status', 'Kiểm tra']);
     }
     $('ov-alerts').innerHTML = alerts.map(([tone, text, href, act]) =>
       `<div class="banner tone-${tone === 'critical' ? 'dmg' : 'gar'}">${icon('warn')}<span>${text}</span><a class="btn-soft sm" href="${href}">${esc(act)}</a></div>`).join('');
@@ -11300,7 +11300,7 @@ async function refreshTab(tab) {
       renderGarage(garage);
       garageWritesEnabled = health.writesEnabled;
       renderOverwrite();
-      $('f-token').placeholder = health.writesEnabled ? 'x-admin-token' : 'ADMIN_TOKEN chưa bật — ghi bị khoá';
+      $('f-token').placeholder = health.writesEnabled ? 'x-admin-token' : 'ADMIN_TOKEN chưa bật, ghi bị khoá';
       break;
     }
   }
@@ -11323,7 +11323,7 @@ const PHASE_BADGE = {
   starting: ['stale', 'Server đang khởi động', 'đợi mod nạp xong'],
   stopping: ['stale', 'Server đang tắt', 'systemd đang dừng tiến trình'],
   stopped:  ['stale', 'Server đã tắt', 'bật lại ở tab Server'],
-  failed:   ['stale', 'Server lỗi', 'systemd báo failed — xem tab Server'],
+  failed:   ['stale', 'Server lỗi', 'systemd báo failed, xem tab Server'],
 };
 
 // A hidden tab (another tab in front, window minimised) asks nothing; it
@@ -11356,7 +11356,7 @@ async function refresh() {
     } else if (last === null) {
       [dot, title, sub] = ['', 'Chưa có dữ liệu', 'chưa nhận được event nào'];
     } else {
-      [dot, title, sub] = ['stale', 'Server im lặng', `không có event ${dur(age)} — có thể đã dừng`];
+      [dot, title, sub] = ['stale', 'Server im lặng', `không có event ${dur(age)}, có thể đã dừng`];
     }
     $('dot').className = 'pulse ' + dot;
     $('status-title').textContent = title;

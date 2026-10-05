@@ -1109,8 +1109,8 @@ function renderPrison(p) {
   if (!p) return;
   el.classList.toggle('escaped', p.escaped === true);
   el.innerHTML = p.escaped
-    ? `<b>🚨 Bạn đang vượt ngục</b> — cả server thấy vị trí của bạn trên bản đồ, ai hạ được bạn sẽ được ghi công. Án còn <b>${esc(prisonDur(p.remainingSec))}</b>, chỉ trừ khi bạn quay lại khu tù.`
-    : `<b>🔒 Bạn đang ở tù</b> — còn <b>${esc(prisonDur(p.remainingSec))}</b> (${esc(p.offense)}: ${esc(p.reason)}). Án chỉ trừ khi bạn online và ở trong khu tù; trong tù không lớn, không đói khát, không mất máu, không dùng được gara.`;
+    ? `<b>🚨 Bạn đang vượt ngục</b>, cả server thấy vị trí của bạn trên bản đồ, ai hạ được bạn sẽ được ghi công. Án còn <b>${esc(prisonDur(p.remainingSec))}</b>, chỉ trừ khi bạn quay lại khu tù.`
+    : `<b>🔒 Bạn đang ở tù</b>, còn <b>${esc(prisonDur(p.remainingSec))}</b> (${esc(p.offense)}: ${esc(p.reason)}). Án chỉ trừ khi bạn online và ở trong khu tù; trong tù không lớn, không đói khát, không mất máu, không dùng được gara.`;
 }
 function renderGame(me) {
   renderPrison(me.prison ?? null);
@@ -1390,7 +1390,7 @@ function growthStage(g) {
 
 /**
  * The tier as a badge: F0 (not prime) … F4 (đời 4), the text moving in the
- * tier's own colours (index.html .ftag) — on the garage cards and the dino panel.
+ * tier's own colours (index.html .ftag), on the garage cards and the dino panel.
  */
 const TIER_NAME = ['Cơ bản', 'Prime', 'Prime đời 2', 'Prime đời 3', 'Prime đời 4'];
 function tierBadge(tier, extra = '') {
@@ -1896,9 +1896,9 @@ const BACKGROUND_DRAW_MS = 5000;
 const inBackground = () => Boolean(window.isleLauncher) && (document.hidden || !document.hasFocus());
 
 // ============================================================================
-// Túi đồ (/me items; the bridge says whether the bag is open to this account —
+// Túi đồ (/me items; the bridge says whether the bag is open to this account,
 // admins only for now). A mutation: "Dùng" opens a box (GET /api/items/preview)
-// — into a slot, with what is there now and its value beside the new one; or,
+// - into a slot, with what is there now and its value beside the new one; or,
 // the dino has it already, +1 đời with every mutation before → after, refused
 // at that mutation's max. Gone once the game confirms. A skin: worn on its species.
 // ============================================================================
@@ -1910,10 +1910,10 @@ const BAG_TICKET = {
   mutation_ticket: { icon: '🎟️', desc: (g) => `Đổi ra một mutation tự chọn (đúng chế độ ăn của loài${g.maxRarity === 'special' ? ', <b>cả mutation nhiệm vụ</b>' : ''}) vào một ô đã mở.` },
   mutation_clear: { icon: '🧹', desc: () => 'Bỏ mutation ở một ô để chọn lại trong game.' },
   prime_ticket: { icon: '👑', desc: () => 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện).' },
-  // The dino boxes (bridge dino-box.ts): opened into a dino item; the dino item used — into the garage.
-  dino_box: { icon: '🎁', action: 'Mở hộp', desc: (g) => `${g.pick === 'random' ? 'Mở ra <b>1 dino ngẫu nhiên</b>' : 'Mở hộp: <b>tự chọn loài</b>'}, tăng trưởng ngẫu nhiên ${Math.round((g.growthMin ?? 0.5) * 100)}–${Math.round((g.growthMax ?? 1) * 100)}%. Mở ra vật phẩm Dino trong túi — dùng nó để chọn giới tính và mutation.` },
+  // The dino boxes (bridge dino-box.ts): opened into a dino item; the dino item used, into the garage.
+  dino_box: { icon: '🎁', action: 'Mở hộp', desc: (g) => `${g.pick === 'random' ? 'Mở ra <b>1 dino ngẫu nhiên</b>' : 'Mở hộp: <b>tự chọn loài</b>'}, tăng trưởng ngẫu nhiên ${Math.round((g.growthMin ?? 0.5) * 100)}–${Math.round((g.growthMax ?? 1) * 100)}%. Mở ra vật phẩm Dino trong túi, dùng nó để chọn giới tính và mutation.` },
   dino: { icon: '🦖', action: 'Dùng', desc: (g) => `Dùng để chọn <b>giới tính</b> và <b>mutation</b> (ô mở theo tăng trưởng: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>.` },
-  growth_bag: { icon: '🌱', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.1) * 100)}% tăng trưởng</b> — ${(g.below ?? 0.6) >= 1 ? 'dùng cho mọi dino chưa 100%' : `chỉ dùng khi dino dưới ${Math.round((g.below ?? 0.6) * 100)}%`}.` },
+  growth_bag: { icon: '🌱', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.1) * 100)}% tăng trưởng</b>, ${(g.below ?? 0.6) >= 1 ? 'dùng cho mọi dino chưa 100%' : `chỉ dùng khi dino dưới ${Math.round((g.below ?? 0.6) * 100)}%`}.` },
   // Written like the game's own item text (owner, 2026-10-05).
   salt_lick: { icon: '🧂', desc: () => 'Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay: <b>hết trạng thái ốm sau khi nôn</b>. Dùng khi dino đang ốm sau khi nôn.' },
   food_box: { icon: '🍖', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.2) * 100)}% thức ăn</b> (chống đói, không tăng chất dinh dưỡng).` },
@@ -1946,7 +1946,7 @@ function bagStatus(kind, html) {
   el.className = `garage-status${kind ? ` ${kind}` : ''}`;
   el.innerHTML = html ?? '';
 }
-/** One card a kind of item: copies of the same item grouped, with how many — a dino item each its own (its species, its growth). */
+/** One card a kind of item: copies of the same item grouped, with how many, a dino item each its own (its species, its growth). */
 function bagGroups(items) {
   const by = new Map();
   for (const it of items) {
@@ -1991,7 +1991,7 @@ function renderBag(me) {
     ...BAG_CATS.filter((c) => counts[c.key] > 0).map((c) => [c.key, c.label, counts[c.key]])]
     .map(([k, label, n]) => `<button type="button" class="gara-filter-btn${bag.filter === k ? ' active' : ''}" data-bag="${k}">${esc(label)} <span class="bag-n">${n}</span></button>`).join('');
   // A card is dimmed only when it does not fit the dino played now (diet, species); out of
-  // the game (or in prison) it keeps its look — only its button is off and says why.
+  // the game (or in prison) it keeps its look, only its button is off and says why.
   const mismatch = (g) => !g.locked && !BAG_NO_DINO.has(g.type) && dino !== null && (g.type === 'mutation' ? Boolean(g.refusal) : g.type === 'skin' ? bagKey(g.species) !== bagKey(dino) : false);
   const blocked = me.prison ? 'Đang ở tù' : dino === null ? 'Vào game để dùng' : null;
   const button = (g, cls, attr, label) => {
@@ -2061,7 +2061,7 @@ function renderBagDialog() {
   if (g.type === 'salt_lick') {
     $('bag-dlg-in').innerHTML = `${head}<div class="sec"><h4>Liếm đá muối</h4>
       <div class="cmp">Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay: <b>hết trạng thái ốm sau khi nôn</b>.</div>
-      <div class="cmp muted">Chỉ chữa ốm sau khi nôn — không hồi máu, thức ăn hay nước. Dùng là hết vật phẩm.</div>
+      <div class="cmp muted">Chỉ chữa ốm sau khi nôn, không hồi máu, thức ăn hay nước. Dùng là hết vật phẩm.</div>
       <div class="row"><button type="button" class="btn btn-emerald" data-dlg="apply" ${bag.busy ? 'disabled' : ''}>🧂 Liếm đá muối</button></div></div>${status}`;
     return;
   }
@@ -2141,7 +2141,7 @@ async function bagSend(url, body, what, inDialog = false) {
     if (r.status !== 202 || typeof b?.id !== 'number') { say('bad', `❌ ${esc(b?.error ?? 'Không gửi được lệnh.')}`); return; }
     say('', 'Đã gửi, chờ game xử lý…');
     const done = await waitCommand(b.id, 20, (c) => c?.status === 'done');
-    if (done === null) { say('bad', 'Chưa thấy game trả lời. Vật phẩm vẫn còn trong túi — thử lại sau.'); return; }
+    if (done === null) { say('bad', 'Chưa thấy game trả lời. Vật phẩm vẫn còn trong túi, thử lại sau.'); return; }
     const msgs = (done.messages ?? []).map((m) => esc(reply(m))).join('<br>');
     if (!done.ok) { say('bad', `❌ ${msgs || esc(ERROR_VI[done.error] ?? done.error ?? 'Game từ chối.')} Vật phẩm vẫn còn trong túi.`); return; }
     if (inDialog) { $('bag-dlg').close(); bag.open = null; }
@@ -2195,7 +2195,7 @@ $('bag-dlg').addEventListener('click', (e) => {
 $('bag-dlg').addEventListener('close', () => { if (!bag.busy) bag.open = null; });
 
 // --- the dino boxes (bridge dino-box.ts) ------------------------------------------------------------
-// A box: opened (its species picked first in a "tự chọn" box) — what was drawn shown with a short roll,
+// A box: opened (its species picked first in a "tự chọn" box), what was drawn shown with a short roll,
 // then a dino item in the bag. A dino item: its sex and the mutations of the slots its growth opens.
 const DIET_OK = { all: () => true, carnivore: (d) => d === 'carnivore', herbivore: (d) => d === 'herbivore',
   herbivore_omnivore: (d) => d === 'herbivore' || d === 'omnivore' };
@@ -2229,8 +2229,8 @@ function renderBoxDialog(o) {
   const head = dlgHead('🎁', g.name, g.rarity, `${random ? 'Loài ngẫu nhiên' : 'Tự chọn loài'} · tăng trưởng ngẫu nhiên ${range}`);
   if (box.phase === 'pick') {
     $('bag-dlg-in').innerHTML = `${head}
-      ${random ? `<div class="sec"><div class="cmp">Mở hộp ra <b>1 trong ${box.opts.species.length} loài</b>, tăng trưởng ngẫu nhiên ${range}. Mở xong là vật phẩm Dino trong túi — dùng để chọn giới tính và mutation.</div></div>`
-        : `<div class="sec"><h4>Chọn loài</h4><label class="dino-slot"><span>Loài</span><select data-box-species><option value="">— Chọn loài —</option>${box.opts.species.map((x) =>
+      ${random ? `<div class="sec"><div class="cmp">Mở hộp ra <b>1 trong ${box.opts.species.length} loài</b>, tăng trưởng ngẫu nhiên ${range}. Mở xong là vật phẩm Dino trong túi, dùng để chọn giới tính và mutation.</div></div>`
+        : `<div class="sec"><h4>Chọn loài</h4><label class="dino-slot"><span>Loài</span><select data-box-species><option value="">Chọn loài</option>${box.opts.species.map((x) =>
           `<option value="${esc(x.key)}" title="${esc(DIET_VI[x.diet] ?? '')}"${box.species === x.key ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
           <div class="cmp muted">Tăng trưởng bốc ngẫu nhiên ${range} khi mở.</div></div>`}
       <div class="act"><button type="button" class="btn btn-emerald" data-dlg="open-box" ${(random || box.species) && !bag.busy ? '' : 'disabled'}>🎁 Mở hộp</button></div>${dlgStatusEl}`;
@@ -2306,7 +2306,7 @@ function renderDinoDialog(o) {
     const list = dinoSlotChoices(d, n);
     const chosen = d.muts[n] ? op.mutations.find((m) => m.name === d.muts[n]) : null;
     return `<label class="dino-slot"><span>Ô ${n}${n === 2 || n === 4 ? ' <span class="muted">(nhận cả mutation chỉ ô 2/4)</span>' : ''}</span>
-      <select data-dino-mut="${n}"><option value="">— Để trống —</option>${list.map((m) =>
+      <select data-dino-mut="${n}"><option value="">Để trống</option>${list.map((m) =>
         `<option value="${esc(m.name)}" title="${esc(m.description ?? '')}"${d.muts[n] === m.name ? ' selected' : ''}>${esc(m.name)}${m.femaleOnly ? ' (cái)' : ''}${m.quest ? ' (nhiệm vụ)' : ''}</option>`).join('')}</select>
       ${chosen ? `<small class="dino-desc">${mutIcon(chosen.name, 'sm')} ${esc(chosen.description ?? '')}</small>` : ''}</label>`;
   };
@@ -2315,7 +2315,7 @@ function renderDinoDialog(o) {
       <div class="xseg"><button type="button" data-dino-sex="m" class="${d.female ? '' : 'on'}">♂ Đực</button><button type="button" data-dino-sex="f" class="${d.female ? 'on' : ''}">♀ Cái</button></div></div>
     <div class="sec"><h4>Mutation <span class="muted" style="font-weight:500">· ${op.openSlots.length ? `mở ${op.openSlots.length}/4 ô theo ${pctOf(op.growth)} tăng trưởng` : 'chưa mở ô nào (dưới 25%)'}</span></h4>
       <div class="dino-muts">${[1, 2, 3, 4].map(slotRow).join('')}</div></div>
-    <p class="muted" style="margin:0;font-size:12.5px">Dùng là hết vật phẩm. Dino vào ô gara trống kế tiếp (kể cả khi gara đã đủ ô)${op.growth >= 0.75 ? ' — từ 75% game cho lên prime' : ''}.</p>
+    <p class="muted" style="margin:0;font-size:12.5px">Dùng là hết vật phẩm. Dino vào ô gara trống kế tiếp (kể cả khi gara đã đủ ô)${op.growth >= 0.75 ? ', từ 75% game cho lên prime' : ''}.</p>
     <div class="act"><button type="button" class="btn btn-emerald" data-dlg="dino" ${bag.busy ? 'disabled' : ''}>Nhận ${esc(op.label)} vào gara</button></div>
     ${dlgStatusEl}`;
 }
@@ -2527,11 +2527,11 @@ window.isleLauncher?.onBigMap?.((open) => {
   if (open) { ensureMap(); loadAiZones(); loadHeat(); pushOverlayGame(lastMeData?.dino ?? null); }
 });
 
-// The launcher's mini map widget: this page's map (map.js paintMini) — the very layers, target and trail
-// set on the map tab or the big map — drawn at the widget's size and sent as a picture each second.
+// The launcher's mini map widget: this page's map (map.js paintMini), the very layers, target and trail
+// set on the map tab or the big map, drawn at the widget's size and sent as a picture each second.
 let miniCanvas = null;
 let miniBusy = false;
-// Standing still, nothing new around: the picture sent is still right — drawn again only every MINI_SAME_MS.
+// Standing still, nothing new around: the picture sent is still right, drawn again only every MINI_SAME_MS.
 let miniKey = '';
 let miniSentAt = 0;
 const MINI_SAME_MS = 5000;
@@ -2591,7 +2591,7 @@ const TOUR_STEPS = [
   },
   {
     badge: 'Bước 3 / 5 · Bản Đồ Gateway Live',
-    title: '🗺️ Bản Đồ Live — Radar AI Trực Tiếp',
+    title: '🗺️ Bản Đồ Live, Radar AI Trực Tiếp',
     target: () => document.querySelector('.nav-btn[data-nav="map"]') || document.querySelector('.thumb-btn[data-nav="map"]'),
     tab: 'map',
     body: `
@@ -2838,11 +2838,11 @@ setInterval(refresh, 1000);
 
 
 // ============================================================================
-// Trang chủ: the rewards first (owner, 2026-10-05) — the starter gift (bridge starter.ts), the daily
+// Trang chủ: the rewards first (owner, 2026-10-05), the starter gift (bridge starter.ts), the daily
 // check-in and the Hổ phách balance (bridge economy.ts), and the way into the server.
 // ============================================================================
 const fmtAmber = (n) => Number(n ?? 0).toLocaleString('vi-VN');
-/** An amount of Hổ phách: "100 <icon>" — the word only on hover (owner, 2026-10-05; amber.svg is theirs). */
+/** An amount of Hổ phách: "100 <icon>", the word only on hover (owner, 2026-10-05; amber.svg is theirs). */
 const amber = (n, sign = '') => `<span class="amber-amt" title="Hổ phách">${sign}${fmtAmber(n)} <img class="amber-ico" src="/amber.svg" alt="Hổ phách"></span>`;
 let homeSig = '';
 let homeBusy = false;
@@ -2916,7 +2916,7 @@ $('home-rewards').addEventListener('click', async (e) => {
     try {
       const r = await fetch('/api/starter/claim', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
       const b = await r.json().catch(() => null);
-      showToast(r.status === 200 ? `✅ Đã nhận ${b.item} — xem trong Túi đồ` : `❌ ${b?.error ?? 'Không nhận được quà.'}`);
+      showToast(r.status === 200 ? `✅ Đã nhận ${b.item}, xem trong Túi đồ` : `❌ ${b?.error ?? 'Không nhận được quà.'}`);
     } catch {
       showToast('❌ Mất kết nối. Thử lại.');
     } finally {

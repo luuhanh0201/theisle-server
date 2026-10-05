@@ -1,7 +1,7 @@
--- VitalLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- VitalLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy).
 --
--- Runs 1–4 (2026-10-02): the stomach after the garage — the attribute set's
+-- Runs 1–4 (2026-10-02): the stomach after the garage, the attribute set's
 -- OriginalMaxHunger / Thirst / Stamina stay a hatchling's after SetGrowth; written
 -- by restore.lua R.setOriginals, fixed for all 22 species.
 --
@@ -121,7 +121,7 @@ H.every(2000, MOD .. ": step", function()
             end
         end
         startedAt = now
-        out("all set (growth %.2f, stomach half full, nutrients as each case) — watching %d s", GROWTH, WATCH_S)
+        out("all set (growth %.2f, stomach half full, nutrients as each case), watching %d s", GROWTH, WATCH_S)
         phase, nextAt = 2, now + EVERY_S
         return
     end
@@ -165,4 +165,4 @@ H.every(2000, MOD .. ": step", function()
     end
 end)
 
-out("loaded — %d dinos, starting %d s after load", #CASES, START_AFTER_S)
+out("loaded, %d dinos, starting %d s after load", #CASES, START_AFTER_S)

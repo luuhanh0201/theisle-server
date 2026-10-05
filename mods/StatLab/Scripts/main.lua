@@ -1,14 +1,14 @@
--- StatLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- StatLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy). A prime dino taken out of the garage kept the max health of a
 -- plain one (a prime Deinosuchus at 88 %: 8,799 instead of 10,931) until the
 -- player logged in again (2026-09-28): restore.lua sets the growth, then asks
--- for prime — the game adds prime's stats when it recomputes them, and nothing
+-- for prime, the game adds prime's stats when it recomputes them, and nothing
 -- made it recompute after. On a Deinosuchus spawned for the test, writes
 -- Mods/StatLab/Saved/statlab.txt: GetMaxHealth / GetMaxStamina / IsPrimeElder
 --   1. after SetGrowth(0.88)
 --   2. after the prime tasks (five) + ServerSetPrimeEligible(true)
---   3. after SetGrowth(0.88) again — does a growth write recompute with prime?
---   4. after SetGrowth(0.74) then SetGrowth(0.88) — crossing the 75 % mark
+--   3. after SetGrowth(0.88) again, does a growth write recompute with prime?
+--   4. after SetGrowth(0.74) then SetGrowth(0.88), crossing the 75 % mark
 -- Flag first per step (Saved/<step>.trying), like the other labs.
 
 if not package.path:find("Mods/?.lua", 1, true) then
@@ -38,7 +38,7 @@ local function write(p, t) local f = io.open(p, "w"); if f then f:write(t); f:cl
 local crashed = {}
 for _, s in ipairs({ "growth", "prime", "regrow", "cross" }) do if exists(DIR .. s .. ".trying") then crashed[s] = true end end
 local function step(name, fn)
-    if crashed[name] then out("step %s: SKIPPED — the server stopped during it last time (crash)", name); return end
+    if crashed[name] then out("step %s: SKIPPED, the server stopped during it last time (crash)", name); return end
     write(DIR .. name .. ".trying", tostring(os.time()))
     local ok, err = pcall(fn)
     os.remove(DIR .. name .. ".trying")
@@ -119,4 +119,4 @@ H.every(2000, MOD .. ": step", function()
     end
 end)
 
-out("loaded — the probe starts %d s after load", START_AFTER_S)
+out("loaded, the probe starts %d s after load", START_AFTER_S)

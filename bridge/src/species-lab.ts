@@ -1,6 +1,6 @@
 /**
  * Each species' maxima at each growth as the game gives them to a fresh dino
- * whose growth is SET (SetGrowth) — measured by SpeciesLab on the test server,
+ * whose growth is SET (SetGrowth), measured by SpeciesLab on the test server,
  * 2026-10-01 (mods/SpeciesLab). That is exactly how the garage restores a dino,
  * so these are what an admin-made dino comes out with; the readings of players'
  * dinos (species-stats.ts) can sit higher (mutations, prime, time).
@@ -8,7 +8,7 @@
  * Per point: [growth, health, stamina, thirst]. Blood equals health on every
  * species. The stomach is not here: SetGrowth leaves it at the hatchling's
  * until a relog, so it is health x `stomach` (0.33 meat eaters, 0.5 plant
- * eaters — the ratio every live reading shows). Oxygen is left out: one
+ * eaters, the ratio every live reading shows). Oxygen is left out: one
  * species read odd values (Allosaurus 400 then 1 above 90 percent).
  * Re-measure after a game update (turn SpeciesLab on in the test copy).
  */

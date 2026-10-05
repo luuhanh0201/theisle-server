@@ -36,10 +36,10 @@
   });
 
   const ERR = {
-    expired: 'Hết thời gian đăng nhập (10 phút) — bấm đăng nhập lại.',
-    'other-address': 'Trình duyệt vừa đăng nhập ở mạng khác với launcher — hãy đăng nhập bằng trình duyệt trên chính máy này.',
-    error: 'Không kết nối được máy chủ để đăng nhập — kiểm tra mạng rồi thử lại.',
-    steam: 'Steam không phản hồi khi máy chủ xác nhận lần đăng nhập — bấm đăng nhập lại.',
+    expired: 'Hết thời gian đăng nhập (10 phút), bấm đăng nhập lại.',
+    'other-address': 'Trình duyệt vừa đăng nhập ở mạng khác với launcher, hãy đăng nhập bằng trình duyệt trên chính máy này.',
+    error: 'Không kết nối được máy chủ để đăng nhập, kiểm tra mạng rồi thử lại.',
+    steam: 'Steam không phản hồi khi máy chủ xác nhận lần đăng nhập, bấm đăng nhập lại.',
   };
   G.onLogin((state) => {
     $('wait').hidden = state !== 'waiting';

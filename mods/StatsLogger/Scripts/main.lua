@@ -11,13 +11,13 @@
 
     This mod is READ-ONLY. It hooks, it reads, it writes to disk. It never
     mutates game state, which is what keeps its crash risk near zero. Keep it
-    that way — if a feature needs to change the world, it belongs in another mod.
+    that way, if a feature needs to change the world, it belongs in another mod.
 
     Threads (docs/lua-safety-rules.md):
-      * game thread  — hooks, and the read loop (H.every: the live state
+      * game thread, hooks, and the read loop (H.every: the live state
                        every second, a snapshot every SNAPSHOT_SECONDS).
                        These only read and queue.
-      * async thread — the 0.5 s LoopAsync tick. It only writes queued lines
+      * async thread, the 0.5 s LoopAsync tick. It only writes queued lines
                        to disk and never touches a UObject.
     So a slow disk never stalls the game, and no engine object is read from
     the wrong thread.
@@ -70,7 +70,7 @@ local VITALS = {
 }
 
 -- Tried first. Evrima keeps vitals in GAS attribute sets, so on the live
--- server (0.21.784) `pawn.Health` is nil — the pawn's getters are the way in.
+-- server (0.21.784) `pawn.Health` is nil, the pawn's getters are the way in.
 -- The names are the UFunctions found in the server binary next to the
 -- SetHealth/SetGrowth setters the garage uses.
 local GETTERS = {
@@ -142,7 +142,7 @@ end
 --------------------------------------------------------------------------
 
 --- Class name of a pawn, or "unknown". pcall returns (ok, value), and on
--- failure the second value is the error message — so check ok explicitly.
+-- failure the second value is the error message, so check ok explicitly.
 local function speciesOf(pawn)
     local ok, name = pcall(function()
         return pawn:GetClass():GetFName():ToString()
@@ -191,7 +191,7 @@ local function round(v)
     return math.floor(v + 0.5)
 end
 
---- World position in UE units (cm), rounded — sub-centimetre precision is
+--- World position in UE units (cm), rounded, sub-centimetre precision is
 -- noise and doubles the size of the snapshot stream.
 local function locationOf(pawn)
     local ok, loc = pcall(function()
@@ -222,7 +222,7 @@ end
 
 --------------------------------------------------------------------------
 -- Ping: the round trip the SERVER measured for each player, read with the
--- snapshot (every SNAPSHOT_SECONDS — no need for more). UE5 keeps it on the
+-- snapshot (every SNAPSHOT_SECONDS, no need for more). UE5 keeps it on the
 -- PlayerState as CompressedPing, a uint8 of ms / 4 (UE4: Ping); a number
 -- read, like the name above. It includes the server's own frame time: when
 -- the server bogs down, everyone's ping rises together. Flag first:
@@ -235,7 +235,7 @@ do
     if f then
         f:close()
         pingOff = true
-        H.logError(MOD .. ": the last run stopped while reading a ping — ping off. Delete " .. PING_FLAG .. " to try again.")
+        H.logError(MOD .. ": the last run stopped while reading a ping, ping off. Delete " .. PING_FLAG .. " to try again.")
     end
 end
 
@@ -272,7 +272,7 @@ local function steamIdOfPawn(pawn)
 end
 
 --------------------------------------------------------------------------
--- Queue — hooks append here, the tick flushes
+-- Queue, hooks append here, the tick flushes
 --------------------------------------------------------------------------
 
 local pending = {}
@@ -291,7 +291,7 @@ local function flush()
 end
 
 --------------------------------------------------------------------------
--- Skin effects probe (mud, dirt, blood, scars) — READ ONLY (H.readSkinEffects)
+-- Skin effects probe (mud, dirt, blood, scars), READ ONLY (H.readSkinEffects)
 --------------------------------------------------------------------------
 -- What the game holds and in which shape, before anything writes it: the
 -- first read of a run logs the struct's fields and types; then each dino's
@@ -307,7 +307,7 @@ do
     if f then
         f:close()
         effectsOff = true
-        H.logError(MOD .. ": the last run stopped while probing skin effects — probe off. Delete " .. EFFECTS_FLAG .. " to try again.")
+        H.logError(MOD .. ": the last run stopped while probing skin effects, probe off. Delete " .. EFFECTS_FLAG .. " to try again.")
     end
 end
 
@@ -369,7 +369,7 @@ local recentHits = {}   -- victimSteamId -> last player hit on them
 
 -- One event per bite. The game calls ApplyDamage several times for one bite
 -- with the same number (a T-Rex bite logged up to six times; the victim lost
--- it once — 2026-09-28): those repeats are dropped here, before anything is
+-- it once, 2026-09-28): those repeats are dropped here, before anything is
 -- read. A hold bite (mouse held) deals ticks, each a little lower: they keep
 -- the bite's id with their tick number, so the bridge adds them into one bite.
 -- os.clock (ms, since the server started) orders them within a second.
@@ -457,7 +457,7 @@ H.timed(MOD .. ": damage hook", function(selfParam, targetParam, amountParam)
 end))
 
 --------------------------------------------------------------------------
--- Chat — the shared hook already deduplicates and defers out of the hook
+-- Chat, the shared hook already deduplicates and defers out of the hook
 --------------------------------------------------------------------------
 
 H.onChat(function(_ctrl, steamId, msg)
@@ -470,7 +470,7 @@ H.onChat(function(_ctrl, steamId, msg)
 end)
 
 --------------------------------------------------------------------------
--- Snapshot loop — the only way to see deaths, spawns and sessions
+-- Snapshot loop, the only way to see deaths, spawns and sessions
 --------------------------------------------------------------------------
 
 local function checkLife(id, name, pawn, snap)
@@ -628,7 +628,7 @@ local function checkLife(id, name, pawn, snap)
     if muts ~= nil then prev.mutations = muts end
 
     -- Quest mutations unlocked (drink saltwater, jump 50 times…): an event
-    -- when the list changes — what the garage must give back (restore.lua).
+    -- when the list changes, what the garage must give back (restore.lua).
     local unlocks = H.readUnlockedMutations(pawn)
     local unlocksKey = unlocks and table.concat(unlocks, ",") or nil
     if unlocksKey ~= nil and prev.unlocksKey ~= nil and unlocksKey ~= prev.unlocksKey then
@@ -682,7 +682,7 @@ end
 -- hundreds of AI would bloat.
 --
 -- AI = every pawn nobody plays: Evrima spawns AI around players and despawns
--- it, so only a live read is true. Uses nothing new against the engine —
+-- it, so only a live read is true. Uses nothing new against the engine,
 -- FindAllOf, IsValid, GetAddress, the class name, K2_GetActorLocation and the
 -- vital getters are what this mod already calls on player pawns. No
 -- reflection walk (reading arbitrary properties crashed the server,
@@ -712,7 +712,7 @@ local function health(pawn)
 end
 
 --- A number the game keeps on its game state (scalar properties only:
---- AIAlive, ServerFPS — both read fine by IsleProbe's config dump).
+--- AIAlive, ServerFPS, both read fine by IsleProbe's config dump).
 local function gameStateNumber(field)
     local ok, n = pcall(function()
         local gs = FindFirstOf("TIGameStateBase")
@@ -893,7 +893,7 @@ end
 -- be the async tick queuing ExecuteInGameThread for each read; on the
 -- server's UE4SS two of those callbacks were lost ("Ref was not function",
 -- 2026-09-24 11:06 UTC) and their "still queued" flags stopped every read
--- for good — the map lost everyone while they were still playing.
+-- for good, the map lost everyone while they were still playing.
 
 local TICK_MS = 500
 local SNAPSHOT_EVERY_LIVES = math.floor(SNAPSHOT_SECONDS * 1000 / LIVE_EVERY_MS)
@@ -931,7 +931,7 @@ end)
 
 -- The world AI spawner's fish numbers, once, two minutes after load: tells
 -- whether the Game.ini [/Script/TheIsle.TIAIWorldSpawner] lines (panel → AI)
--- are taken. Numbers only — reading them is safe; a Lua WRITE there crashed
+-- are taken. Numbers only, reading them is safe; a Lua WRITE there crashed
 -- the server (docs/lua-safety-rules.md).
 H.defer(120000, function()
     local okA, all = pcall(function() return FindAllOf("TIAIWorldSpawner") or {} end)

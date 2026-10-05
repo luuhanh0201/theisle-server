@@ -1,4 +1,4 @@
--- Functional test: PlayerCommands — !slay, !unstuck, !prime, !status, !food, the
+-- Functional test: PlayerCommands, !slay, !unstuck, !prime, !status, !food, the
 -- panel's cooldown / on-off settings, and the ground-spot tracker.
 
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end
@@ -62,7 +62,7 @@ say("-- 3. !prime reads the game's own getters --")
 cmd("!prime")
 check("conditions done out of 10, the 5 needed, eligible, prime and growth",
       lastMsg():find("Nhiệm vụ prime: 3/10 xong (cần 5)", 1, true) and lastMsg():find("Đủ điều kiện: không", 1, true)
-      and lastMsg():find("Prime: chưa — game xét ở 75% growth", 1, true) and lastMsg():find("Growth 50%", 1, true), lastMsg())
+      and lastMsg():find("Prime: chưa, game xét ở 75% growth", 1, true) and lastMsg():find("Growth 50%", 1, true), lastMsg())
 
 say("")
 say("-- 4. !unstuck: only to a recorded GROUND spot, old enough and far enough --")

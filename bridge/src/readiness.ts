@@ -24,7 +24,7 @@ export interface GameLogFacts {
   eosError: string | null;
 }
 
-// UE log prefix: [2026.09.23-20.52.25:043] — UTC.
+// UE log prefix: [2026.09.23-20.52.25:043], UTC.
 const STAMP = /^\[(\d{4})\.(\d{2})\.(\d{2})-(\d{2})\.(\d{2})\.(\d{2}):\d{3}\]/;
 
 function stampOf(line: string): number | null {
@@ -76,7 +76,7 @@ async function readProcNet(proto: 'tcp' | 'udp'): Promise<Set<number>> {
     try {
       for (const p of parseProcNet(await readFile(`/proc/net/${file}`, 'utf8'), proto)) out.add(p);
     } catch {
-      // No IPv6 table on this host — the other one still counts.
+      // No IPv6 table on this host, the other one still counts.
     }
   }
   return out;
@@ -109,11 +109,11 @@ export interface Readiness {
 }
 
 /**
- * The server list is served by Warp Hosting's API (api.warphosting.com.au —
+ * The server list is served by Warp Hosting's API (api.warphosting.com.au,
  * the URLs are in the server binary: /v1/presence/server, /v1/servers/active…),
  * not read from EOS by the client. Its list endpoint needs a Steam ticket from
  * a player's client, so the panel cannot read the list itself; it can check
- * that the API is up and reachable from this VPS — when it is not, servers
+ * that the API is up and reachable from this VPS, when it is not, servers
  * drop off the in-game list while running fine. A GET is answered 405 without
  * the API doing any work; checked at most every 5 minutes.
  */
@@ -128,7 +128,7 @@ export async function checkListApi(now: number, fetchImpl: typeof fetch = fetch)
     const res = await fetchImpl(LIST_API, { method: 'GET', signal: AbortSignal.timeout(8000) });
     state = res.status < 500
       ? { ok: true, detail: `api.warphosting.com.au trả lời (HTTP ${res.status})`, at: now }
-      : { ok: false, detail: `api.warphosting.com.au lỗi HTTP ${res.status} — danh sách server có thể không cập nhật`, at: now };
+      : { ok: false, detail: `api.warphosting.com.au lỗi HTTP ${res.status}, danh sách server có thể không cập nhật`, at: now };
   } catch (error) {
     state = { ok: false, detail: `không gọi được api.warphosting.com.au từ VPS: ${(error as Error).message}`, at: now };
   }
@@ -189,7 +189,7 @@ export function assess(input: ReadinessInput, log: GameLogFacts | null, logError
     : failed.length > 0 ? 'problem' : waiting.length > 0 ? 'starting' : 'ready';
   const summary = {
     ready: 'Đủ điều kiện hiển thị và nhận người chơi',
-    starting: `Đang khởi động — còn chờ: ${waiting.map((c) => c.label).join(', ')}`,
+    starting: `Đang khởi động, còn chờ: ${waiting.map((c) => c.label).join(', ')}`,
     down: 'Server không chạy',
     problem: `Có lỗi: ${failed.map((c) => c.label).join(', ')}`,
   }[verdict];

@@ -1,4 +1,4 @@
--- SkinLab — TEST SERVER ONLY (off in ue4ss/mods.txt; scripts/test-server.sh
+-- SkinLab, TEST SERVER ONLY (off in ue4ss/mods.txt; scripts/test-server.sh
 -- turns it on in the test copy). Tries on a dino nobody plays what the skin
 -- features would do on the live server, and writes what happened to
 -- Mods/SkinLab/Saved/skinlab.txt:
@@ -48,7 +48,7 @@ end
 
 --- Run one step once, flag first. false when it crashed a previous run (skipped).
 local function step(name, fn)
-    if crashed[name] then out("step %s: SKIPPED — the server stopped during it last time (crash)", name); return false end
+    if crashed[name] then out("step %s: SKIPPED, the server stopped during it last time (crash)", name); return false end
     write(DIR .. name .. ".trying", tostring(os.time()))
     local ok, err = pcall(fn)
     os.remove(DIR .. name .. ".trying")
@@ -105,7 +105,7 @@ H.every(2000, MOD .. ": step", function()
     end
 
     local pawn = ourDino()
-    if pawn == nil then out("no dino to test (spawn failed or it is gone) — stopping"); phase = #STEPS + 2; return end
+    if pawn == nil then out("no dino to test (spawn failed or it is gone), stopping"); phase = #STEPS + 2; return end
 
     if phase == 2 then
         step("read", function()
@@ -114,7 +114,7 @@ H.every(2000, MOD .. ": step", function()
             else
                 local f = {}
                 for _, x in ipairs(e.fields) do f[#f + 1] = x[1] .. ":" .. x[2] end
-                out("read: effects struct %s — fields [%s]", tostring(e.struct), table.concat(f, ", "))
+                out("read: effects struct %s, fields [%s]", tostring(e.struct), table.concat(f, ", "))
                 out("read: effects values %s", json.encode(e.values))
             end
             out("read: CustomizerData %s", skinText(H.readSkin(pawn)))
@@ -162,4 +162,4 @@ H.every(2000, MOD .. ": step", function()
     end
 end)
 
-out("loaded — the test starts %d s after load", START_AFTER_S)
+out("loaded, the test starts %d s after load", START_AFTER_S)

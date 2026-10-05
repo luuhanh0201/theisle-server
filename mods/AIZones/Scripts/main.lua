@@ -1,4 +1,4 @@
--- AIZones — AI that lives in admin-drawn zones.
+-- AIZones, AI that lives in admin-drawn zones.
 --
 -- The game spawns its own AI around players (Game.ini AIDensity…); it has no
 -- zones. This mod adds them. Each zone (drawn on the admin panel) has its
@@ -18,7 +18,7 @@
 --
 -- The bridge writes Mods/AIZones/Saved/zones.json: the zones, each species'
 -- pawn + AI controller class (pairs verified live by the evrima-dev-knowledge
--- AI Spawn Pair catalog, MIT/CC BY 4.0), and spawn POINTS — places a player
+-- AI Spawn Pair catalog, MIT/CC BY 4.0), and spawn POINTS, places a player
 -- or an AI really stood inside the zone, so nothing is spawned under the
 -- landscape or at a guessed height. This mod writes status.json back.
 --
@@ -32,7 +32,7 @@
 --   * a server-wide cap on ALL living AI (the game's own and the zones'):
 --     at the cap nothing is added, so players have to hunt some down first
 --     (corpses do not count); plus a few per zone per turn
---   * spawned pawns are remembered by address only, to count them — never
+--   * spawned pawns are remembered by address only, to count them, never
 --     called again after the turn they were made in
 
 if not package.path:find("Mods/?.lua", 1, true) then
@@ -87,7 +87,7 @@ local function readConfig()
     f:close()
     local ok, data = pcall(json.decode, raw)
     if not ok or type(data) ~= "table" then
-        H.logError(MOD .. ": zones.json is not valid JSON — keeping the previous zones")
+        H.logError(MOD .. ": zones.json is not valid JSON, keeping the previous zones")
         return
     end
     config = data
@@ -157,7 +157,7 @@ end
 
 --- Inside a zone: within its `radius` (for a circle, the zone; for an ellipse
 --- or a polygon, the circle around it) and, when it has one, its outline
---- `poly` ({ {x, y}, … } — the bridge turns an ellipse into one).
+--- `poly` ({ {x, y}, … }, the bridge turns an ellipse into one).
 local function inZone(z, radius, pt)
     if not near(pt, z.x, z.y, radius) then return false end
     local poly = z.poly
@@ -244,7 +244,7 @@ do
     if f then
         f:close()
         deferred = false
-        H.logError(MOD .. ": the last run stopped during a deferred spawn — back to world:SpawnActor. Delete " .. DEFERRED_FLAG .. " to try again.")
+        H.logError(MOD .. ": the last run stopped during a deferred spawn, back to world:SpawnActor. Delete " .. DEFERRED_FLAG .. " to try again.")
     end
 end
 
@@ -281,7 +281,7 @@ local function spawnPawn(world, cls, loc, rot)
     if first then os.remove(DEFERRED_FLAG) end
     if broken then
         deferred = false
-        H.logError(MOD .. ": deferred spawn failed, back to world:SpawnActor — " .. broken)
+        H.logError(MOD .. ": deferred spawn failed, back to world:SpawnActor, " .. broken)
         return nil
     end
     if pawn ~= nil and deferred == nil then
@@ -472,7 +472,7 @@ local function tick()
         -- A top-up that made nothing (no class, no free spot) is not retried every tick.
         if room > 0 and #made == 0 then retryAt[z.id] = now + RETRY_S end
         if #made > 0 then
-            H.log(string.format("%s: zone '%s' +%d (%s, %s) — %d in the zone (min %d, max %d, %s), %d/%d AI on the server",
+            H.log(string.format("%s: zone '%s' +%d (%s, %s), %d in the zone (min %d, max %d, %s), %d/%d AI on the server",
                 MOD, tostring(z.name), #made, table.concat(made, ", "), why == "min" and "keeping the minimum" or "a turn",
                 count, min, max, zs.occupied and "a player is in it" or "empty", total, cap))
         end
@@ -615,8 +615,8 @@ end
 -- Reset: "clear the AI" from the admin panel (bridge/src/ai-reset.ts)
 --------------------------------------------------------------------------
 -- Nothing is ever destroyed from Lua (K2_DestroyActor on an actor the game
--- already removed crashes the server). A reset KILLS the AI instead —
--- SetHealth(0), as !slay does — on pawns found fresh in this very tick,
+-- already removed crashes the server). A reset KILLS the AI instead,
+-- SetHealth(0), as !slay does, on pawns found fresh in this very tick,
 -- RESET_BATCH per poll; the bridge then clears the corpses with the game's
 -- own RCON WipeCorpses, and the game and the zones spawn new ones.
 -- Only pawns an AIController drives: a player's dino (online, or left in the
@@ -661,7 +661,7 @@ local function continueReset()
     reset.killed = reset.killed + killed
     if left == 0 or os.time() - reset.started >= RESET_MAX_S then
         finish(reset.id, true, reset.killed, left > 0 and (left .. " still alive after " .. RESET_MAX_S .. " s") or nil)
-        H.log(string.format("%s: reset %d — %d AI killed%s", MOD, reset.id, reset.killed,
+        H.log(string.format("%s: reset %d, %d AI killed%s", MOD, reset.id, reset.killed,
             left > 0 and (", " .. left .. " left (the game keeps spawning)") or ""))
         reset = nil
     end
@@ -703,13 +703,13 @@ local function pollDrops()
                     for _, c in ipairs(d.keep) do keep[tostring(c)] = true end
                 end
                 reset = { id = id, classes = classes, keep = keep, started = now, killed = 0 }
-                H.log(MOD .. ": reset " .. id .. " — killing " .. (classes and "the chosen AI" or "every AI"))
+                H.log(MOD .. ": reset " .. id .. ", killing " .. (classes and "the chosen AI" or "every AI"))
                 continueReset()
             end
         else
             local ok, made, why = runDrop(d)
             finish(id, ok, made, (not ok or made < (tonumber(d.count) or 0)) and why or nil)
-            local line = string.format("%s: drop %d — %d × %s next to %s%s", MOD, id, made,
+            local line = string.format("%s: drop %d, %d × %s next to %s%s", MOD, id, made,
                 tostring(d.sp and d.sp.key), tostring(d.steamId), why and (" (" .. tostring(why) .. ")") or "")
             if ok then H.log(line) else H.logError(line) end
         end
@@ -729,4 +729,4 @@ LoopAsync(READ_MS, function()
 end)
 H.every(TICK_MS, MOD .. " turn", tick)
 H.every(DROP_MS, MOD .. " drops", pollDrops)
-H.log(MOD .. ": loaded — zones from " .. ZONES_PATH .. " (off until the panel turns them on)")
+H.log(MOD .. ": loaded, zones from " .. ZONES_PATH .. " (off until the panel turns them on)")

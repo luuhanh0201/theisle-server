@@ -132,7 +132,7 @@ export class GameAdminLog {
       const blocked = off.has(a.steamId);
       await audit({
         action: `in-game ${a.command}`, detail: detailOf(a), ok: !blocked,
-        ...(blocked ? { error: 'quyền admin trong game đang TẮT nhưng game vẫn cho dùng — hết hẳn sau lần restart tới' } : {}),
+        ...(blocked ? { error: 'quyền admin trong game đang TẮT nhưng game vẫn cho dùng, hết hẳn sau lần restart tới' } : {}),
       }, { steamId: a.steamId, name: a.name }, a.t);
       last = Math.max(last, a.t);
     }

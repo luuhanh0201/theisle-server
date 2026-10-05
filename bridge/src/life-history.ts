@@ -7,14 +7,14 @@ import { PRIME_NEEDED, PRIME_DEADLINE } from './prime.js';
 /**
  * Every dino a player played, as the game showed it (StatsLogger's events):
  * species, the growth it reached, its mutations, its prime tasks and prime,
- * elder stacks, its skin — and a way for an admin to put one back in the
+ * elder stacks, its skin, and a way for an admin to put one back in the
  * player's garage as it was before it died (restoreLife).
  *
  * One life runs from a "spawn" to its "death" (or the dino stored, or removed
  * by an admin). What happened in between on that species updates it:
  * "mutation", "prime", "skin", "growth_set", the growth in "prime" events.
  * Not in the events, so not restored as it was: the vitals and the nutrients
- * — the dino comes out healthy and fed (garage.ts: stomach full, nutrients 50 %).
+ * - the dino comes out healthy and fed (garage.ts: stomach full, nutrients 50 %).
  */
 
 export interface LifeDetail {
@@ -23,7 +23,7 @@ export interface LifeDetail {
   classPath: string | null;
   growth: number | null;
   endedAt: number | null;
-  /** 'rebirth': chuyển sinh — the prime at 100 % came back young with one more elder stack (store.ts #rebirth). */
+  /** 'rebirth': chuyển sinh, the prime at 100 % came back young with one more elder stack (store.ts #rebirth). */
   end: 'death' | 'garage' | 'admin' | 'rebirth' | null;
   mutations: Record<string, string>;
   /** Ten 0/1, condition 1 first, and what it adds up to. Null: never read. */

@@ -375,7 +375,7 @@ function speciesOf(raw) {
 // --- when to draw ------------------------------------------------------------------
 // In the launcher the page counts as visible even in the tray or behind the game (its window keeps
 // backgroundThrottling off, for the voice and the overlay): document.hidden stays false there. The 3D
-// went on drawing every frame while the owner played — in software WebGL (GPU off: SwiftShader),
+// went on drawing every frame while the owner played, in software WebGL (GPU off: SwiftShader),
 // 8 threads at 60 % each, the game's FPS from 40-60 down to 20-30 (2026-10-04). Not focused in the
 // launcher = nobody looks at it: nothing drawn (the same test as app.js's background redraw).
 // Shown from the tray, GNOME may leave the focus where it was: the mouse over the page (moved, clicked,
@@ -744,7 +744,7 @@ window.Dino3D = { create, fromGame, standIn: STAND_IN, speciesOf: (raw) => speci
   const start = () => {
     if (!preview.offsetParent) { setTimeout(start, 400); return; }
     registryReady.then(() => {
-      if (!registry) { picker.innerHTML = '<option value="">—</option>'; $('skin-preview-note').textContent = 'Chưa có mô hình 3D trên server, xem màu theo từng ô.'; return; }
+      if (!registry) { picker.innerHTML = '<option value="">-</option>'; $('skin-preview-note').textContent = 'Chưa có mô hình 3D trên server, xem màu theo từng ô.'; return; }
       lastSkin = lastSkin ?? window.skin3dLastSkin ?? null;
       started = true;
       const live = window.skin3dLive;

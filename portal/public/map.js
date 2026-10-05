@@ -158,12 +158,12 @@ function saveLayers(on) {
   } catch { /* not remembered */ }
 }
 // The big map over the game (bigmap.html): the island at `map` opacity, its sea at SEA_SHARE of that,
-// beyond the picture only the `dim` veil — the owner: "những nơi trống thì tự động mờ nhiều hơn".
+// beyond the picture only the `dim` veil, the owner: "những nơi trống thì tự động mờ nhiều hơn".
 const SEA_SHARE = 0.45;
 export const LOOK_DEFAULT = { map: 0.85, dim: 0.35 };
 
 /**
- * opts.overlay: the big map over the game — see-through (setLook), no page around it.
+ * opts.overlay: the big map over the game, see-through (setLook), no page around it.
  */
 export function createMap(root, opts = {}) {
   root.innerHTML = `<div class="map-wrap">
@@ -385,7 +385,7 @@ export function createMap(root, opts = {}) {
     }
 
     // Where players are (the heat map, a picture every 5 minutes, admins left out): a 500 m glow round
-    // each 500 m square with players, its colour how many (HEAT_LEVELS) — never a count, never who
+    // each 500 m square with players, its colour how many (HEAT_LEVELS), never a count, never who
     // (owner: "bán kính khoảng 500m để không bị cụ thể quá và làm lộ vị trí người chơi").
     if (st.on.has('heat') && st.heat) {
       const r = Math.max(14, rY(st.heat.cell / 1000));
@@ -537,7 +537,7 @@ export function createMap(root, opts = {}) {
   }
 
   /**
-   * The launcher's mini map: this map as it is — its layers, target, trail, AI… — around your dino,
+   * The launcher's mini map: this map as it is, its layers, target, trail, AI…, around your dino,
    * radiusM metres to the edge, north up or turned with the dino, onto `c` (width × height CSS px at
    * dpr). False when there is nothing to draw yet (no map, no position).
    */

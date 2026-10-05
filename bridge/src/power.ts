@@ -150,7 +150,7 @@ export class Power {
     return op;
   }
 
-  /** Cancel during the countdown only — once systemctl runs it is too late. */
+  /** Cancel during the countdown only, once systemctl runs it is too late. */
   cancel(): boolean {
     if (this.#current === null || this.#current.step !== 'countdown') return false;
     this.#abort?.abort();
@@ -225,7 +225,7 @@ export class Power {
         }
         if (!ready) {
           op.message = (op.message ? op.message + ' · ' : '')
-            + 'the unit is up but the mods have not reported "loaded" yet — check UE4SS.log';
+            + 'the unit is up but the mods have not reported "loaded" yet, check UE4SS.log';
         }
       }
       op.step = 'done';

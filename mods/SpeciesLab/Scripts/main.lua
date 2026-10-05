@@ -1,4 +1,4 @@
--- SpeciesLab — TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
+-- SpeciesLab, TEST SERVER ONLY (off in ue4ss/mods.txt; turned on by hand in the
 -- test copy). Every species' maxima at every growth, measured on the game
 -- itself: the panel's "expected stats" only know what players happened to
 -- play (2026-10-01: 20 species, most not up to 100 %), and the four
@@ -85,7 +85,7 @@ local function finish(name, status)
     if results[name] then results[name].status = status end
     os.remove(DIR .. name .. ".trying")
     save()
-    H.log(MOD .. ": " .. name .. " — " .. status)
+    H.log(MOD .. ": " .. name .. ", " .. status)
 end
 
 local idx, phase, nextAt, loadedAt = 1, "spawn", 0, os.time()
@@ -105,7 +105,7 @@ H.every(STEP_S * 1000, MOD .. ": step", function()
 
     if phase == "spawn" then
         if exists(DIR .. name .. ".trying") then
-            results[name] = { status = "SKIPPED — the server stopped while measuring it last time (crash)" }
+            results[name] = { status = "SKIPPED, the server stopped while measuring it last time (crash)" }
             os.remove(DIR .. name .. ".trying")
             save()
             idx = idx + 1
@@ -172,4 +172,4 @@ H.every(STEP_S * 1000, MOD .. ": step", function()
     end
 end)
 
-H.log(string.format("%s: loaded — %d species, starting %d s after load", MOD, #SPECIES, START_AFTER_S))
+H.log(string.format("%s: loaded, %d species, starting %d s after load", MOD, #SPECIES, START_AFTER_S))

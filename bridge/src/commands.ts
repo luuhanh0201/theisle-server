@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { assertSlot, assertSteamId, ValidationError } from './garage.js';
 
 /**
- * Commands for the game, delivered through DinoGarage's inbox — the admin
+ * Commands for the game, delivered through DinoGarage's inbox, the admin
  * "kill", a player's own "store" / "redeem" from the web garage, and their
  * "skin" (the colours of the dino they play now, from the web)
  * (mods/DinoGarage/Scripts/garage/inbox.lua). The bridge cannot touch the
@@ -41,7 +41,7 @@ type NewCommand =
 
 /**
  * A mutation item used on the dino a player plays now (items.ts; mods/DinoGarage
- * garage/mutation.lua): into a slot, or — the dino has it already — +1 đời
+ * garage/mutation.lua): into a slot, or, the dino has it already, +1 đời
  * (ElderReplicationStacks) from `fromStacks`, refused by the mod at `maxStacks`
  * or when the dino's stacks are no longer `fromStacks` (mutation-tiers.ts).
  */
@@ -84,10 +84,10 @@ export const ADMIN_VITALS = ['health', 'hunger', 'thirst', 'stamina', 'blood', '
 
 /** The skin regions of pawn.CustomizerData (<Region>Color), as the mods read and write them. */
 export const SKIN_REGIONS = ['Body', 'Flank', 'Underbelly', 'Markings', 'MaleDisplay', 'Detail1', 'Eyes', 'Teeth', 'Mouth', 'Claws'] as const;
-/** Skin effects (pawn.SkinEffects) a player may set, 0–1 — they dry / fade in game as usual. */
+/** Skin effects (pawn.SkinEffects) a player may set, 0–1, they dry / fade in game as usual. */
 export const SKIN_EFFECTS = ['Wet', 'Mud', 'Blood', 'Dirt', 'Dust', 'Duckweed'] as const;
 /**
- * A colour channel may go above 1 ("glow": the game keeps it — tried on a test
+ * A colour channel may go above 1 ("glow": the game keeps it, tried on a test
  * server, 2026-09-27; how it LOOKS in game is to be seen). The mod takes up to 10.
  */
 export const SKIN_CHANNEL_MAX = 4;
@@ -363,7 +363,7 @@ export async function queueAdminAction(steamId: string, raw: unknown): Promise<I
 
 /**
  * Admin test (panel API only): a light attached to a player's dino, or taken
- * off it (mods/DinoGarage garage/light.lua) — to see whether a light the
+ * off it (mods/DinoGarage garage/light.lua), to see whether a light the
  * server spawns shows on players' machines at night. Not for players.
  */
 export async function queueLightTest(steamId: string, on: unknown): Promise<InboxCommand> {

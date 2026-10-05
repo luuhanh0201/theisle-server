@@ -10,12 +10,12 @@
     replicated: written in place on the server, the change reaches every
     client, which re-colours the dino (OnRep_CustomizerData). Not through
     SetCustomizerData(struct): a struct passed BY VALUE from Lua is what
-    crashed RequestRespawn (docs/garage.md) — only numbers are written here,
+    crashed RequestRespawn (docs/garage.md), only numbers are written here,
     field by field, the way the prime conditions are (restore.lua).
 
     Skin effects (skin.effects = { Wet, Mud, Blood, Dirt, Dust, Duckweed }, 0–1):
     pawn.SkinEffects (FSkinEffects: WetAmount, DuckweedAmount, MudAmount,
-    BloodAmount, DirtAmount, DustAmount, their Dry* and VomitAmount — read on
+    BloodAmount, DirtAmount, DustAmount, their Dry* and VomitAmount, read on
     the test server, 2026-09-27). Mud, blood and dirt through the game's own
     SetMudAmount / SetBloodAmount / SetDirtAmount (tried there: set, then they
     dry as in game); the others field by field, like the colours.
@@ -49,7 +49,7 @@ do
     if f then
         f:close()
         writes = false
-        H.logError("skin: the last run stopped while writing a skin — skins are not written. Delete " .. S.FLAG .. " to try again.")
+        H.logError("skin: the last run stopped while writing a skin, skins are not written. Delete " .. S.FLAG .. " to try again.")
     end
 end
 

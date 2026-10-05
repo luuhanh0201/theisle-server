@@ -5,7 +5,7 @@ import { ValidationError } from './garage.js';
 import { getItem, grantItem } from './items.js';
 
 /**
- * Hổ phách (owner, 2026-10-05): the server's one currency, earned by playing — the daily check-in now,
+ * Hổ phách (owner, 2026-10-05): the server's one currency, earned by playing, the daily check-in now,
  * the daily quests next; spent in a shop later. Not sold for real money. Tried by SVip first (svip.ts
  * feature 'amber'). Everything tunable on the panel (Nhiệm vụ).
  *
@@ -74,7 +74,7 @@ export async function saveEconomySettings(raw: unknown): Promise<EconomySettings
     const it = await getItem(s.checkinBonusItem);
     if (it === null) throw new ValidationError('no such item');
     // A dino item is only made by opening a box (dino-box.ts): give the box.
-    if (it.type === 'dino') throw new ValidationError('vật phẩm Dino chỉ có khi mở hộp — chọn một hộp dino');
+    if (it.type === 'dino') throw new ValidationError('vật phẩm Dino chỉ có khi mở hộp, chọn một hộp dino');
   }
   await writeJson(settingsPath(), s);
   return s;
@@ -160,7 +160,7 @@ export async function economySummary(): Promise<{ players: number; total: number
 
 /**
  * Seconds in game per player and day, from session_start / session_end (and a server start, which ends
- * every session open then — a crash sends no session_end). Fed the events in file order; read again
+ * every session open then, a crash sends no session_end). Fed the events in file order; read again
  * from the start at every bridge start, so nothing of it is kept on disk.
  */
 export class PlayDays {

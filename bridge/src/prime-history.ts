@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { config } from './config.js';
 
 /**
- * A player's prime progress for one species as the game showed it — the
+ * A player's prime progress for one species as the game showed it, the
  * StatsLogger "prime" event of that (player, species) with the MOST tasks
  * done (the latest of those). An admin who gives a player a dino (garage.ts
  * createSlot) starts from it, so a dino given back keeps its tasks: an admin

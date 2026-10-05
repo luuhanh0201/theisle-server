@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy.sh — render config templates, sync to the VPS, restart the server.
+# deploy.sh, render config templates, sync to the VPS, restart the server.
 #
 #   ./scripts/deploy.sh --dry-run     render + check + show the diff, change nothing
 #   ./scripts/deploy.sh               full deploy (RESTARTS THE SERVER)
@@ -43,7 +43,7 @@ say() { echo "==> $*"; }
 
 # --- 1. environment -----------------------------------------------------
 
-[[ -f .env ]] || die ".env not found — copy .env.example and fill it in"
+[[ -f .env ]] || die ".env not found, copy .env.example and fill it in"
 set -a; . ./.env; set +a
 
 REQUIRED=(
@@ -137,18 +137,18 @@ done
 
 if (( DO_CONFIG )); then
     # The keys the admin panel owns (Server tab) live on the VPS, not in the
-    # repo. Fetch them and put them into the rendered Game.ini — otherwise
+    # repo. Fetch them and put them into the rendered Game.ini, otherwise
     # every deploy would silently undo what admins set in the panel.
     # If the VPS cannot be asked, STOP: rendering without them loses them.
     say "fetching panel-managed settings from the VPS"
     ssh "$DEPLOY_HOST" "f='$BRIDGE_DATA_DIR/game-settings.json'; if [ -f \"\$f\" ]; then cat \"\$f\"; fi" \
         > "$STAGE/panel-settings.json" \
-        || die "could not read panel settings from $DEPLOY_HOST — refusing to overwrite Game.ini without them"
+        || die "could not read panel settings from $DEPLOY_HOST, refusing to overwrite Game.ini without them"
     node bridge/dist/cli-apply-settings.js "$STAGE/config/Game.ini" "$STAGE/panel-settings.json" \
         > "$STAGE/config/Game.ini.panel" || die "applying panel settings to Game.ini failed"
     mv "$STAGE/config/Game.ini.panel" "$STAGE/config/Game.ini"
     [[ -s "$STAGE/panel-settings.json" ]] && say "  applied $(tr -cd ',' < "$STAGE/panel-settings.json" | wc -c | awk '{print $1+1}') panel setting(s)" \
-        || say "  no panel settings yet — template defaults"
+        || say "  no panel settings yet, template defaults"
 fi
 
 # --- 3. check Lua -------------------------------------------------------
@@ -161,7 +161,7 @@ if (( DO_MODS )); then
         say "syntax-checking Lua (install lua5.4 to run the tests)"
         find mods -name '*.lua' -print0 | xargs -0 -r -n1 luac -p
     else
-        echo "    (lua not installed — mods NOT checked)" >&2
+        echo "    (lua not installed, mods NOT checked)" >&2
     fi
 fi
 
@@ -174,7 +174,7 @@ if (( DO_CONFIG )); then
     say "config -> $CONFIG_DIR"
     if (( DRY_RUN )); then
         ssh "$DEPLOY_HOST" "test -d '$CONFIG_DIR'" \
-            || echo "    (would create $CONFIG_DIR — the server has not run yet)"
+            || echo "    (would create $CONFIG_DIR, the server has not run yet)"
     else
         # On a fresh install the game has not run yet, so Saved/Config does not
         # exist. Creating the directory is all we do under Saved/ besides it.
@@ -198,7 +198,7 @@ if (( DO_MODS )); then
     "${RSYNC[@]}" ue4ss/UE4SS-settings.ini "$DEPLOY_HOST:$BIN_DIR/"
     "${RSYNC[@]}" ue4ss/mods.txt           "$DEPLOY_HOST:$BIN_DIR/Mods/"
 
-    # UE4SS owns Mods/shared/ — it ships Types.lua and UEHelpers/ there.
+    # UE4SS owns Mods/shared/, it ships Types.lua and UEHelpers/ there.
     # Our helpers go in a subfolder of their own, and this sync must NEVER
     # use --delete or it would wipe UEHelpers out from under BPModLoaderMod.
     say "shared helpers -> $BIN_DIR/Mods/shared/isle"
@@ -230,7 +230,7 @@ if (( DO_BRIDGE )); then
         "$DEPLOY_HOST:$BRIDGE_DIR/"
 
     # systemd reads this via EnvironmentFile. Only the keys the bridge needs go
-    # in — not the whole .env (no EOS secret, no server password). It does hold
+    # in, not the whole .env (no EOS secret, no server password). It does hold
     # the RCON password (the bridge speaks RCON on 127.0.0.1), so it is 0600.
     cat > "$STAGE/bridge.env" <<ENV
 EVENTS_PATH=$EVENTS_PATH
@@ -272,7 +272,7 @@ ENV
         if [[ -n "$changed" ]] && (( ! DRY_RUN )); then
             say "voice keys changed: restarting isle-voice.service"
             ssh "$DEPLOY_HOST" "sudo -n systemctl restart isle-voice.service" \
-                || echo "    ! could not restart isle-voice.service — run scripts/install-voice.sh on the VPS first" >&2
+                || echo "    ! could not restart isle-voice.service, run scripts/install-voice.sh on the VPS first" >&2
         fi
     fi
 
@@ -282,7 +282,7 @@ ENV
         # anyone, but it must not fail silently: a bridge that was not
         # restarted keeps serving the OLD code. -n: never hang on a password.
         if ! ssh "$DEPLOY_HOST" "sudo -n systemctl restart theisle-bridge.service"; then
-            echo "    ! could not restart theisle-bridge.service — the bridge is still" >&2
+            echo "    ! could not restart theisle-bridge.service, the bridge is still" >&2
             echo "      running the previous code. Give the deploy user the right with" >&2
             echo "      scripts/install-bridge.sh --with-sudoers, or restart it on the VPS." >&2
         fi
@@ -317,7 +317,7 @@ ENV
         # 0640, group portal: the service user reads it, nobody else.
         ssh "$DEPLOY_HOST" "cd '$PORTAL_DIR' && chgrp portal .env && chmod 640 .env && npm ci --omit=dev --silent"
         if ! ssh "$DEPLOY_HOST" "sudo -n systemctl restart theisle-portal.service"; then
-            echo "    ! could not restart theisle-portal.service — run scripts/install-portal.sh on the VPS first" >&2
+            echo "    ! could not restart theisle-portal.service, run scripts/install-portal.sh on the VPS first" >&2
         fi
     fi
 fi
@@ -325,7 +325,7 @@ fi
 # --- 5. restart ---------------------------------------------------------
 
 if (( DRY_RUN )); then
-    say "dry run — nothing was changed"
+    say "dry run, nothing was changed"
     exit 0
 fi
 
@@ -336,9 +336,9 @@ elif (( RESTART )); then
     say "restarting theisle.service (players will be disconnected)"
     # -n: fail instead of hanging on a password prompt (install.sh grants this).
     ssh "$DEPLOY_HOST" "sudo -n systemctl restart theisle.service" \
-        || die "could not restart theisle.service — does $DEPLOY_HOST have the sudoers rule from install.sh?"
+        || die "could not restart theisle.service, does $DEPLOY_HOST have the sudoers rule from install.sh?"
     # "activating" after a restart usually means the process exited and systemd
-    # is about to retry (Restart=on-failure) — a crash loop, not a slow start.
+    # is about to retry (Restart=on-failure), a crash loop, not a slow start.
     # Watch a little so a broken launch is reported here, not discovered later.
     sleep 20
     # Parse Key=Value lines: `systemctl show --value` prints values in systemd's
@@ -359,7 +359,7 @@ elif (( RESTART )); then
         echo "        journalctl -u theisle.service -n 50 --no-pager" >&2
     fi
 else
-    say "not restarting — changes apply on the next restart"
+    say "not restarting, changes apply on the next restart"
 fi
 
 say "done. verify with: ./scripts/logs.sh ue4ss"

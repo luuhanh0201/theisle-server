@@ -35,7 +35,7 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
     /** Called each time the range key is pressed, in game too. */
     onRangeKey: (cb) => { if (typeof cb === 'function') ipcRenderer.on('range-key', () => cb()); },
 
-    /** Game mode: { on, keep: { voice, map, dino, quests } } — the launcher out of the way while playing. */
+    /** Game mode: { on, keep: { voice, map, dino, quests } }, the launcher out of the way while playing. */
     gameModeGet: () => ipcRenderer.sendSync('gamemode:get'),
     gameModeSet: (on) => ipcRenderer.send('gamemode:set', on === true),
     gameModeKeep: (keep) => ipcRenderer.send('gamemode:keep', keep),
@@ -50,7 +50,7 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
     /** Put a widget at { x, y } (screen coordinates, any screen) at { scale } %. */
     overlayPlace: (widget, spot) => ipcRenderer.send('overlay:place', String(widget), spot),
     overlayPreview: () => ipcRenderer.send('overlay:preview'),
-    /** "Sửa viền đen": { on, saved } — set it and the launcher restarts without GPU acceleration. */
+    /** "Sửa viền đen": { on, saved }, set it and the launcher restarts without GPU acceleration. */
     overlayCompatGet: () => ipcRenderer.sendSync('overlay:compat:get'),
     overlayCompatSet: (on) => ipcRenderer.send('overlay:compat:set', on === true),
     overlayState: (state) => ipcRenderer.send('overlay:state', state),
@@ -60,7 +60,7 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
     /** The mini map the portal draws (map.js) for the overlay's map widget: { image: bytes, type }. */
     overlayMiniFrame: (frame) => ipcRenderer.send('overlay:mini-frame', frame),
 
-    /** The big map (bigmap.html, its key — M): the game data as it comes, the latest at once, closing it. */
+    /** The big map (bigmap.html, its key, M): the game data as it comes, the latest at once, closing it. */
     onOverlayGame: (cb) => { if (typeof cb === 'function') ipcRenderer.on('overlay:game', (_e, g) => cb(g)); },
     overlayGameGet: () => ipcRenderer.sendSync('overlay:game:get'),
     bigMapGet: () => ipcRenderer.sendSync('bigmap:get'),

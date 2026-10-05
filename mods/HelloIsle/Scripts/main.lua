@@ -2,7 +2,7 @@
     HelloIsle
 
     The smallest useful mod: greet players on join and answer a chat ping.
-    Keep it working — it is the canary that tells you UE4SS, the shared helpers
+    Keep it working, it is the canary that tells you UE4SS, the shared helpers
     and the chat hook all came up correctly after a deploy.
 ]]
 
@@ -30,7 +30,7 @@ RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(ctrlParam
     local ctrl = ctrlParam:get()
     if not H.isValid(ctrl) then return end
 
-    -- Rule 3/4: do not talk to the client from inside the hook — defer, and
+    -- Rule 3/4: do not talk to the client from inside the hook, defer, and
     -- let deferWithPawn re-resolve the player when the timer fires.
     H.deferWithPawn(ctrl, GREET_DELAY_MS, function(c, _pawn)
         Msg.notify(c, "hello.welcome", "Welcome to the island. Type !ping to check the mods.")
@@ -47,7 +47,7 @@ H.onChat(function(ctrl, steamId, msg)
     if cmd ~= "ping" then return end
 
     H.log(MOD .. ": !ping from " .. steamId)
-    Msg.notify(ctrl, "hello.pong", "pong — mods are alive")
+    Msg.notify(ctrl, "hello.pong", "pong, mods are alive")
 end)
 
 H.log(MOD .. ": loaded")

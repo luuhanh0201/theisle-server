@@ -6,7 +6,7 @@ import { SKIN_CHANNEL_MAX, SKIN_REGIONS, type SkinRequest } from './commands.js'
  *
  * The game saves a dino with the colours the player picked in the game, not
  * the ones painted on it while playing (the web skin editor, the garage's
- * restore): after every relog — and every server restart — it came back in
+ * restore): after every relog, and every server restart, it came back in
  * its own colours (8 players, 2026-09-27/28). The kept colours ("giữ màu cho
  * lần chơi sau") are painted by the mod itself (DinoGarage keepskin.lua), so a
  * species with kept colours is left to it.
@@ -82,7 +82,7 @@ export class SkinRelog {
           this.#last.set(id, { species: e.species, skin: waiting.skin, t: e.t });
           this.log(`[skin-relog] ${id} came back on its ${e.species}: its colours painted again`);
         } catch (err) {
-          this.log(`[skin-relog] ${id}: could not repaint — ${(err as Error).message}`);
+          this.log(`[skin-relog] ${id}: could not repaint, ${(err as Error).message}`);
         }
         return;
       }

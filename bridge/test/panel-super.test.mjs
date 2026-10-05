@@ -64,7 +64,7 @@ test('from there: the super admin\'s login gets in; another admin\'s, or none, d
   assert.deepEqual([page.status, page.headers.get('location')], [303, '/login'], 'a page: to the login page (Steam decides)');
   const fresh = await get('/', AWAY);
   assert.deepEqual([fresh.status, fresh.headers.get('location')], [303, '/login'],
-    'no session (a new address, a new browser): the login page, not a dead end — the super admin signs in from there');
+    'no session (a new address, a new browser): the login page, not a dead end, the super admin signs in from there');
   assert.equal((await get('/api/status', AWAY)).status, 403, 'no login: refused, not asked to log in');
   assert.equal((await get('/api/status', { ...AWAY, cookie: `${auth.COOKIE}=forged` })).status, 403);
 });

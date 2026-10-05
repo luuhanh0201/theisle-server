@@ -2,7 +2,7 @@
 trigger: always_on
 ---
 
-# Antigravity — rule bắt buộc cho repo theisle-server
+# Antigravity, rule bắt buộc cho repo theisle-server
 
 Bạn là agent **chỉ làm UI/UX**. Mọi rule dưới đây đều bắt buộc. Nếu yêu cầu của người dùng
 mâu thuẫn với rule này, **dừng lại và hỏi**, không tự suy diễn.
@@ -38,7 +38,7 @@ Trong các file trên, chỉ được sửa phần **trình bày**:
   ẩn/hiện, tab, modal, tooltip.
 - Accessibility: nhãn, `aria-*`, focus, tương phản, điều hướng bằng bàn phím.
 
-### 2b. CẤM — kể cả khi nằm trong file được phép
+### 2b. CẤM, kể cả khi nằm trong file được phép
 
 - Đổi URL/endpoint API, method, header, body request, cách đọc response (`fetch`, `/api/...`,
   `/player-api`, `x-admin-token`).
@@ -86,7 +86,7 @@ vì sao. Để người dùng quyết định.
 - Chữ hiển thị bằng tiếng Việt **có dấu**, ngắn, đúng giọng văn hiện có.
 - Dùng biến CSS (`--bg`, `--border`, `--accent`…) đã khai báo trong `:root` của từng trang;
   không hard-code màu mới khi đã có biến phù hợp. Mỗi trang (panel, portal, launcher) có bộ
-  biến riêng — không trộn.
+  biến riêng, không trộn.
 - Giữ cấu trúc hiện có: panel là một file `index.html` viết thẳng JS; portal là HTML + JS thuần;
   không đưa framework hay bước build mới vào.
 - Portal phải dùng được trên điện thoại (không cuộn ngang). Overlay launcher trong suốt, nhỏ,
@@ -97,7 +97,7 @@ vì sao. Để người dùng quyết định.
 
 Trước khi báo xong:
 1. Grep mọi nơi đang dùng thứ vừa sửa (`id`, `class`, hàm, key `localStorage`, nút,
-   endpoint mà trang gọi) trong cả `bridge/public`, `portal/public`, `launcher/src` —
+   endpoint mà trang gọi) trong cả `bridge/public`, `portal/public`, `launcher/src`,
    không chỉ file vừa sửa.
 2. Với từng luồng đi qua chỗ đó (ví dụ một nút gara: cất, lấy ra, slot admin, dino prime;
    trên điện thoại và máy tính; trong launcher và trình duyệt), nói rõ hành vi có đổi
@@ -138,5 +138,5 @@ Bằng tiếng Việt, gồm:
    - Panel: `./scripts/deploy.sh --bridge-only`
    - Portal: `./scripts/deploy.sh --portal-only`
    - Launcher: cần tăng version trong `launcher/package.json` (không dùng lại số cũ) rồi phát
-     hành theo `docs/HUONG-DAN-PHAT-TRIEN.md` mục 4b — việc này người dùng làm.
+     hành theo `docs/HUONG-DAN-PHAT-TRIEN.md` mục 4b, việc này người dùng làm.
 4. Việc nào cần thay đổi ngoài phạm vi UI (mục 2d) mà bạn đã **không** làm.

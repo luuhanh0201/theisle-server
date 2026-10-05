@@ -1,5 +1,5 @@
 --[[
-    PlayerCommands — chat commands for players.
+    PlayerCommands, chat commands for players.
 
         !slay      kill your current dino (cooldown)
         !unstuck   move back to the last spot you stood on the GROUND, a few
@@ -11,7 +11,7 @@
                    critter grabbed (ReleasePhysicsCharacter, as PteraCarry
                    uses), the piece carried / dragged (SetDraggedPickablePiece
                    / SetDraggedActor with none), and the "food nearby" state
-                   (ServerResetPickableNearby) — the game's own setters
+                   (ServerResetPickableNearby), the game's own setters
 
     Settings (panel → Server → Cấu hình game → Lệnh người chơi) are read fresh
     from Mods/PlayerCommands/Saved/settings.json on every command.
@@ -194,7 +194,7 @@ local function doUnstuck(ctrl, steamId, settings)
     local here = locationOf(pawn)
     local target = here and unstuckTarget(steamId, here)
     if not target then
-        Msg.notify(ctrl, "cmd.unstuck.noSafeSpot", "!unstuck: chưa có điểm an toàn trên mặt đất — đi bộ trên mặt đất vài giây rồi thử lại.")
+        Msg.notify(ctrl, "cmd.unstuck.noSafeSpot", "!unstuck: chưa có điểm an toàn trên mặt đất, đi bộ trên mặt đất vài giây rồi thử lại.")
         return
     end
     local ok, moved = H.try(MOD .. ": unstuck K2_SetActorLocation", function()
@@ -227,7 +227,7 @@ local function doFood(ctrl, steamId, settings)
     if hadPiece and pcall(function() pawn:SetDraggedPickablePiece(nil) end) then done[#done + 1] = "piece" end
     if pcall(function() pawn:SetDraggedActor(nil) end) then done[#done + 1] = "dragged" end
     if pcall(function() pawn:ServerResetPickableNearby() end) then done[#done + 1] = "nearby" end
-    H.log(string.format("%s: !food by %s — had a piece: %s, done: %s", MOD, steamId, tostring(hadPiece), table.concat(done, ",")))
+    H.log(string.format("%s: !food by %s, had a piece: %s, done: %s", MOD, steamId, tostring(hadPiece), table.concat(done, ",")))
     if #done == 0 then
         Msg.notify(ctrl, "cmd.food.failed", "!food không thực hiện được, thử lại sau.")
         return
@@ -270,7 +270,7 @@ local function doPrime(ctrl)
     local status
     if isPrime == true then status = "đã là Prime 👑"
     elseif growth and growth >= 0.75 then status = "không (đã qua mốc 75%)"
-    else status = "chưa — game xét ở 75% growth" end
+    else status = "chưa, game xét ở 75% growth" end
     Msg.notify(ctrl, "cmd.prime.info",
         "Nhiệm vụ prime: {done}/10 xong (cần {needed}) · Đủ điều kiện: {eligible} · Prime: {status} · Growth {growth}.",
         { done = done ~= nil and tostring(done) or "?", needed = "5", eligible = yesNo(eligible), prime = yesNo(isPrime),
@@ -336,7 +336,7 @@ end)
 H.every(TRACK_MS, MOD .. ": ground spots", recordSpots)
 
 -- Chat commands are NOT hidden from the chat. Tried 2026-10-04: blanking the
--- two texts in a GetChatMessage hook (an empty FText from KismetTextLibrary —
+-- two texts in a GetChatMessage hook (an empty FText from KismetTextLibrary,
 -- this UE4SS has no FText()) crashed the live server 5 s after the first
 -- command (EXCEPTION_ACCESS_VIOLATION 10:39:54 UTC, Dev-Lucii's T-Rex lost with
 -- it). Writing a hook's FText parameter is not safe here: do not try it again.

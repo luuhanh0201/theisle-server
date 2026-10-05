@@ -2,7 +2,7 @@
  * The AI the AIZones mod can spawn: a pawn class and the AI controller that
  * drives it. Every pair here was verified live ("spawned, possessed, the AI
  * brain actually pathfinds the pawn") by the evrima-dev-knowledge AI Spawn
- * Pair catalog, 2026-05-22 — https://github.com/diplomatic-tendencies/evrima-dev-knowledge
+ * Pair catalog, 2026-05-22, https://github.com/diplomatic-tendencies/evrima-dev-knowledge
  * (EVRIMA_AI_Spawn_Pairs.md; code and data MIT, prose CC BY 4.0). Species
  * with no controller of their own borrow a similar one, as the catalog does
  * (a Triceratops with the Diabloceratops brain flees a Rex correctly).

@@ -43,10 +43,10 @@ export async function bagUnlimited(steamId: string): Promise<boolean> {
 }
 
 /**
- * The player portal's view of the bridge (portal/ — the public site players
+ * The player portal's view of the bridge (portal/, the public site players
  * log into with Steam). The portal never gets the admin token: it calls only
  * these /player-api routes with its own PORTAL_TOKEN, and everything here is
- * read-only and trimmed to what a player may see about THEMSELVES — their
+ * read-only and trimmed to what a player may see about THEMSELVES, their
  * own dino's position (for their map) but nobody else's, no chat, no other
  * player's SteamID, no raw garage files.
  *
@@ -63,7 +63,7 @@ export async function bagUnlimited(steamId: string): Promise<boolean> {
  *          dino they play now (that slot; the copy is used up once the game has it)
  *          keep: true keeps these colours for the species played now (every new dino of it), false forgets them;
  *          { forget: "BP_X_C" } forgets one species' kept colours
- *        — that player's own store / redeem, run by DinoGarage exactly like
+ *        - that player's own store / redeem, run by DinoGarage exactly like
  *          the chat command (commands.ts → inbox). 202 { id }.
  *   GET /player-api/command/<steamId>/<id>     its outcome once the mod ran it
  *   POST /player-api/voice/<steamId>/token     join token for the proximity voice room
@@ -72,7 +72,7 @@ export async function bagUnlimited(steamId: string): Promise<boolean> {
  *        never a position or a SteamID (voice.ts)
  *
  * The only writes a player can make, and only for the SteamID the portal
- * logged in — the portal never takes a SteamID from the browser.
+ * logged in, the portal never takes a SteamID from the browser.
  *
  * The portal decides which SteamID is "me" from its Steam login; this side
  * trusts the token for that, which is why the token must stay with the portal.
@@ -138,7 +138,7 @@ export interface PlayerView {
     trail: Array<{ x: number; y: number; t: number }>;
   } | null;
   stats: { kills: number; deaths: number; spawns: number; playtime: number; longestLife: number; sessions: number };
-  /** One entry per DINO (newest first): its stretches — relogs, the garage, rebirths — together (dinoRows). */
+  /** One entry per DINO (newest first): its stretches, relogs, the garage, rebirths, together (dinoRows). */
   lives: Array<{
     species: string | null; spawnedAt: number; endedAt: number | null; end: string | null;
     /** alive (played now), garage (in the garage), left (logged out on it / switched: no death seen), death, admin, rebirth. */
@@ -167,7 +167,7 @@ export interface PlayerView {
 
 /**
  * The player's dinos, one row each (newest first). The store keeps a life per
- * stretch — every relog, garage store / redeem and rebirth starts one — and the
+ * stretch, every relog, garage store / redeem and rebirth starts one, and the
  * page listed those: one Rex at 100 % came out as five rows, four of them
  * "Đang sống" (stretches the player logged out of), plus the admin camera
  * ("AdminPawn"). The owner did not understand it (2026-10-03). A dino is a
@@ -366,7 +366,7 @@ function placeRefusal(p: PlayerStats, name: string, slot: unknown, slot2: boolea
     return `Ô ${slot} mở từ ${pct(min)} tăng trưởng (dino đang ${typeof p.growth === 'number' ? pct(p.growth) : '?'}), như trong game.`;
   }
   const active = mutationPreview(name, p.mutations, null).has.find((k) => (ACTIVE_SLOTS as readonly string[]).includes(k));
-  if (active) return `Dino đã có ${name} ở ô ${active.slice(-1)} — dùng thêm không mạnh hơn. Vật phẩm vẫn còn.`;
+  if (active) return `Dino đã có ${name} ở ô ${active.slice(-1)}, dùng thêm không mạnh hơn. Vật phẩm vẫn còn.`;
   return null;
 }
 
@@ -420,7 +420,7 @@ export async function startMutationUse(ctx: UseCtx, who: string, uid: string, sl
     use = { mode: 'prime' };
   } else if (item.type === 'growth_bag') {
     const { amount, below } = item.data;
-    if (typeof p.growth !== 'number') return { status: 409, body: { error: 'Chưa đọc được tăng trưởng của dino — thử lại sau vài giây.' } };
+    if (typeof p.growth !== 'number') return { status: 409, body: { error: 'Chưa đọc được tăng trưởng của dino, thử lại sau vài giây.' } };
     if (p.growth + 1e-6 >= below) {
       return { status: 409, body: { error: below >= 1 ? 'Dino đã 100% tăng trưởng.' : `Túi tăng trưởng chỉ dùng cho dino dưới ${pct(below)} (dino đang ${pct(p.growth)}).` } };
     }
@@ -555,7 +555,7 @@ export async function handlePlayerApi(
     send(res, r.status, r.body);
     return true;
   }
-  // The dino boxes (dino-box.ts): a box opened into a dino item; the dino item used — into their garage.
+  // The dino boxes (dino-box.ts): a box opened into a dino item; the dino item used, into their garage.
   const optsRoute = /^\/player-api\/items\/(\d{17})\/(box|dino)-options\/([\w-]{1,40})$/.exec(path);
   if (optsRoute !== null) {
     if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
@@ -575,7 +575,7 @@ export async function handlePlayerApi(
     const who = boxRoute[1] as string;
     const body = await readSmallJson(req);
     if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
-    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Hộp dino đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Hộp dino đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
     const uid = typeof body['uid'] === 'string' ? body['uid'] : '';
     const name = ctx.store.player(who)?.player.name ?? null;
     try {
@@ -598,12 +598,12 @@ export async function handlePlayerApi(
     }
     return true;
   }
-  // The starter gift (starter.ts): taken on the home page — the ticket into their bag.
+  // The starter gift (starter.ts): taken on the home page, the ticket into their bag.
   const starterClaim = /^\/player-api\/starter\/(\d{17})\/claim$/.exec(path);
   if (starterClaim !== null) {
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
     const who = starterClaim[1] as string;
-    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Quà tân thủ đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Quà tân thủ đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
     try {
       const out = await claimStarter(who);
       const name = ctx.store.player(who)?.player.name ?? null;
@@ -622,7 +622,7 @@ export async function handlePlayerApi(
     const who = questClaim[1] as string;
     const body = await readSmallJson(req);
     if (body === null || typeof body['quest'] !== 'string') { send(res, 400, { error: 'expected { quest }' }); return true; }
-    if (!(await earlyAccess('quests', who))) { send(res, 403, { error: 'Nhiệm vụ đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (!(await earlyAccess('quests', who))) { send(res, 403, { error: 'Nhiệm vụ đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
     if (!ctx.questProgress) { send(res, 503, { error: 'quests unavailable' }); return true; }
     try {
       const p = ctx.store.player(who)?.player;
@@ -638,7 +638,7 @@ export async function handlePlayerApi(
   if (checkin !== null) {
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
     const who = checkin[1] as string;
-    if (!(await earlyAccess('amber', who))) { send(res, 403, { error: 'Điểm danh đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (!(await earlyAccess('amber', who))) { send(res, 403, { error: 'Điểm danh đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
     try {
       send(res, 200, await claimCheckin(who, ctx.playDays?.minutesToday(who, Math.floor(Date.now() / 1000)) ?? 0));
     } catch (err) {
@@ -678,7 +678,7 @@ export async function handlePlayerApi(
         if (item === null || item.type !== 'skin') { send(res, 404, { error: 'Skin không còn tồn tại.' }); return true; }
         const playing = ctx.store.player(who)?.player.species ?? null;
         if (speciesKey(playing) !== speciesKey(item.data.species)) {
-          send(res, 409, { error: `Skin này dành cho ${item.data.species} — hãy chơi ${item.data.species} rồi mặc.` });
+          send(res, 409, { error: `Skin này dành cho ${item.data.species}, hãy chơi ${item.data.species} rồi mặc.` });
           return true;
         }
         const cmd = await queueSkin(who, resolveSkin(item.data), Date.now(), SKIN_CHANNEL_MAX);
@@ -743,11 +743,11 @@ export async function handlePlayerApi(
       keptSkins: await keptSkinsOf(steamId),
       // Their items (items.ts): what each is; a skin with the colours the game gets when they wear it.
       items: await ownedView(steamId, detail?.player.online ? detail.player.species ?? null : null, ctx.store.catalog.list()),
-      // The bag's tab: open to them, or they own something (the starter ticket — shown while being tried).
+      // The bag's tab: open to them, or they own something (the starter ticket, shown while being tried).
       bag: (await bagOpen(steamId)) || (await inventoryOf(steamId)).length > 0,
       // The starter gift (starter.ts), while it waits on the home page.
       starter: (await starterOffered(steamId))
-        ? ((await earlyAccess('starter', steamId)) ? {} : { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' })
+        ? ((await earlyAccess('starter', steamId)) ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' })
         : null,
       // SVip (svip.ts): tries the features being tested before everyone.
       svip: await isSvip(steamId),
@@ -756,12 +756,12 @@ export async function handlePlayerApi(
         currency: CURRENCY,
         balance: await balanceOf(steamId),
         checkin: await checkinStatus(steamId, ctx.playDays?.minutesToday(steamId, Math.floor(Date.now() / 1000)) ?? 0),
-        ...((await earlyAccess('amber', steamId)) ? {} : { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' }),
+        ...((await earlyAccess('amber', steamId)) ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' }),
       },
       // The daily / weekly quests (quests.ts): given at the first ask of the day, for the dino played then.
       quests: ctx.questProgress ? {
         ...(await questsOf(steamId, detail?.player.online ? detail.player.species ?? null : null, ctx.questProgress)),
-        ...((await earlyAccess('quests', steamId)) ? {} : { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' }),
+        ...((await earlyAccess('quests', steamId)) ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' }),
       } : null,
       bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
@@ -811,7 +811,7 @@ export async function handlePlayerApi(
   }
   if (path === '/player-api/ai') {
     // The server owner chose to show players every live AI (2026-09-24). AI
-    // spawns around players, so clusters hint where others are — say so if asked.
+    // spawns around players, so clusters hint where others are, say so if asked.
     const ai = (ctx.live ? await ctx.live() : null)?.ai ?? null;
     send(res, 200, ai === null ? { t: null, stale: true, count: 0, list: [], escapees: (ctx.prison?.escapees() ?? []).map((e) => ({ name: e.name, s: e.species, x: e.x, y: e.y, since: e.since })) } : {
       t: ai.t, stale: ai.stale, count: ai.count, aiAlive: ai.aiAlive,
@@ -848,7 +848,7 @@ async function ownedView(steamId: string, playing: string | null, catalog: Array
     if (i === undefined) return [];
     const locked = !(i.type === 'dino_box' || i.type === 'dino' ? open.starter : open.bag);
     return [{ uid: o.uid, id: i.id, type: i.type, name: i.name, rarity: i.rarity, source: o.source, grantedAt: o.grantedAt, note: o.note,
-      ...(locked ? { locked: 'Đang thử nghiệm — SVip dùng trước, sẽ mở cho tất cả' } : {}),
+      ...(locked ? { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' } : {}),
       ...(i.type === 'skin' ? { species: i.data.species, skin: resolveSkin(i.data) }
         : i.type === 'mutation' ? { mutation: i.data.mutation, diet: i.data.diet, slot2: i.data.slot2, description: findReference(i.data.mutation)?.description ?? null,
           refusal: playing === null ? null : dietRefusal(playing, i.data.diet) }

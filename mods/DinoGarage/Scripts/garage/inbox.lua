@@ -1,7 +1,7 @@
 --[[
     DinoGarage/inbox.lua
 
-    Admin commands from the bridge service — the CommandBridge pattern
+    Admin commands from the bridge service, the CommandBridge pattern
     (docs/architecture.md): the bridge cannot touch the game, so it writes a
     file and this mod polls it.
 
@@ -13,28 +13,28 @@
     Every command runs AT MOST ONCE:
       * ids only grow; anything <= lastId is already handled
       * lastId is persisted, so a server restart does not replay old commands
-      * a command past expiresAt is refused, not run late — an admin who
+      * a command past expiresAt is refused, not run late, an admin who
         clicked "kill" a minute ago is no longer looking at the same situation
 
     Supported:
-      "kill"    — (admin) SetHealth(0) on the player's current dino, exactly
+      "kill", (admin) SetHealth(0) on the player's current dino, exactly
                   what !store does. Outcome: an `admin_kill` event.
-      "store"   — (the player, from the web garage) { slot }
-      "redeem"  — (the player, from the web garage) { slot, where }
-                  Both run the handlers main.lua registers with I.on() — the
-                  very doStore / doRedeem of the chat commands — for the
+      "store", (the player, from the web garage) { slot }
+      "redeem", (the player, from the web garage) { slot, where }
+                  Both run the handlers main.lua registers with I.on(), the
+                  very doStore / doRedeem of the chat commands, for the
                   player the command names, only while that player is online.
                   Outcome: a `portal_command` event with the replies the
                   player also gets in chat.
-      "skin"    — (the player, from the web) { skin = { colors, pattern,
+      "skin", (the player, from the web) { skin = { colors, pattern,
                   theme, variation } } onto the dino they play now
                   (garage/skin.lua), same outcome event.
-      "light"   — (admin test, panel API) { on } a light on / off the
+      "light", (admin test, panel API) { on } a light on / off the
                   player's dino (garage/light.lua).
-      "admin"   — (admin, panel) { action = heal | vitals | grow | teleport, … }
+      "admin", (admin, panel) { action = heal | vitals | grow | teleport, … }
                   the /adminpanel actions on the player's dino (garage/admin.lua).
                   Outcome: a `portal_command` event (action "admin").
-      "mutation" — (the player, from their bag on the web) { mode "place", mutation, slot, unlock }
+      "mutation", (the player, from their bag on the web) { mode "place", mutation, slot, unlock }
                   or { mode "upgrade", mutation, fromStacks, maxStacks } (+1 đời, off)
                   or { mode "clear", slot } (Phiếu bỏ mutation) or { mode "prime" } (Phiếu Prime)
                   or { mode "growth", amount, below } (Túi tăng trưởng) or { mode "food", amount } (Hộp food)
@@ -46,7 +46,7 @@
 
     Threads: poll() runs ON THE GAME THREAD (H.every in main.lua): it reads
     one small file, acts, and appends the outcomes. It used to run on the
-    async thread and hand each command to ExecuteInGameThread — the hand-off
+    async thread and hand each command to ExecuteInGameThread, the hand-off
     that lost callbacks on the server (2026-09-24).
 ]]
 

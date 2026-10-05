@@ -185,7 +185,7 @@ step(2)
 check("then stung", other.__props.Health == 90, tostring(other.__props.Health))
 check("an admin in the prison is left alone", admin.__props.Health == 100 and #ac._messages == 0)
 
-say("\n-- 9. caught (\"teleport\"): an escaper brought to 20% does not die — back in the prison --")
+say("\n-- 9. caught (\"teleport\"): an escaper brought to 20% does not die, back in the prison --")
 local function sentence(id, mode)
   config({ enabled = true, zone = ZONE, drops = BASE.drops, sting = BASE.sting, exempt = { ADMIN },
     caught = { mode = mode, pct = 20 }, sentences = { [INMATE] = { id = id, total = 3600, release = false } } })

@@ -1,6 +1,6 @@
--- FishSpawnTest — on the LIVE server now (the test server is gone, 2026-09-26),
+-- FishSpawnTest, on the LIVE server now (the test server is gone, 2026-09-26),
 -- but only around the owner's two admin accounts, and only while one of them
--- SWIMS (CharacterMovement:IsSwimming) — nobody else's game is touched.
+-- SWIMS (CharacterMovement:IsSwimming), nobody else's game is touched.
 --
 -- Can a mod spawn the game's fish, as AIZones spawns boars? FishFind step 3
 -- (2026-09-26) gave the classes: /Game/TheIsle/Core/AI/Characters/Fish/BP_*.
@@ -20,24 +20,24 @@ local MOD = "FishSpawnTest"
 local DIR = "Mods/AIZones/Saved/"
 -- Run 1 (fishspawn.flag): the pawn spawned, then the server CRASHED at the
 -- controller (SpawnActor of TIAIFishController / Possess). Run 2: pawns only,
--- no controller — do they stay, where, and do they move?
--- Run 2 (fishspawn2.flag): 3 pawns spawned, none among the Pawns 20 s later —
+-- no controller, do they stay, where, and do they move?
+-- Run 2 (fishspawn2.flag): 3 pawns spawned, none among the Pawns 20 s later,
 -- not Pawns, or gone. Run 3: found by their own classes (BP_Catfish_C,
 -- TIFishBase, TIAmbientFish) 5 s and 30 s after.
 -- Run 3 (fishspawn3.flag): BP_Catfish_C is a TIAmbientFish, not a Pawn;
--- the 3 stayed 30 s, but read at (0, 0, 0). Run 4: one fish — its location
+-- the 3 stayed 30 s, but read at (0, 0, 0). Run 4: one fish, its location
 -- right after the spawn, a root component or not, then K2_SetActorLocation.
 -- Run 4 (fishspawn4.flag): right after the spawn the fish IS at the lake
--- (root component, location right); 5 s later it reads (0, 0, 0) — parked by
+-- (root component, location right); 5 s later it reads (0, 0, 0), parked by
 -- the game's fish system? Run 5: the names of TIAmbientFish's and
 -- BP_Catfish_C's own functions and properties (the class's lists; no parent
--- walk — that crashed) to find how the game places a fish.
+-- walk, that crashed) to find how the game places a fish.
 -- Run 5 (fishspawn5.flag): TIAmbientFish has no functions of its own, but
 -- RelevanceDistance, DespawnDelaySeconds, MinimumWaterDepth, Client*
--- smoothing… — a server-side swimmer, replicated, parked with no player near?
+-- smoothing…, a server-side swimmer, replicated, parked with no player near?
 -- Run 6: once a player is online, 3 catfish around them 1.5 m under them,
 -- their places every 5 s for a minute (and the fish's own numbers).
--- (fishspawn6.flag: stopped at a log line's "%d" with a float z — nothing spawned.)
+-- (fishspawn6.flag: stopped at a log line's "%d" with a float z, nothing spawned.)
 local FLAG = DIR .. "fishspawn7.flag"
 local OUT = DIR .. "fishspawn7.txt"
 local WAIT_FOR_PLAYER = true
@@ -134,7 +134,7 @@ end
 local already = io.open(FLAG, "r")
 if already then
     already:close()
-    H.log(MOD .. ": already ran — nothing to do")
+    H.log(MOD .. ": already ran, nothing to do")
 else
     local started = false
     H.every(5000, MOD .. " wait", function()
@@ -154,5 +154,5 @@ else
         out("player at (%.0f, %.0f, %.0f)", at.X, at.Y, at.Z)
         H.try(MOD .. ": spawn", function() spawn(at) end)
     end)
-    H.log(MOD .. ": loaded — spawns 3 catfish around an admin account once it swims")
+    H.log(MOD .. ": loaded, spawns 3 catfish around an admin account once it swims")
 end

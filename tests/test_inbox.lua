@@ -1,4 +1,4 @@
--- Functional test: commands from the bridge via DinoGarage's inbox — the
+-- Functional test: commands from the bridge via DinoGarage's inbox, the
 -- admin kill, and the player's own store / redeem from the web garage.
 
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end
