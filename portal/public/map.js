@@ -164,6 +164,8 @@ export const LOOK_DEFAULT = { map: 0.85, dim: 0.35 };
 
 /**
  * opts.overlay: the big map over the game, see-through (setLook), no page around it.
+ * opts.onOutsideTap: a tap off the map's picture (the big map: closes it). Without it such a tap does
+ * nothing; a target is only ever set on the map itself (owner, 2026-10-05).
  */
 export function createMap(root, opts = {}) {
   root.innerHTML = `<div class="map-wrap">
@@ -598,7 +600,13 @@ export function createMap(root, opts = {}) {
     // A tap (no drag, one finger): that is where you are heading.
     const tap = st.drag && !st.drag.moved && st.pointers.size === 1 && e.type === 'pointerup';
     st.pointers.delete(e.pointerId); if (st.pointers.size < 2) st.pinch = null; st.drag = null;
-    if (tap && st.data && st.view) { const [x, y] = local(e); setTarget({ ...toWorld(x, y), name: 'Điểm đến' }); }
+    if (tap && st.data && st.view) {
+      const [x, y] = local(e);
+      const w = st.img.naturalWidth * st.view.s, h = st.img.naturalHeight * st.view.s;
+      const onMap = x >= st.view.ox && x <= st.view.ox + w && y >= st.view.oy && y <= st.view.oy + h;
+      if (onMap) setTarget({ ...toWorld(x, y), name: 'Điểm đến' });
+      else opts.onOutsideTap?.();
+    }
   };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);

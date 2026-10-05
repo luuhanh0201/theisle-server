@@ -1,6 +1,6 @@
 /*
- * ui-inputs.js, the system's number and date / time inputs (rule: AGENTS.md
- * "UI"), on every page: the admin panel (bridge serves it from the portal), the
+ * ui-inputs.js, the system's number, date / time, checkbox, slider and colour
+ * inputs (rule: AGENTS.md "UI"), on every page: the admin panel (bridge serves it from the portal), the
  * portal, the launcher's pages. Load it as a classic script before the page's
  * own code, after ui-select.js:
  *   <script src="/ui-inputs.js"></script>
@@ -68,6 +68,53 @@ input.dt-native { display: none !important; }
 /* inside the box: the page's own input look is not wanted */
 .nf > input[type=number] { color: var(--text, #f1f5f9); font: inherit; font-size: 13.5px; padding-top: 8px; padding-bottom: 8px; outline: none; }
 .dt-time .nf > input[type=number] { padding-top: 5px; padding-bottom: 5px; }
+/* Checkboxes: the system's box and tick (the native box gone, the input kept); a panel on/off
+   switch (input.switch) keeps its own look. */
+input[type=checkbox]:not([data-plain]):not(.switch) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; margin: 0; flex: none; display: inline-grid; place-content: center;
+  border: 1.5px solid var(--border-strong, var(--border-light, rgba(255,255,255,.22))); border-radius: 5px; background: var(--surface-2, var(--bg-surface, #0e1526));
+  cursor: pointer; vertical-align: middle; transition: background .12s, border-color .12s, box-shadow .12s; }
+input[type=checkbox]:not([data-plain]):not(.switch)::before { content: ''; width: 10px; height: 10px; transform: scale(0); transition: transform .12s;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); background: #fff; }
+input[type=checkbox]:not([data-plain]):not(.switch):checked { background: var(--accent, var(--emerald, #10b981)); border-color: var(--accent, var(--emerald, #10b981)); }
+input[type=checkbox]:not([data-plain]):not(.switch):checked::before { transform: scale(1); }
+input[type=checkbox]:not([data-plain]):not(.switch):hover:not(:disabled) { border-color: var(--accent, var(--emerald, #10b981)); }
+input[type=checkbox]:not([data-plain]):not(.switch):focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft, var(--emerald-soft, rgba(16,185,129,.18))); }
+input[type=checkbox]:not([data-plain]):not(.switch):disabled { opacity: .45; cursor: not-allowed; }
+/* Sliders: a round track filled to the value (--pct, set by the script), a round thumb. */
+input[type=range]:not([data-plain]) { -webkit-appearance: none; appearance: none; height: 22px; padding: 0; background: transparent; cursor: pointer; --pct: 50%; }
+input[type=range]:not([data-plain]):focus { outline: none; }
+input[type=range]:not([data-plain])::-webkit-slider-runnable-track { height: 6px; border-radius: 999px;
+  background: linear-gradient(to right, var(--accent, var(--emerald, #10b981)) var(--pct), var(--border-strong, var(--border-light, rgba(255,255,255,.18))) var(--pct)); }
+input[type=range]:not([data-plain])::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--accent, var(--emerald, #10b981)); box-shadow: 0 1px 4px rgba(0,0,0,.35); transition: transform .1s; }
+input[type=range]:not([data-plain]):active::-webkit-slider-thumb { transform: scale(1.15); }
+input[type=range]:not([data-plain]):focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--accent-soft, var(--emerald-soft, rgba(16,185,129,.25))); }
+input[type=range]:not([data-plain])::-moz-range-track { height: 6px; border-radius: 999px; background: var(--border-strong, var(--border-light, rgba(255,255,255,.18))); }
+input[type=range]:not([data-plain])::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--accent, var(--emerald, #10b981)); }
+input[type=range]:not([data-plain])::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid var(--accent, var(--emerald, #10b981)); }
+input[type=range]:not([data-plain]):disabled { opacity: .45; cursor: not-allowed; }
+/* Colours: a swatch button and the system's picker (the native input hidden, kept for its value). */
+input[type=color].cp-native { display: none !important; }
+.cp-btn { width: 26px; height: 26px; flex: none; padding: 0; border-radius: 6px; cursor: pointer; vertical-align: middle;
+  border: 1.5px solid var(--border-strong, var(--border-light, rgba(255,255,255,.22))); box-shadow: inset 0 0 0 2px rgba(0,0,0,.25); }
+.cp-btn:hover:not(:disabled), .cp-btn[aria-expanded="true"] { border-color: var(--accent, var(--emerald, #10b981)); }
+.cp-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft, var(--emerald-soft, rgba(16,185,129,.18))); }
+.cp-btn:disabled { opacity: .45; cursor: not-allowed; }
+.cp-pop { position: fixed; z-index: 1000; width: 232px; padding: 10px; display: flex; flex-direction: column; gap: 10px; border-radius: 12px;
+  background: var(--surface, var(--bg-card, #0c1220)); color: var(--text, #f1f5f9); border: 1px solid var(--border-strong, var(--border-light, rgba(255,255,255,.14)));
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .3); }
+.cp-pop[hidden] { display: none; }
+.cp-sv { position: relative; height: 140px; border-radius: 8px; cursor: crosshair; touch-action: none;
+  background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent), var(--cp-hue, red); }
+.cp-hue { position: relative; height: 12px; border-radius: 999px; cursor: pointer; touch-action: none;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.cp-knob { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none; }
+.cp-hue .cp-knob { top: 50%; }
+.cp-row { display: flex; gap: 8px; align-items: center; }
+.cp-prev { width: 30px; height: 30px; border-radius: 8px; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+.cp-hex { flex: 1; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border-strong, var(--border-light, rgba(255,255,255,.14)));
+  background: var(--surface-2, var(--bg-surface, #0e1526)); color: inherit; font: inherit; font-size: 13px; font-family: ui-monospace, monospace; text-transform: uppercase; }
+.cp-ok { padding: 7px 12px; border-radius: 8px; border: 0; background: var(--accent, var(--emerald, #10b981)); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 `;
   (document.head || document.documentElement).append(style);
 })();
@@ -317,21 +364,132 @@ input.dt-native { display: none !important; }
     sync(inp);
   }
   // A <label for> of a hidden date input: send it to its button.
+  // A label's click (label for=…, or one wrapped round the input) opens the system's control, never the
+  // browser's own (a colour input inside its label opened the OS colour dialog).
   document.addEventListener('click', (ev) => {
-    const label = ev.target.closest?.('label[for]');
-    const inp = label && document.getElementById(label.htmlFor);
+    if (ev.target.closest?.('button, input, select, textarea, a')) return;
+    const label = ev.target.closest?.('label');
+    const inp = label?.control;
     if (inp instanceof HTMLInputElement && btnOf.has(inp)) { ev.preventDefault(); btnOf.get(inp).click(); }
   });
 
+  // --- slider: its track filled to the value (CSS --pct), kept when code sets the value -------------
+  function rangeFill(inp) {
+    if (inp.hasAttribute('data-plain') || inp.dataset.uiRange) return;
+    inp.dataset.uiRange = '1';
+    const paint = () => {
+      const min = inp.min === '' ? 0 : Number(inp.min), max = inp.max === '' ? 100 : Number(inp.max);
+      const v = Number(inputValue.get.call(inp));
+      inp.style.setProperty('--pct', `${max > min ? Math.min(100, Math.max(0, (v - min) / (max - min) * 100)) : 0}%`);
+    };
+    inp.addEventListener('input', paint);
+    Object.defineProperty(inp, 'value', { configurable: true, get() { return inputValue.get.call(this); }, set(v) { inputValue.set.call(this, v); paint(); } });
+    new MutationObserver(paint).observe(inp, { attributes: true, attributeFilter: ['min', 'max', 'value'] });
+    paint();
+  }
+
+  // --- colour: a swatch button opening the system's picker (saturation / brightness, hue, hex) --------
+  const hexToRgb = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h).trim()); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const rgbToHex = (r, g, b) => `#${[r, g, b].map((x) => Math.round(x).toString(16).padStart(2, '0')).join('')}`;
+  const rgbToHsv = (r, g, b) => {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx];
+  };
+  const hsvToRgb = (h, s, v) => {
+    const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return [f(5) * 255, f(3) * 255, f(1) * 255];
+  };
+  let cpOpen = null;   // { inp, btn, pop, hsv: [h, s, v], start }
+  function cpClose(keep) {
+    const o = cpOpen;
+    if (!o) return;
+    cpOpen = null;
+    o.pop.remove();
+    o.btn.setAttribute('aria-expanded', 'false');
+    if (!keep && inputValue.get.call(o.inp) !== o.start) { inputValue.set.call(o.inp, o.start); o.paint(); fire(o.inp); }
+    else if (keep) o.inp.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  function cpOpenFor(inp, btn, paint) {
+    if (cpOpen) cpClose(true);
+    const pop = document.createElement('div');
+    pop.className = 'cp-pop';
+    pop.setAttribute('role', 'dialog');
+    pop.innerHTML = '<div class="cp-sv"><span class="cp-knob"></span></div><div class="cp-hue"><span class="cp-knob"></span></div>'
+      + '<div class="cp-row"><span class="cp-prev"></span><input class="cp-hex" maxlength="7" spellcheck="false" aria-label="Mã màu"><button type="button" class="cp-ok">Xong</button></div>';
+    (btn.closest('dialog[open]') ?? document.body).append(pop);
+    const rgb = hexToRgb(inputValue.get.call(inp)) ?? [0, 0, 0];
+    const o = { inp, btn, pop, paint, hsv: rgbToHsv(...rgb), start: inputValue.get.call(inp) };
+    cpOpen = o;
+    btn.setAttribute('aria-expanded', 'true');
+    const sv = pop.querySelector('.cp-sv'), hue = pop.querySelector('.cp-hue'), hex = pop.querySelector('.cp-hex');
+    const show = (fromHex) => {
+      const [h, s, v] = o.hsv;
+      sv.style.setProperty('--cp-hue', `hsl(${h}, 100%, 50%)`);
+      sv.firstChild.style.left = `${s * 100}%`; sv.firstChild.style.top = `${(1 - v) * 100}%`;
+      hue.firstChild.style.left = `${h / 360 * 100}%`;
+      const val = rgbToHex(...hsvToRgb(h, s, v));
+      pop.querySelector('.cp-prev').style.background = val;
+      if (!fromHex) hex.value = val.toUpperCase();
+      if (inputValue.get.call(inp).toLowerCase() !== val) { inputValue.set.call(inp, val); paint(); inp.dispatchEvent(new Event('input', { bubbles: true })); }
+    };
+    const drag = (el, at) => el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      const move = (ev) => { const r = el.getBoundingClientRect(); at(Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height))); show(); };
+      move(e);
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', () => el.removeEventListener('pointermove', move), { once: true });
+    });
+    drag(sv, (x, y) => { o.hsv[1] = x; o.hsv[2] = 1 - y; });
+    drag(hue, (x) => { o.hsv[0] = Math.min(359.9, x * 360); });
+    hex.addEventListener('input', () => { const c = hexToRgb(hex.value); if (c) { o.hsv = rgbToHsv(...c); show(true); } });
+    hex.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cpClose(true); } });
+    pop.querySelector('.cp-ok').addEventListener('click', () => cpClose(true));
+    // Beside the button, inside the screen.
+    const r = btn.getBoundingClientRect(), w = 232, hgt = pop.offsetHeight || 230;
+    pop.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.left))}px`;
+    pop.style.top = `${r.bottom + hgt + 8 > innerHeight ? Math.max(8, r.top - hgt - 6) : r.bottom + 6}px`;
+    show();
+  }
+  document.addEventListener('pointerdown', (e) => { if (cpOpen && !cpOpen.pop.contains(e.target) && e.target !== cpOpen.btn) cpClose(true); }, true);
+  document.addEventListener('keydown', (e) => { if (cpOpen && e.key === 'Escape') { e.stopPropagation(); cpClose(false); } }, true);
+  function colorBox(inp) {
+    if (inp.hasAttribute('data-plain') || inp.classList.contains('cp-native')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cp-btn';
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', inp.getAttribute('aria-label') || inp.title || 'Chọn màu');
+    // The swatch keeps the size the page gave the input.
+    const cs = getComputedStyle(inp);
+    if (inp.offsetWidth > 0) { btn.style.width = cs.width; btn.style.height = cs.height; }
+    inp.classList.add('cp-native');
+    inp.after(btn);
+    const paint = () => { btn.style.background = inputValue.get.call(inp) || '#000000'; btn.disabled = inp.disabled; btn.hidden = inp.hidden; };
+    btn.addEventListener('click', () => { if (cpOpen?.inp === inp) cpClose(true); else cpOpenFor(inp, btn, paint); });
+    Object.defineProperty(inp, 'value', { configurable: true, get() { return inputValue.get.call(this); }, set(v) { inputValue.set.call(this, v); paint(); } });
+    inp.addEventListener('input', paint);
+    new MutationObserver(paint).observe(inp, { attributes: true, attributeFilter: ['disabled', 'hidden', 'value'] });
+    btnOf.set(inp, btn);
+    paint();
+  }
+
   const DATEISH = new Set(['date', 'time', 'datetime-local']);
   const one = (el) => {
-    if (!(el instanceof HTMLInputElement) || el.closest('.dt-pop')) return;
+    if (!(el instanceof HTMLInputElement) || el.closest('.dt-pop') || el.closest('.cp-pop')) return;
     if (el.type === 'number') numberBox(el);
     else if (DATEISH.has(el.type)) dateBox(el);
+    else if (el.type === 'range') rangeFill(el);
+    else if (el.type === 'color') colorBox(el);
   };
   const scan = (root) => {
     if (root instanceof HTMLInputElement) one(root);
-    else root.querySelectorAll?.('input[type=number], input[type=date], input[type=time], input[type=datetime-local]').forEach(one);
+    else root.querySelectorAll?.('input[type=number], input[type=date], input[type=time], input[type=datetime-local], input[type=range], input[type=color]').forEach(one);
   };
   const start = () => {
     scan(document);
@@ -339,6 +497,7 @@ input.dt-native { display: none !important; }
       for (const m of muts) {
         for (const n of m.addedNodes) if (n.nodeType === 1) scan(n);
         if (open && !open.inp.isConnected) close(false);
+        if (cpOpen && !cpOpen.inp.isConnected) cpClose(true);
       }
     }).observe(document.body, { childList: true, subtree: true });
   };

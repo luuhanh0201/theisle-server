@@ -7,7 +7,8 @@ import { createMap, LOOK_DEFAULT } from './map.js';
 
 const L = window.isleLauncher;
 const $ = (id) => document.getElementById(id);
-const map = createMap($('map'), { overlay: true });
+// A tap off the island's picture closes the map (owner, 2026-10-05), it no longer drops a target there.
+const map = createMap($('map'), { overlay: true, onOutsideTap: () => close() });
 
 // How see-through: the island and the veil over the game, kept in this browser.
 const LOOK_KEY = 'isle-bigmap-look.v1';

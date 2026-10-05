@@ -43,16 +43,21 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   must print nothing.
 
 ## UI (panel, portal, launcher pages)
-- Never the browser's own select box, number spinner or date / time picker:
-  every page loads the shared controls, before its own code,
-  `<script src="/ui-select.js"></script>` and `<script src="/ui-inputs.js"></script>`
+- Never the browser's own select box, number spinner, date / time picker,
+  checkbox, slider or colour picker, on the player site, the launcher's pages
+  and the panel alike: every page loads the shared controls, before its own
+  code, `<script src="/ui-select.js"></script>` and `<script src="/ui-inputs.js"></script>`
   (files in `portal/public/`; the bridge serves them to the panel). They
-  turn every `<select>`, `input[type=number|date|time|datetime-local]` into
-  the system's own (the native element stays hidden as the value). Write
-  plain `<select>` / `<input>`; never a one-off dropdown or picker.
-  `data-plain` opts one element out (only with a reason in a comment).
+  turn every `<select>`, `input[type=number|date|time|datetime-local|range|color|checkbox]`
+  into the system's own (the native element stays as the value and fires
+  its input / change events; the colour picker never opens the OS dialog).
+  Write plain `<select>` / `<input>`; never a one-off dropdown, picker or
+  slider. `data-plain` opts one element out (only with a reason in a comment);
+  a panel on/off switch is `input[type=checkbox].switch`.
 - CSS around them: the number box is `span.nf` (a `> input` selector no longer
-  matches), the date box `button.dt-btn`, the select `button.cs-btn`.
+  matches), the date box `button.dt-btn`, the select `button.cs-btn`, the
+  colour swatch `button.cp-btn` (its picker `.cp-pop`); a slider's fill is the
+  CSS variable `--pct`.
 - The skin colour editor is shared too (`portal/public/skin-editor.js`).
 - Mutation icons: `<img data-mut-icon="Name">` (filled by `portal/public/mut-icons.js`
   from one bundle); never one `<img src=".../<slug>.svg">` each, many at once
