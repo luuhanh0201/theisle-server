@@ -151,6 +151,8 @@ test('own position falls back to the snapshot; the trail is theirs only', async 
 test('home page info: name, slots, a real Discord invite only', () => {
   assert.equal(discordLink('https://discord.gg/abcDEF12'), 'https://discord.gg/abcDEF12');
   assert.equal(discordLink('discord.gg/abc'), 'https://discord.gg/abc');
+  assert.equal(discordLink('3TeC6yNkCz'), 'https://discord.gg/3TeC6yNkCz', 'Game.ini keeps the code only');
+  assert.equal(discordLink('DiscordLinkHere'), null, 'the game\'s placeholder is no link');
   assert.equal(discordLink('https://discord.com/invite/xyz-1'), 'https://discord.com/invite/xyz-1');
   assert.equal(discordLink('DiscordLinkHere'), null, 'the game\'s placeholder');
   assert.equal(discordLink('javascript:alert(1)'), null);

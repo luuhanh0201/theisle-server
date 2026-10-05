@@ -242,3 +242,13 @@ test('the SVip are the game\'s VIPs too: added at start, the panel\'s own list k
   const ini = '[/Script/TheIsle.TIGameSession]\nMaxPlayerCount=100\n';
   assert.deepEqual(readManaged(applySettings(ini, withSvipVips({}, [B], []))).VIPs, [B], 'written into Game.ini');
 });
+
+test('Discord: the invite code only (the game adds discord.gg/ itself); a pasted link cut down to it', async () => {
+  const { validateSettings, discordCode } = await import('../dist/gameini.js');
+  for (const raw of ['https://discord.gg/3TeC6yNkCz', 'discord.gg/3TeC6yNkCz/', 'https://discord.com/invite/3TeC6yNkCz', '3TeC6yNkCz', '  3TeC6yNkCz  ']) {
+    assert.equal(validateSettings({ Discord: raw }).Discord, '3TeC6yNkCz', raw);
+  }
+  assert.throws(() => discordCode('https://example.com/x'), /mã mời/);
+  assert.throws(() => discordCode('hello world'), /mã mời/);
+  assert.equal(validateSettings({ Discord: '' }).Discord, null, 'empty: no line, the game keeps its own');
+});

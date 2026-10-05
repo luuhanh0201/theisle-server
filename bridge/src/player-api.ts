@@ -292,7 +292,9 @@ async function readSmallJson(req: IncomingMessage): Promise<Record<string, unkno
 export function discordLink(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
   const m = /^(?:https?:\/\/)?(?:www\.)?(discord\.gg|discord(?:app)?\.com\/invite)\/([A-Za-z0-9-]{2,64})\/?$/.exec(raw.trim());
-  return m ? `https://${m[1]}/${m[2]}` : null;
+  if (m) return `https://${m[1]}/${m[2]}`;
+  // Game.ini keeps the invite code only (gameini.ts discordCode): the game adds discord.gg/ itself.
+  return /^[A-Za-z0-9-]{2,64}$/.test(raw.trim()) && raw.trim() !== 'DiscordLinkHere' ? `https://discord.gg/${raw.trim()}` : null;
 }
 
 export interface PublicServerInfo { name: string | null; maxPlayers: number | null; discord: string | null }

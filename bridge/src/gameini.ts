@@ -125,12 +125,25 @@ const STEAM = /^\d{17}$/;
  * bEnableMutations switches them all). Runtime state (ServerFPS, AIAlive,
  * VIPQueue, HLOD arrays) is not configuration.
  */
+/**
+ * The game puts "discord.gg/" in front of Game.ini's Discord itself (the string sits beside the
+ * server listing's fields in TheIsleServer-Win64-Shipping.exe): a whole link there became
+ * "discord.gg/https://discord.gg/…" and the in-game button opened discord.com's home (2026-10-05).
+ * So only the invite code is kept; a link pasted is cut down to it.
+ */
+export function discordCode(raw: string): string {
+  const t = raw.trim().replace(/\/+$/, '');
+  const code = t.replace(/^(?:https?:\/\/)?(?:www\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\//i, '');
+  if (!/^[A-Za-z0-9-]{2,64}$/.test(code)) throw new ValidationError('Discord: chỉ nhập mã mời (phần sau discord.gg/), vd 3TeC6yNkCz');
+  return code;
+}
+
 export const MANAGED: Record<string, ManagedKey> = {
   // --- server
   ServerName: { section: S, group: 'server', type: 'text', maxLen: 100, default: '',
     label: 'Tên server', help: 'Hiện trong danh sách server của game. Để trống = lấy SERVER_NAME trong .env (deploy).' },
   Discord: { section: S, group: 'server', type: 'text', maxLen: 200, default: 'DiscordLinkHere',
-    label: 'Link Discord', help: 'Hiện cho người chơi trong game. Để trống = giá trị mặc định của game.' },
+    label: 'Mã mời Discord', help: 'Chỉ mã mời (phần sau discord.gg/), vd 3TeC6yNkCz: game tự thêm "discord.gg/" phía trước. Dán cả link cũng được, panel tự lấy mã. Để trống = giá trị mặc định của game.' },
   MaxPlayerCount: { section: S, group: 'server', type: 'int', min: 1, max: 500, default: 100,
     label: 'Số người chơi tối đa', help: 'Số người vào cùng lúc; đầy thì vào hàng chờ.' },
   bServerWhitelist: { section: S, group: 'server', type: 'bool', default: false,
@@ -279,7 +292,7 @@ export function validateSettings(raw: unknown): Settings {
       if (t.length > spec.maxLen) throw new ValidationError(`${key}: at most ${spec.maxLen} characters`);
       // Empty = no line: the game turns "Discord=" into the FName "None" and
       // shows that to players; without the line it keeps its own default.
-      out[key] = t === '' ? null : t;
+      out[key] = t === '' ? null : key === 'Discord' ? discordCode(t) : t;
     } else if (spec.type === 'bool') {
       if (typeof value !== 'boolean') throw new ValidationError(`${key} must be true or false`);
       out[key] = value;
