@@ -1,4 +1,4 @@
-; Engine.ini — rendered by scripts/deploy.sh from .env.
+; Engine.ini, rendered by scripts/deploy.sh from .env.
 ; Network and log tuning for a dedicated server, plus the Epic Online Services
 ; credentials the Evrima server needs to register (without them it may not
 ; start, or may run but never show in the server browser).
@@ -24,7 +24,7 @@ MaxDynamicBandwidth=100000
 MinDynamicBandwidth=10000
 
 [Core.Log]
-; Keep the log readable — UE4SS output is what we actually care about.
+; Keep the log readable, UE4SS output is what we actually care about.
 LogNet=Warning
 LogNetTraffic=Error
 LogPhysics=Warning

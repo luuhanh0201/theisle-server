@@ -1,4 +1,4 @@
-; mods.txt — which Lua mods UE4SS loads, and in what order.
+; mods.txt, which Lua mods UE4SS loads, and in what order.
 ; Format: <ModName> : <1 = enabled, 0 = disabled>
 ; The name must match a directory under $BIN_DIR/Mods/ exactly.
 ;
@@ -14,7 +14,7 @@ StatsLogger : 1
 
 HelloIsle : 1
 
-; Mutates game state — the riskiest mod here. Its store step calls SetHealth(0),
+; Mutates game state, the riskiest mod here. Its store step calls SetHealth(0),
 ; which StatsLogger sees as a death; the bridge correlates the garage_store
 ; event and labels it, so the stat is not inflated.
 DinoGarage : 1
@@ -29,10 +29,10 @@ AIZones : 1
 PteraCarry : 1
 PlantProbe : 0
 Flora : 1
-; FishProbe: OFF (2026-09-26) — done; its census walks every Actor each minute and
+; FishProbe: OFF (2026-09-26), done; its census walks every Actor each minute and
 ; GetSuperStruct on fish classes (that call crashed the server at 16:25).
 FishProbe : 0
-; FishControl: OFF — a Lua write on the AI spawner crashed the server (2026-09-26).
+; FishControl: OFF, a Lua write on the AI spawner crashed the server (2026-09-26).
 FishControl : 0
 ; Small dinos only in the zones the panel marks (bridge writes Saved/guard.json);
 ; off until the panel turns it on.
@@ -51,7 +51,7 @@ FishFind : 0
 FishSpawnTest : 0
 ; FishTune: ON only to WATCH (Saved/watch.json, read only) why a bitten big fish
 ; (Coelacanth) vanishes for a small crocodile: its size, the dino, what is left.
-; keep.json is off and there is no apply.json, so it writes nothing on the game —
+; keep.json is off and there is no apply.json, so it writes nothing on the game,
 ; the server stays as at 08:50. Only where Mods/FishTune/Saved/ENABLED exists.
 FishTune : 1
 ; SkinLab: TEST SERVER ONLY (scripts/test-server.sh turns it on in the test copy):
@@ -101,7 +101,7 @@ SplitScreenMod : 0
 LineTraceMod : 0
 jsbLuaProfilerMod : 0
 
-; Blueprint mod loading — enable only if we actually ship a .pak blueprint mod.
+; Blueprint mod loading, enable only if we actually ship a .pak blueprint mod.
 BPML_GenericFunctions : 0
 BPModLoaderMod : 0
 
