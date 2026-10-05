@@ -581,22 +581,37 @@ export async function listAll(): Promise<GarageIndex> {
 /** Where a redeemed dino appears. The mod treats anything else as 'current'. */
 export const REDEEM_AT = ['current', 'stored', 'choice'] as const;
 export type RedeemAt = (typeof REDEEM_AT)[number];
+/**
+ * The garage by member tier (owner, 2026-10-05): a player's slots and wait between two uses follow who
+ * they are. `maxSlots` / `cooldown` are a plain player's (người thường); `tiers` the VIP's and SVip's
+ * (maxSlots 0 = no limit); an admin has no limit and no wait. Who is which (member-tier.ts) is written
+ * in the same file as `members` by the bridge every minute, for the mod (garage/settings.lua).
+ */
+export const MEMBER_TIERS = ['normal', 'vip', 'svip', 'admin'] as const;
+export type MemberTier = (typeof MEMBER_TIERS)[number];
+export interface TierRule { maxSlots: number; cooldown: number }
 export interface GarageSettings {
   redeemAt: RedeemAt;
-  /** Slots a player may fill with !store. */
+  /** Slots a plain player may fill with !store. */
   maxSlots: number;
   /** Seconds from "!store" to the dino going in; nothing is saved before. */
   storeCountdown: number;
-  /** Seconds between two garage uses (!store or !redeem) by one player. */
+  /** Seconds a plain player waits between two garage uses (!store or !redeem). */
   cooldown: number;
   /** Health needed to store, % of the dino's max (0 = any). */
   minHealthPct: number;
   /** Growth needed to store, % (0 = any). */
   minGrowthPct: number;
+  /** The VIP's and the SVip's own (maxSlots 0 = no limit). */
+  tiers: { vip: TierRule; svip: TierRule };
 }
-export const GARAGE_SETTINGS_DEFAULTS: GarageSettings = { redeemAt: 'current', maxSlots: 2, storeCountdown: 30, cooldown: 60, minHealthPct: 0, minGrowthPct: 0 };
+export const GARAGE_SETTINGS_DEFAULTS: GarageSettings = { redeemAt: 'current', maxSlots: 3, storeCountdown: 30, cooldown: 180, minHealthPct: 0, minGrowthPct: 0,
+  tiers: { vip: { maxSlots: 5, cooldown: 120 }, svip: { maxSlots: 0, cooldown: 60 } } };
+/** An admin: no limit, no wait (owner's call, 2026-10-05). */
+export const ADMIN_RULE: TierRule = { maxSlots: 0, cooldown: 0 };
 /** Same ranges as mods/DinoGarage/Scripts/garage/settings.lua. */
 const RANGES = { maxSlots: [1, 20], storeCountdown: [0, 300], cooldown: [0, 86400], minHealthPct: [0, 100], minGrowthPct: [0, 100] } as const;
+const TIER_RANGES = { maxSlots: [0, 50], cooldown: [0, 86400] } as const;
 
 const settingsPath = (): string => join(config.garageRoot, 'garage-settings.json');
 
@@ -605,21 +620,47 @@ function wholeIn(v: unknown, [lo, hi]: readonly [number, number]): number | null
   return Number.isInteger(n) && n >= lo && n <= hi ? n : null;
 }
 
-export async function readGarageSettings(): Promise<GarageSettings> {
-  const out = { ...GARAGE_SETTINGS_DEFAULTS };
+async function readSettingsFile(): Promise<Record<string, unknown>> {
   try {
-    const raw = JSON.parse(await readFile(settingsPath(), 'utf8')) as Record<string, unknown>;
-    if (REDEEM_AT.includes(raw['redeemAt'] as RedeemAt)) out.redeemAt = raw['redeemAt'] as RedeemAt;
-    for (const key of Object.keys(RANGES) as (keyof typeof RANGES)[]) {
-      out[key] = wholeIn(raw[key], RANGES[key]) ?? out[key];
-    }
+    const raw = JSON.parse(await readFile(settingsPath(), 'utf8')) as unknown;
+    return typeof raw === 'object' && raw !== null ? raw as Record<string, unknown> : {};
   } catch {
-    // Missing or unreadable: the mod falls back to the defaults too.
+    return {};
+  }
+}
+
+// The panel's save and the minute's members write share the file: one at a time.
+let settingsChain: Promise<unknown> = Promise.resolve();
+function settingsSerialized<T>(fn: () => Promise<T>): Promise<T> {
+  const next = settingsChain.then(fn, fn);
+  settingsChain = next.catch(() => undefined);
+  return next;
+}
+
+export async function readGarageSettings(): Promise<GarageSettings> {
+  const out: GarageSettings = { ...GARAGE_SETTINGS_DEFAULTS, tiers: structuredClone(GARAGE_SETTINGS_DEFAULTS.tiers) };
+  // Missing or unreadable: the mod falls back to the defaults too.
+  const raw = await readSettingsFile();
+  if (REDEEM_AT.includes(raw['redeemAt'] as RedeemAt)) out.redeemAt = raw['redeemAt'] as RedeemAt;
+  for (const key of Object.keys(RANGES) as (keyof typeof RANGES)[]) {
+    out[key] = wholeIn(raw[key], RANGES[key]) ?? out[key];
+  }
+  const tiers = (typeof raw['tiers'] === 'object' && raw['tiers'] !== null ? raw['tiers'] : {}) as Record<string, Record<string, unknown> | undefined>;
+  for (const t of ['vip', 'svip'] as const) {
+    for (const key of Object.keys(TIER_RANGES) as (keyof typeof TIER_RANGES)[]) {
+      out.tiers[t][key] = wholeIn(tiers[t]?.[key], TIER_RANGES[key]) ?? out.tiers[t][key];
+    }
   }
   return out;
 }
 
-/** Validated (every field), then written atomically. Takes effect on the next command. */
+/** One player's garage: their tier, slots (null = no limit) and wait. */
+export function garageRuleFor(settings: GarageSettings, tier: MemberTier): { tier: MemberTier; maxSlots: number | null; cooldown: number } {
+  const rule = tier === 'admin' ? ADMIN_RULE : tier === 'normal' ? { maxSlots: settings.maxSlots, cooldown: settings.cooldown } : settings.tiers[tier];
+  return { tier, maxSlots: rule.maxSlots === 0 ? null : rule.maxSlots, cooldown: rule.cooldown };
+}
+
+/** Validated (every field), then written atomically (the members list kept). Takes effect on the next command. */
 export async function saveGarageSettings(raw: unknown): Promise<GarageSettings> {
   const r = (raw ?? {}) as Record<string, unknown>;
   if (!REDEEM_AT.includes(r['redeemAt'] as RedeemAt)) {
@@ -631,6 +672,30 @@ export async function saveGarageSettings(raw: unknown): Promise<GarageSettings> 
     if (v === null) throw new ValidationError(`${key} must be a whole number ${RANGES[key][0]}–${RANGES[key][1]}`);
     settings[key] = v;
   }
-  await writeJsonAtomic(settingsPath(), settings);
-  return settings;
+  const tiersRaw = (typeof r['tiers'] === 'object' && r['tiers'] !== null ? r['tiers'] : {}) as Record<string, Record<string, unknown> | undefined>;
+  settings.tiers = structuredClone(GARAGE_SETTINGS_DEFAULTS.tiers);
+  for (const t of ['vip', 'svip'] as const) {
+    for (const key of Object.keys(TIER_RANGES) as (keyof typeof TIER_RANGES)[]) {
+      const given = tiersRaw[t]?.[key];
+      if (given === undefined) continue;
+      const v = wholeIn(given, TIER_RANGES[key]);
+      if (v === null) throw new ValidationError(`tiers.${t}.${key} must be a whole number ${TIER_RANGES[key][0]}–${TIER_RANGES[key][1]}`);
+      settings.tiers[t][key] = v;
+    }
+  }
+  return settingsSerialized(async () => {
+    const members = (await readSettingsFile())['members'];
+    await writeJsonAtomic(settingsPath(), { ...settings, ...(members !== undefined ? { members } : {}) });
+    return settings;
+  });
+}
+
+/** Who is VIP / SVip / admin, for the mod (member-tier.ts), written when it changed. True when written. */
+export function saveGarageMembers(members: Record<string, Exclude<MemberTier, 'normal'>>): Promise<boolean> {
+  return settingsSerialized(async () => {
+    const raw = await readSettingsFile();
+    if (JSON.stringify(raw['members'] ?? {}) === JSON.stringify(members)) return false;
+    await writeJsonAtomic(settingsPath(), { ...raw, members });
+    return true;
+  });
 }

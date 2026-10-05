@@ -18,7 +18,7 @@
  */
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { applySettings, validateSettings, withoutAdmins, type Settings } from './gameini.js';
+import { applySettings, readManaged, validateSettings, withSvipVips, withoutAdmins, type Settings } from './gameini.js';
 import { config } from './config.js';
 import { effectiveGrowth, readGrowthApplied, readGrowthEvents, writeGrowthApplied } from './growth-events.js';
 
@@ -40,6 +40,16 @@ function readSettings(path: string): Settings | null {
   return raw === '' ? null : validateSettings(JSON.parse(raw));
 }
 
+/** The SVip (panel → Thành viên → SVip), from svip.json next to the settings: VIPs in game too. */
+function svipIds(settingsFile: string): string[] {
+  try {
+    const d = JSON.parse(readFileSync(join(dirname(settingsFile), 'svip.json'), 'utf8')) as { players?: Array<{ steamId?: unknown }> };
+    return (d.players ?? []).map((p) => p.steamId).filter((id): id is string => typeof id === 'string');
+  } catch {
+    return [];
+  }
+}
+
 /** Admins switched off in game (panel → Phân quyền), from admin-permissions.json next to the settings. */
 function inGameOff(settingsFile: string): Set<string> {
   try {
@@ -52,8 +62,11 @@ function inGameOff(settingsFile: string): Set<string> {
 
 try {
   const saved = readSettings(settingsPath);
-  const settings = saved === null ? null : withoutAdmins(saved, inGameOff(settingsPath), config.panel.superAdminId);
   const ini = readFileSync(iniPath, 'utf8');
+  const svip = svipIds(settingsPath);
+  const panel = saved === null ? null : withoutAdmins(saved, inGameOff(settingsPath), config.panel.superAdminId);
+  // The SVip are the game's VIPs too (no panel settings yet: only that).
+  const settings = panel === null && svip.length === 0 ? null : withSvipVips(panel ?? {}, svip, readManaged(ini)['VIPs']);
   if (!inPlace) {
     process.stdout.write(applySettings(ini, settings ?? {}));
   } else {

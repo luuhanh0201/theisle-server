@@ -154,9 +154,10 @@ test('mutation notes: set, clear, and reject bad input', async () => {
 
 test('garage settings: defaults, validated save, the file the mod reads', async () => {
   const { readGarageSettings, saveGarageSettings } = await import('../dist/garage.js');
-  const D = { redeemAt: 'current', maxSlots: 2, storeCountdown: 30, cooldown: 60, minHealthPct: 0, minGrowthPct: 0 };
-  assert.deepEqual(await readGarageSettings(), D, 'no file = the mod\'s defaults (2 slots, 30 s, 60 s)');
-  const want = { redeemAt: 'choice', maxSlots: 3, storeCountdown: 10, cooldown: 0, minHealthPct: 80, minGrowthPct: 50 };
+  const TIERS = { vip: { maxSlots: 5, cooldown: 120 }, svip: { maxSlots: 0, cooldown: 60 } };
+  const D = { redeemAt: 'current', maxSlots: 3, storeCountdown: 30, cooldown: 180, minHealthPct: 0, minGrowthPct: 0, tiers: TIERS };
+  assert.deepEqual(await readGarageSettings(), D, 'no file = the mod\'s defaults (người thường 3 slots / 180 s, VIP 5 / 120, SVip no limit / 60)');
+  const want = { redeemAt: 'choice', maxSlots: 3, storeCountdown: 10, cooldown: 0, minHealthPct: 80, minGrowthPct: 50, tiers: { vip: { maxSlots: 6, cooldown: 90 }, svip: { maxSlots: 0, cooldown: 30 } } };
   assert.deepEqual(await saveGarageSettings(want), want);
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'garage-settings.json'), 'utf8')), want);
   assert.deepEqual(await readGarageSettings(), want);
@@ -166,9 +167,24 @@ test('garage settings: defaults, validated save, the file the mod reads', async 
   await assert.rejects(() => saveGarageSettings({ ...want, cooldown: 1.5 }), /cooldown/);
   await assert.rejects(() => saveGarageSettings({ ...want, minHealthPct: 101 }), /minHealthPct.*0–100/);
   await assert.rejects(() => saveGarageSettings({ ...want, minGrowthPct: -1 }), /minGrowthPct.*0–100/);
+  await assert.rejects(() => saveGarageSettings({ ...want, tiers: { vip: { maxSlots: 51 } } }), /tiers\.vip\.maxSlots.*0–50/);
   assert.deepEqual(await readGarageSettings(), want, 'a rejected save changes nothing');
   writeFileSync(join(root, 'garage-settings.json'), '{broken');
   assert.deepEqual(await readGarageSettings(), D, 'a broken file = defaults, like the mod');
+});
+
+test('garage by tier: who is who written for the mod, kept by a panel save; each tier\'s slots and wait', async () => {
+  const { saveGarageSettings, saveGarageMembers, readGarageSettings, garageRuleFor } = await import('../dist/garage.js');
+  const members = { '76561198000000001': 'vip', '76561198000000002': 'svip', '76561198000000003': 'admin' };
+  assert.equal(await saveGarageMembers(members), true);
+  assert.equal(await saveGarageMembers(members), false, 'unchanged: not written again');
+  await saveGarageSettings({ redeemAt: 'current', maxSlots: 3, cooldown: 180 });
+  assert.deepEqual(JSON.parse(readFileSync(join(root, 'garage-settings.json'), 'utf8')).members, members, 'a panel save keeps the members');
+  const gs = await readGarageSettings();
+  assert.deepEqual(garageRuleFor(gs, 'normal'), { tier: 'normal', maxSlots: 3, cooldown: 180 });
+  assert.deepEqual(garageRuleFor(gs, 'vip'), { tier: 'vip', maxSlots: 5, cooldown: 120 });
+  assert.deepEqual(garageRuleFor(gs, 'svip'), { tier: 'svip', maxSlots: null, cooldown: 60 }, 'SVip: no limit');
+  assert.deepEqual(garageRuleFor(gs, 'admin'), { tier: 'admin', maxSlots: null, cooldown: 0 }, 'admin: no limit, no wait');
 });
 
 test('admin-made slots carry the fill the mod applies on redeem', async () => {

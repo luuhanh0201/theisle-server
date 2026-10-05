@@ -124,6 +124,21 @@ test('ExecStartPre CLI: re-applies in place, no-op without settings', () => {
   assert.equal(readFileSync(ini, 'utf8'), applySettings(GAME_REWRITTEN, { AllowedClasses: [] }));
 });
 
+test('ExecStartPre CLI: the SVip (svip.json next to the settings) in the game\'s VIP list, with or without panel settings', () => {
+  const cli = join(here, '..', 'dist', 'cli-apply-settings.js');
+  const dir = join(root, 'svip-start');
+  mkdirSync(dir, { recursive: true });
+  const ini = join(dir, 'Game.ini');
+  writeFileSync(ini, GAME_REWRITTEN);
+  writeFileSync(join(dir, 'svip.json'), JSON.stringify({ players: [{ steamId: '76561198000000002', note: '', addedAt: 1, by: null }] }));
+  execFileSync('node', [cli, '--in-place', ini, join(dir, 'none.json')]);
+  assert.deepEqual(readManaged(readFileSync(ini, 'utf8')).VIPs, ['76561198000000002'], 'no panel settings: the SVip still VIP');
+  writeFileSync(join(dir, 'settings.json'), JSON.stringify({ VIPs: ['76561198000000001'] }));
+  execFileSync('node', [cli, '--in-place', ini, join(dir, 'settings.json')]);
+  assert.deepEqual(readManaged(readFileSync(ini, 'utf8')).VIPs, ['76561198000000001', '76561198000000002'], 'the panel\'s VIPs and the SVip');
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8')).VIPs, ['76561198000000001'], 'the panel\'s list itself unchanged');
+});
+
 test('live save: validates first, backs up, writes settings and Game.ini', async () => {
   const live = join(process.env.GAME_CONFIG_DIR, 'Game.ini');
   writeFileSync(live, TEMPLATE_RENDERED);
@@ -213,4 +228,17 @@ test('the ambient fish numbers go in their own section, the rest untouched', () 
   assert.match(out, /\[\/Script\/TheIsle\.TIAIWorldSpawner\]\nMaxAmbientFishPerPlayer=20\nAmbientFishSoftLimitPerWater=40\nAmbientFishSpawnAttemptsPerPlayer=2/);
   assert.deepEqual(readManaged(out).MaxAmbientFishPerPlayer, 20);
   assert.equal(applySettings(out, { MaxAmbientFishPerPlayer: 20, AmbientFishSoftLimitPerWater: 40, AmbientFishSpawnAttemptsPerPlayer: 2 }), out, 'idempotent');
+});
+
+test('the SVip are the game\'s VIPs too: added at start, the panel\'s own list kept, Game.ini\'s when the panel has none', async () => {
+  const { withSvipVips, applySettings, readManaged } = await import('../dist/gameini.js');
+  const A = '76561198000000001', B = '76561198000000002', C = '76561198000000003';
+  assert.deepEqual(withSvipVips({ VIPs: [A], MaxPlayerCount: 50 }, [B, A], []), { VIPs: [A, B], MaxPlayerCount: 50 });
+  const same = { VIPs: [A] };
+  assert.equal(withSvipVips(same, [A], []), same, 'nothing new: the same settings');
+  assert.equal(withSvipVips(same, [], []), same, 'no SVip: unchanged');
+  assert.deepEqual(withSvipVips({}, [B], [C]).VIPs, [C, B], 'the panel never saved VIPs: Game.ini\'s kept, the SVip added');
+  assert.deepEqual(withSvipVips({}, ['nope', B], []).VIPs, [B], 'only SteamIDs');
+  const ini = '[/Script/TheIsle.TIGameSession]\nMaxPlayerCount=100\n';
+  assert.deepEqual(readManaged(applySettings(ini, withSvipVips({}, [B], []))).VIPs, [B], 'written into Game.ini');
 });

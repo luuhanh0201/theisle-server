@@ -158,7 +158,7 @@ local cd = portalById(8)
 check("the garage cooldown applies to the web too", cd and cd.ok == false
       and (cd.messages[1] or ""):find("hồi", 1, true) ~= nil, cd and json.encode(cd))
 
-skew = 61                                    -- past the 60 s cooldown
+skew = 181                                   -- past the 180 s cooldown (a plain player's default)
 local pawnR = H.makePawn({ growth = 0.05 })  -- respawned, same species
 local ctrlR = H.makeCtrl(A, pawnR, "Alpha")
 online = { ctrlR }
@@ -172,7 +172,7 @@ local red = eventsOf("garage_redeem")[1]
 check("restored", red and red.ok == true and red.slot == "1", red and json.encode(red))
 
 cmds({ { id = 10, type = "redeem", steamId = A, slot = "1" } })
-skew = 200
+skew = 362
 poll.fn()
 local again = portalById(10)
 check("a slot is used once", again and again.ok == false, again and json.encode(again))

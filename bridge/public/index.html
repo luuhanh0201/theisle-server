@@ -2540,9 +2540,9 @@
 
             <div class="cfg-grid">
               <div class="cfg-field">
-                <label for="gs-max-slots">Số slot tối đa mỗi người chơi <span class="mono">maxSlots</span></label>
+                <label for="gs-max-slots">👤 Người thường: số slot tối đa <span class="mono">maxSlots</span></label>
                 <input id="gs-max-slots" type="number" min="1" max="20" step="1">
-                <div class="step-hint">Tối đa bao nhiêu dino một người được cất (kể cả slot admin tặng). Mặc định 2.</div>
+                <div class="step-hint">Tối đa bao nhiêu dino một người được cất (kể cả slot admin tặng). Mặc định 3. Ai đang có nhiều hơn vẫn giữ và lấy ra được, chỉ không cất thêm.</div>
               </div>
               <div class="cfg-field">
                 <label for="gs-countdown">Thời gian đếm ngược khi cất (giây) <span class="mono">storeCountdown</span></label>
@@ -2550,9 +2550,29 @@
                 <div class="step-hint">Từ lúc bấm Cất tới khi dino vào gara. Người chơi phải đứng yên trong 5m, không nhận sát thương. Mặc định 30s.</div>
               </div>
               <div class="cfg-field">
-                <label for="gs-cooldown">Hồi chiêu giữa 2 lần dùng gara (giây) <span class="mono">cooldown</span></label>
+                <label for="gs-cooldown">👤 Người thường: chờ giữa 2 lần dùng gara (giây) <span class="mono">cooldown</span></label>
                 <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
-                <div class="step-hint">Thời gian chờ sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người. Mặc định 60s.</div>
+                <div class="step-hint">Thời gian chờ sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người. Mặc định 180 giây.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-vip-slots">⭐ VIP: số slot tối đa</label>
+                <input id="gs-vip-slots" type="number" min="0" max="50" step="1">
+                <div class="step-hint">0 = không giới hạn. Mặc định 5. VIP: Thành viên → VIP.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-vip-cd">⭐ VIP: chờ giữa 2 lần dùng gara (giây)</label>
+                <input id="gs-vip-cd" type="number" min="0" max="86400" step="1">
+                <div class="step-hint">Mặc định 120 giây.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-svip-slots">💎 SVip: số slot tối đa</label>
+                <input id="gs-svip-slots" type="number" min="0" max="50" step="1">
+                <div class="step-hint">0 = không giới hạn (mặc định). SVip: Thành viên → SVip.</div>
+              </div>
+              <div class="cfg-field">
+                <label for="gs-svip-cd">💎 SVip: chờ giữa 2 lần dùng gara (giây)</label>
+                <input id="gs-svip-cd" type="number" min="0" max="86400" step="1">
+                <div class="step-hint">Mặc định 60 giây. Admin luôn không giới hạn slot và không phải chờ.</div>
               </div>
               <div class="cfg-field">
                 <label for="gs-min-health">Máu tối thiểu để được cất (%) <span class="mono">minHealthPct</span></label>
@@ -3056,7 +3076,7 @@
       </div>
       <div data-sub="members:vips" hidden>
         <section class="card">
-          <div class="card-head"><h2>VIP</h2><span class="sub">được ưu tiên vào khi server đầy</span></div>
+          <div class="card-head"><h2>VIP</h2><span class="sub">được ưu tiên vào khi server đầy; gara 5 slot, chờ 120 giây (Server → Gara). SVip tự được tính là VIP trong game (thêm vào Game.ini mỗi lần server khởi động), không cần thêm ở đây.</span></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
             <div class="step-hint">Lưu vào Game.ini, có hiệu lực từ lần khởi động lại tới.</div>
             <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -5086,7 +5106,7 @@ function applyPlayersView() {
           <button type="button" class="icon-btn" data-copy-steam="${esc(p.steamId)}" title="Sao chép SteamID" style="padding:2px 5px;margin-left:4px;vertical-align:middle;display:inline-flex;font-size:11px">📋</button>
         </td>
         <td>${pingCell(p)}</td>
-        <td class="${p.garage ? '' : 'muted'}" style="font-variant-numeric:tabular-nums">${p.garage ?? 0}${playersState.garageMax ? `/${playersState.garageMax}` : ''}</td>
+        <td class="${p.garage ? '' : 'muted'}" style="font-variant-numeric:tabular-nums">${p.garage ?? 0}/${p.garageMax === null ? '∞' : p.garageMax ?? playersState.garageMax}</td>
         <td><b>${p.kills}</b> <span class="muted">/ ${p.deaths}</span></td>
         <td class="hide-sm">${num(p.damageDealt)}</td>
         <td class="hide-sm muted">${dur(p.playtime)}</td>
@@ -10879,11 +10899,15 @@ function renderGarageSettings(gs) {
   $('gs-max-slots').value = gs.maxSlots;
   $('gs-countdown').value = gs.storeCountdown;
   $('gs-cooldown').value = gs.cooldown;
+  $('gs-vip-slots').value = gs.tiers?.vip?.maxSlots ?? 5;
+  $('gs-vip-cd').value = gs.tiers?.vip?.cooldown ?? 120;
+  $('gs-svip-slots').value = gs.tiers?.svip?.maxSlots ?? 0;
+  $('gs-svip-cd').value = gs.tiers?.svip?.cooldown ?? 60;
   $('gs-min-health').value = gs.minHealthPct ?? 0;
   $('gs-min-growth').value = gs.minGrowthPct ?? 0;
   $('gs-help').innerHTML = GS_HELP[gs.redeemAt] ?? '';
 }
-for (const id of ['gs-max-slots', 'gs-countdown', 'gs-cooldown', 'gs-min-health', 'gs-min-growth']) $(id).addEventListener('input', () => { gsDirty = true; });
+for (const id of ['gs-max-slots', 'gs-countdown', 'gs-cooldown', 'gs-min-health', 'gs-min-growth', 'gs-vip-slots', 'gs-vip-cd', 'gs-svip-slots', 'gs-svip-cd']) $(id).addEventListener('input', () => { gsDirty = true; });
 $('gs-redeem-at').addEventListener('change', () => {
   gsDirty = true;
   $('gs-help').innerHTML = GS_HELP[$('gs-redeem-at').value] ?? '';
@@ -10896,6 +10920,8 @@ $('gs-save').addEventListener('click', () => withToken('lưu cài đặt gara', 
     cooldown: Number($('gs-cooldown').value),
     minHealthPct: Number($('gs-min-health').value),
     minGrowthPct: Number($('gs-min-growth').value),
+    tiers: { vip: { maxSlots: Number($('gs-vip-slots').value), cooldown: Number($('gs-vip-cd').value) },
+      svip: { maxSlots: Number($('gs-svip-slots').value), cooldown: Number($('gs-svip-cd').value) } },
   });
   gsDirty = false;
   toast('Đã lưu, áp dụng ngay cho lần cất / lấy ra kế tiếp.');

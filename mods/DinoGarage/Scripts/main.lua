@@ -104,7 +104,7 @@ end
 local function cooldownLeft(steamId, settings)
     local at = lastGarageUse[steamId]
     if at == nil then return nil end
-    local left = at + settings.cooldown - os.time()
+    local left = at + Settings.forPlayer(settings, steamId).cooldown - os.time()
     if left > 0 then return left end
     return nil
 end
@@ -204,7 +204,8 @@ local function finishStore(c, pawn, steamId, pending)
         failed("not_same_dino")
         return
     end
-    if Storage.listSlots(steamId)[slot] == nil and countSlots(steamId) >= settings.maxSlots then
+    local limit = Settings.forPlayer(settings, steamId).maxSlots
+    if Storage.listSlots(steamId)[slot] == nil and limit ~= nil and countSlots(steamId) >= limit then
         failed("full")
         return
     end
@@ -272,8 +273,9 @@ local function doStore(ctrl, steamId, say, cmdId)
         Msg.say(say, "garage.noDino", "Bạn cần đang điều khiển dino để cất.")
         return false
     end
-    if countSlots(steamId) >= settings.maxSlots then
-        Msg.say(say, "garage.full", "Gara đã đầy ({maxSlots} slot). Lấy bớt một con ra trước.", { maxSlots = settings.maxSlots })
+    local limit = Settings.forPlayer(settings, steamId).maxSlots
+    if limit ~= nil and countSlots(steamId) >= limit then
+        Msg.say(say, "garage.full", "Gara đã đầy ({maxSlots} slot). Lấy bớt một con ra trước.", { maxSlots = limit })
         return false
     end
     -- The admin's minimums (panel: garage settings): a dino too hurt or too

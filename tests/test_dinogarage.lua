@@ -445,15 +445,16 @@ check("no slot saved", next(Storage.listSlots(STEAM)) == nil)
 check("no dino removed", H.countCalls("SetHealth") == 0)
 check("the web is told: 'left'", final(id12) and final(id12).ok == false and final(id12).reason == "left")
 
-print("\n-- 13. two slots per player by default --")
+print("\n-- 13. three slots per plain player by default (owner, 2026-10-05) --")
 Storage.put(STEAM, "a1", { classPath = "X", growth = 1 })
 Storage.put(STEAM, "a2", { classPath = "X", growth = 1 })
+Storage.put(STEAM, "a3", { classPath = "X", growth = 1 })
 writeSettings('{"cooldown":0}')
 local c13 = H.makeCtrl(STEAM, H.makePawn({ growth = 0.7 }))
 useCtrl(c13)
 local id13 = send("store")
-check("third slot refused", (started(id13).messages[1] or ""):find("đầy (2 slot)", 1, true) ~= nil, started(id13).messages[1])
-writeSettings('{"cooldown":0,"maxSlots":3,"storeCountdown":0}')
+check("fourth slot refused", (started(id13).messages[1] or ""):find("đầy (3 slot)", 1, true) ~= nil, started(id13).messages[1])
+writeSettings('{"cooldown":0,"maxSlots":4,"storeCountdown":0}')
 local id13b = send("store")
 H.advance(10)
 check("allowed when the panel raises the limit, as slot 1", final(id13b) and final(id13b).ok == true
@@ -475,6 +476,32 @@ check("second use within 60 s refused", Storage.get(STEAM, "2") == nil
 clock = clock + 51
 send("store"); H.advance(10)
 check("allowed after the cooldown", Storage.get(STEAM, "2") ~= nil)
+
+print("\n-- 14b. by member tier: VIP 5 slots / 120 s, SVip no limit / 60 s, admin no limit / no wait --")
+do
+  local Settings = require("garage.settings")
+  writeSettings('{"maxSlots":3,"cooldown":180,"tiers":{"vip":{"maxSlots":5,"cooldown":120},"svip":{"maxSlots":0,"cooldown":60}},' ..
+    '"members":{"76561198000000071":"vip","76561198000000072":"svip","76561198000000073":"admin","76561198000000074":"boss"}}')
+  local s = Settings.read()
+  local function rule(id) local r = Settings.forPlayer(s, id); return r.tier .. " " .. tostring(r.maxSlots) .. " " .. r.cooldown end
+  check("a plain player: 3 slots, 180 s", rule(STEAM) == "normal 3 180", rule(STEAM))
+  check("VIP: 5 slots, 120 s", rule("76561198000000071") == "vip 5 120", rule("76561198000000071"))
+  check("SVip: no limit, 60 s", rule("76561198000000072") == "svip nil 60", rule("76561198000000072"))
+  check("admin: no limit, no wait", rule("76561198000000073") == "admin nil 0", rule("76561198000000073"))
+  check("an unknown tier is a plain player", rule("76561198000000074") == "normal 3 180", rule("76561198000000074"))
+  -- An SVip with 6 dinos stores a 7th; a plain player at 3 cannot.
+  local SV = "76561198000000072"
+  for i = 1, 6 do Storage.put(SV, "s" .. i, { classPath = "X", growth = 1 }) end
+  writeSettings('{"maxSlots":3,"cooldown":180,"storeCountdown":0,"members":{"' .. SV .. '":"svip"}}')
+  local csv = H.makeCtrl(SV, H.makePawn({ growth = 0.7 }))
+  useCtrl(csv)
+  local idv = send("store", { steamId = SV }); H.advance(10)
+  check("SVip: a 7th dino stored (no limit)", final(idv) and final(idv).ok == true, started(idv) and started(idv).messages[1])
+  clock = clock + 30
+  local idw = send("store", { steamId = SV }); H.advance(10)
+  check("SVip: 30 s later, still waiting (60 s)", (started(idw).messages[1] or ""):find("chờ 30 giây", 1, true) ~= nil, started(idw).messages[1])
+  for slot in pairs(Storage.listSlots(SV)) do Storage.discard(SV, slot) end
+end
 
 print("\n-- 15. an admin-made slot comes out with a full stomach --")
 writeSettings('{"cooldown":0,"maxSlots":10}')

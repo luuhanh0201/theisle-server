@@ -50,6 +50,7 @@ import { Prison } from './prison.js';
 import { KillScenes } from './kill-scene.js';
 import { GameAdminLog } from './game-admin-log.js';
 import { fillBags, settleUse } from './items.js';
+import { syncGarageMembers } from './member-tier.js';
 import { syncAdminGuard } from './permissions.js';
 import { bagUnlimited, publicServerInfo, shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
@@ -181,6 +182,8 @@ setInterval(sweepStarters, 60_000);
 // The admins' bags (items.ts fillBags): one of every item given out, at the start and every minute
 // (an admin added in Game.ini / the panel, an item made or given out again).
 const sweepAdminBags = (): void => {
+  // …and who is VIP / SVip / admin for the garage's slots and wait (member-tier.ts).
+  syncGarageMembers().catch((error: unknown) => console.error('[garage] could not write the members:', error));
   adminIds().then((ids) => fillBags(ids, STARTER_ITEM_IDS))
     .then((n) => { if (n > 0) console.info(`[items] ${n} item(s) put in the admins' bags`); })
     .catch((error: unknown) => console.error('[items] could not fill the admins\' bags:', error));

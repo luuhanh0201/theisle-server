@@ -26,6 +26,7 @@ import { KEEP_DAYS, type Traffic } from './traffic.js';
 import { EARLY_FEATURES, readSvip, saveSvip, type SvipState } from './svip.js';
 import { STARTER_ITEM_IDS } from './starter.js';
 import { readShop, saveShop } from './shop.js';
+import { memberTiers, syncGarageMembers } from './member-tier.js';
 import type { Metrics } from './metrics.js';
 import type { VoiceRoom } from './voice.js';
 import { handlePlayerApi, publicServerInfo, startMutationUse } from './player-api.js';
@@ -74,7 +75,7 @@ import {
   ConflictError,
   type NewSlotSpec,
   readGarageSettings,
-  saveGarageSettings,
+  saveGarageSettings, garageRuleFor,
 } from './garage.js';
 import { addPrimeFix, listPrimeFixes } from './prime-fixes.js';
 import type { Prison } from './prison.js';
@@ -1057,6 +1058,8 @@ async function handlePanel(
       const saved = await saveSvip(await readJsonBody(req), name ?? login.steamId ?? null);
       const ids = (s: typeof saved): string => s.players.map((p) => p.steamId).join(', ');
       await audit({ action: 'SVip saved', detail: describeChanges({ svip: ids(before), ...before.features }, { svip: ids(saved), ...saved.features }) || 'không đổi gì', ok: true });
+      // Their garage tier at once (member-tier.ts; the minute's sweep does it too).
+      await syncGarageMembers().catch((e: unknown) => console.error('[garage] members:', e));
       sendJson(res, 200, svipView(saved));
       return;
     }
@@ -1156,7 +1159,9 @@ async function handlePanel(
     if (path === '/api/garage-settings') {
       const before = await readGarageSettings();
       const saved = await saveGarageSettings(await readJsonBody(req));
-      await audit({ action: 'garage settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      const flat = ({ tiers, ...rest }: typeof saved): Record<string, unknown> => ({ ...rest,
+        vipMaxSlots: tiers.vip.maxSlots, vipCooldown: tiers.vip.cooldown, svipMaxSlots: tiers.svip.maxSlots, svipCooldown: tiers.svip.cooldown });
+      await audit({ action: 'garage settings saved', detail: describeChanges(flat(before), flat(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
     }
@@ -1174,6 +1179,8 @@ async function handlePanel(
         is[k] = settings[k];
       }
       await audit({ action: 'game config saved', detail: describeChanges(was, is) || 'không đổi gì', ok: true });
+      // A VIP or an admin added / removed: their garage tier at once.
+      await syncGarageMembers().catch((e: unknown) => console.error('[garage] members:', e));
       let operation = null;
       if (body.restart) {
         operation = power.request('restart', {
@@ -1335,9 +1342,11 @@ async function handlePanel(
   switch (path) {
     case '/api/players': {
       // With each player's garage: how many dinos stored, of the slots allowed.
-      const [index, gs] = await Promise.all([listAll(), readGarageSettings()]);
+      const [index, gs, tiers] = await Promise.all([listAll(), readGarageSettings(), memberTiers()]);
       sendJson(res, 200, {
         players: store.players().map((p) => ({ ...p, garage: Object.keys(index.players[p.steamId] ?? {}).length,
+          // Their garage by tier (garage.ts garageRuleFor): null = no limit.
+          garageMax: garageRuleFor(gs, tiers[p.steamId] ?? 'normal').maxSlots, tier: tiers[p.steamId] ?? 'normal',
           // Serving a prison sentence: shown as [Tù] (prison.ts).
           ...(ctx.prison?.isInmate(p.steamId) ? { prison: ctx.prison.playerView(p.steamId) } : {}) })),
         garageMax: gs.maxSlots,

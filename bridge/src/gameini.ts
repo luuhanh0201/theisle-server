@@ -406,6 +406,19 @@ export function withoutAdmins(settings: Settings, off: ReadonlySet<string>, keep
   return { ...settings, AdminsSteamIDs: kept.length > 0 ? kept : list };
 }
 
+/**
+ * The settings as Game.ini gets them: the SVip in the game's VIP list too (owner, 2026-10-05: SVip has
+ * every VIP right, the queue when the server is full). `current` is Game.ini's own VIPs, kept when the
+ * panel never saved the list. The panel's list itself is not changed: one no longer SVip drops out of
+ * the game's list at the next start. Never more than the game's 2,000.
+ */
+export function withSvipVips(settings: Settings, svip: readonly string[], current: unknown): Settings {
+  if (svip.length === 0) return settings;
+  const base = Array.isArray(settings['VIPs']) ? settings['VIPs'] : Array.isArray(current) ? current.filter((x): x is string => typeof x === 'string') : [];
+  const merged = [...new Set([...base, ...svip.filter((id) => /^\d{17}$/.test(id))])].slice(0, 2000);
+  return merged.length === base.length ? settings : { ...settings, VIPs: merged };
+}
+
 export async function readLive(): Promise<LiveConfig> {
   const settings = await readSettings();
   try {

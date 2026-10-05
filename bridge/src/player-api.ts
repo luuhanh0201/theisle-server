@@ -4,8 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
-import { isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
+import { garageRuleFor, isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
 import { claimStarter, starterOffered } from './starter.js';
+import { tierOf } from './member-tier.js';
 import { MAX_QTY, buy, shopView } from './shop.js';
 import { boxOptions, dinoItemOptions, openDinoBox, speciesOptions, useDinoItem } from './dino-box.js';
 import { audit } from './audit.js';
@@ -764,7 +765,8 @@ export async function handlePlayerApi(
       ...playerView(steamId, detail?.player ?? null, detail?.lives ?? [], await readPlayerGarage(steamId), live, trail,
         (id) => ctx.store.isAdmin(id)),
       // The garage rules the web garage shows (and the mod enforces).
-      garageRules: { maxSlots: gs.maxSlots, redeemAt: gs.redeemAt, storeCountdown: gs.storeCountdown, cooldown: gs.cooldown,
+      // By their tier (member-tier.ts): người thường / VIP / SVip / admin; maxSlots null = no limit.
+      garageRules: { ...garageRuleFor(gs, await tierOf(steamId)), redeemAt: gs.redeemAt, storeCountdown: gs.storeCountdown,
         minHealthPct: gs.minHealthPct, minGrowthPct: gs.minGrowthPct },
       // Colours kept for the next times, by species (kept-skins.ts).
       keptSkins: await keptSkinsOf(steamId),

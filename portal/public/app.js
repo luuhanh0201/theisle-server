@@ -1559,20 +1559,25 @@ const DEMO_TIER_SLOTS = [
   },
 ];
 
+/** The member tiers (bridge member-tier.ts), as the garage names them. */
+const GARA_TIER = { normal: '👤 Người thường', vip: '⭐ VIP', svip: '💎 SVip', admin: '🛡️ Admin' };
 function renderGara(me) {
   if (!me) return;
-  const rules = me.garageRules ?? { maxSlots: 2, redeemAt: 'current', storeCountdown: 30 };
+  const rules = me.garageRules ?? { maxSlots: 3, redeemAt: 'current', storeCountdown: 30, cooldown: 180, tier: 'normal' };
+  // maxSlots null: no limit (SVip, admin; bridge garage.ts garageRuleFor).
+  const maxText = rules.maxSlots == null ? '∞' : rules.maxSlots;
   $('nav-gara-badge').textContent = me.garage.length;
-  $('gara-count-tag').textContent = garagePreviewTiers ? 'Demo hiệu ứng' : `${me.garage.length} / ${rules.maxSlots}`;
+  $('gara-count-tag').textContent = garagePreviewTiers ? 'Demo hiệu ứng' : `${me.garage.length} / ${maxText}`;
+  $('gara-tier').innerHTML = `${GARA_TIER[rules.tier] ?? GARA_TIER.normal}: <b>${rules.maxSlots == null ? 'không giới hạn ô' : `${rules.maxSlots} ô`}</b>, chờ <b>${rules.cooldown ?? 0} giây</b> giữa 2 lần cất / lấy.`;
   $('gara-where-box').hidden = rules.redeemAt !== 'choice';
   const hubGaraSub = $('hub-gara-sub');
   if (hubGaraSub) {
-    hubGaraSub.textContent = me.garage.length > 0 ? `${me.garage.length}/${rules.maxSlots} dino` : 'Cất & Khôi phục';
+    hubGaraSub.textContent = me.garage.length > 0 ? `${me.garage.length}/${maxText} dino` : 'Cất & Khôi phục';
   }
 
   // Store: needs a dino in game, a free place, nothing in flight.
   const playing = Boolean(me.online && me.dino);
-  const full = me.garage.length >= rules.maxSlots;
+  const full = rules.maxSlots != null && me.garage.length >= rules.maxSlots;
   // The admin's minimums (the game checks them again when storing).
   const d = me.dino;
   const hpPct = d && typeof d.vitals?.health === 'number' && d.max?.health > 0 ? d.vitals.health / d.max.health * 100 : null;

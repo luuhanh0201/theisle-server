@@ -209,7 +209,9 @@ test('web garage: a player\'s own store / redeem goes to the inbox, one at a tim
 
 test('me: the garage rules the web garage shows', async () => {
   const { body } = await call(`/player-api/me/${ME}`);
-  assert.equal(body.garageRules.maxSlots, 2);
+  assert.equal(body.garageRules.maxSlots, 3, 'a plain player: 3 slots');
+  assert.equal(body.garageRules.cooldown, 180);
+  assert.equal(body.garageRules.tier, 'normal');
   assert.equal(body.garageRules.storeCountdown, 30);
   assert.equal(body.garageRules.redeemAt, 'current');
 });
