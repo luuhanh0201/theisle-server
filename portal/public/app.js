@@ -1119,7 +1119,7 @@ function renderGame(me) {
   renderPrison(me.prison ?? null);
   const navBadge = $('nav-dino-badge');
   if (me.dino && me.online) {
-    navBadge.hidden = false;
+    navBadge.classList.add('on');
     $('game-dino-species').textContent = me.dino.species ?? 'Dino Đang Chơi';
     $('game-dino-status').textContent = 'Đang trực tuyến trên server Gateway';
     { const st = growthStage(me.dino.growth); $('game-dino-growth').textContent = `${st.icon} Growth: ${pct(me.dino.growth)}`; $('game-dino-growth').title = st.name; }
@@ -1177,7 +1177,7 @@ function renderGame(me) {
       if ($('hub-prime-text')) $('hub-prime-text').textContent = me.dino.prime ? '👑 Đã đạt danh hiệu Prime' : 'Nhiệm vụ Prime đang theo dõi';
     }
   } else {
-    navBadge.hidden = true;
+    navBadge.classList.remove('on');
     $('game-dino-species').textContent = me.online ? 'Đang chọn loài' : 'Chưa vào server';
     $('game-dino-status').textContent = me.online ? 'Bạn đang ở sảnh chọn dino ingame.' : 'Vào game để hiển thị đầy đủ chỉ số và vị trí.';
     $('game-dino-growth').textContent = '🥚 Growth: 0%';
@@ -3132,12 +3132,26 @@ function questRow(q, locked) {
       <div class="hq-meta">${num(q.progress)}/${num(q.target)} ${esc(q.unit)} · thưởng ${amber(q.reward)}</div></div>${btn}
       <div class="hr-progress"><i style="width:${pct}%"></i></div></li>`;
 }
+// The mark beside a feature (bridge svip.ts /me releases): its level, or NEW for 7 days after it is made public.
+const REL_BADGE = { dev: ['Đang phát triển', 'Chỉ admin thấy: đang phát triển'], svip: ['Ưu tiên', 'SVip dùng trước, sẽ mở cho tất cả'], new: ['NEW', 'Vừa phát hành'] };
+const relBadge = (b) => (REL_BADGE[b] ? `<span class="rel-badge rel-${b}" title="${esc(REL_BADGE[b][1])}">${esc(REL_BADGE[b][0])}</span>` : '');
+/** The menu's marks: Túi đồ, Cửa hàng; Trang chủ when its features (Hổ phách, nhiệm vụ, quà tân thủ) all share one. */
+function renderReleases(me) {
+  const rel = me?.releases ?? {};
+  const set = (id, b) => { const el = $(id); if (!el) return; el.hidden = !REL_BADGE[b]; if (REL_BADGE[b]) { el.className = `nav-rel rel-badge rel-${b}`; el.textContent = REL_BADGE[b][0]; el.title = REL_BADGE[b][1]; } };
+  set('nav-bag-rel', rel.bag);
+  set('nav-shop-rel', rel.shop);
+  const home = [me?.economy ? rel.amber ?? '' : null, me?.quests ? rel.quests ?? '' : null, me?.starter ? rel.starter ?? '' : null].filter((x) => x !== null);
+  set('nav-home-rel', home.length > 0 && home.every((x) => x === home[0]) ? home[0] : '');
+}
 function renderHomeRewards(me) {
+  renderReleases(me);
   const eco = me?.economy ?? null;
   // The starter gift waits here until taken; then the ticket is in the bag and this box is gone.
   const gift = me?.starter ?? null;
   const quests = me?.quests ?? null;
-  const sig = JSON.stringify([eco, quests, gift, homeBusy]);
+  const rel = me?.releases ?? {};
+  const sig = JSON.stringify([eco, quests, gift, homeBusy, rel]);
   if (sig === homeSig) return;
   homeSig = sig;
   // The balance, by the way in (a click: the shop).
@@ -3150,14 +3164,14 @@ function renderHomeRewards(me) {
   st.hidden = !gift;
   if (gift) {
     // A button in the corner; what it gives shows on hover (or keyboard focus).
-    st.innerHTML = `<button type="button" class="hr-starter-btn" id="home-starter-btn" aria-describedby="home-starter-tip" ${gift.locked || homeBusy ? 'disabled' : ''}>🎁 Quà tân thủ <b>Nhận</b></button>
+    st.innerHTML = `<button type="button" class="hr-starter-btn" id="home-starter-btn" aria-describedby="home-starter-tip" ${gift.locked || homeBusy ? 'disabled' : ''}>🎁 Quà tân thủ ${relBadge(rel.starter)}<b>Nhận</b></button>
       <span class="hr-starter-tip" id="home-starter-tip" role="tooltip"><b>Hộp dino tự chọn</b>, mỗi tài khoản 1 lần. Nhận hộp vào <b>Túi đồ</b> → mở hộp, <b>chọn loài</b> (tăng trưởng ngẫu nhiên 50–100%) → dùng Dino vừa mở để chọn <b>giới tính</b> và <b>mutation</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>.${gift.locked ? `<br>🧪 ${esc(gift.locked)}` : ''}</span>`;
   }
   // The daily and weekly quests.
   const qe = $('home-quests');
   qe.hidden = !quests;
   if (quests) {
-    qe.innerHTML = `<h3>🎯 Nhiệm vụ hôm nay</h3>
+    qe.innerHTML = `<h3>🎯 Nhiệm vụ hôm nay ${relBadge(rel.quests)}</h3>
       ${quests.daily.length ? `<ul class="hq-list">${quests.daily.map((q) => questRow(q, quests.locked)).join('')}</ul>` : '<p>Chưa có nhiệm vụ hôm nay.</p>'}
       ${quests.weekly ? `<div class="hq-week">Nhiệm vụ tuần</div><ul class="hq-list">${questRow(quests.weekly, quests.locked)}</ul>` : ''}
       ${quests.locked ? `<div class="hr-note">🧪 ${esc(quests.locked)}</div>` : ''}
@@ -3183,7 +3197,7 @@ function renderHomeRewards(me) {
     const todayGift = c.day === c.rewards.length && c.bonusItem ? `🎁 ${esc(c.bonusItem)}` : '';
     const gets = [reward > 0 ? amber(reward, '+') : '', todayGift].filter(Boolean).join(' + ');
     const label = c.claimed ? '✓ Đã điểm danh hôm nay' : c.ready ? (gets ? `Điểm danh: ${gets}` : 'Điểm danh') : `Chơi thêm ${Math.max(0, c.needed - c.minutes)} phút để điểm danh`;
-    ck.innerHTML = `<h3>📅 Điểm danh hằng ngày <span class="muted" style="font-size:13px;font-weight:600">ngày ${c.day}/${c.rewards.length}</span></h3>
+    ck.innerHTML = `<h3>📅 Điểm danh hằng ngày <span class="muted" style="font-size:13px;font-weight:600">ngày ${c.day}/${c.rewards.length}</span> ${relBadge(rel.amber)}</h3>
       <div class="hr-days">${days}</div>
       <div class="hr-row" style="justify-content:space-between"><span class="muted">Hôm nay đã chơi <b>${c.minutes}</b>/${c.needed} phút trong game</span>
         ${c.bonusItem ? `<span class="muted">Ngày ${c.rewards.length}: +🎁 ${esc(c.bonusItem)}</span>` : ''}</div>

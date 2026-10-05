@@ -14,7 +14,7 @@ after(() => rmSync(root, { recursive: true, force: true }));
 // The bag's own list before SVip: taken over.
 writeFileSync(join(process.env.DATA_DIR, 'bag-access.json'), JSON.stringify({ players: ['76561199248426579'] }));
 
-const { readSvip, saveSvip, earlyAccess, featureAccess, isSvip, resetSvipCache, closedError } = await import('../dist/svip.js');
+const { readSvip, saveSvip, earlyAccess, featureAccess, isSvip, resetSvipCache, closedError, releaseBadge } = await import('../dist/svip.js');
 const ADMIN = '76561198000000090', OLD = '76561199248426579', NEW = '76561198000000077', PLAYER = '76561198000000055';
 
 test('the bag\'s old list becomes SVip; a feature not set yet is for the admins only', async () => {
@@ -56,6 +56,22 @@ test('saving: a new SVip gets its time and who added it, the old keep theirs; "a
   await saveSvip({ players: [], features: { bag: 'all' } }, 'Dã Tượng');
   assert.equal(await earlyAccess('bag', PLAYER), true, 'open to all');
   assert.equal(await isSvip(OLD), false, 'removed');
+});
+
+test('the mark beside a feature: Đang phát triển, Ưu tiên, NEW for 7 days after Công khai', async () => {
+  const T = 1_800_000_000_000, D = 86_400;
+  let st = await saveSvip({ players: [], features: { bag: 'admin', shop: 'testing', quests: 'all' } }, null, T);
+  assert.deepEqual([releaseBadge(st, 'bag'), releaseBadge(st, 'shop'), releaseBadge(st, 'quests', T / 1000 + 60)], ['dev', 'svip', 'new']);
+  assert.equal(st.released.quests, T / 1000, 'made Công khai now');
+  st = await saveSvip({ players: [], features: { bag: 'admin', shop: 'all', quests: 'all' } }, null, T + 3 * D * 1000);
+  assert.equal(st.released.quests, T / 1000, 'kept while it stays Công khai (the panel sends none)');
+  assert.equal(st.released.shop, T / 1000 + 3 * D, 'the shop: now');
+  assert.equal(releaseBadge(st, 'quests', T / 1000 + 7 * D - 1), 'new', 'still within 7 days');
+  assert.equal(releaseBadge(st, 'quests', T / 1000 + 7 * D), null, 'after 7 days: nothing');
+  st = await saveSvip({ players: [], features: { bag: 'admin', shop: 'testing', quests: 'all' } }, null, T + 4 * D * 1000);
+  assert.equal(st.released.shop, undefined, 'moved back down: forgotten');
+  resetSvipCache();
+  assert.equal((await readSvip()).released.quests, T / 1000, 'read back from the file');
 });
 
 test('a bad SteamID is refused, nothing saved', async () => {

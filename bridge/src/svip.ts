@@ -13,7 +13,10 @@ import { adminIds } from './panel-auth.js';
  *   "testing" SVip, ưu tiên dùng trước: admins + SVip; others see it, locked.
  *   "all"     Công khai, đã phát hành: everyone.
  *
- *   DATA_DIR/svip.json  { players: [{ steamId, note, addedAt, by }], features: { bag: 'testing' } }
+ *   DATA_DIR/svip.json  { players: [{ steamId, note, addedAt, by }], features: { bag: 'testing' }, released: { shop: <unix s> } }
+ *
+ * `released`: when a feature was made Công khai (moved back down: forgotten), for the web's "NEW"
+ * beside it for RELEASE_NEW_DAYS (releaseBadge).
  *
  * The bag's own list before this (data/bag-access.json, T-Rex Nổi Loạn) is
  * taken over the first time: those players become SVip.
@@ -45,12 +48,24 @@ export const closedError = (name: string, access: FeatureAccess): string =>
   (access === 'hidden' ? `${name} đang phát triển, chưa mở.` : `${name} đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.`);
 
 export interface SvipEntry { steamId: string; note: string; addedAt: number; by: string | null }
-export interface SvipState { players: SvipEntry[]; features: Record<FeatureKey, FeatureMode> }
+export interface SvipState { players: SvipEntry[]; features: Record<FeatureKey, FeatureMode>; released: Partial<Record<FeatureKey, number>> }
+
+/** "NEW" beside a feature this many days after it is made Công khai (owner, 2026-10-06: "< 7 ngày ghi new"). */
+export const RELEASE_NEW_DAYS = 7;
+/** What the web writes beside a feature: Đang phát triển, Ưu tiên (SVip), NEW (Công khai < 7 days), or nothing. */
+export type ReleaseBadge = 'dev' | 'svip' | 'new';
+export function releaseBadge(s: SvipState, feature: FeatureKey, nowS = Math.floor(Date.now() / 1000)): ReleaseBadge | null {
+  const mode = s.features[feature];
+  if (mode === 'admin') return 'dev';
+  if (mode === 'testing') return 'svip';
+  const at = s.released[feature];
+  return at !== undefined && nowS - at < RELEASE_NEW_DAYS * 86_400 ? 'new' : null;
+}
 
 const MAX_PLAYERS = 500;
 const path = (): string => join(config.dataDir, 'svip.json');
 // A feature not set yet (a new one): the admins only, until it is moved up in the panel.
-const defaults = (): SvipState => ({ players: [], features: Object.fromEntries(EARLY_FEATURES.map((f) => [f.key, 'admin'])) as SvipState['features'] });
+const defaults = (): SvipState => ({ players: [], features: Object.fromEntries(EARLY_FEATURES.map((f) => [f.key, 'admin'])) as SvipState['features'], released: {} });
 
 let cache: { state: SvipState; at: number } | null = null;
 const CACHE_MS = 5000;
@@ -73,6 +88,11 @@ function clean(raw: unknown): SvipState {
   }
   const f = (typeof r['features'] === 'object' && r['features'] !== null ? r['features'] : {}) as Record<string, unknown>;
   for (const { key } of EARLY_FEATURES) { const m = f[key]; if (isMode(m)) out.features[key] = m; }
+  const rel = (typeof r['released'] === 'object' && r['released'] !== null ? r['released'] : {}) as Record<string, unknown>;
+  for (const { key } of EARLY_FEATURES) {
+    const at = rel[key];
+    if (out.features[key] === 'all' && typeof at === 'number' && Number.isFinite(at)) out.released[key] = at;
+  }
   return out;
 }
 
@@ -117,6 +137,12 @@ export async function saveSvip(raw: unknown, by: string | null, nowMs = Date.now
     const was = known.get(p.steamId);
     return was !== undefined ? { ...was, note: p.note } : { ...p, addedAt: Math.floor(nowMs / 1000), by };
   });
+  // When each feature was made Công khai: kept while it stays there, now when it gets there (the panel sends none).
+  next.released = {};
+  for (const { key } of EARLY_FEATURES) {
+    if (next.features[key] !== 'all') continue;
+    next.released[key] = before.features[key] === 'all' ? before.released[key] ?? Math.floor(nowMs / 1000) : Math.floor(nowMs / 1000);
+  }
   await mkdir(config.dataDir, { recursive: true });
   const tmp = `${path()}.tmp`;
   await writeFile(tmp, JSON.stringify(next, null, 2), 'utf8');

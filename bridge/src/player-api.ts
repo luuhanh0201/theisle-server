@@ -27,7 +27,7 @@ import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoo
 import { readVoiceSettings, shownName } from './voice-settings.js';
 import type { Prison } from './prison.js';
 import { adminIds } from './panel-auth.js';
-import { LOCKED_NOTE, type FeatureAccess, type FeatureKey, closedError, earlyAccess, featureAccess, isSvip } from './svip.js';
+import { EARLY_FEATURES, LOCKED_NOTE, type FeatureAccess, type FeatureKey, type ReleaseBadge, closedError, earlyAccess, featureAccess, isSvip, readSvip, releaseBadge } from './svip.js';
 import { parseTrafficEvent, type Traffic } from './traffic.js';
 import { MUTATION_REFERENCE, findReference } from './mutation-reference.js';
 import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from './mutation-tiers.js';
@@ -46,6 +46,16 @@ export async function bagOpen(steamId: string): Promise<boolean> {
  */
 function shown<T extends object>(access: FeatureAccess, part: T): (T & { locked?: string }) | null {
   return access === 'open' ? part : access === 'locked' ? { ...part, locked: LOCKED_NOTE } : null;
+}
+/** The web's mark beside each feature this player sees (one Chỉ admin hides from them: none). */
+async function releasesFor(steamId: string): Promise<Partial<Record<FeatureKey, ReleaseBadge>>> {
+  const s = await readSvip();
+  const out: Partial<Record<FeatureKey, ReleaseBadge>> = {};
+  for (const { key } of EARLY_FEATURES) {
+    const b = releaseBadge(s, key);
+    if (b !== null && (await featureAccess(key, steamId)) !== 'hidden') out[key] = b;
+  }
+  return out;
 }
 /** A route of a feature not open to this player: 403 with why, and true (the route is done). */
 async function refused(res: ServerResponse, feature: FeatureKey, steamId: string, name: string): Promise<boolean> {
@@ -825,6 +835,8 @@ export async function handlePlayerApi(
       shop: shown(await featureAccess('shop', steamId), {}),
       // SVip (svip.ts): tries the features being tested before everyone.
       svip: await isSvip(steamId),
+      // Beside each feature they see (svip.ts): dev (Chỉ admin), svip (Ưu tiên), new (Công khai < 7 days).
+      releases: await releasesFor(steamId),
       // Hổ phách and the daily check-in (economy.ts); being tried: shown, marked.
       economy: shown(await featureAccess('amber', steamId), {
         currency: CURRENCY,

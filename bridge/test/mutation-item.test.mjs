@@ -90,6 +90,8 @@ test('a player uses a mutation from their bag: checks, the command, used up only
   const lv = (await call(`/player-api/me/${P2}`)).body;
   assert.equal(lv.economy, null, 'Hổ phách at Chỉ admin: a player gets nothing of it');
   assert.match(lv.shop.locked, /SVip dùng trước/, 'the shop at SVip: shown, locked');
+  assert.deepEqual(lv.releases, { bag: 'svip', shop: 'svip' }, 'marks: Ưu tiên for SVip ones; none for Chỉ admin (hidden) or an old Công khai');
+  assert.equal((await call(`/player-api/me/${P1}`)).body.releases.amber, 'dev', 'an admin sees Đang phát triển');
   assert.equal((await call(`/player-api/me/${P1}`)).body.economy.locked, undefined, 'an admin: Hổ phách open');
   assert.equal((await call(`/player-api/shop/${P2}/buy`, 'POST', { listing: 'x', qty: 1 })).status, 403, 'a locked shop sells nothing');
   writeFileSync(join(root, 'data', 'svip.json'), JSON.stringify({ players: [], features: { bag: 'testing', shop: 'admin' } }));
