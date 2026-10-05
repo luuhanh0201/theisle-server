@@ -45,6 +45,9 @@ export class BridgeClient {
   heatmap() { return this.get('/player-api/heatmap'); }
   /** The daily check-in (bridge economy.ts). */
   checkin(steamId: string) { return this.post(`/player-api/checkin/${steamId}`, {}); }
+  /** The Hổ phách shop (bridge shop.ts): what is on sale, and a buy. */
+  shop(steamId: string) { return this.get(`/player-api/shop/${steamId}`); }
+  shopBuy(steamId: string, body: { listing: unknown; qty: unknown }) { return this.post(`/player-api/shop/${steamId}/buy`, body); }
   /** The starter gift (bridge starter.ts): taken on the home page, the ticket into the bag. */
   claimStarter(steamId: string) { return this.post(`/player-api/starter/${steamId}/claim`, {}); }
   /** A quest's reward (bridge quests.ts). */

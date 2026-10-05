@@ -106,6 +106,8 @@ const bridge = {
   heatmap: async () => ({ status: 200, body: { t: 1, next: 300, cell: 50000, players: 2, cells: [{ x: 25000, y: 25000, n: 2 }] } }),
   claimQuest: async (steamId, quest) => { bridgeCalls.push(`quest:${steamId}:${quest}`); return { status: 200, body: { reward: 100, balance: 100, label: 'Hạ 1 dino' } }; },
   claimStarter: async (steamId) => { bridgeCalls.push(`starter:${steamId}`); return { status: 200, body: { item: 'Phiếu chọn dino' } }; },
+  shop: async (steamId) => { bridgeCalls.push(`shop:${steamId}`); return { status: 200, body: { listings: [] } }; },
+  shopBuy: async (steamId, body) => { bridgeCalls.push({ shopBuy: steamId, body }); return { status: 200, body: { item: 'Hộp food nhỏ', qty: 2, spent: 100, balance: 0, left: 1 } }; },
   checkin: async (steamId) => { bridgeCalls.push(`checkin:${steamId}`); return { status: 200, body: { day: 1, reward: 50, balance: 50, item: null } }; },
   itemOptions: async (steamId, kind, uid) => { bridgeCalls.push(`opts:${steamId}:${kind}:${uid}`); return { status: 200, body: { pick: 'random' } }; },
   openBox: async (steamId, body) => { bridgeCalls.push({ openBox: steamId, body }); return { status: 200, body: { uid: 'own_10', species: 'triceratops', label: 'Triceratops', growth: 0.7, drawn: true } }; },
@@ -163,6 +165,11 @@ test('the check-in and the dino ticket: login, same-origin; the SteamID is the s
   const r = await post('/api/checkin', { ...json, cookie, origin });
   assert.equal(r.status, 200);
   assert.equal(bridgeCalls[bridgeCalls.length - 1], `checkin:${ME}`);
+  const buy = JSON.stringify({ listing: 'sh_1', qty: 2, price: 1, steamId: '76561198000000002' });
+  assert.equal((await post('/api/shop/buy', { ...json, origin }, buy)).status, 401, 'the shop: no login');
+  assert.equal((await post('/api/shop/buy', { ...json, cookie, origin: 'https://evil.example' }, buy)).status, 403, 'the shop: another site');
+  assert.equal((await post('/api/shop/buy', { ...json, cookie, origin }, buy)).status, 200);
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { shopBuy: ME, body: { listing: 'sh_1', qty: 2 } }, 'the shop: no price, no SteamID from the browser');
   assert.equal((await post('/api/starter/claim', { ...json, origin })).status, 401, 'the gift: no login');
   assert.equal((await post('/api/starter/claim', { ...json, cookie, origin: 'https://evil.example' })).status, 403, 'the gift: another site');
   assert.equal((await post('/api/starter/claim', { ...json, cookie, origin }, '{"steamId":"76561198000000002"}')).status, 200);

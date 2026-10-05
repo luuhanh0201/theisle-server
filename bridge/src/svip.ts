@@ -22,6 +22,7 @@ export const EARLY_FEATURES = [
   { key: 'starter', label: 'Hộp dino (quà tân thủ mỗi tài khoản 1 hộp, hộp ngẫu nhiên / tự chọn): mở hộp, dùng Dino để nhận vào gara' },
   { key: 'amber', label: 'Hổ phách + điểm danh hàng ngày (nhận thưởng khi chơi đủ phút trong ngày)' },
   { key: 'quests', label: 'Nhiệm vụ hằng ngày / tuần (thưởng Hổ phách)' },
+  { key: 'shop', label: 'Cửa hàng Hổ phách: mua vật phẩm bằng Hổ phách (giới hạn mỗi ngày)' },
 ] as const;
 export type FeatureKey = typeof EARLY_FEATURES[number]['key'];
 export type FeatureMode = 'testing' | 'all';

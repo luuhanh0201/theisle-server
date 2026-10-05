@@ -313,6 +313,20 @@
   .qq-row .qq-on { flex-direction: row; align-items: center; padding-bottom: 8px; }
   @media (max-width: 1100px) { .qq-row { grid-template-columns: auto repeat(2, minmax(0, 1fr)) auto; } .qq-row .qq-wide { grid-column: span 2; } }
   @media (max-width: 560px) { .qq-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .qq-row .qq-wide { grid-column: 1 / -1; } }
+  .sp-row { display: grid; grid-template-columns: auto minmax(200px, 3fr) repeat(2, minmax(100px, 1fr)) auto; gap: 8px; align-items: end;
+    padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+  .sp-row.off { opacity: .6; }
+  .sp-row label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); font-weight: 650; min-width: 0; }
+  .sp-row .qq-on { flex-direction: row; align-items: center; padding-bottom: 8px; }
+  .sp-row .sp-btns { display: flex; gap: 4px; }
+  @media (max-width: 700px) {
+    .sp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .sp-row .qq-on { grid-column: 1 / -1; padding-bottom: 0; gap: 8px; justify-content: flex-start; font-size: 13px; }
+    .sp-row .qq-on input { width: auto; flex: none; }
+    .sp-row .qq-on::after { content: 'Đang bán'; }
+    .sp-row .sp-item, .sp-row .sp-btns { grid-column: 1 / -1; }
+    .sp-row .sp-btns { justify-content: flex-end; }
+  }
   .qs-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
   .qs-days label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; min-width: 0; }
   @media (max-width: 700px) { .qs-days { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -3113,6 +3127,15 @@
             <button type="button" class="btn" id="qs-apply">Cộng / trừ</button>
           </div>
           <div id="qs-top"></div>
+        </div>
+      </section>
+      <section class="card" style="margin-top:16px">
+        <div class="card-head"><h2>🏪 Cửa hàng Hổ phách</h2><span class="sub">người chơi mua ở trang Cửa hàng, vật phẩm vào Túi đồ; giới hạn tính theo người, mỗi ngày (00:00 giờ VN); 0 = không giới hạn</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+          <p class="step-hint" style="margin:0">Thứ tự ở đây là thứ tự trong cửa hàng (trong từng nhóm). Món tắt hoặc vật phẩm ngừng phát hành thì không hiện. Mỗi lần mua ghi vào Sổ giao dịch ("Mua N × tên"). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Cửa hàng).</p>
+          <div id="sp-list" class="qq-list"></div>
+          <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap"><span class="muted" id="sp-dirty" style="margin-right:auto;font-size:12.5px"></span>
+            <button type="button" class="btn-ghost" id="sp-add">+ Thêm món</button><button type="button" class="btn" id="sp-save">Lưu cửa hàng</button></div>
         </div>
       </section>
       <section class="card" style="margin-top:16px">
@@ -9340,8 +9363,72 @@ $('qq-save').addEventListener('click', () => withToken('lưu nhiệm vụ', asyn
   renderQq();
   toast('Đã lưu nhiệm vụ.');
 }));
+// --- Nhiệm vụ → Cửa hàng Hổ phách (bridge shop.ts) ---
+const sp = { draft: null, saved: null, items: [] };
+const spDirty = () => sp.draft !== null && JSON.stringify(sp.draft) !== sp.saved;
+const SP_TYPE = { mutation: '🧬', mutation_ticket: '🎟️', mutation_clear: '🧹', prime_ticket: '👑', dino_box: '🎁', growth_bag: '🌱', food_box: '🍖', salt_lick: '🧂', skin: '🎨' };
+function renderSp() {
+  const d = sp.draft;
+  if (!d) return;
+  const edit = can('economy.edit');
+  const dis = edit ? '' : ' disabled';
+  const known = new Set(sp.items.map((i) => i.id));
+  $('sp-list').innerHTML = d.map((l, i) => `<div class="sp-row${l.enabled ? '' : ' off'}" data-sp="${i}">
+      <label class="qq-on" title="Bật / tắt"><input type="checkbox" data-sp-f="enabled"${l.enabled ? ' checked' : ''}${dis}></label>
+      <label class="sp-item">Vật phẩm<select data-sp-f="itemId"${dis}>${known.has(l.itemId) ? '' : `<option value="${esc(l.itemId)}" selected>${esc(l.itemId)} (không còn)</option>`}${sp.items.map((it) =>
+        `<option value="${esc(it.id)}"${it.id === l.itemId ? ' selected' : ''}>${SP_TYPE[it.type] ?? ''} ${esc(it.name)}</option>`).join('')}</select></label>
+      <label>Giá (Hổ phách)<input type="number" min="1" max="1000000" step="1" data-sp-f="price" value="${l.price}"${dis}></label>
+      <label>Mỗi người / ngày<input type="number" min="0" max="100" step="1" data-sp-f="dailyLimit" value="${l.dailyLimit}"${dis}></label>
+      ${edit ? `<div class="sp-btns"><button type="button" class="btn-ghost sm" data-sp-move="${i}" data-dir="-1" title="Lên" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" class="btn-ghost sm" data-sp-move="${i}" data-dir="1" title="Xuống" ${i === d.length - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" class="btn-ghost sm" data-sp-del="${i}" title="Bỏ khỏi cửa hàng" style="color:var(--kill,#ef4444)">Xoá</button></div>` : '<span></span>'}
+    </div>`).join('') || '<p class="step-hint" style="margin:0">Cửa hàng chưa có món nào. Bấm "+ Thêm món".</p>';
+  $('sp-add').hidden = $('sp-save').hidden = !edit;
+  $('sp-dirty').textContent = spDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu';
+}
+const spField = (e) => {
+  const row = e.target.closest('[data-sp]'), f = e.target.dataset.spF;
+  if (!row || !f || !sp.draft) return;
+  const l = sp.draft[Number(row.dataset.sp)];
+  if (f === 'enabled') { l.enabled = e.target.checked; row.classList.toggle('off', !l.enabled); }
+  else if (f === 'price' || f === 'dailyLimit') l[f] = Math.round(Number(e.target.value) || 0);
+  else l[f] = e.target.value;
+  $('sp-dirty').textContent = spDirty() ? '● Có thay đổi chưa lưu' : 'Đã lưu';
+};
+$('sp-list').addEventListener('input', spField);
+$('sp-list').addEventListener('change', spField);
+$('sp-list').addEventListener('click', (e) => {
+  if (!sp.draft) return;
+  const del = e.target.closest('[data-sp-del]');
+  if (del) { sp.draft.splice(Number(del.dataset.spDel), 1); renderSp(); return; }
+  const mv = e.target.closest('[data-sp-move]');
+  if (mv && !mv.disabled) {
+    const i = Number(mv.dataset.spMove), j = i + Number(mv.dataset.dir);
+    [sp.draft[i], sp.draft[j]] = [sp.draft[j], sp.draft[i]];
+    renderSp();
+  }
+});
+$('sp-add').addEventListener('click', () => {
+  if (!sp.draft || sp.items.length === 0) return;
+  const free = sp.items.find((it) => !sp.draft.some((l) => l.itemId === it.id)) ?? sp.items[0];
+  sp.draft.push({ itemId: free.id, price: 100, dailyLimit: 1, enabled: true });
+  renderSp();
+});
+$('sp-save').addEventListener('click', () => withToken('lưu cửa hàng', async (token) => {
+  const r = await adminFetch('/api/shop', 'PUT', token, { listings: sp.draft });
+  sp.draft = structuredClone(r.listings); sp.saved = JSON.stringify(sp.draft);
+  renderSp();
+  toast('Đã lưu cửa hàng.');
+}));
+async function refreshShopAdmin(force = false) {
+  const r = await getJson('/api/shop');
+  sp.items = r.items ?? [];
+  if (force || !spDirty()) { sp.draft = structuredClone(r.listings); sp.saved = JSON.stringify(sp.draft); }
+  renderSp();
+}
+
 async function refreshQuests(force = false) {
-  const [eco, items, quests] = await Promise.all([getJson('/api/economy'), can('items.view') ? getJson('/api/items').catch(() => null) : null, getJson('/api/quests')]);
+  const [eco, items, quests] = await Promise.all([getJson('/api/economy'), can('items.view') ? getJson('/api/items').catch(() => null) : null, getJson('/api/quests'),
+    refreshShopAdmin(force).catch((e) => toast(`Cửa hàng: ${e.message ?? e}`, 'err'))]);
   qq.kinds = quests.kinds;
   if (force || !qqDirty()) { qq.draft = structuredClone(quests.settings); qq.saved = JSON.stringify(qq.draft); }
   renderQq();

@@ -25,6 +25,7 @@ import { readLiveState, livePlayer } from './live.js';
 import { KEEP_DAYS, type Traffic } from './traffic.js';
 import { EARLY_FEATURES, readSvip, saveSvip, type SvipState } from './svip.js';
 import { STARTER_ITEM_IDS } from './starter.js';
+import { readShop, saveShop } from './shop.js';
 import type { Metrics } from './metrics.js';
 import type { VoiceRoom } from './voice.js';
 import { handlePlayerApi, publicServerInfo, startMutationUse } from './player-api.js';
@@ -568,6 +569,13 @@ async function handlePanel(
       summary: { ...sum, top: sum.top.map((x) => ({ ...x, name: ctx.store.player(x.steamId)?.player.name ?? null })) } });
     return;
   }
+  // The Hổ phách shop (shop.ts): the listings, and the items it may sell for the panel's picker.
+  if (path === '/api/shop' && req.method === 'GET') {
+    const items = (await listItems()).filter((i) => !i.retired && !ITEM_TYPES.find((t) => t.key === i.type)?.system)
+      .map((i) => ({ id: i.id, type: i.type, name: i.name, rarity: i.rarity }));
+    sendJson(res, 200, { listings: await readShop(), items });
+    return;
+  }
   if (path === '/api/quests' && req.method === 'GET') {
     sendJson(res, 200, { settings: await readQuestSettings(), kinds: QUEST_KINDS });
     return;
@@ -631,6 +639,7 @@ async function handlePanel(
       (path === '/api/svip' && req.method === 'PUT') ||
       (path === '/api/economy/settings' && req.method === 'PUT') ||
       (path === '/api/quests' && req.method === 'PUT') ||
+      (path === '/api/shop' && req.method === 'PUT') ||
       (path === '/api/economy/adjust' && req.method === 'POST') ||
       (path === '/api/ai-zones' && req.method === 'PUT') ||
       (path === '/api/ai-drop' && req.method === 'POST') ||
@@ -1067,6 +1076,16 @@ async function handlePanel(
         ...Object.fromEntries(q.defs.map((d) => [d.id, `${d.enabled ? '' : '(tắt) '}${d.label} ${d.target} → ${d.reward}`])) });
       await audit({ action: 'quests settings', detail: describeChanges(sum(before), sum(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, { settings: saved });
+      return;
+    }
+    if (path === '/api/shop') {
+      const before = await readShop();
+      const saved = await saveShop(await readJsonBody(req));
+      const names = new Map((await listItems()).map((i) => [i.id, i.name]));
+      const sum = (ls: typeof saved): Record<string, string> => Object.fromEntries(ls.map((l) =>
+        [names.get(l.itemId) ?? l.itemId, `${l.enabled ? '' : '(tắt) '}${l.price} Hổ phách, ${l.dailyLimit || 'không giới hạn'}/ngày`]));
+      await audit({ action: 'shop settings', detail: describeChanges(sum(before), sum(saved)) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { listings: saved });
       return;
     }
     if (path === '/api/economy/adjust') {

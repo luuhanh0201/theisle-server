@@ -6,6 +6,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { config } from './config.js';
 import { isSteamId, readGarageCatalog, readGarageSettings, readPlayerGarage, ValidationError, type StoredDino } from './garage.js';
 import { claimStarter, starterOffered } from './starter.js';
+import { MAX_QTY, buy, shopView } from './shop.js';
 import { boxOptions, dinoItemOptions, openDinoBox, speciesOptions, useDinoItem } from './dino-box.js';
 import { audit } from './audit.js';
 import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
@@ -592,6 +593,32 @@ export async function handlePlayerApi(
         { steamId: who, name });
         send(res, 200, out);
       }
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
+  // The Hổ phách shop (shop.ts): what is on sale for them; a buy.
+  const shopRoute = /^\/player-api\/shop\/(\d{17})(\/buy)?$/.exec(path);
+  if (shopRoute !== null) {
+    const who = shopRoute[1] as string;
+    const open = await earlyAccess('shop', who);
+    if (shopRoute[2] === undefined) {
+      if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
+      send(res, 200, { currency: CURRENCY, balance: await balanceOf(who), maxQty: MAX_QTY, listings: await shopView(who),
+        ...(open ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' }) });
+      return true;
+    }
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    if (!open) { send(res, 403, { error: 'Cửa hàng đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    try {
+      const out = await buy(who, body['listing'], body['qty']);
+      const name = ctx.store.player(who)?.player.name ?? null;
+      await audit({ action: 'shop buy', ok: true, detail: `${name ?? who} mua ${out.qty} × ${out.item}: ${out.spent} ${CURRENCY}, còn ${out.balance}` }, { steamId: who, name });
+      send(res, 200, out);
     } catch (err) {
       if (err instanceof ValidationError) send(res, 400, { error: err.message });
       else throw err;

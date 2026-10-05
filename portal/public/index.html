@@ -2374,6 +2374,16 @@
   .bag-tabs { display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg-card); padding: 3px; border-radius: 8px; border: 1px solid var(--border); }
   .bag-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 4px 0 10px; }
   .bag-dino { font-size: 13px; margin: 0 0 10px; }
+  .shop-bal { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 15px;
+    border: 1px solid rgba(34, 197, 94, .35); background: rgba(34, 197, 94, .08); white-space: nowrap; }
+  .shop-item .price { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+  .shop-item .price .amber-amt { font-size: 17px; font-weight: 800; }
+  .shop-item .act .nf { width: 120px; min-width: 0; flex: none; }
+  .shop-sum { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 4px 14px; font-size: 13.5px; }
+  .shop-sum b { justify-self: end; }
+  .shop-item .left { color: var(--text-muted); font-size: 12.5px; }
+  .shop-item .left.out { color: #fbbf24; }
+  .home-rewards .hr-amber { cursor: pointer; }
   .bag-grid .bag-sec { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin: 6px 0 -4px; font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--text-normal, var(--text)); }
   .bag-grid .bag-sec:first-child { margin-top: 0; }
   .bag-grid .bag-sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
@@ -4225,6 +4235,11 @@
           <span class="nav-label">Túi đồ</span>
           <span class="nav-badge" id="nav-bag-badge" hidden>0</span>
         </button>
+        <!-- Cửa hàng Hổ phách (bridge shop.ts): shown once logged in -->
+        <button type="button" class="nav-btn" data-nav="shop" id="nav-shop" hidden title="Cửa hàng Hổ phách">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v7h14v-7"/><path d="M10 20v-4h4v4"/></svg></span>
+          <span class="nav-label">Cửa hàng</span>
+        </button>
       </div>
 
       <!-- 3. CÔNG CỤ TIỆN ÍCH -->
@@ -5140,6 +5155,22 @@
           <ul class="bag-grid" id="bag-list"></ul>
         </div>
       </section>
+      <!-- Cửa hàng Hổ phách (app.js renderShop; bridge shop.ts) -->
+      <section id="page-shop" class="page-content" hidden>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">🏪 Cửa hàng Hổ phách</h3>
+              <span class="card-subtitle">Mua vật phẩm bằng Hổ phách kiếm được khi chơi (điểm danh, nhiệm vụ). Mua xong vật phẩm vào Túi đồ. Mỗi món có giới hạn mua mỗi ngày, làm mới lúc 00:00.</span>
+            </div>
+            <span class="shop-bal" id="shop-bal"></span>
+          </div>
+          <div class="bag-bar"><div class="bag-tabs" id="shop-filter"></div></div>
+          <div class="garage-status" id="shop-status" role="status" aria-live="polite" hidden></div>
+          <ul class="bag-grid" id="shop-list"><li class="muted" style="padding:16px;grid-column:1/-1">Đang tải cửa hàng…</li></ul>
+        </div>
+      </section>
+      <dialog class="bag-dlg" id="shop-dlg" aria-labelledby="shop-dlg-title"><div class="in" id="shop-dlg-in"></div></dialog>
       <!-- Outside the pages: the home page opens it too (the starter ticket), and a hidden page hides its dialog. -->
       <dialog class="bag-dlg" id="bag-dlg" aria-labelledby="bag-dlg-title"><div class="in" id="bag-dlg-in"></div></dialog>
 

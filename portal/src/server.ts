@@ -36,6 +36,8 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   GET  /api/items/dino-options/<uid>  a dino item: its species, growth, open slots, the mutations that fit (login)
  *   POST /api/items/open        { uid, species? } open a dino box: a dino item into the bag (login, same-origin, JSON)
  *   POST /api/starter/claim     the starter gift: the dino ticket into the bag, once (login, same-origin)
+ *   GET  /api/shop              the Hổ phách shop: what is on sale, the price, how many left today (login)
+ *   POST /api/shop/buy          { listing, qty } buy with Hổ phách, into the bag (login, same-origin, JSON)
  *   POST /api/checkin           today's check-in: Hổ phách once a day after enough minutes in game (login, same-origin)
  *   POST /api/quests/claim      { quest } a done quest's Hổ phách, once (login, same-origin, JSON)
  *   POST /api/items/dino        { uid, female, mutations: { 1–4: name } } use a dino item: the dino into your garage (login, same-origin, JSON)
@@ -373,6 +375,26 @@ export function createPortal(opts: PortalOptions): Server {
         if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
         if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
         const r = await opts.bridge.claimStarter(me);
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/shop') {
+        if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        const r = await opts.bridge.shop(me);
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/shop/buy') {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
+        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) { send(res, 415, { error: 'JSON only' }); return; }
+        if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
+        const body = await readSmallJson(req);
+        if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
+        // Only these fields, and never a SteamID or a price from the browser.
+        const r = await opts.bridge.shopBuy(me, { listing: body['listing'], qty: body['qty'] });
         send(res, r.status, r.body);
         return;
       }

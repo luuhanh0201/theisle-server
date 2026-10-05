@@ -45,7 +45,7 @@ async function getJson(url) {
 // ============================================================================
 // 1. Navigation / Tab Routing
 // ============================================================================
-const VALID_TABS = ['home', 'game', 'gara', 'map', 'ranking', 'skin', 'bag', 'voice', 'overlay'];
+const VALID_TABS = ['home', 'game', 'gara', 'map', 'ranking', 'skin', 'bag', 'shop', 'voice', 'overlay'];
 let currentTab = 'home';
 
 function switchTab(tabId, updateHash = true) {
@@ -65,6 +65,9 @@ function switchTab(tabId, updateHash = true) {
   if (updateHash && location.hash !== `#${tabId}`) {
     location.hash = tabId;
   }
+
+  // The shop: read again each time it is opened (prices, what is left today, the balance).
+  if (tabId === 'shop') void loadShop();
 
   // If switched to map, make sure canvas updates
   if (tabId === 'map' && map && lastMeData?.dino) {
@@ -2377,6 +2380,151 @@ $('bag-filter').addEventListener('click', (e) => {
 });
 $('bag-q').addEventListener('input', () => { bag.sig = ''; renderBag(lastMeData); });
 
+// ============================================================================
+// Cửa hàng Hổ phách (bridge shop.ts; owner, 2026-10-05): items bought with Hổ phách, a daily limit per
+// item, 1–10 at a time; a box to confirm with the total and what is left. Bought: into the bag.
+// ============================================================================
+const shop = { data: null, filter: 'all', busy: false, qty: {}, open: null };
+function shopStatus(kind, html) {
+  const el = $('shop-status');
+  el.hidden = !html;
+  el.className = `garage-status${kind ? ` ${kind}` : ''}`;
+  el.innerHTML = html ?? '';
+}
+async function loadShop() {
+  const r = await getJson('/api/shop').catch(() => null);
+  if (r?.status !== 200) { shopStatus('bad', `❌ ${esc(r?.body?.error ?? 'Không tải được cửa hàng.')}`); return; }
+  shop.data = r.body;
+  renderShop();
+}
+/** A listing's item as the bag's card texts read it (BAG_TICKET). */
+const shopG = (l) => ({ ...l.item.data, type: l.item.type, name: l.item.name, rarity: l.item.rarity });
+const shopIcon = (l) => (l.item.type === 'mutation' ? mutIcon(l.item.data.mutation)
+  : `<span class="mut-ico tk-ico" aria-hidden="true">${l.item.type === 'skin' ? '🎨' : BAG_TICKET[l.item.type]?.icon ?? '🎁'}</span>`);
+const shopDesc = (l) => (l.item.type === 'mutation' ? esc(l.item.description ?? l.item.data.mutation)
+  : l.item.type === 'skin' ? `Skin cho <b>${esc(l.item.data.species)}</b>, mặc lên dino đúng loài.` : BAG_TICKET[l.item.type]?.desc(shopG(l)) ?? '');
+/** Why this listing cannot be bought now, or null. */
+function shopBlock(l) {
+  const d = shop.data;
+  if (d.locked) return '🧪 Đang thử nghiệm';
+  if (l.owned) return 'Đã có';
+  if (l.left === 0) return 'Hết lượt hôm nay';
+  if (l.price > d.balance) return 'Chưa đủ Hổ phách';
+  return null;
+}
+const shopMax = (l) => Math.max(1, Math.min(shop.data.maxQty ?? 10, l.left ?? Infinity, Math.floor(shop.data.balance / l.price) || 1));
+function renderShop() {
+  const d = shop.data;
+  if (!d) return;
+  $('shop-bal').innerHTML = `<span>Bạn có</span>${amber(d.balance)}`;
+  shopStatus(d.locked ? '' : null, d.locked ? `🧪 ${esc(d.locked)}` : null);
+  const ls = d.listings;
+  const counts = Object.fromEntries(BAG_CATS.map((c) => [c.key, ls.filter((l) => c.types.includes(l.item.type)).length]));
+  if (shop.filter !== 'all' && !counts[shop.filter]) shop.filter = 'all';
+  $('shop-filter').innerHTML = [['all', 'Tất cả', ls.length], ...BAG_CATS.filter((c) => counts[c.key] > 0).map((c) => [c.key, c.label, counts[c.key]])]
+    .map(([k, label, n]) => `<button type="button" class="gara-filter-btn${shop.filter === k ? ' active' : ''}" data-shop-tab="${k}">${esc(label)} <span class="bag-n">${n}</span></button>`).join('');
+  const shown = ls.filter((l) => shop.filter === 'all' || bagCat(l.item.type) === shop.filter);
+  const card = (l) => {
+    const block = shopBlock(l);
+    const unique = l.item.type === 'skin';
+    const q = Math.min(shop.qty[l.id] ?? 1, shopMax(l));
+    return `<li class="bag-item shop-item rar-${esc(l.item.rarity)}">
+      <div class="top">${shopIcon(l)}<div class="nm"><b>${esc(l.item.name)}</b><span class="rar-label rar-${esc(l.item.rarity)}">${esc(BAG_RARITY[l.item.rarity] ?? l.item.rarity)}</span></div></div>
+      <div class="desc">${shopDesc(l)}</div>
+      <div class="price">${amber(l.price)}<span class="left${l.left === 0 ? ' out' : ''}">${l.owned ? 'Đã có trong túi' : l.left === null ? 'Không giới hạn' : `Hôm nay còn ${l.left}/${l.dailyLimit}`}</span></div>
+      <div class="act">${unique || block ? '' : `<input type="number" min="1" max="${shopMax(l)}" step="1" value="${q}" data-shop-qty="${esc(l.id)}" aria-label="Số lượng">`}
+        <button type="button" class="btn ${block ? 'btn-ghost' : 'btn-emerald'}" data-shop-buy="${esc(l.id)}" ${block || shop.busy ? 'disabled' : ''}>${esc(block ?? 'Mua')}</button></div>
+    </li>`;
+  };
+  const kinds = [...new Set(shown.map((l) => bagCat(l.item.type)))];
+  const html = kinds.length > 1
+    ? kinds.map((k) => {
+      const list = shown.filter((l) => bagCat(l.item.type) === k);
+      return `<li class="bag-sec">${esc(BAG_CATS.find((c) => c.key === k)?.label ?? 'Khác')} <span class="bag-n">${list.length}</span></li>${list.map(card).join('')}`;
+    }).join('')
+    : shown.map(card).join('');
+  $('shop-list').innerHTML = html || '<li class="muted" style="padding:16px;text-align:center;grid-column:1/-1">Cửa hàng chưa có món nào.</li>';
+}
+function renderShopDialog() {
+  const o = shop.open;
+  if (!o) return;
+  const l = o.l;
+  const total = l.price * o.qty;
+  const after = shop.data.balance - total;
+  $('shop-dlg-in').innerHTML = `<div class="hd">${shopIcon(l)}<div><b id="shop-dlg-title">${esc(l.item.name)}</b>
+      <span class="rar-label rar-${esc(l.item.rarity)}">${esc(BAG_RARITY[l.item.rarity] ?? l.item.rarity)}</span>
+      <div class="muted" style="font-size:12.5px">${amber(l.price)} mỗi cái</div></div>
+      <button type="button" class="x" data-shop-dlg="close" aria-label="Đóng">×</button></div>
+    <div class="sec"><h4>Xác nhận mua</h4>
+      <div class="cmp">Mua <b>${o.qty} × ${esc(l.item.name)}</b></div>
+      <div class="shop-sum"><span class="muted">Tổng</span><b>${amber(total)}</b><span class="muted">Bạn đang có</span><b>${amber(shop.data.balance)}</b>
+        <span class="muted">Mua xong còn</span><b>${amber(Math.max(0, after))}</b></div>
+      ${l.left !== null ? `<div class="cmp muted">Hôm nay còn mua được ${l.left - o.qty} cái sau lần này.</div>` : ''}
+      ${after < 0 ? '<div class="why" style="color:#fbbf24;font-size:13px">⚠️ Chưa đủ Hổ phách.</div>' : ''}
+    </div>
+    <div class="act"><button type="button" class="btn btn-ghost" data-shop-dlg="close">Huỷ</button>
+      <button type="button" class="btn btn-emerald" data-shop-dlg="buy" ${after < 0 || shop.busy ? 'disabled' : ''}>Mua</button></div>
+    <div class="garage-status" id="shop-dlg-status" role="status" aria-live="polite" hidden></div>`;
+}
+$('shop-filter').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-shop-tab]');
+  if (!b) return;
+  shop.filter = b.dataset.shopTab;
+  renderShop();
+});
+$('shop-list').addEventListener('change', (e) => {
+  const q = e.target.closest('[data-shop-qty]');
+  if (q) shop.qty[q.dataset.shopQty] = Math.max(1, Math.min(Number(q.max) || 1, Math.floor(Number(q.value)) || 1));
+});
+$('shop-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-shop-buy]');
+  if (!b || b.disabled || !shop.data) return;
+  const l = shop.data.listings.find((x) => x.id === b.dataset.shopBuy);
+  if (!l) return;
+  const input = $('shop-list').querySelector(`[data-shop-qty="${CSS.escape(l.id)}"]`);
+  const qty = l.item.type === 'skin' ? 1 : Math.max(1, Math.min(shopMax(l), Math.floor(Number(input?.value ?? shop.qty[l.id] ?? 1)) || 1));
+  shop.qty[l.id] = qty;
+  shop.open = { l, qty };
+  renderShopDialog();
+  $('shop-dlg').showModal();
+});
+$('shop-dlg').addEventListener('click', async (e) => {
+  if (e.target === $('shop-dlg') || e.target.closest('[data-shop-dlg="close"]')) { $('shop-dlg').close(); return; }
+  const o = shop.open;
+  if (!o || shop.busy || !e.target.closest('[data-shop-dlg="buy"]')) return;
+  shop.busy = true;
+  renderShopDialog();
+  let error = null;
+  try {
+    const r = await fetch('/api/shop/buy', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ listing: o.l.id, qty: o.qty }) });
+    const b = await r.json().catch(() => null);
+    if (r.status === 429) error = 'Chậm lại chút rồi thử lại.';
+    else if (r.status !== 200) error = `❌ ${esc(b?.error ?? 'Không mua được.')}`;
+    else {
+      $('shop-dlg').close();
+      shopStatus('ok', `✅ Đã mua <b>${b.qty} × ${esc(b.item)}</b> (${amber(b.spent)}). Xem trong <a href="#bag">Túi đồ</a>.`);
+      showToast(`✅ Đã mua ${b.qty} × ${b.item}, xem trong Túi đồ`);
+    }
+  } catch {
+    error = 'Mất kết nối. Thử lại.';
+  } finally {
+    shop.busy = false;
+    if (error && shop.open === o) {
+      renderShopDialog();
+      const st = $('shop-dlg-status');
+      if (st) { st.hidden = false; st.className = 'garage-status bad'; st.innerHTML = error; }
+    }
+    await loadShop();
+    const me = await getJson('/api/me').catch(() => null);
+    if (me?.status === 200) { lastMeData = me.body; bag.sig = ''; homeSig = ''; renderBag(lastMeData); renderHomeRewards(lastMeData); }
+  }
+});
+$('shop-dlg').addEventListener('close', () => { if (!shop.busy) shop.open = null; });
+$('home-amber').addEventListener('click', () => switchTab('shop'));
+// While the shop is open: read again every 30 s (a new day, the balance from a quest).
+setInterval(() => { if (currentTab === 'shop' && !document.hidden && !shop.busy && !shop.open) void loadShop(); }, 30_000);
+
 async function refresh() {
   if (busy) return;
   busy = true;
@@ -2864,8 +3012,10 @@ function renderHomeRewards(me) {
   const sig = JSON.stringify([eco, quests, gift, homeBusy]);
   if (sig === homeSig) return;
   homeSig = sig;
-  // The balance, by the way in.
+  // The balance, by the way in (a click: the shop).
   $('home-amber').hidden = !eco;
+  $('home-amber').title = 'Mở cửa hàng Hổ phách';
+  $('nav-shop').hidden = !eco;
   if (eco) $('home-amber').innerHTML = `${amber(eco.balance)}${eco.locked ? ' <small style="opacity:.75">(thử nghiệm)</small>' : ''}`;
   const st = $('home-starter');
   st.hidden = !gift;
