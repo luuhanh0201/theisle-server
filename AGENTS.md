@@ -41,8 +41,15 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   parentheses or a new sentence instead; "-" for an empty value. Owner's
   rule, 2026-10-05. Check before committing: `git grep -nP '\x{2014}'`
   must print nothing.
+- Never break a line unnaturally or awkwardly: within the same title, heading,
+  badge or coherent label phrase, keep it on a single line (e.g. `white-space: nowrap`
+  or `text-wrap: balance` where appropriate; avoid `<br>` inside titles). Owner's
+  rule, 2026-10-05.
 
 ## UI (panel, portal, launcher pages)
+- Titles and headings: a title must stay on one line, never an awkward or
+  unreasonable line break midway through a title or header phrase (use
+  `white-space: nowrap`, with `text-wrap: balance` on very narrow screens).
 - Never the browser's own select box, number spinner, date / time picker,
   checkbox, slider or colour picker, on the player site, the launcher's pages
   and the panel alike: every page loads the shared controls, before its own

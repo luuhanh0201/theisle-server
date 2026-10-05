@@ -91,6 +91,10 @@ vì sao. Để người dùng quyết định.
   không đưa framework hay bước build mới vào.
 - Portal phải dùng được trên điện thoại (không cuộn ngang). Overlay launcher trong suốt, nhỏ,
   chỉ cập nhật DOM khi dữ liệu thật sự đổi (xem `setText` trong `overlay-page.js`).
+- Không được xuống dòng vô lý trong UI và văn bản: cùng một tiêu đề (title, heading, card title)
+  hoặc cụm nhãn liền mạch phải nằm trên cùng một dòng, tránh ngắt dòng lưng chừng làm gãy chữ
+  (dùng `white-space: nowrap`, `text-wrap: balance` hoặc canh layout cho phù hợp; chỉ xuống dòng
+  khi có chủ đích rõ ràng hoặc trên màn hình cực hẹp). Quy tắc bắt buộc của chủ server, 2026-10-05.
 - Không dựng mô hình 3D dino bằng code (người dùng đã từ chối).
 
 ## 4b. Sửa lỗi hay thêm chức năng: rà soát lại các luồng cũ

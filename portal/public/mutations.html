@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
+    color-scheme: dark;
     --bg: #070a11;
     --bg-card: #0c1220;
     --bg-card-hover: #121a2d;
@@ -54,6 +55,13 @@
     font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(24px, 4vw, 32px);
     font-weight: 800; letter-spacing: -0.02em; color: #fff;
     display: flex; align-items: center; gap: 12px;
+    white-space: nowrap;
+  }
+  @media (max-width: 480px) {
+    h1 {
+      white-space: normal;
+      text-wrap: balance;
+    }
   }
   .badge-total {
     font-size: 14px; font-weight: 700; padding: 4px 10px;
@@ -202,6 +210,9 @@
   <main class="grid" id="mutation-grid"></main>
 </div>
 
+<!-- The system's select box and number / date / time inputs (rule: AGENTS.md "UI") -->
+<script src="/ui-select.js"></script>
+<script src="/ui-inputs.js"></script>
 <script src="/mut-icons.js"></script>
 <script src="/mutations.js"></script>
 </body>

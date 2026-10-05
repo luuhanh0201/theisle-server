@@ -21,6 +21,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
+    color-scheme: dark;
     /* 60% Canvas / Background Palette */
     --bg: #070a11;
     --bg-canvas: #070a11;
@@ -667,6 +668,13 @@
     align-items: center;
     gap: 10px;
     color: #fff;
+    white-space: nowrap;
+  }
+  @media (max-width: 480px) {
+    .card-title {
+      white-space: normal;
+      text-wrap: balance;
+    }
   }
   .card-subtitle {
     font-size: 12.5px;

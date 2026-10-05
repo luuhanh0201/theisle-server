@@ -166,7 +166,7 @@
     box-shadow: var(--shadow); min-width: 0;
   }
   .card-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 0; flex-wrap: wrap; }
-  .card-head h2 { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .card-head h2 { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
   .card-head .sub { color: var(--muted); font-size: 12px; }
   .card-body { padding: 14px 18px 18px; }
   .grid { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
@@ -1562,6 +1562,23 @@
     background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; transition: border-color .15s, box-shadow .15s;
   }
   input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input[type=file]::file-selector-button {
+    border: 1px solid var(--border-strong);
+    background: var(--surface-3);
+    color: var(--text);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+    transition: background .15s, border-color .15s;
+  }
+  input[type=file]::file-selector-button:hover {
+    background: var(--surface-hover, var(--border-strong));
+    border-color: var(--accent);
+  }
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 10px 16px; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13.5px;
