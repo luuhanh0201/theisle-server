@@ -1377,6 +1377,10 @@
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; border-radius: 12px;
     background: var(--surface); border: 1px solid #fb923c; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: 13px; }
   .unsaved-bar a { color: #fb923c; }
+  .fresh-bar { position: fixed; left: 16px; right: 16px; top: 14px; z-index: 60; width: fit-content; margin: 0 auto;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--accent-2, #10b981); box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: 13px; }
+  .fresh-bar[hidden] { display: none; }
   .world-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
   .world-card ul { margin: 0 0 12px; padding-left: 18px; line-height: 1.7; font-size: 13.5px; }
   .quick { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -3342,6 +3346,10 @@
 
   </main>
   <div class="unsaved-bar" id="unsaved-bar" hidden></div>
+  <div class="fresh-bar" id="fresh-bar" role="status" hidden>
+    <span>Có thay đổi mới từ máy chủ.</span><span class="muted" id="fresh-note" hidden>Lưu hoặc bỏ thay đổi của bạn trước khi tải lại.</span>
+    <button type="button" class="btn sm" id="fresh-reload">Tải lại</button>
+  </div>
 </div>
 
 <div class="modal-back" id="scene" hidden>
@@ -3574,6 +3582,7 @@ async function adminFetch(url, method, token, body) {
   if (res.status === 401) { toLogin(); throw new Error('Phiên đăng nhập đã hết, đăng nhập lại'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  if (method !== 'GET') fresh.mineUntil = Date.now() + 15_000;   // what changes now is this admin's own save
   return data;
 }
 
@@ -11206,10 +11215,14 @@ $('pa-save').addEventListener('click', () => withToken('lưu danh sách IP', asy
 
 // --- routing + refresh --------------------------------------------------------
 
-const getJson = (url) => fetch(url).then((r) => {
+// What each GET answered last (its text): a settings page's check for changes compares with it.
+const seenJson = new Map();
+const getJson = (url) => fetch(url).then(async (r) => {
   if (r.status === 401) toLogin();
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  const text = await r.text();
+  seenJson.set(url, text);
+  return JSON.parse(text);
 });
 
 // --- unsaved changes: one bar for every settings page ------------------------------
@@ -11416,6 +11429,80 @@ function showTab() {
 window.addEventListener('hashchange', showTab);
 $('back').addEventListener('click', () => (history.length > 1 ? history.back() : (location.hash = 'overview')));
 
+// --- live lists, settings loaded once (owner, 2026-10-05: an open select box or an input's
+// suggestions flashed away under the 2 s refresh) --------------------------------------
+// A list page (not in FORM_PAGES) updates every 2 s, but never while the admin is at it: a select /
+// date / colour / suggestion list open, typing, a dialog, text selected. A settings page loads once
+// per visit (or after a save); every 10 s what it was loaded from is asked again, only to compare:
+// changed on the server (another admin, the game) -> the bar "Có thay đổi mới", reloaded on a click.
+// [url, the part that is the page's (what moves on its own left out: counts, who is online)]
+const ITEMS_WATCH = [['/api/items', (j) => j.items?.map(({ owners, ...it }) => it)]];
+const MEMBERS_WATCH = [['/api/members']];
+const FORM_PAGES = {
+  'world/flora': [['/api/flora-settings']],
+  'world/fish': [['/api/fish-settings']],
+  'garage/settings': [['/api/garage-settings', ({ memberCounts, ...j }) => j]],
+  'items/skins': ITEMS_WATCH, 'items/mutations': ITEMS_WATCH, 'items/tickets': ITEMS_WATCH,
+  'mods/commands': [['/api/commands-settings']],
+  'mods/ptera': [['/api/ptera-carry']],
+  'mods/voice': [['/api/voice-settings']],
+  'mods/messages': [['/api/messages']],
+  'admin/access': [['/api/panel-access']],
+  'admin/discord': [['/api/discord', ({ status, ...j }) => j]],
+  'members/admins': MEMBERS_WATCH, 'members/whitelist': MEMBERS_WATCH, 'members/vips': MEMBERS_WATCH,
+  'members/perms': [['/api/permissions', (j) => ({ ...j, admins: j.admins?.map(({ inGameNow, ...a }) => a) })]],
+  'members/svip': [['/api/svip']],
+  quests: [['/api/economy', (j) => j.settings], ['/api/quests'], ['/api/shop']],
+  'server/cfg': [['/api/game-config']],
+};
+const fresh = { key: null, at: 0, failed: false, stale: false, checking: false, mineUntil: 0 };
+let lastInput = 0;
+for (const ev of ['pointerdown', 'keydown', 'input']) addEventListener(ev, () => { lastInput = Date.now(); }, true);
+function pageKey() { const [v, sub] = herePage(); return sub ? `${v}/${sub}` : v; }
+/** Is the admin at something a redraw would take away? */
+function busyUI() {
+  const now = Date.now();
+  if (now - lastInput < 2000) return true;
+  if (document.querySelector('.cs-pop:not([hidden]), .dt-pop:not([hidden]), .cp-pop:not([hidden]), .sg-pop:not([hidden]), dialog[open]')) return true;
+  if (!$('modal').hidden) return true;
+  const a = document.activeElement;
+  if (a?.isContentEditable || a?.tagName === 'TEXTAREA') return true;
+  if (a?.tagName === 'INPUT' && !/^(checkbox|radio|range|button|submit|reset|color|file)$/.test(a.type) && now - lastInput < 6000) return true;
+  const sel = getSelection();
+  return Boolean(sel && !sel.isCollapsed && String(sel).trim());
+}
+function showFresh(on) {
+  fresh.stale = on;
+  $('fresh-bar').hidden = !on;
+  if (on) { const [v, sub] = herePage(); $('fresh-note').hidden = !pageDirty(v, sub); }
+}
+$('fresh-reload').addEventListener('click', () => { showFresh(false); refresh(); });
+async function loadPage(key) {
+  showFresh(false);
+  // Failed (the bridge away): tried again on a tick, as a list is, never under the admin's hands.
+  fresh.key = key; fresh.at = Date.now(); fresh.failed = true;
+  await refreshTab(currentTab());
+  fresh.failed = false;
+}
+const watchSig = (text, keep) => { try { const j = JSON.parse(text); return JSON.stringify(keep ? keep(j) : j); } catch { return text; } };
+/** A settings page: has what it was loaded from changed on the server? Nothing is redrawn. */
+async function checkFresh(key) {
+  if (fresh.stale || fresh.checking || Date.now() - fresh.at < 10_000) return;
+  fresh.checking = true;
+  fresh.at = Date.now();
+  try {
+    for (const [url, keep] of FORM_PAGES[key]) {
+      const r = await fetch(url);
+      if (!r.ok || fresh.key !== key) return;
+      const text = await r.text();
+      const was = seenJson.get(url);
+      // This admin's own save (or a first look): taken as the new baseline, no bar.
+      if (was === undefined || Date.now() < fresh.mineUntil) { seenJson.set(url, text); continue; }
+      if (watchSig(text, keep) !== watchSig(was, keep)) { showFresh(true); return; }
+    }
+  } catch { /* the badge shows a lost bridge; checked again in 10 s */ } finally { fresh.checking = false; }
+}
+
 async function refreshTab(tab) {
   switch (tab) {
     case 'traffic':
@@ -11547,13 +11634,20 @@ let refreshing = false;
 async function tick() {
   if (document.hidden || refreshing) return;
   refreshing = true;
-  try { await refresh(); } finally { refreshing = false; }
+  try { await refresh(true); } finally { refreshing = false; }
 }
 document.addEventListener('visibilitychange', tick);
 
-async function refresh() {
+// refresh(): the page loaded now (a visit, a save, a click). refresh(true): the 2 s tick (see
+// FORM_PAGES): a list redrawn unless the admin is at it, a settings page only checked.
+async function refresh(auto = false) {
+  const key = pageKey();
+  const page = !auto || fresh.key !== key ? loadPage(key)
+    : FORM_PAGES[key] && !fresh.failed ? checkFresh(key)
+    : busyUI() ? null
+    : fresh.failed ? loadPage(key) : refreshTab(currentTab());
   try {
-    const [health] = await Promise.all([getJson('/api/health'), refreshTab(currentTab()), refreshUnitPhase()]);
+    const [health] = await Promise.all([getJson('/api/health'), page, refreshUnitPhase()]);
     const last = health.lastEventAt;
     const age = last === null ? null : Math.floor(Date.now() / 1000) - last;
     const live = age !== null && age < 30;

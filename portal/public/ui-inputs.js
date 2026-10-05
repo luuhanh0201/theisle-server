@@ -1,6 +1,6 @@
 /*
- * ui-inputs.js, the system's number, date / time, checkbox, slider and colour
- * inputs (rule: AGENTS.md "UI"), on every page: the admin panel (bridge serves it from the portal), the
+ * ui-inputs.js, the system's number, date / time, checkbox, slider, colour and
+ * suggestion (input list=… + <datalist>) inputs (rule: AGENTS.md "UI"), on every page: the admin panel (bridge serves it from the portal), the
  * portal, the launcher's pages. Load it as a classic script before the page's
  * own code, after ui-select.js:
  *   <script src="/ui-inputs.js"></script>
@@ -114,6 +114,13 @@ input[type=color].cp-native { display: none !important; }
 .cp-prev { width: 30px; height: 30px; border-radius: 8px; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
 .cp-hex { flex: 1; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border-strong, var(--border-light, rgba(255,255,255,.14)));
   background: var(--surface-2, var(--bg-surface, #0e1526)); color: inherit; font: inherit; font-size: 13px; font-family: ui-monospace, monospace; text-transform: uppercase; }
+.sg-pop { position: fixed; z-index: 1000; max-height: 260px; overflow-y: auto; padding: 4px; border-radius: 10px;
+  background: var(--surface, var(--bg-card, #0c1220)); color: var(--text, #f1f5f9); border: 1px solid var(--border-strong, var(--border-light, rgba(255,255,255,.14)));
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .3); overscroll-behavior: contain; }
+.sg-pop[hidden] { display: none; }
+.sg-opt { display: flex; flex-direction: column; gap: 1px; padding: 7px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; }
+.sg-opt small { color: var(--muted, var(--text-muted, #8b9bb4)); font-size: 11.5px; font-family: ui-monospace, monospace; }
+.sg-opt.on, .sg-opt:hover { background: var(--accent-soft, var(--emerald-soft, rgba(16,185,129,.14))); }
 .cp-ok { padding: 7px 12px; border-radius: 8px; border: 0; background: var(--accent, var(--emerald, #10b981)); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 `;
   (document.head || document.documentElement).append(style);
@@ -479,9 +486,92 @@ input[type=color].cp-native { display: none !important; }
     paint();
   }
 
+  // --- suggestions (input list=… with a <datalist>): the system's list, not the browser's ---------------
+  // The datalist stays the source (pages keep filling it); its options are read each time the list is
+  // shown, and a datalist refilled while the list is open (the panel's 2 s refresh) leaves it open.
+  let sgOpen = null;   // { inp, pop, items, on }
+  function sgClose() { if (!sgOpen) return; sgOpen.pop.remove(); sgOpen = null; }
+  function sgItems(inp) {
+    const dl = document.getElementById(inp.dataset.sgList);
+    if (!dl) return [];
+    const q = inputValue.get.call(inp).trim().toLowerCase();
+    const all = [...dl.querySelectorAll('option')].map((o) => ({ value: o.value, label: o.label && o.label !== o.value ? o.label : (o.textContent.trim() !== o.value ? o.textContent.trim() : '') }));
+    return (q ? all.filter((o) => `${o.value} ${o.label}`.toLowerCase().includes(q)) : all).slice(0, 60);
+  }
+  function sgRender() {
+    const o = sgOpen;
+    if (!o) return;
+    o.items = sgItems(o.inp);
+    if (o.items.length === 0) { o.pop.hidden = true; return; }
+    o.pop.hidden = false;
+    if (o.on >= o.items.length) o.on = o.items.length - 1;
+    o.pop.innerHTML = o.items.map((it, i) => `<div class="sg-opt${i === o.on ? ' on' : ''}" data-sg="${i}" role="option"><span></span>${it.label ? '<small></small>' : ''}</div>`).join('');
+    // Text set as text: nothing in a name runs.
+    o.pop.querySelectorAll('.sg-opt').forEach((el, i) => {
+      const it = o.items[i];
+      el.firstChild.textContent = it.label || it.value;
+      if (it.label) el.lastChild.textContent = it.value;
+    });
+    const r = o.inp.getBoundingClientRect();
+    o.pop.style.minWidth = `${Math.max(200, r.width)}px`;
+    o.pop.style.left = `${Math.max(8, Math.min(innerWidth - Math.max(200, r.width) - 8, r.left))}px`;
+    const below = innerHeight - r.bottom;
+    o.pop.style.top = below < 200 && r.top > below ? `${Math.max(8, r.top - Math.min(260, o.pop.offsetHeight || 260) - 4)}px` : `${r.bottom + 4}px`;
+  }
+  function sgShow(inp) {
+    if (sgOpen?.inp !== inp) {
+      sgClose();
+      const pop = document.createElement('div');
+      pop.className = 'sg-pop';
+      pop.setAttribute('role', 'listbox');
+      (inp.closest('dialog[open]') ?? document.body).append(pop);
+      sgOpen = { inp, pop, items: [], on: -1 };
+      pop.addEventListener('pointerdown', (e) => {
+        const el = e.target.closest('[data-sg]');
+        if (!el) return;
+        e.preventDefault();
+        sgPick(Number(el.dataset.sg));
+      });
+    }
+    sgRender();
+  }
+  function sgPick(i) {
+    const o = sgOpen;
+    const it = o?.items[i];
+    if (!it) return;
+    inputValue.set.call(o.inp, it.value);
+    fire(o.inp);
+    sgClose();
+  }
+  function suggestBox(inp) {
+    if (inp.hasAttribute('data-plain') || inp.dataset.sgList) return;
+    inp.dataset.sgList = inp.getAttribute('list');
+    inp.removeAttribute('list');   // the browser's own list gone
+    inp.setAttribute('autocomplete', 'off');
+    inp.addEventListener('focus', () => sgShow(inp));
+    inp.addEventListener('input', () => { if (sgOpen?.inp === inp) { sgOpen.on = -1; sgRender(); } else sgShow(inp); });
+    inp.addEventListener('blur', () => setTimeout(() => { if (sgOpen?.inp === inp && document.activeElement !== inp) sgClose(); }, 120));
+    inp.addEventListener('keydown', (e) => {
+      const o = sgOpen;
+      if (!o || o.inp !== inp || o.pop.hidden) { if (e.key === 'ArrowDown') sgShow(inp); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        o.on = (o.on + (e.key === 'ArrowDown' ? 1 : -1) + o.items.length) % o.items.length;
+        sgRender();
+        o.pop.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && o.on >= 0) { e.preventDefault(); sgPick(o.on); }
+      else if (e.key === 'Escape') { e.stopPropagation(); sgClose(); }
+    });
+    const dl = document.getElementById(inp.dataset.sgList);
+    if (dl) new MutationObserver(() => { if (sgOpen?.inp === inp) sgRender(); }).observe(dl, { childList: true, subtree: true, attributes: true });
+  }
+  addEventListener('scroll', (e) => { if (sgOpen && !sgOpen.pop.contains(e.target)) sgRender(); }, true);
+  addEventListener('resize', () => sgRender());
+
   const DATEISH = new Set(['date', 'time', 'datetime-local']);
   const one = (el) => {
     if (!(el instanceof HTMLInputElement) || el.closest('.dt-pop') || el.closest('.cp-pop')) return;
+    if (el.hasAttribute('list') && (el.type === 'text' || el.type === 'search' || el.type === '')) suggestBox(el);
     if (el.type === 'number') numberBox(el);
     else if (DATEISH.has(el.type)) dateBox(el);
     else if (el.type === 'range') rangeFill(el);
@@ -489,7 +579,7 @@ input[type=color].cp-native { display: none !important; }
   };
   const scan = (root) => {
     if (root instanceof HTMLInputElement) one(root);
-    else root.querySelectorAll?.('input[type=number], input[type=date], input[type=time], input[type=datetime-local], input[type=range], input[type=color]').forEach(one);
+    else root.querySelectorAll?.('input[type=number], input[type=date], input[type=time], input[type=datetime-local], input[type=range], input[type=color], input[list]').forEach(one);
   };
   const start = () => {
     scan(document);
@@ -498,6 +588,7 @@ input[type=color].cp-native { display: none !important; }
         for (const n of m.addedNodes) if (n.nodeType === 1) scan(n);
         if (open && !open.inp.isConnected) close(false);
         if (cpOpen && !cpOpen.inp.isConnected) cpClose(true);
+        if (sgOpen && !sgOpen.inp.isConnected) sgClose();
       }
     }).observe(document.body, { childList: true, subtree: true });
   };
