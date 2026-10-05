@@ -1243,6 +1243,17 @@
   .dc-route [data-dc-tag], .dc-route [data-dc-tag] + .cs-btn { width: 130px; flex: none; }
   .dc-route { flex-wrap: wrap; }
   .dc-route > span { flex: 1 1 140px; min-width: 140px; }
+  /* A feature's release level (Thành viên → SVip): three buttons, the one set lit in its tone. */
+  .lvl-seg { display: inline-flex; flex: 0 1 auto; border: 1px solid var(--border-strong); border-radius: 10px; padding: 3px; gap: 3px; background: var(--surface-2); }
+  .lvl-seg button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 104px; border: 1px solid transparent; background: none; color: var(--muted);
+    padding: 5px 10px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .lvl-seg button small { font-size: 11px; font-weight: 500; opacity: .85; }
+  .lvl-seg button:hover:not(.on) { color: var(--text); background: var(--surface); }
+  .lvl-seg button.on { cursor: default; color: var(--text); background: var(--surface); box-shadow: var(--shadow); }
+  .lvl-seg button.on[data-level="admin"] { border-color: rgba(148,163,184,.6); }
+  .lvl-seg button.on[data-level="testing"] { border-color: #f59e0b; color: #f59e0b; }
+  .lvl-seg button.on[data-level="all"] { border-color: var(--accent-2, #10b981); color: var(--accent-2, #10b981); }
+  @media (max-width: 640px) { .lvl-seg { display: flex; flex: 1 1 100%; } .lvl-seg button { flex: 1 1 0; min-width: 0; padding: 5px 4px; white-space: normal; text-align: center; } }
   .dc-route input[data-dc-role] { width: 170px; flex: none; margin-left: auto; padding: 7px 10px; font-size: 12.5px; }
   .dc-routes .g { grid-column: 1 / -1; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
   .dc-route { display: flex; align-items: center; gap: 10px; }
@@ -2622,7 +2633,7 @@
                       <td data-label="🛡️ Admin" class="fixed">0</td></tr>
                     <tr><th scope="row">Ưu tiên vào khi server đầy<small>danh sách VIP của game; SVip được thêm lúc server khởi động</small></th>
                       <td data-label="👤 Người thường" class="info">Không</td><td data-label="⭐ VIP" class="info yes">Có</td><td data-label="💎 SVip" class="info yes">Có</td><td data-label="🛡️ Admin" class="info">Theo danh sách VIP</td></tr>
-                    <tr><th scope="row">Dùng trước tính năng thử nghiệm<small>Thành viên → SVip → Chức năng thử nghiệm</small></th>
+                    <tr><th scope="row">Dùng trước tính năng thử nghiệm<small>Thành viên → SVip → Mức phát hành chức năng</small></th>
                       <td data-label="👤 Người thường" class="info">Không</td><td data-label="⭐ VIP" class="info">Không</td><td data-label="💎 SVip" class="info yes">Có</td><td data-label="🛡️ Admin" class="info yes">Có</td></tr>
                   </tbody>
                 </table>
@@ -3171,7 +3182,7 @@
       <!-- SVip: players who try the features being tested (bridge svip.ts) -->
       <div data-sub="members:svip" hidden>
         <section class="card">
-          <div class="card-head"><h2>SVip</h2><span class="sub">dùng trước các chức năng đang thử nghiệm (cùng admin), có hiệu lực ngay</span></div>
+          <div class="card-head"><h2>SVip</h2><span class="sub">dùng trước các chức năng ở mức SVip (cùng admin), có hiệu lực ngay</span></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
             <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
               <div class="cfg-field" style="flex:1 1 220px"><label for="sv-id">SteamID</label>
@@ -3184,7 +3195,7 @@
           </div>
         </section>
         <section class="card" style="margin-top:16px">
-          <div class="card-head"><h2>Chức năng thử nghiệm</h2><span class="sub">"Mở cho tất cả" khi đã ổn</span></div>
+          <div class="card-head"><h2>Mức phát hành chức năng</h2><span class="sub">Chỉ admin: người khác không thấy · SVip: người khác thấy nhưng khoá · Công khai: mọi người</span></div>
           <div class="card-body" id="sv-features"></div>
         </section>
       </div>
@@ -3194,7 +3205,7 @@
     <!-- Truy cập: site / launcher traffic (bridge traffic.ts, counted by the portal) -->
     <!-- Nhiệm vụ: Hổ phách and the daily check-in (bridge economy.ts), the daily quests next -->
     <div data-view="quests" hidden>
-      <div class="page-head"><div><h1>Nhiệm vụ</h1><p>Hổ phách, tiền của server, kiếm bằng cách chơi (không bán bằng tiền thật), và điểm danh hằng ngày (giờ Việt Nam). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b>.</p></div></div>
+      <div class="page-head"><div><h1>Nhiệm vụ</h1><p>Hổ phách, tiền của server, kiếm bằng cách chơi (không bán bằng tiền thật), và điểm danh hằng ngày (giờ Việt Nam). Ai dùng được: <b>Thành viên → SVip → Mức phát hành chức năng</b>.</p></div></div>
       <section class="card">
         <div class="card-head"><h2>📅 Điểm danh hằng ngày</h2><span class="sub">người chơi chơi đủ phút trong ngày rồi bấm điểm danh trên trang chủ; bỏ lỡ 1 ngày là quay về ngày 1</span></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
@@ -3222,7 +3233,7 @@
       <section class="card" style="margin-top:16px">
         <div class="card-head"><h2>🏪 Cửa hàng Hổ phách</h2><span class="sub">người chơi mua ở trang Cửa hàng, vật phẩm vào Túi đồ; giới hạn tính theo người, mỗi ngày (00:00 giờ VN); 0 = không giới hạn</span></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-          <p class="step-hint" style="margin:0">Thứ tự ở đây là thứ tự trong cửa hàng (trong từng nhóm). Món tắt hoặc vật phẩm ngừng phát hành thì không hiện. Mỗi lần mua ghi vào Sổ giao dịch ("Mua N × tên"). Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Cửa hàng).</p>
+          <p class="step-hint" style="margin:0">Thứ tự ở đây là thứ tự trong cửa hàng (trong từng nhóm). Món tắt hoặc vật phẩm ngừng phát hành thì không hiện. Mỗi lần mua ghi vào Sổ giao dịch ("Mua N × tên"). Ai dùng được: <b>Thành viên → SVip → Mức phát hành chức năng</b> (Cửa hàng).</p>
           <div id="sp-list" class="qq-list"></div>
           <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap"><span class="muted" id="sp-dirty" style="margin-right:auto;font-size:12.5px"></span>
             <button type="button" class="btn-ghost" id="sp-add">+ Thêm món</button><button type="button" class="btn" id="sp-save">Lưu cửa hàng</button></div>
@@ -4640,7 +4651,7 @@ const TKT_INFO = {
   mutation_ticket: 'Người chơi tự chọn một mutation khi dùng: mọi mutation còn trong game, đúng chế độ ăn của loài. Phiếu <b>Đặc biệt</b> đổi được cả mutation nhiệm vụ; độ hiếm khác chỉ để hiển thị. Chỉ vào ô đã mở theo tăng trưởng như game (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%).',
   mutation_clear: 'Bỏ mutation ở một ô (1–4) để người chơi chọn lại trong game.',
   prime_ticket: 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện, chỉ số prime sau vài giây). Dùng cho trường hợp lỡ prime.',
-  dino_box: 'Người chơi <b>mở hộp</b>: loài <b>ngẫu nhiên</b> (có hiệu ứng roll) hoặc <b>tự chọn</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới, ra <b>vật phẩm Dino</b> trong túi. Dùng vật phẩm Dino: chọn giới tính và mutation (ô mở theo tăng trưởng như game: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%; đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>. Quà tân thủ <span class="mono">starter_box</span> (hộp tự chọn) được nhận ở trang chủ, mỗi tài khoản 1 lần. Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Hộp dino).',
+  dino_box: 'Người chơi <b>mở hộp</b>: loài <b>ngẫu nhiên</b> (có hiệu ứng roll) hoặc <b>tự chọn</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới, ra <b>vật phẩm Dino</b> trong túi. Dùng vật phẩm Dino: chọn giới tính và mutation (ô mở theo tăng trưởng như game: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%; đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>. Quà tân thủ <span class="mono">starter_box</span> (hộp tự chọn) được nhận ở trang chủ, mỗi tài khoản 1 lần. Ai dùng được: <b>Thành viên → SVip → Mức phát hành chức năng</b> (Hộp dino).',
   loot_box: 'Người chơi <b>mở hòm</b> (có hiệu ứng quay kiểu gacha) và nhận <b>1 phần thưởng</b> bốc ngẫu nhiên theo trọng số bên dưới; người chơi xem được tỉ lệ từng món trước khi mở. Hòm không chứa hòm khác. Bán ở cửa hàng: Nhiệm vụ → Cửa hàng Hổ phách. Túi admin mở không mất hòm.',
   salt_lick: 'Dùng lên dino <b>đang chơi</b>: hết trạng thái ốm sau khi nôn (hàm game <span class="mono">ResetVomitSickState</span>, như nút Hồi máu của admin). Không hồi máu / thức ăn / nước. Người chơi thấy: “Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay”.',
   growth_bag: 'Dùng lên dino <b>đang chơi</b>: cộng thêm tăng trưởng, chỉ khi dino dưới mốc (vd +10% khi dưới 60%: 55% → 65%; mốc 100% = mọi dino chưa trưởng thành). Chỉ số giữ theo tỉ lệ. Vật phẩm chỉ mất khi game xác nhận.',
@@ -9403,16 +9414,15 @@ function renderSvip() {
   const d = sv.data;
   if (!d) return;
   $('sv-list').innerHTML = d.players.length === 0 ? '<p class="step-hint">Chưa có SVip nào.</p>'
-    : `<table class="audit-table"><thead><tr><th>Người chơi</th><th>SteamID</th><th>Ghi chú</th><th>Thêm lúc</th><th></th></tr></thead><tbody>${d.players.map((p) => `
+    : `<div class="table-wrap"><table class="audit-table"><thead><tr><th>Người chơi</th><th>SteamID</th><th>Ghi chú</th><th>Thêm lúc</th><th></th></tr></thead><tbody>${d.players.map((p) => `
       <tr><td>${p.name ? who(p.steamId, p.name) : '<span class="muted">chưa vào game</span>'}</td><td class="mono">${esc(p.steamId)}</td>
         <td>${esc(p.note || '')}</td><td class="muted">${p.addedAt ? dateTime(p.addedAt) : ''}${p.by ? ` · ${esc(p.by)}` : ''}</td>
-        <td style="text-align:right"><button type="button" class="btn-ghost sm" data-sv-del="${esc(p.steamId)}" style="color:var(--kill,#ef4444)">Bỏ</button></td></tr>`).join('')}</tbody></table>`;
-  // Released or being tried: one button each (owner, 2026-10-05: "nút phát hành, click là phát hành cho tất cả").
+        <td style="text-align:right"><button type="button" class="btn-ghost sm" data-sv-del="${esc(p.steamId)}" style="color:var(--kill,#ef4444)">Bỏ</button></td></tr>`).join('')}</tbody></table></div>`;
+  // Each feature's level (owner, 2026-10-06): Chỉ admin (đang phát triển), SVip (ưu tiên dùng trước), Công khai (đã phát hành).
+  const modes = d.modes ?? SV_LEVELS;
   $('sv-features').innerHTML = d.features.map((f) => `<div class="dc-route"><span>${esc(f.label)}</span>
-    <span style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap">
-      ${f.mode === 'all' ? '<span class="chip tone-grow">✓ Đã phát hành cho tất cả</span>' : '<span class="chip tone-accent">🧪 Đang thử nghiệm: admin + SVip</span>'}
-      <button type="button" class="${f.mode === 'all' ? 'btn-ghost' : 'btn'} sm" data-sv-release="${esc(f.key)}" data-mode="${f.mode === 'all' ? 'testing' : 'all'}">${f.mode === 'all' ? 'Đưa về thử nghiệm' : '🚀 Phát hành'}</button>
-    </span></div>`).join('');
+    <div class="lvl-seg" role="group" aria-label="Mức phát hành">${modes.map((m) => `<button type="button" data-level="${esc(m.key)}" data-sv-feature="${esc(f.key)}"
+      class="${f.mode === m.key ? 'on' : ''}" aria-pressed="${f.mode === m.key}">${esc(m.label)}<small>${esc(m.note)}</small></button>`).join('')}</div></div>`).join('');
 }
 function saveSvip(players, features, label) {
   return withToken(label, async (token) => {
@@ -9437,17 +9447,30 @@ $('sv-list').addEventListener('click', (e) => {
   if (!b) return;
   saveSvip(sv.data.players.filter((p) => p.steamId !== b.dataset.svDel), sv.data.features, 'bỏ SVip');
 });
+// The levels as the bridge names them (svip.ts FEATURE_MODES), for an older bridge that does not send them.
+const SV_LEVELS = [
+  { key: 'admin', label: 'Chỉ admin', note: 'Đang phát triển' },
+  { key: 'testing', label: 'SVip', note: 'Ưu tiên dùng trước' },
+  { key: 'all', label: 'Công khai', note: 'Đã phát hành' },
+];
+const SV_LEVEL_WHAT = {
+  admin: 'Chỉ admin dùng được. Người chơi khác, kể cả SVip, không thấy chức năng này.',
+  testing: 'Admin và SVip dùng được. Người chơi khác thấy chức năng nhưng bị khoá ("SVip dùng trước").',
+  all: 'Mọi người chơi dùng được ngay.',
+};
 $('sv-features').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-sv-release]');
-  if (!b) return;
-  const f = sv.data.features.find((x) => x.key === b.dataset.svRelease);
-  if (!f) return;
-  const release = b.dataset.mode === 'all';
+  const b = e.target.closest('[data-sv-feature]');
+  if (!b || b.classList.contains('on')) return;
+  const f = sv.data.features.find((x) => x.key === b.dataset.svFeature);
+  const m = (sv.data.modes ?? SV_LEVELS).find((x) => x.key === b.dataset.level);
+  if (!f || !m) return;
   confirmAction({
-    title: release ? `Phát hành "${f.label}"?` : `Đưa "${f.label}" về thử nghiệm?`,
-    body: release ? 'Mọi người chơi dùng được ngay (không chỉ admin + SVip).' : 'Chỉ admin + SVip dùng được; người khác thấy "Đang thử nghiệm".',
-    okLabel: release ? 'Phát hành' : 'Đưa về thử nghiệm',
-    run: async () => saveSvip(sv.data.players, sv.data.features.map((x) => (x.key === f.key ? { ...x, mode: b.dataset.mode } : x)), release ? 'phát hành chức năng' : 'đưa về thử nghiệm'),
+    title: `"${f.label}": ${m.label} (${m.note})?`,
+    body: esc(SV_LEVEL_WHAT[m.key] ?? ''),
+    okLabel: m.key === 'all' ? 'Phát hành' : `Chuyển sang ${m.label}`,
+    withReason: false,
+    danger: false,
+    run: async () => saveSvip(sv.data.players, sv.data.features.map((x) => (x.key === f.key ? { ...x, mode: m.key } : x)), `mức phát hành: ${m.label}`),
   });
 });
 

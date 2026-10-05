@@ -2008,7 +2008,7 @@ function renderBag(me) {
   const button = (g, cls, attr, label) => {
     const ok = usable(g) && !bag.busy;
     // Being tried (svip.ts): shown, but for SVip first.
-    if (g.locked) return `<button type="button" class="btn ${cls}" disabled title="${esc(g.locked)}">🧪 Đang thử nghiệm</button>`;
+    if (g.locked) return `<button type="button" class="btn ${cls}" disabled title="${esc(g.locked)}">${/phát triển/.test(g.locked) ? '🔒 Đang phát triển' : '🧪 Đang thử nghiệm'}</button>`;
     const text = ok || mismatch(g) || !blocked || BAG_NO_DINO.has(g.type) ? label : blocked;
     return `<button type="button" class="btn ${cls}" ${attr}="${esc(g.key)}" ${ok ? '' : `disabled title="${esc(blocked && !mismatch(g) ? `${blocked}: điều khiển một con dino trong game` : '')}"`}>${esc(text)}</button>`;
   };
@@ -3143,7 +3143,8 @@ function renderHomeRewards(me) {
   // The balance, by the way in (a click: the shop).
   $('home-amber').hidden = !eco;
   $('home-amber').title = 'Mở cửa hàng Hổ phách';
-  $('nav-shop').hidden = !eco;
+  // The shop's way in, by its own level (bridge svip.ts: null = the admins only); an older bridge: with Hổ phách.
+  $('nav-shop').hidden = me?.shop !== undefined ? !me.shop : !eco;
   if (eco) $('home-amber').innerHTML = `${amber(eco.balance)}${eco.locked ? ' <small style="opacity:.75">(thử nghiệm)</small>' : ''}`;
   const st = $('home-starter');
   st.hidden = !gift;

@@ -7,8 +7,11 @@ import { adminIds } from './panel-auth.js';
 /**
  * SVip (owner's request, 2026-10-04): players allowed the features still being
  * tried (the bag of items…) before everyone, besides the admins. The panel's
- * Quản trị → SVip: their SteamIDs, and each feature's mode, "testing" (admins
- * + SVip) or "all" (everyone), switched there without a code change.
+ * Thành viên → SVip: their SteamIDs, and each feature's release level, switched
+ * there without a code change (owner, 2026-10-06, three levels):
+ *   "admin"   Chỉ admin, đang phát triển: the admins only; nobody else sees it.
+ *   "testing" SVip, ưu tiên dùng trước: admins + SVip; others see it, locked.
+ *   "all"     Công khai, đã phát hành: everyone.
  *
  *   DATA_DIR/svip.json  { players: [{ steamId, note, addedAt, by }], features: { bag: 'testing' } }
  *
@@ -25,14 +28,29 @@ export const EARLY_FEATURES = [
   { key: 'shop', label: 'Cửa hàng Hổ phách: mua vật phẩm bằng Hổ phách (giới hạn mỗi ngày)' },
 ] as const;
 export type FeatureKey = typeof EARLY_FEATURES[number]['key'];
-export type FeatureMode = 'testing' | 'all';
+export type FeatureMode = 'admin' | 'testing' | 'all';
+/** The levels, lowest first, as the panel names them. */
+export const FEATURE_MODES: ReadonlyArray<{ key: FeatureMode; label: string; note: string }> = [
+  { key: 'admin', label: 'Chỉ admin', note: 'Đang phát triển' },
+  { key: 'testing', label: 'SVip', note: 'Ưu tiên dùng trước' },
+  { key: 'all', label: 'Công khai', note: 'Đã phát hành' },
+];
+const isMode = (v: unknown): v is FeatureMode => FEATURE_MODES.some((m) => m.key === v);
+/** What a player sees of a feature: usable, shown but locked, or nothing at all. */
+export type FeatureAccess = 'open' | 'locked' | 'hidden';
+/** The line a locked feature (or an item of it) shows. */
+export const LOCKED_NOTE = 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả';
+/** A refusal for a feature not open to this player: `name` "Cửa hàng"… */
+export const closedError = (name: string, access: FeatureAccess): string =>
+  (access === 'hidden' ? `${name} đang phát triển, chưa mở.` : `${name} đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.`);
 
 export interface SvipEntry { steamId: string; note: string; addedAt: number; by: string | null }
 export interface SvipState { players: SvipEntry[]; features: Record<FeatureKey, FeatureMode> }
 
 const MAX_PLAYERS = 500;
 const path = (): string => join(config.dataDir, 'svip.json');
-const defaults = (): SvipState => ({ players: [], features: Object.fromEntries(EARLY_FEATURES.map((f) => [f.key, 'testing'])) as SvipState['features'] });
+// A feature not set yet (a new one): the admins only, until it is moved up in the panel.
+const defaults = (): SvipState => ({ players: [], features: Object.fromEntries(EARLY_FEATURES.map((f) => [f.key, 'admin'])) as SvipState['features'] });
 
 let cache: { state: SvipState; at: number } | null = null;
 const CACHE_MS = 5000;
@@ -54,7 +72,7 @@ function clean(raw: unknown): SvipState {
     });
   }
   const f = (typeof r['features'] === 'object' && r['features'] !== null ? r['features'] : {}) as Record<string, unknown>;
-  for (const { key } of EARLY_FEATURES) if (f[key] === 'all' || f[key] === 'testing') out.features[key] = f[key];
+  for (const { key } of EARLY_FEATURES) { const m = f[key]; if (isMode(m)) out.features[key] = m; }
   return out;
 }
 
@@ -111,11 +129,18 @@ export async function isSvip(steamId: string): Promise<boolean> {
   return (await readSvip()).players.some((p) => p.steamId === steamId);
 }
 
-/** Whether this player may use a feature being tried: open to all, or an admin, or SVip. */
-export async function earlyAccess(feature: FeatureKey, steamId: string): Promise<boolean> {
+/** What this player gets of a feature, by its level: an admin always uses it; SVip from "testing"; everyone at "all". */
+export async function featureAccess(feature: FeatureKey, steamId: string): Promise<FeatureAccess> {
   const s = await readSvip();
-  if (s.features[feature] === 'all') return true;
-  return (await adminIds()).has(steamId) || s.players.some((p) => p.steamId === steamId);
+  const mode = s.features[feature];
+  if (mode === 'all' || (await adminIds()).has(steamId)) return 'open';
+  if (mode === 'admin') return 'hidden';
+  return s.players.some((p) => p.steamId === steamId) ? 'open' : 'locked';
+}
+
+/** Whether this player may use a feature: featureAccess() is 'open'. */
+export async function earlyAccess(feature: FeatureKey, steamId: string): Promise<boolean> {
+  return (await featureAccess(feature, steamId)) === 'open';
 }
 
 /** For tests: forget what was read. */

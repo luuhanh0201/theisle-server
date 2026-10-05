@@ -84,6 +84,19 @@ test('a player uses a mutation from their bag: checks, the command, used up only
   resetSvipCache();
   const p2 = (await call(`/player-api/me/${P2}`)).body;
   assert.deepEqual([p2.bag, p2.bagUnlimited, p2.svip], [true, false, true], 'an SVip sees the bag');
+  // The three levels in what /me sends a player (svip.ts): Chỉ admin = nothing of it; SVip = shown locked; Công khai = open.
+  writeFileSync(join(root, 'data', 'svip.json'), JSON.stringify({ players: [], features: { bag: 'testing', amber: 'admin', shop: 'testing', starter: 'all' } }));
+  resetSvipCache();
+  const lv = (await call(`/player-api/me/${P2}`)).body;
+  assert.equal(lv.economy, null, 'Hổ phách at Chỉ admin: a player gets nothing of it');
+  assert.match(lv.shop.locked, /SVip dùng trước/, 'the shop at SVip: shown, locked');
+  assert.equal((await call(`/player-api/me/${P1}`)).body.economy.locked, undefined, 'an admin: Hổ phách open');
+  assert.equal((await call(`/player-api/shop/${P2}/buy`, 'POST', { listing: 'x', qty: 1 })).status, 403, 'a locked shop sells nothing');
+  writeFileSync(join(root, 'data', 'svip.json'), JSON.stringify({ players: [], features: { bag: 'testing', shop: 'admin' } }));
+  resetSvipCache();
+  assert.equal((await call(`/player-api/me/${P2}`)).body.shop, null, 'the shop at Chỉ admin: no way in');
+  assert.match((await call(`/player-api/shop/${P2}`)).body.error, /đang phát triển/, 'nor its page');
+  assert.match((await call(`/player-api/checkin/${P2}`, 'POST', {})).body.error, /Điểm danh đang phát triển/, 'nor the check-in');
   writeFileSync(join(root, 'data', 'svip.json'), JSON.stringify({ players: [], features: { bag: 'testing' } }));
   resetSvipCache();
   assert.match((await use(a.uid, 1, P2)).body.error, /chưa mở/, 'nor may they use one');

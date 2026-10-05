@@ -27,7 +27,7 @@ import { isRange, joinToken, peersOf, voiceIdentity, VOICE_RANGES, type VoiceRoo
 import { readVoiceSettings, shownName } from './voice-settings.js';
 import type { Prison } from './prison.js';
 import { adminIds } from './panel-auth.js';
-import { earlyAccess, isSvip } from './svip.js';
+import { LOCKED_NOTE, type FeatureAccess, type FeatureKey, closedError, earlyAccess, featureAccess, isSvip } from './svip.js';
 import { parseTrafficEvent, type Traffic } from './traffic.js';
 import { MUTATION_REFERENCE, findReference } from './mutation-reference.js';
 import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from './mutation-tiers.js';
@@ -39,6 +39,20 @@ import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from '.
  */
 export async function bagOpen(steamId: string): Promise<boolean> {
   return earlyAccess('bag', steamId);
+}
+/**
+ * A feature by its level (svip.ts) in what /me sends: the part as is when open, marked { locked } when
+ * shown locked (SVip first), null when the admins only have it (nothing of it shows).
+ */
+function shown<T extends object>(access: FeatureAccess, part: T): (T & { locked?: string }) | null {
+  return access === 'open' ? part : access === 'locked' ? { ...part, locked: LOCKED_NOTE } : null;
+}
+/** A route of a feature not open to this player: 403 with why, and true (the route is done). */
+async function refused(res: ServerResponse, feature: FeatureKey, steamId: string, name: string): Promise<boolean> {
+  const access = await featureAccess(feature, steamId);
+  if (access === 'open') return false;
+  send(res, 403, { error: closedError(name, access) });
+  return true;
 }
 /** An admin's bag never runs out: a used item stays (items.ts settleUse). */
 export async function bagUnlimited(steamId: string): Promise<boolean> {
@@ -580,7 +594,7 @@ export async function handlePlayerApi(
     const who = boxRoute[1] as string;
     const body = await readSmallJson(req);
     if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
-    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Hộp dino đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (await refused(res, 'starter', who, 'Hộp dino')) return true;
     const uid = typeof body['uid'] === 'string' ? body['uid'] : '';
     const name = ctx.store.player(who)?.player.name ?? null;
     try {
@@ -614,7 +628,7 @@ export async function handlePlayerApi(
         return true;
       }
       if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
-      if (!(await bagOpen(who))) { send(res, 403, { error: 'Túi đồ đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+      if (await refused(res, 'bag', who, 'Túi đồ')) return true;
       const body = await readSmallJson(req);
       if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
       const out = await openLootBox(who, typeof body['uid'] === 'string' ? body['uid'] : '', await bagUnlimited(who));
@@ -633,15 +647,17 @@ export async function handlePlayerApi(
   const shopRoute = /^\/player-api\/shop\/(\d{17})(\/buy)?$/.exec(path);
   if (shopRoute !== null) {
     const who = shopRoute[1] as string;
-    const open = await earlyAccess('shop', who);
+    const access = await featureAccess('shop', who);
     if (shopRoute[2] === undefined) {
       if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
+      // Admins only (being made): nothing of it for anyone else.
+      if (access === 'hidden') { send(res, 403, { error: closedError('Cửa hàng', access) }); return true; }
       send(res, 200, { currency: CURRENCY, balance: await balanceOf(who), maxQty: MAX_QTY, listings: await shopView(who),
-        ...(open ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' }) });
+        ...(access === 'open' ? {} : { locked: LOCKED_NOTE }) });
       return true;
     }
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
-    if (!open) { send(res, 403, { error: 'Cửa hàng đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (access !== 'open') { send(res, 403, { error: closedError('Cửa hàng', access) }); return true; }
     const body = await readSmallJson(req);
     if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
     try {
@@ -660,7 +676,7 @@ export async function handlePlayerApi(
   if (starterClaim !== null) {
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
     const who = starterClaim[1] as string;
-    if (!(await earlyAccess('starter', who))) { send(res, 403, { error: 'Quà tân thủ đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (await refused(res, 'starter', who, 'Quà tân thủ')) return true;
     try {
       const out = await claimStarter(who);
       const name = ctx.store.player(who)?.player.name ?? null;
@@ -679,7 +695,7 @@ export async function handlePlayerApi(
     const who = questClaim[1] as string;
     const body = await readSmallJson(req);
     if (body === null || typeof body['quest'] !== 'string') { send(res, 400, { error: 'expected { quest }' }); return true; }
-    if (!(await earlyAccess('quests', who))) { send(res, 403, { error: 'Nhiệm vụ đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (await refused(res, 'quests', who, 'Nhiệm vụ')) return true;
     if (!ctx.questProgress) { send(res, 503, { error: 'quests unavailable' }); return true; }
     try {
       const p = ctx.store.player(who)?.player;
@@ -695,7 +711,7 @@ export async function handlePlayerApi(
   if (checkin !== null) {
     if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
     const who = checkin[1] as string;
-    if (!(await earlyAccess('amber', who))) { send(res, 403, { error: 'Điểm danh đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+    if (await refused(res, 'amber', who, 'Điểm danh')) return true;
     try {
       send(res, 200, await claimCheckin(who, ctx.playDays?.minutesToday(who, Math.floor(Date.now() / 1000)) ?? 0));
     } catch (err) {
@@ -804,23 +820,21 @@ export async function handlePlayerApi(
       // The bag's tab: open to them, or they own something (the starter ticket, shown while being tried).
       bag: (await bagOpen(steamId)) || (await inventoryOf(steamId)).length > 0,
       // The starter gift (starter.ts), while it waits on the home page.
-      starter: (await starterOffered(steamId))
-        ? ((await earlyAccess('starter', steamId)) ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' })
-        : null,
+      starter: (await starterOffered(steamId)) ? shown(await featureAccess('starter', steamId), {}) : null,
+      // The Hổ phách shop's way in (its page asks /shop): {} open, { locked } shown locked, null none.
+      shop: shown(await featureAccess('shop', steamId), {}),
       // SVip (svip.ts): tries the features being tested before everyone.
       svip: await isSvip(steamId),
       // Hổ phách and the daily check-in (economy.ts); being tried: shown, marked.
-      economy: {
+      economy: shown(await featureAccess('amber', steamId), {
         currency: CURRENCY,
         balance: await balanceOf(steamId),
         checkin: await checkinStatus(steamId, ctx.playDays?.minutesToday(steamId, Math.floor(Date.now() / 1000)) ?? 0),
-        ...((await earlyAccess('amber', steamId)) ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' }),
-      },
+      }),
       // The daily / weekly quests (quests.ts): given at the first ask of the day, for the dino played then.
-      quests: ctx.questProgress ? {
-        ...(await questsOf(steamId, detail?.player.online ? detail.player.species ?? null : null, ctx.questProgress)),
-        ...((await earlyAccess('quests', steamId)) ? {} : { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' }),
-      } : null,
+      quests: ctx.questProgress
+        ? shown(await featureAccess('quests', steamId), await questsOf(steamId, detail?.player.online ? detail.player.species ?? null : null, ctx.questProgress))
+        : null,
       bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
       prison: ctx.prison?.playerView(steamId) ?? null,
@@ -899,14 +913,14 @@ async function ownedView(steamId: string, playing: string | null, catalog: Array
   const labels = new Map(speciesOptions(catalog).map((x) => [x.key, x.label]));
   const labelOf = (key: string): string => labels.get(key) ?? key.charAt(0).toUpperCase() + key.slice(1);
   const byId = new Map((await listItems()).map((i) => [i.id, i]));
-  // A feature still being tried (svip.ts): its items are shown, marked, and cannot be used yet.
-  const open = { bag: await earlyAccess('bag', steamId), starter: await earlyAccess('starter', steamId) };
+  // A feature not open to them (svip.ts): its items are shown (they own them), marked, and cannot be used yet.
+  const open = { bag: await featureAccess('bag', steamId), starter: await featureAccess('starter', steamId) };
   return owned.flatMap((o) => {
     const i = byId.get(o.itemId);
     if (i === undefined) return [];
-    const locked = !(i.type === 'dino_box' || i.type === 'dino' ? open.starter : open.bag);
+    const access = i.type === 'dino_box' || i.type === 'dino' ? open.starter : open.bag;
     return [{ uid: o.uid, id: i.id, type: i.type, name: i.name, rarity: i.rarity, source: o.source, grantedAt: o.grantedAt, note: o.note,
-      ...(locked ? { locked: 'Đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả' } : {}),
+      ...(access === 'open' ? {} : { locked: access === 'hidden' ? 'Đang phát triển, chưa mở' : LOCKED_NOTE }),
       ...(i.type === 'skin' ? { species: i.data.species, skin: resolveSkin(i.data) }
         : i.type === 'mutation' ? { mutation: i.data.mutation, diet: i.data.diet, slot2: i.data.slot2, description: findReference(i.data.mutation)?.description ?? null,
           refusal: playing === null ? null : dietRefusal(playing, i.data.diet) }

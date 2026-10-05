@@ -23,7 +23,7 @@ import { MANAGED, GROUPS, KNOWN_PLAYABLES, readLive, readSettings, saveSettings,
 import { readReadiness } from './readiness.js';
 import { readLiveState, livePlayer } from './live.js';
 import { KEEP_DAYS, type Traffic } from './traffic.js';
-import { EARLY_FEATURES, readSvip, saveSvip, type SvipState } from './svip.js';
+import { EARLY_FEATURES, FEATURE_MODES, readSvip, saveSvip, type SvipState } from './svip.js';
 import { STARTER_ITEM_IDS } from './starter.js';
 import { readShop, saveShop } from './shop.js';
 import { memberTiers, syncGarageMembers } from './member-tier.js';
@@ -240,10 +240,15 @@ export interface Ctx {
 
 const fmtTime = (s: number): string => new Date(s * 1000).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
-/** SVip for the panel: the players (with the names seen in game) and the features being tried. */
+/** SVip for the panel: the players (with the names seen in game), the features with their release level, the levels. */
 let svipNames: (id: string) => string | null = () => null;
 function svipView(s: SvipState): unknown {
-  return { players: s.players.map((p) => ({ ...p, name: svipNames(p.steamId) })), features: EARLY_FEATURES.map((f) => ({ ...f, mode: s.features[f.key] })) };
+  return { players: s.players.map((p) => ({ ...p, name: svipNames(p.steamId) })), features: EARLY_FEATURES.map((f) => ({ ...f, mode: s.features[f.key] })), modes: FEATURE_MODES };
+}
+/** The features' levels for the audit, by name: "Cửa hàng…: Chỉ admin (Đang phát triển)". */
+function featureLevels(s: SvipState): Record<string, string> {
+  const name = (k: string): string => FEATURE_MODES.find((m) => m.key === k)?.label ?? k;
+  return Object.fromEntries(EARLY_FEATURES.map((f) => [f.key, name(s.features[f.key])]));
 }
 
 /** Everything the Server tab shows, in one call. */
@@ -1057,7 +1062,7 @@ async function handlePanel(
       const before = await readSvip();
       const saved = await saveSvip(await readJsonBody(req), name ?? login.steamId ?? null);
       const ids = (s: typeof saved): string => s.players.map((p) => p.steamId).join(', ');
-      await audit({ action: 'SVip saved', detail: describeChanges({ svip: ids(before), ...before.features }, { svip: ids(saved), ...saved.features }) || 'không đổi gì', ok: true });
+      await audit({ action: 'SVip saved', detail: describeChanges({ svip: ids(before), ...featureLevels(before) }, { svip: ids(saved), ...featureLevels(saved) }) || 'không đổi gì', ok: true });
       // Their garage tier at once (member-tier.ts; the minute's sweep does it too).
       await syncGarageMembers().catch((e: unknown) => console.error('[garage] members:', e));
       sendJson(res, 200, svipView(saved));
