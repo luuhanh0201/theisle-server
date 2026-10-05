@@ -126,16 +126,16 @@ const STEAM = /^\d{17}$/;
  * VIPQueue, HLOD arrays) is not configuration.
  */
 /**
- * The game puts "discord.gg/" in front of Game.ini's Discord itself (the string sits beside the
- * server listing's fields in TheIsleServer-Win64-Shipping.exe): a whole link there became
- * "discord.gg/https://discord.gg/…" and the in-game button opened discord.com's home (2026-10-05).
- * So only the invite code is kept; a link pasted is cut down to it.
+ * The in-game Discord button opened "https://discord.gg/" with no code, with Game.ini's Discord
+ * set to "https://discord.gg/3TeC6yNkCz" and to "3TeC6yNkCz" alike (the client's TheIsle.log,
+ * LaunchURL, 2026-10-05). The game looks for "discord.gg/" in it (the only Discord string in the
+ * session code of the game's exe): the value is kept as "discord.gg/<code>", whatever was pasted.
  */
 export function discordCode(raw: string): string {
   const t = raw.trim().replace(/\/+$/, '');
   const code = t.replace(/^(?:https?:\/\/)?(?:www\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\//i, '');
-  if (!/^[A-Za-z0-9-]{2,64}$/.test(code)) throw new ValidationError('Discord: chỉ nhập mã mời (phần sau discord.gg/), vd 3TeC6yNkCz');
-  return code;
+  if (!/^[A-Za-z0-9-]{2,64}$/.test(code)) throw new ValidationError('Discord: nhập link mời, vd discord.gg/3TeC6yNkCz');
+  return `discord.gg/${code}`;
 }
 
 export const MANAGED: Record<string, ManagedKey> = {
@@ -143,7 +143,7 @@ export const MANAGED: Record<string, ManagedKey> = {
   ServerName: { section: S, group: 'server', type: 'text', maxLen: 100, default: '',
     label: 'Tên server', help: 'Hiện trong danh sách server của game. Để trống = lấy SERVER_NAME trong .env (deploy).' },
   Discord: { section: S, group: 'server', type: 'text', maxLen: 200, default: 'DiscordLinkHere',
-    label: 'Mã mời Discord', help: 'Chỉ mã mời (phần sau discord.gg/), vd 3TeC6yNkCz: game tự thêm "discord.gg/" phía trước. Dán cả link cũng được, panel tự lấy mã. Để trống = giá trị mặc định của game.' },
+    label: 'Link Discord', help: 'Link mời Discord, lưu dạng discord.gg/<mã> (không có https://), dạng mà nút Discord trong game đọc được. Dán link nào panel cũng tự đưa về dạng này. Để trống = giá trị mặc định của game.' },
   MaxPlayerCount: { section: S, group: 'server', type: 'int', min: 1, max: 500, default: 100,
     label: 'Số người chơi tối đa', help: 'Số người vào cùng lúc; đầy thì vào hàng chờ.' },
   bServerWhitelist: { section: S, group: 'server', type: 'bool', default: false,
