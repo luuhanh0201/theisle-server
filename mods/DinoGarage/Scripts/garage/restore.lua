@@ -19,6 +19,7 @@
 ]]
 
 local H = require("shared.isle.helpers")
+local Stomach = require("garage.stomach")
 
 local R = {}
 
@@ -292,10 +293,11 @@ function R.primeGrowth(pawn, growth)
 end
 
 --- SetGrowth(growth) on a live dino, its vitals kept as the share of their max
---- they had, the stomach max for the new max health (the species' stomach /
---- health ratio, read before, a ratio far off, as a hatchling's stomach left on
---- a grown dino, is not used) and the originals (R.setOriginals). Used for a prime
---- that turned prime only after the restore, and by an admin's growth (admin.lua).
+--- they had, the stomach max = the SPECIES' share of the new max health
+--- (stomach.lua; never the dino's own share, which an earlier write or the game
+--- catching up may have moved: the 2026-10-05 vomit) and the originals
+--- (R.setOriginals). Used for a prime that turned prime only after the restore,
+--- by an admin's growth and by the growth bag (admin.lua).
 --- `prime`: the dino is prime now and should get prime's stats (R.primeGrowth).
 -- @return ok, the stomach max now, what setOriginals wrote
 function R.regrowKeep(pawn, growth, prime)
@@ -304,19 +306,18 @@ function R.regrowKeep(pawn, growth, prime)
         local cur, max = readNumber(pawn, v[1]), readNumber(pawn, v[2])
         if cur ~= nil and max ~= nil and max > 0 then shares[i] = cur / max end
     end
-    local mh, mhp = readNumber(pawn, "GetMaxHunger"), readNumber(pawn, "GetMaxHealth")
-    local ratio = (mh and mhp and mhp > 0) and mh / mhp or nil
-    if ratio ~= nil and (ratio < 0.05 or ratio > 2) then ratio = nil end
     if prime == true then
         R.primeGrowth(pawn, growth)
     elseif not pcall(function() pawn:SetGrowth(growth) end) then
         return false
     end
-    local newHealth = readNumber(pawn, "GetMaxHealth")
-    if ratio ~= nil and newHealth ~= nil then set(pawn, "SetMaxHunger", ratio * newHealth) end
+    -- The stomach and its food (SHARES[2]); a species not in the table keeps the game's.
+    local fitted = Stomach.fit(pawn, shares[2])
     for i, v in ipairs(SHARES) do
-        local max = readNumber(pawn, v[2])
-        if shares[i] ~= nil and max ~= nil then set(pawn, v[3], max * math.min(1, shares[i])) end
+        if not (i == 2 and fitted ~= nil) then
+            local max = readNumber(pawn, v[2])
+            if shares[i] ~= nil and max ~= nil then set(pawn, v[3], max * math.min(1, shares[i])) end
+        end
     end
     local wrote = R.setOriginals(pawn)
     return true, readNumber(pawn, "GetMaxHunger"), wrote
@@ -509,8 +510,10 @@ function R.apply(pawn, state, onDone)
     -- included (both grow by the same factor): read it from the fresh dino
     -- here, set the stomach from it after every growth write, for every
     -- slot, not only the admin-made ones (see applyVitals).
-    local stomachRatio = nil
-    do
+    -- The species' share (stomach.lua, measured on every species); the fresh
+    -- dino's own reading only for a species not in the table.
+    local stomachRatio = Stomach.ratioOf(pawn)
+    if stomachRatio == nil then
         local mh, mhp = readNumber(pawn, "GetMaxHunger"), readNumber(pawn, "GetMaxHealth")
         if mh ~= nil and mhp ~= nil and mh > 0 and mhp > 0 then
             stomachRatio = mh / mhp

@@ -29,6 +29,7 @@
 
 local H = require("shared.isle.helpers")
 local Restore = require("garage.restore")
+local Stomach = require("garage.stomach")
 
 local A = {}
 
@@ -150,6 +151,9 @@ end
 function A.feed(pawn, amount)
     local a = unit(amount)
     if a == nil or a <= 0 then return false, "feed: amount must be 0–1" end
+    -- A stomach above its species' share first put back (food as a share), so the food is not
+    -- measured against a stomach the game will shrink (stomach.lua).
+    if Stomach.inflated(pawn) then Stomach.fit(pawn) end
     local before = share(pawn, "hunger")
     if before == nil then return false, "feed: food bar unreadable" end
     if before >= 0.995 then return false, "full", before, before end

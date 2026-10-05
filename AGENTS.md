@@ -23,6 +23,18 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 - Never call RequestRespawn / UpdateChat / UTISaveManager functions (crash).
 - FName fields: write FName("x"), never a Lua string.
 - Re-apply vitals after any SetGrowth.
+- Growth changes (owner's rule after the 2026-10-05 vomit): whatever grows or
+  shrinks a dino (admin growth, growth bag, Phiếu Prime, garage restore, a
+  gift, any new item or command), EVERY stat must follow the new growth at
+  once: maxima as the game has them for that growth, current values as the
+  same share of the max (never above it), and the originals
+  (OriginalMaxHunger…) the same. Never set any growth by hand: call
+  `Restore.regrowKeep` (garage/restore.lua). The stomach is always
+  `Stomach.RATIO[species] x max health` (garage/stomach.lua), never read from
+  the dino. A new growth path needs: a test in tests/test_admin.lua or
+  tests/test_dinogarage.lua (stomach = share x max health, food <= stomach,
+  then the next growth tick) and a GrowthLab run on the test server.
+  Details: docs/lua-safety-rules.md, rule 11.
 
 ## Writing (every text: UI, game messages, panel, launcher, docs, comments, replies)
 - Never use the em dash (the long dash, U+2014). Write a comma, a colon,

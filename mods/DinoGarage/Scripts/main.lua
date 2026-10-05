@@ -42,6 +42,7 @@ local PrimeFix = require("garage.primefix")
 local Skin    = require("garage.skin")
 local KeepSkin = require("garage.keepskin")
 local UnlockHeal = require("garage.unlockheal")
+local Stomach = require("garage.stomach")
 local Light   = require("garage.light")
 local Admin   = require("garage.admin")
 local MutationItem = require("garage.mutation")
@@ -706,6 +707,8 @@ H.every(5000, MOD .. ": prime fixes", PrimeFix.poll)
 H.every(3000, MOD .. ": kept skins", KeepSkin.poll)
 -- A mutation in its slot but not unlocked (hidden, not working): unlocked again (garage/unlockheal.lua).
 H.every(15000, MOD .. ": unlock heal", UnlockHeal.poll)
+-- A stomach above its species' share of the max health (a vomit waiting) put back (garage/stomach.lua).
+H.every(7000, MOD .. ": stomach guard", Stomach.guard)
 
 H.log(MOD .. ": loaded")
 Events.emit({ type = "mod_loaded", mod = MOD })

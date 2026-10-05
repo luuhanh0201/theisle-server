@@ -546,6 +546,32 @@ local carb
 for _, cl in ipairs(H.calls) do if cl.what == "field:CarbValue" then carb = cl.args[1] end end
 check("nutrients from that stomach too", carb and math.abs(carb - want / 2) < 0.01, tostring(carb))
 
+print("\n-- 15c. a T-Rex stored with a stomach off its share (the 2026-10-05 vomit) comes out with the right one --")
+do
+  local REXC = "BlueprintGeneratedClass /Game/TheIsle/Core/Characters/Dinosaurs/Tyrannosaurus/BP_Tyrannosaurus.BP_Tyrannosaurus_C"
+  -- Stored at 52 % with a 1,725 stomach (an old growth write) and 1,588 food (92 % of it).
+  Storage.put(STEAM, "bigbelly", { classPath = REXC, growth = 0.52, health = 3108.8, maxHealth = 3108.8,
+    hunger = 1588.0, maxHunger = 1724.8, thirst = 800, stamina = 500 })
+  local r = H.makePawn({ growth = 0.25, mutation = "None", gasVitals = true, class = REXC })
+  r.__props.MaxHunger = 16.5
+  local grown = false
+  rawset(r, "GetMaxHealth", function() return grown and 3108.8 or 50 end)
+  rawset(r, "SetGrowth", function(_, v) H.record("SetGrowth", v); grown = true end)
+  useCtrl(H.makeCtrl(STEAM, r))
+  H.calls = {}
+  send("redeem", { slot = "bigbelly" })
+  H.advance(3100); H.advance(600)
+  local maxSet, fed
+  for _, cl in ipairs(H.calls) do
+    if cl.what == "SetMaxHunger" then maxSet = cl.args[1] end
+    if cl.what == "SetHunger" then fed = cl.args[1] end
+  end
+  local want = 0.33 * 3108.8
+  check("stomach = the T-Rex share of max health (1,025.9), not the stored 1,724.8", maxSet and math.abs(maxSet - want) < 0.01, tostring(maxSet))
+  check("food = its stored share (92 %) of that, under 100 %", fed and math.abs(fed - want * 1588.0 / 1724.8) < 0.01 and fed <= want,
+    tostring(fed))
+end
+
 print("\n-- 16. nutrients are kept by their REAL field names --")
 for slot in pairs(Storage.listSlots(STEAM)) do Storage.discard(STEAM, slot) end
 writeSettings('{"cooldown":0,"storeCountdown":30}')
