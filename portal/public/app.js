@@ -3148,11 +3148,9 @@ function renderHomeRewards(me) {
   const st = $('home-starter');
   st.hidden = !gift;
   if (gift) {
-    st.innerHTML = `<h3>🎁 Quà tân thủ: Hộp dino tự chọn</h3>
-      <p>Nhận hộp vào <b>Túi đồ</b> → mở hộp, <b>chọn loài</b> (tăng trưởng ngẫu nhiên 50–100%) → dùng Dino vừa mở để chọn <b>giới tính</b> và <b>mutation</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>.</p>
-      ${gift.locked ? `<div class="hr-note">🧪 ${esc(gift.locked)}</div>` : ''}
-      <div class="hr-row"><button type="button" class="btn btn-emerald" id="home-starter-btn" ${gift.locked || homeBusy ? 'disabled' : ''}>🎁 Nhận quà</button>
-        <span class="muted">Mỗi tài khoản 1 lần</span></div>`;
+    // A button in the corner; what it gives shows on hover (or keyboard focus).
+    st.innerHTML = `<button type="button" class="hr-starter-btn" id="home-starter-btn" aria-describedby="home-starter-tip" ${gift.locked || homeBusy ? 'disabled' : ''}>🎁 Quà tân thủ <b>Nhận</b></button>
+      <span class="hr-starter-tip" id="home-starter-tip" role="tooltip"><b>Hộp dino tự chọn</b>, mỗi tài khoản 1 lần. Nhận hộp vào <b>Túi đồ</b> → mở hộp, <b>chọn loài</b> (tăng trưởng ngẫu nhiên 50–100%) → dùng Dino vừa mở để chọn <b>giới tính</b> và <b>mutation</b>. Dino vào gara với <b>đủ 10 nhiệm vụ prime</b>.${gift.locked ? `<br>🧪 ${esc(gift.locked)}` : ''}</span>`;
   }
   // The daily and weekly quests.
   const qe = $('home-quests');
@@ -3173,10 +3171,17 @@ function renderHomeRewards(me) {
     const days = c.rewards.map((r, i) => {
       const n = i + 1;
       const cls = n < c.day || (c.claimed && n === c.day) ? 'done' : n === c.day ? 'today' : '';
-      return `<div class="hr-day ${cls}">Ngày ${n}<b>${cls === 'done' ? '✓' : amber(r, '+')}</b>${n === c.rewards.length && c.bonusItem ? `<span title="${esc(c.bonusItem)}">🎁</span>` : ''}</div>`;
+      // The last day's gift: in place of the amount when the day gives no Hổ phách (owner: a 0 shows
+      // nothing), else a badge on the cell's corner. A day with neither: "-".
+      const gift = n === c.rewards.length && c.bonusItem ? `<span class="hr-gift-in" title="${esc(c.bonusItem)}">🎁</span>` : '';
+      const what = cls === 'done' ? '✓' : r > 0 ? amber(r, '+') : gift || '-';
+      const badge = gift && r > 0 && cls !== 'done' ? `<span class="hr-gift" title="${esc(c.bonusItem)}">🎁</span>` : '';
+      return `<div class="hr-day ${cls}"><span class="hr-n">Ngày ${n}</span><b>${what}</b>${badge}</div>`;
     }).join('');
     const reward = c.rewards[c.day - 1] ?? 0;
-    const label = c.claimed ? '✓ Đã điểm danh hôm nay' : c.ready ? `Điểm danh: ${amber(reward, '+')}` : `Chơi thêm ${Math.max(0, c.needed - c.minutes)} phút để điểm danh`;
+    const todayGift = c.day === c.rewards.length && c.bonusItem ? `🎁 ${esc(c.bonusItem)}` : '';
+    const gets = [reward > 0 ? amber(reward, '+') : '', todayGift].filter(Boolean).join(' + ');
+    const label = c.claimed ? '✓ Đã điểm danh hôm nay' : c.ready ? (gets ? `Điểm danh: ${gets}` : 'Điểm danh') : `Chơi thêm ${Math.max(0, c.needed - c.minutes)} phút để điểm danh`;
     ck.innerHTML = `<h3>📅 Điểm danh hằng ngày <span class="muted" style="font-size:13px;font-weight:600">ngày ${c.day}/${c.rewards.length}</span></h3>
       <div class="hr-days">${days}</div>
       <div class="hr-row" style="justify-content:space-between"><span class="muted">Hôm nay đã chơi <b>${c.minutes}</b>/${c.needed} phút trong game</span>
@@ -3229,7 +3234,10 @@ $('home-rewards').addEventListener('click', async (e) => {
   try {
     const r = await fetch('/api/checkin', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
     const b = await r.json().catch(() => null);
-    if (r.status === 200) showToast(`✅ Điểm danh ngày ${b.day}: +${fmtAmber(b.reward)} Hổ phách${b.item ? ` và ${b.item}` : ''}`);
+    if (r.status === 200) {
+      const got = [b.reward > 0 ? `+${fmtAmber(b.reward)} Hổ phách` : '', b.item ? `🎁 ${b.item}` : ''].filter(Boolean).join(' và ');
+      showToast(`✅ Điểm danh ngày ${b.day}${got ? `: ${got}` : ''}`);
+    }
     else showToast(`❌ ${b?.error ?? 'Không điểm danh được.'}`);
   } catch {
     showToast('❌ Mất kết nối. Thử lại.');

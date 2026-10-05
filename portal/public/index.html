@@ -2454,12 +2454,33 @@
   .home-rewards .hr-card { border-radius: 16px; padding: 18px 20px; background: var(--bg-card); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .home-rewards .hr-card h3 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .home-rewards .hr-card p { margin: 0; color: var(--text-muted); font-size: 13.5px; line-height: 1.5; }
-  .home-rewards .hr-starter { background: linear-gradient(135deg, rgba(245,158,11,.16), rgba(16,185,129,.08)); border-color: rgba(245,158,11,.55); }
-  .home-rewards .hr-checkin { border-color: rgba(52,211,153,.4); }
+  .home-rewards .hr-starter { position: relative; display: inline-flex; }
+  .home-rewards .hr-starter[hidden] { display: none; }
+  .home-rewards .hr-starter-btn { display: inline-flex; align-items: center; gap: 8px; padding: 7px 8px 7px 14px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap;
+    color: var(--text); background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(16,185,129,.12)); border: 1px solid rgba(245,158,11,.55); }
+  .home-rewards .hr-starter-btn b { padding: 3px 10px; border-radius: 999px; background: var(--emerald, #10b981); color: #fff; font-size: 12.5px; }
+  .home-rewards .hr-starter-btn:hover:not(:disabled) { border-color: #f59e0b; }
+  .home-rewards .hr-starter-btn:disabled { cursor: default; opacity: .7; }
+  .home-rewards .hr-starter-btn:disabled b { background: var(--bg-surface); color: var(--text-muted); }
+  .home-rewards .hr-starter-tip { position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; width: min(320px, calc(100vw - 32px)); padding: 10px 12px; border-radius: 12px;
+    background: var(--bg-card); border: 1px solid rgba(245,158,11,.45); box-shadow: 0 12px 30px rgba(0,0,0,.4); color: var(--text-muted); font-size: 12.5px; line-height: 1.5;
+    opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .15s, transform .15s, visibility .15s; pointer-events: none; }
+  .home-rewards .hr-starter:hover .hr-starter-tip, .home-rewards .hr-starter-btn:focus-visible + .hr-starter-tip { opacity: 1; visibility: visible; transform: none; }
+  .home-rewards .hr-starter-tip b { color: var(--text); }
+  .home-rewards .hr-checkin { border-color: rgba(52,211,153,.4); container-type: inline-size; }
   .home-rewards .hr-note { font-size: 12.5px; color: #fbbf24; font-weight: 600; }
-  .home-rewards .hr-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-  .home-rewards .hr-day { border-radius: 10px; padding: 8px 4px; text-align: center; background: var(--bg-surface); border: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); min-width: 0; }
-  .home-rewards .hr-day b { display: block; font-size: 13px; color: var(--text); }
+  .home-rewards .hr-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding-top: 6px; }
+  .home-rewards .hr-day { position: relative; border-radius: 10px; padding: 8px 2px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; background: var(--bg-surface); border: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); min-width: 0; }
+  .home-rewards .hr-day .hr-n { white-space: nowrap; }
+  .home-rewards .hr-day b { display: flex; align-items: center; justify-content: center; height: 20px; font-size: 12.5px; color: var(--text); white-space: nowrap; }
+  .home-rewards .hr-day b .amber-amt { gap: 3px; }
+  .home-rewards .hr-day b .amber-ico { width: 1.2em; height: 1.2em; }
+  .home-rewards .hr-day b .hr-gift-in { font-size: 15px; line-height: 20px; cursor: help; }
+  .home-rewards .hr-day .hr-gift { position: absolute; top: -8px; right: -5px; font-size: 14px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  /* A card too narrow for seven cells with "Ngày 7" and "+120 <icon>" each on one line: two rows (4 + 3). */
+  @container (max-width: 480px) {
+    .home-rewards .hr-days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
   .home-rewards .hr-day.done { border-color: rgba(52,211,153,.5); background: rgba(16,185,129,.12); }
   .home-rewards .hr-day.today { border-color: #f59e0b; background: rgba(245,158,11,.14); box-shadow: 0 0 0 1px rgba(245,158,11,.4); }
   .home-rewards .hr-quests { border-color: rgba(96,165,250,.45); }
@@ -4384,10 +4405,11 @@
              check-in and quests, the Hổ phách balance (app.js renderHomeRewards). -->
         <div class="home-rewards" id="home-rewards">
           <div class="hr-bar">
+            <!-- The starter gift: a small button in the corner, its text on hover (owner, 2026-10-06). -->
+            <span class="hr-starter" id="home-starter" hidden></span>
             <span class="hr-amber" id="home-amber" hidden></span>
           </div>
           <div class="hr-grid">
-            <section class="hr-card hr-starter" id="home-starter" hidden></section>
             <section class="hr-card hr-checkin" id="home-checkin" hidden></section>
             <section class="hr-card hr-quests" id="home-quests" hidden></section>
           </div>
