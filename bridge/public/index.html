@@ -148,17 +148,23 @@
     .app { grid-template-columns: minmax(0, 1fr); }
     aside {
       position: sticky; top: 0; z-index: 10; height: auto; flex-direction: row; align-items: center;
-      padding: 10px 16px; gap: 12px; border-right: 0; border-bottom: 1px solid var(--border);
+      padding: 10px 16px; gap: 8px 12px; border-right: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap;
     }
     .brand > div:last-child, .side-foot .server-card .sub, nav a .label, nav a .count { display: none; }
-    nav { flex-direction: row; overflow-x: auto; gap: 2px; scrollbar-width: none; }
+    /* Row 1: logo + server, account, theme; row 2: every tab (wrapped, never hidden off the side). */
+    nav { order: 3; flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; gap: 2px; }
     nav a { padding: 8px 10px; }
-    .side-foot { margin: 0 0 0 auto; flex-direction: row; }
+    .side-foot { margin: 0 0 0 auto; flex-direction: row; align-items: center; gap: 8px; min-width: 0; }
+    aside .me-card { margin-bottom: 0; padding: 5px 6px 5px 10px; min-width: 0; }
+    aside .me-card .sub { display: none; }
+    aside .me-card .me-who b { max-width: 130px; }
+    aside .brand { padding: 0; }
     .server-card { padding: 7px 9px; }
     .server-card .row span:last-child { display: none; }
     .theme-btn span { display: none; }
     main { padding: 20px 16px 48px; }
   }
+  @media (max-width: 480px) { aside .me-card .me-who b { max-width: 76px; } }
 
   /* ---- cards ---------------------------------------------------------- */
   .card {
