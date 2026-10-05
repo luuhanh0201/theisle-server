@@ -619,8 +619,9 @@ Inbox.on("mutation", function(c, cmd, say)
             return false
         end
         if g + 0.000001 >= below then
+            if below >= 1 then say("Dino đã 100% tăng trưởng — vật phẩm vẫn còn.") else
             say(string.format("Túi tăng trưởng chỉ dùng cho dino dưới %d%% (dino đang %d%%) — vật phẩm vẫn còn.",
-                math.floor(below * 100 + 0.5), math.floor(g * 100)))
+                math.floor(below * 100 + 0.5), math.floor(g * 100))) end
             return false
         end
         local to = math.min(1, g + add)
@@ -641,6 +642,15 @@ Inbox.on("mutation", function(c, cmd, say)
         local words = { from = math.floor(before * 100 + 0.5), to = math.floor(after * 100 + 0.5) }
         say(string.format("Thức ăn %d%% → %d%%.", words.from, words.to))
         Msg.notify(c, "item.food", "Dino của bạn đã được cho ăn: thức ăn {from}% → {to}%.", words)
+        return true
+    end
+    if cmd.mode == "cure" then
+        -- Đá muối: the sickness after vomiting cleared.
+        local ok, line = Admin.cure(pawn)
+        H.log("mutation item: " .. cmd.steamId .. " salt lick — " .. tostring(line))
+        if not ok then say("Không chữa được — vật phẩm vẫn còn."); return false end
+        say("Đã liếm đá muối: hết ốm sau khi nôn.")
+        Msg.notify(c, "item.cure", "Dino của bạn đã liếm đá muối: dạ dày dịu lại, hết ốm sau khi nôn.", {})
         return true
     end
     if cmd.mode == "upgrade" then

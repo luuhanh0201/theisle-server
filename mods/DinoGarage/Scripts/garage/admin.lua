@@ -19,7 +19,10 @@
       teleport  { x, y, z }: the bridge picks a spot something really stood on
 
     And for the bag's items (main.lua inbox "mutation"): A.feed — the food
-    bar up by a share of its max, nutrients left as they are (Hộp food).
+    bar up by a share of its max, nutrients left as they are (Hộp food);
+    A.cure — the sickness after vomiting cleared (Đá muối:
+    ResetVomitSickState, the call the Heal above uses), with the pawn's
+    vomit / sick values read before and after for the log.
 
     Returns ok, a line for the panel, a few words for the player.
 ]]
@@ -252,6 +255,31 @@ function A.probe(pawn)
     table.sort(out)
     H.log("admin: probe " .. #out .. " values: " .. table.concat(out, " | "))
     return true, "probe: " .. table.concat(out, " | ")
+end
+
+--- The pawn's (and its attribute set's) scalar values named like vomit / sickness, for the log.
+local function sickValues(pawn)
+    local out = {}
+    pcall(function() probeObject(pawn, out, "") end)
+    local addr = pawn:GetAddress()
+    local okA, sets = pcall(function() return FindAllOf("TIAttributeSetDinosaur") or {} end)
+    for _, set in ipairs(okA and sets or {}) do
+        local okO, outer = pcall(function() return set:GetOuter():GetAddress() end)
+        if okO and outer == addr then pcall(function() probeObject(set, out, "attr.") end) end
+    end
+    local keep = {}
+    for _, v in ipairs(out) do
+        if v:find("Vomit", 1, true) or v:find("Sick", 1, true) or v:find("Nause", 1, true) then keep[#keep + 1] = v end
+    end
+    table.sort(keep)
+    return #keep > 0 and table.concat(keep, " ") or "none read"
+end
+
+--- Đá muối: the sickness after vomiting cleared. Returns ok, a line for the log.
+function A.cure(pawn)
+    local before = sickValues(pawn)
+    local ok = pcall(function() pawn:ResetVomitSickState() end)
+    return ok, string.format("cure: ResetVomitSickState %s | before: %s | after: %s", ok and "done" or "failed", before, sickValues(pawn))
 end
 
 --- One inbox command { action, values?, growth?, x?, y?, z?, slots? } on a live pawn.

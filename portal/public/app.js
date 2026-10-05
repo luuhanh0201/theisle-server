@@ -1913,7 +1913,9 @@ const BAG_TICKET = {
   // The dino boxes (bridge dino-box.ts): opened into a dino item; the dino item used — into the garage.
   dino_box: { icon: '🎁', action: 'Mở hộp', desc: (g) => `${g.pick === 'random' ? 'Mở ra <b>1 dino ngẫu nhiên</b>' : 'Mở hộp: <b>tự chọn loài</b>'}, tăng trưởng ngẫu nhiên ${Math.round((g.growthMin ?? 0.5) * 100)}–${Math.round((g.growthMax ?? 1) * 100)}%. Mở ra vật phẩm Dino trong túi — dùng nó để chọn giới tính và mutation.` },
   dino: { icon: '🦖', action: 'Dùng', desc: (g) => `Dùng để chọn <b>giới tính</b> và <b>mutation</b> (ô mở theo tăng trưởng: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>.` },
-  growth_bag: { icon: '🌱', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.1) * 100)}% tăng trưởng</b> — chỉ dùng khi dino dưới ${Math.round((g.below ?? 0.6) * 100)}%.` },
+  growth_bag: { icon: '🌱', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.1) * 100)}% tăng trưởng</b> — ${(g.below ?? 0.6) >= 1 ? 'dùng cho mọi dino chưa 100%' : `chỉ dùng khi dino dưới ${Math.round((g.below ?? 0.6) * 100)}%`}.` },
+  // Written like the game's own item text (owner, 2026-10-05).
+  salt_lick: { icon: '🧂', desc: () => 'Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay: <b>hết trạng thái ốm sau khi nôn</b>. Dùng khi dino đang ốm sau khi nôn.' },
   food_box: { icon: '🍖', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.2) * 100)}% thức ăn</b> (chống đói, không tăng chất dinh dưỡng).` },
 };
 /** The bag's kinds (owner, 2026-10-05: "phân loại vật phẩm cho dễ tìm"): a tab each, a heading each in "Tất cả". */
@@ -1921,7 +1923,7 @@ const BAG_CATS = [
   { key: 'dino', label: '🦖 Dino', types: ['dino_box', 'dino'] },
   { key: 'mutation', label: '🧬 Mutation', types: ['mutation'] },
   { key: 'ticket', label: '🎟️ Phiếu', types: ['mutation_ticket', 'mutation_clear', 'prime_ticket'] },
-  { key: 'care', label: '🍖 Tăng trưởng & thức ăn', types: ['growth_bag', 'food_box'] },
+  { key: 'care', label: '🍖 Chăm sóc dino', types: ['growth_bag', 'food_box', 'salt_lick'] },
   { key: 'skin', label: '🎨 Skin', types: ['skin'] },
 ];
 const BAG_TYPE_ORDER = BAG_CATS.flatMap((c) => c.types);
@@ -2056,11 +2058,19 @@ function renderBagDialog() {
       <div class="muted" style="font-size:12.5px">${esc(pv.species ?? '')} · ${pv.growth != null ? `${Math.round(pv.growth * 100)}%` : '?'} · đời ${esc(gen)}${pv.prime ? ' · prime' : ''}${lastMeData?.bagUnlimited ? ' · ∞ (túi admin)' : g.uids.length > 1 ? ` · còn ${g.uids.length} cái` : ''}</div></div>
       <button type="button" class="x" data-dlg="close" aria-label="Đóng">×</button></div>`;
   const status = '<div class="garage-status" id="bag-dlg-status" role="status" aria-live="polite" hidden></div>';
+  if (g.type === 'salt_lick') {
+    $('bag-dlg-in').innerHTML = `${head}<div class="sec"><h4>Liếm đá muối</h4>
+      <div class="cmp">Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay: <b>hết trạng thái ốm sau khi nôn</b>.</div>
+      <div class="cmp muted">Chỉ chữa ốm sau khi nôn — không hồi máu, thức ăn hay nước. Dùng là hết vật phẩm.</div>
+      <div class="row"><button type="button" class="btn btn-emerald" data-dlg="apply" ${bag.busy ? 'disabled' : ''}>🧂 Liếm đá muối</button></div></div>${status}`;
+    return;
+  }
   if (g.type === 'growth_bag' || g.type === 'food_box') {
     const grow = g.type === 'growth_bag';
     const amount = Math.round((g.amount ?? (grow ? 0.1 : 0.2)) * 100);
     const below = g.below ?? 0.6;
-    const why = grow && pv.growth != null && pv.growth >= below - 1e-6 ? `Chỉ dùng cho dino dưới ${Math.round(below * 100)}% (dino đang ${Math.round(pv.growth * 100)}%).` : '';
+    const why = grow && pv.growth != null && pv.growth >= below - 1e-6
+      ? (below >= 1 ? 'Dino đã 100% tăng trưởng.' : `Chỉ dùng cho dino dưới ${Math.round(below * 100)}% (dino đang ${Math.round(pv.growth * 100)}%).`) : '';
     const to = grow && pv.growth != null ? Math.min(100, Math.round(pv.growth * 100) + amount) : null;
     $('bag-dlg-in').innerHTML = `${head}<div class="sec"><h4>${grow ? 'Tăng trưởng' : 'Cho ăn'}</h4>
       <div class="cmp">${grow ? `Dino đang chơi lớn thêm <b>${amount}%</b>${to !== null ? ` (${Math.round(pv.growth * 100)}% → <b>${to}%</b>)` : ''}. Chỉ số được giữ theo tỉ lệ như lúc trước.`

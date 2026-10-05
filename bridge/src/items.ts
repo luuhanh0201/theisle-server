@@ -26,7 +26,7 @@ import { findReference, type Diet } from './mutation-reference.js';
  */
 
 export type ItemType = 'skin' | 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket'
-  | 'dino_box' | 'dino' | 'growth_bag' | 'food_box';
+  | 'dino_box' | 'dino' | 'growth_bag' | 'food_box' | 'salt_lick';
 export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: boolean; system?: boolean }> = [
   // unique: a player owns it once (a skin); a kind used up (a mutation…) may be owned several times.
   { key: 'skin', label: 'Skin dino', unique: true },
@@ -43,6 +43,8 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
   // Used on the dino played now (mods/DinoGarage garage/admin.lua): growth, food.
   { key: 'growth_bag', label: 'Túi tăng trưởng', unique: false },
   { key: 'food_box', label: 'Hộp food', unique: false },
+  // Đá muối: the sickness after vomiting cleared (ResetVomitSickState).
+  { key: 'salt_lick', label: 'Đá muối', unique: false },
 ];
 
 /**
@@ -172,7 +174,8 @@ type TypedData =
   | { type: 'dino_box'; data: DinoBoxData }
   | { type: 'dino'; data: EmptyData }
   | { type: 'growth_bag'; data: GrowthBagData }
-  | { type: 'food_box'; data: FoodBoxData };
+  | { type: 'food_box'; data: FoodBoxData }
+  | { type: 'salt_lick'; data: EmptyData };
 export type Item = ItemBase & TypedData;
 type ItemDef = Pick<ItemBase, 'name' | 'rarity'> & TypedData;
 
@@ -339,7 +342,7 @@ export function validateItem(raw: unknown): ItemDef & { retired?: boolean } {
     return { type, name, rarity: maxRarity as Rarity, data: { maxRarity: maxRarity as Rarity }, ...extra };
   }
   if (rarity === 'special') throw new ValidationError('Đặc biệt chỉ dành cho mutation nhiệm vụ');
-  if (type === 'mutation_clear' || type === 'prime_ticket') return { type, name, rarity: rarity as Rarity, data: {}, ...extra };
+  if (type === 'mutation_clear' || type === 'prime_ticket' || type === 'salt_lick') return { type, name, rarity: rarity as Rarity, data: {}, ...extra };
   if (type === 'dino_box') return { type, name, rarity: rarity as Rarity, data: validateDinoBoxData(r['data']), ...extra };
   if (type === 'dino') return { type, name, rarity: rarity as Rarity, data: {}, ...extra };
   if (type === 'growth_bag') return { type, name, rarity: rarity as Rarity, data: validateGrowthBagData(r['data']), ...extra };

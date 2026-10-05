@@ -149,6 +149,7 @@ export const MESSAGES: readonly MessageDef[] = [
   // --- admin actions (mods/DinoGarage inbox) ---
   { key: 'item.mutationClear', group: 'admin', label: 'Người chơi dùng Phiếu bỏ mutation', default: 'Đã bỏ mutation {mutation} khỏi ô {slot}.', vars: ['mutation', 'slot'] },
   { key: 'item.growth', group: 'admin', label: 'Người chơi dùng Túi tăng trưởng', default: 'Dino của bạn đã lớn từ {from}% lên {to}%.', vars: ['from', 'to'] },
+  { key: 'item.cure', group: 'admin', label: 'Người chơi dùng Đá muối', default: 'Dino của bạn đã liếm đá muối: dạ dày dịu lại, hết ốm sau khi nôn.', vars: [] },
   { key: 'item.food', group: 'admin', label: 'Người chơi dùng Hộp food', default: 'Dino của bạn đã được cho ăn: thức ăn {from}% → {to}%.', vars: ['from', 'to'] },
   { key: 'item.prime', group: 'admin', label: 'Người chơi dùng Phiếu Prime', default: 'Dino của bạn đã lên prime — chỉ số prime được áp sau vài giây.', vars: [] },
   { key: 'item.mutationUpgrade', group: 'admin', label: 'Người chơi nâng cấp mutation bằng vật phẩm trùng (+1 đời)', default: 'Dino của bạn đã lên đời {generation} nhờ {mutation} — mọi mutation mạnh hơn.', vars: ['generation', 'mutation'] },

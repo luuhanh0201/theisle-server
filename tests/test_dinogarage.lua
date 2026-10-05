@@ -1056,6 +1056,11 @@ do
   fp.__props.Hunger = 100
   local f2 = sendUse({ mode = "food", amount = 0.2 })
   check("a full dino: refused (the item stays)", started(f2) and started(f2).ok == false and lastMsg(fc):find("no", 1, true) ~= nil, lastMsg(fc))
+  local cured = false
+  rawset(fp, "ResetVomitSickState", function() cured = true end)
+  local c1 = sendUse({ mode = "cure" })
+  check("salt lick: the sickness after vomiting reset, the player told", started(c1) and started(c1).ok == true and cured
+        and lastMsg(fc):find("đá muối", 1, true) ~= nil, lastMsg(fc))
 end
 
 say("\n-- the admin's minimums: health and growth needed to store --")

@@ -322,7 +322,7 @@ function send(res: ServerResponse, status: number, body: unknown): void {
 type UseCtx = { store: Store; prison?: Prison };
 type Answer = { status: number; body: Record<string, unknown> };
 /** The items used on the dino a player plays now (a skin is worn instead: /player-api/skin). */
-type DinoItem = Extract<Item, { type: 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket' | 'growth_bag' | 'food_box' }>;
+type DinoItem = Extract<Item, { type: 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket' | 'growth_bag' | 'food_box' | 'salt_lick' }>;
 const isDinoItem = (i: Item): i is DinoItem => i.type !== 'skin' && i.type !== 'dino_box' && i.type !== 'dino';
 const pct = (g: number): string => `${Math.round(g * 100)}%`;
 
@@ -402,6 +402,7 @@ export async function previewMutationUse(ctx: UseCtx, who: string, uid: string):
  *   prime_ticket      a grown dino made prime
  *   growth_bag        +its amount on a dino below its `below` (55 % → 65 %)
  *   food_box          the food bar +its amount (food only, no nutrients)
+ *   salt_lick         the sickness after vomiting cleared
  * (`upgrade`: the switched-off duplicate +1 đời, mutation-tiers.ts.) The
  * player's own POST /player-api/items/…/use, and the panel's "Dùng lên dino"
  * (server.ts): the same checks for both. 202 { id }: queued; the copy goes
@@ -420,10 +421,14 @@ export async function startMutationUse(ctx: UseCtx, who: string, uid: string, sl
   } else if (item.type === 'growth_bag') {
     const { amount, below } = item.data;
     if (typeof p.growth !== 'number') return { status: 409, body: { error: 'Chưa đọc được tăng trưởng của dino — thử lại sau vài giây.' } };
-    if (p.growth + 1e-6 >= below) return { status: 409, body: { error: `Túi tăng trưởng chỉ dùng cho dino dưới ${pct(below)} (dino đang ${pct(p.growth)}).` } };
+    if (p.growth + 1e-6 >= below) {
+      return { status: 409, body: { error: below >= 1 ? 'Dino đã 100% tăng trưởng.' : `Túi tăng trưởng chỉ dùng cho dino dưới ${pct(below)} (dino đang ${pct(p.growth)}).` } };
+    }
     use = { mode: 'growth', amount, below };
   } else if (item.type === 'food_box') {
     use = { mode: 'food', amount: item.data.amount };
+  } else if (item.type === 'salt_lick') {
+    use = { mode: 'cure' };
   } else if (item.type === 'mutation_clear') {
     if (slot !== 1 && slot !== 2 && slot !== 3 && slot !== 4) return { status: 400, body: { error: 'Chọn ô mutation 1–4.' } };
     if (!p.mutations?.[`Slot${slot}`]) return { status: 409, body: { error: `Ô ${slot} đang trống.` } };

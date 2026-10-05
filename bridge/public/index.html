@@ -2932,7 +2932,8 @@
                   <option value="prime_ticket">👑 Phiếu Prime</option>
                   <option value="dino_box">🎁 Hộp dino</option>
                   <option value="growth_bag">🌱 Túi tăng trưởng</option>
-                  <option value="food_box">🍖 Hộp food</option></select></label>
+                  <option value="food_box">🍖 Hộp food</option>
+                  <option value="salt_lick">🧂 Đá muối</option></select></label>
                 <label>Tên<input id="tkt-name" maxlength="60" placeholder="vd: Phiếu đổi mutation Hiếm"></label>
                 <label id="tkt-rarity-l">Độ hiếm<select id="tkt-rarity"></select></label>
               </div>
@@ -4514,7 +4515,7 @@ $('mit-owners').addEventListener('click', async (e) => {
 
 // --- Vật phẩm → Phiếu (items.ts mutation_ticket / mutation_clear / prime_ticket; used in the player's Túi đồ) ---
 const TKT_TYPES = { mutation_ticket: '🎟️ Phiếu đổi mutation', mutation_clear: '🧹 Phiếu bỏ mutation', prime_ticket: '👑 Phiếu Prime',
-  dino_box: '🎁 Hộp dino', growth_bag: '🌱 Túi tăng trưởng', food_box: '🍖 Hộp food' };
+  dino_box: '🎁 Hộp dino', growth_bag: '🌱 Túi tăng trưởng', food_box: '🍖 Hộp food', salt_lick: '🧂 Đá muối' };
 /** A new item's data, by type (items.ts defaults). */
 const TKT_DATA = { dino_box: () => ({ pick: 'random', growthMin: 0.5, growthMax: 1, quest: false }), growth_bag: () => ({ amount: 0.1, below: 0.6 }), food_box: () => ({ amount: 0.2 }) };
 const TKT_INFO = {
@@ -4522,7 +4523,8 @@ const TKT_INFO = {
   mutation_clear: 'Bỏ mutation ở một ô (1–4) để người chơi chọn lại trong game.',
   prime_ticket: 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện, chỉ số prime sau vài giây). Dùng cho trường hợp lỡ prime.',
   dino_box: 'Người chơi <b>mở hộp</b>: loài <b>ngẫu nhiên</b> (có hiệu ứng roll) hoặc <b>tự chọn</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới — ra <b>vật phẩm Dino</b> trong túi. Dùng vật phẩm Dino: chọn giới tính và mutation (ô mở theo tăng trưởng như game: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%; đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>. Quà tân thủ <span class="mono">starter_box</span> (hộp tự chọn) được nhận ở trang chủ, mỗi tài khoản 1 lần. Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Hộp dino).',
-  growth_bag: 'Dùng lên dino <b>đang chơi</b>: cộng thêm tăng trưởng, chỉ khi dino dưới mốc (vd +10% khi dưới 60%: 55% → 65%). Chỉ số giữ theo tỉ lệ. Vật phẩm chỉ mất khi game xác nhận.',
+  salt_lick: 'Dùng lên dino <b>đang chơi</b>: hết trạng thái ốm sau khi nôn (hàm game <span class="mono">ResetVomitSickState</span>, như nút Hồi máu của admin). Không hồi máu / thức ăn / nước. Người chơi thấy: “Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay”.',
+  growth_bag: 'Dùng lên dino <b>đang chơi</b>: cộng thêm tăng trưởng, chỉ khi dino dưới mốc (vd +10% khi dưới 60%: 55% → 65%; mốc 100% = mọi dino chưa trưởng thành). Chỉ số giữ theo tỉ lệ. Vật phẩm chỉ mất khi game xác nhận.',
   food_box: 'Dùng lên dino <b>đang chơi</b>: thanh thức ăn cộng thêm (tối đa đầy) — chống đói, <b>không tăng chất dinh dưỡng</b>. Dino đang no: vật phẩm vẫn còn.',
 };
 const tkt = { sel: null, draft: null, saved: null };

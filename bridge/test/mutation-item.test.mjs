@@ -305,3 +305,27 @@ test('Túi tăng trưởng and Hộp food: on the dino played now; the growth ba
   await I.settleUse({ type: 'portal_command', id: gr.body.id, action: 'mutation', ok: true });
   assert.equal((await I.inventoryOf(P5)).some((o) => o.uid === g.uid), false);
 });
+
+test('Túi tăng trưởng 5% for every dino (below 100 %) and Đá muối (the sickness after vomiting)', async () => {
+  const P6 = '76561198000000026';
+  const { readFileSync: rf } = await import('node:fs');
+  const five = await I.createItem({ type: 'growth_bag', name: 'Túi tăng trưởng 5%', rarity: 'common', data: { amount: 0.05, below: 1 } }, ADMIN);
+  const salt = await I.createItem({ type: 'salt_lick', name: 'Đá muối', rarity: 'rare', data: { anything: 1 } }, ADMIN);
+  assert.deepEqual(salt.data, {}, 'nothing to set');
+  const g = await I.grantItem(P6, five.id, 'admin', ADMIN);
+  const sl = await I.grantItem(P6, salt.id, 'admin', ADMIN);
+  const store = new Store();
+  const t = Math.floor(Date.now() / 1000);
+  store.apply({ type: 'session_start', t, steamId: P6, name: 'P6' });
+  store.apply({ type: 'spawn', t, steamId: P6, name: 'P6', species: 'BP_Tyrannosaurus_C', growth: 1, mutations: {} });
+  const ctx = { store };
+  const inbox = () => JSON.parse(rf(join(root, 'garage', 'inbox.json'), 'utf8')).commands;
+  assert.match((await startMutationUse(ctx, P6, g.uid, null)).body.error, /đã 100%/);
+  store.apply({ type: 'snapshot', t: t + 1, steamId: P6, name: 'P6', species: 'BP_Tyrannosaurus_C', growth: 0.98, health: 1 });
+  const gr = await startMutationUse(ctx, P6, g.uid, null);
+  assert.equal(gr.status, 202, '98 %: any dino under 100 %');
+  assert.deepEqual((({ mode, amount, below }) => ({ mode, amount, below }))(inbox().find((x) => x.id === gr.body.id)), { mode: 'growth', amount: 0.05, below: 1 });
+  const cu = await startMutationUse(ctx, P6, sl.uid, null);
+  assert.equal(cu.status, 202);
+  assert.equal(inbox().find((x) => x.id === cu.body.id).mode, 'cure');
+});

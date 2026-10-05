@@ -53,7 +53,9 @@ export type MutationUse =
   | { mode: 'prime' }
   // Túi tăng trưởng: +amount when the dino is below `below`. Hộp food: the food bar +amount (admin.lua grow / feed).
   | { mode: 'growth'; amount: number; below: number }
-  | { mode: 'food'; amount: number };
+  | { mode: 'food'; amount: number }
+  // Đá muối: the sickness after vomiting cleared (admin.lua cure).
+  | { mode: 'cure' };
 
 /** The growth at which the game opens each mutation slot (players' own picks on this server, 2026-10-02). */
 export const SLOT_MIN_GROWTH: Readonly<Record<1 | 2 | 3 | 4, number>> = { 1: 0.25, 2: 0.5, 3: 0.75, 4: 0.75 };
@@ -329,6 +331,7 @@ export function validateAdminAction(raw: unknown): AdminAction {
 export async function queueMutationUse(steamId: string, use: MutationUse): Promise<InboxCommand> {
   assertSteamId(steamId);
   if (use.mode === 'prime') return enqueue({ type: 'mutation', steamId, mode: 'prime' });
+  if (use.mode === 'cure') return enqueue({ type: 'mutation', steamId, mode: 'cure' });
   const share = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 1;
   if (use.mode === 'growth') {
     if (!share(use.amount) || !share(use.below)) throw new ValidationError('amount and below must be 0–1');
