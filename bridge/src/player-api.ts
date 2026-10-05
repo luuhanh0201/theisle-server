@@ -576,7 +576,7 @@ export async function handlePlayerApi(
     try {
       const catalog = ctx.store.catalog.merge(await readGarageCatalog()).list();
       if (boxRoute[2] === 'open') {
-        const out = await openDinoBox(who, uid, body, catalog);
+        const out = await openDinoBox(who, uid, body, catalog, Math.random, await bagUnlimited(who));
         await audit({ action: 'dino box open', ok: true,
           detail: `${name ?? who} mở hộp dino: ${out.label} ${Math.round(out.growth * 100)}% (${out.drawn ? 'loài ngẫu nhiên' : 'tự chọn loài'}) vào túi đồ` }, { steamId: who, name });
         send(res, 200, out);

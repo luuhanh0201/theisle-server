@@ -49,7 +49,7 @@ import { loadGuard, runGuardAction, saveGuard, speciesName, type GuardAction } f
 import { Prison } from './prison.js';
 import { KillScenes } from './kill-scene.js';
 import { GameAdminLog } from './game-admin-log.js';
-import { settleUse } from './items.js';
+import { fillBags, settleUse } from './items.js';
 import { syncAdminGuard } from './permissions.js';
 import { bagUnlimited, publicServerInfo, shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
@@ -177,6 +177,16 @@ const sweepStarters = (): void => {
 };
 setTimeout(sweepStarters, 30_000);
 setInterval(sweepStarters, 60_000);
+
+// The admins' bags (items.ts fillBags): one of every item given out, at the start and every minute
+// (an admin added in Game.ini / the panel, an item made or given out again).
+const sweepAdminBags = (): void => {
+  adminIds().then((ids) => fillBags(ids))
+    .then((n) => { if (n > 0) console.info(`[items] ${n} item(s) put in the admins' bags`); })
+    .catch((error: unknown) => console.error('[items] could not fill the admins\' bags:', error));
+};
+setTimeout(sweepAdminBags, 20_000);
+setInterval(sweepAdminBags, 60_000);
 
 const tails = [config.eventsPath, config.snapshotsPath].map(
   (path) => new NdjsonTail(path, (event) => {

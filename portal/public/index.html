@@ -2374,6 +2374,11 @@
   .bag-tabs { display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg-card); padding: 3px; border-radius: 8px; border: 1px solid var(--border); }
   .bag-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 4px 0 10px; }
   .bag-dino { font-size: 13px; margin: 0 0 10px; }
+  .bag-grid .bag-sec { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin: 6px 0 -4px; font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--text-normal, var(--text)); }
+  .bag-grid .bag-sec:first-child { margin-top: 0; }
+  .bag-grid .bag-sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .bag-n { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(148, 163, 184, .14); font-size: 11px; font-weight: 700; text-align: center; color: var(--text-muted); }
+  .gara-filter-btn.active .bag-n { background: rgba(16, 185, 129, .2); color: inherit; }
   .bag-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
   .bag-item { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border); min-width: 0; overflow: hidden; isolation: isolate; }
   .bag-item.off { opacity: .55; filter: saturate(.6); }
@@ -5116,16 +5121,14 @@
           <div class="card-header">
             <div>
               <h3 class="card-title">🎒 Túi đồ</h3>
-              <span class="card-subtitle">Mutation và phiếu: dùng lên dino đang chơi (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75% tăng trưởng); dùng xong vật phẩm mất. Skin: mặc lên đúng loài.</span>
+              <span class="card-subtitle">Mutation, phiếu, túi tăng trưởng, hộp food: dùng lên dino đang chơi (ô mutation 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75% tăng trưởng). Hộp dino: mở ra Dino, dùng để nhận vào gara. Skin: mặc lên đúng loài.</span>
             </div>
             <span class="tag" id="bag-count">0 món</span>
           </div>
           <div class="bag-bar">
             <div class="bag-tabs" id="bag-filter">
+              <!-- Filled by app.js renderBag: Tất cả, Dùng được ngay, then each kind held (BAG_CATS). -->
               <button type="button" class="gara-filter-btn active" data-bag="all">Tất cả</button>
-              <button type="button" class="gara-filter-btn" data-bag="usable">Dùng được ngay</button>
-              <button type="button" class="gara-filter-btn" data-bag="mutation">Mutation</button>
-              <button type="button" class="gara-filter-btn" data-bag="skin">Skin</button>
             </div>
             <div class="gara-search-box">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>

@@ -78,7 +78,7 @@ import { addPrimeFix, listPrimeFixes } from './prime-fixes.js';
 import type { Prison } from './prison.js';
 import type { KillScenes } from './kill-scene.js';
 import { type Item, ITEM_TYPES, RARITIES, LIGHT_MAX, LIGHT_MIN, createItem, getItem, grantItem, listItems, ownerCounts, ownersOf, resolveSkin,
-  inventoryOf, revokeItem, speciesKey, updateItem } from './items.js';
+  fillBags, inventoryOf, revokeItem, speciesKey, updateItem } from './items.js';
 import { queueSkinRepaint } from './commands.js';
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -396,11 +396,15 @@ async function handlePanel(
       if (path === '/api/items') {
         const item = await createItem(await readJsonBody(req), login.steamId);
         await audit({ action: 'item created', detail: `${label(item)} · ${item.id}`, ok: true });
+        // Into every admin's bag at once (items.ts fillBags; the bridge's minute sweep does it too).
+        await fillBags(await adminIds());
         sendJson(res, 201, { item });
         return;
       }
       if (itemOne) {
         const { before, after } = await updateItem(itemOne[1] as string, await readJsonBody(req));
+        // Given out again (no longer retired): back in the admins' bags.
+        if (before.retired && !after.retired) await fillBags(await adminIds());
         await audit({ action: 'item updated', detail: `${label(after)} · ${after.id}`
           + (before.retired !== after.retired ? (after.retired ? ' · ngừng phát hành' : ' · phát hành lại') : ''), ok: true });
         sendJson(res, 200, { item: after });

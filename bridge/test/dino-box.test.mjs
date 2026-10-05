@@ -92,3 +92,23 @@ test('using a dino: the sex and the mutations of the open slots; into the garage
   assert.equal((await I.inventoryOf(A)).some((o) => o.uid === opened.uid), false, 'used up');
   await assert.rejects(() => B.useDinoItem(A, opened.uid, { female: false }, CATALOG), /không có vật phẩm dino/);
 });
+
+test('the admins\' bags: one of every item given out (not retired, never the dino item), once; a box opened there stays', async () => {
+  const ADM = '76561198000000099';
+  const old = await I.createItem({ type: 'food_box', name: 'Hộp food cũ', rarity: 'common', data: {} }, null);
+  await I.updateItem(old.id, { type: 'food_box', name: 'Hộp food cũ', rarity: 'common', data: {}, retired: true });
+  const added = await I.fillBags([ADM, 'nope']);
+  const inv = await I.inventoryOf(ADM);
+  const all = (await I.listItems()).filter((i) => !i.retired && i.type !== 'dino');
+  assert.equal(added, all.length);
+  assert.deepEqual(new Set(inv.map((o) => o.itemId)), new Set(all.map((i) => i.id)), 'every item given out, one each');
+  assert.equal(inv.some((o) => o.itemId === old.id || o.itemId === B.DINO_ITEM_ID), false, 'not a retired one, not the dino item');
+  assert.equal(await I.fillBags([ADM]), 0, 'already full: nothing twice');
+  const fresh = await box('random');
+  assert.equal(await I.fillBags([ADM]), 1, 'a new item: in');
+  const own = (await I.inventoryOf(ADM)).find((o) => o.itemId === fresh.id);
+  await B.openDinoBox(ADM, own.uid, {}, CATALOG, () => 0.1, true);
+  const after = await I.inventoryOf(ADM);
+  assert.ok(after.some((o) => o.uid === own.uid), 'an admin\'s box stays');
+  assert.equal(after.filter((o) => o.itemId === B.DINO_ITEM_ID).length, 1, 'and the dino is there');
+});

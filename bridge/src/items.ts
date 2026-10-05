@@ -527,9 +527,9 @@ export function consumeOwned(steamId: string, uid: string): Promise<boolean> {
 
 /**
  * A box opened: the box's copy out, a dino item in, in one write (two opens at once: one dino).
- * Null when the copy is not there (used already).
+ * `keepBox`: an admin's bag never runs out — the box stays. Null when the copy is not there (used already).
  */
-export function openOwned(steamId: string, uid: string, intoItemId: string, dino: OwnedDino, note: string): Promise<{ box: Owned; dino: Owned } | null> {
+export function openOwned(steamId: string, uid: string, intoItemId: string, dino: OwnedDino, note: string, keepBox = false): Promise<{ box: Owned; dino: Owned } | null> {
   return serialized(async () => {
     const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
     file.players ??= {};
@@ -538,9 +538,38 @@ export function openOwned(steamId: string, uid: string, intoItemId: string, dino
     if (box === undefined) return null;
     const out: Owned = { uid: newId('own'), itemId: intoItemId, source: box.source, grantedAt: Math.floor(Date.now() / 1000), by: box.by,
       note: note.slice(0, 200), dino };
-    file.players[steamId] = [...list.filter((o) => o.uid !== uid), out];
+    file.players[steamId] = [...(keepBox ? list : list.filter((o) => o.uid !== uid)), out];
     await writeJson(inventoryPath(), file);
     return { box, dino: out };
+  });
+}
+
+/**
+ * The admins' bags (owner, 2026-10-05: "tất cả đều tự add vào túi admin"): one copy of every item still
+ * given out (not retired; never the dino item, made by opening a box) in each of these bags that has
+ * none — one write. Their bag never runs out (player-api.ts bagUnlimited), so one is enough.
+ * Returns how many copies went in.
+ */
+export function fillBags(steamIds: Iterable<string>, note = 'Túi admin: mọi vật phẩm'): Promise<number> {
+  const ids = [...new Set(steamIds)].filter((id) => /^\d{17}$/.test(id));
+  if (ids.length === 0) return Promise.resolve(0);
+  return serialized(async () => {
+    const all = (await listItems()).filter((i) => !i.retired && !ITEM_TYPES.find((t) => t.key === i.type)?.system);
+    const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
+    file.players ??= {};
+    const now = Math.floor(Date.now() / 1000);
+    let added = 0;
+    for (const id of ids) {
+      const list = file.players[id] ?? [];
+      const have = new Set(list.map((o) => o.itemId));
+      const fresh = all.filter((i) => !have.has(i.id))
+        .map((i): Owned => ({ uid: newId('own'), itemId: i.id, source: 'admin', grantedAt: now, by: null, note }));
+      if (fresh.length === 0) continue;
+      file.players[id] = [...list, ...fresh];
+      added += fresh.length;
+    }
+    if (added > 0) await writeJson(inventoryPath(), file);
+    return added;
   });
 }
 

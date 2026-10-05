@@ -94,8 +94,11 @@ export async function boxOptions(steamId: string, uid: string, catalog: Catalog)
     species: speciesOptions(catalog).map((s) => ({ key: s.key, label: s.label, diet: s.diet })) };
 }
 
-/** Open a box: its species drawn or picked, its growth drawn (`random` for the tests); the dino item in the bag. */
-export async function openDinoBox(steamId: string, uid: string, raw: unknown, catalog: Catalog, random: () => number = Math.random,
+/**
+ * Open a box: its species drawn or picked, its growth drawn (`random` for the tests); the dino item in the
+ * bag. `keepBox`: an admin's bag (player-api.ts bagUnlimited) — the box stays.
+ */
+export async function openDinoBox(steamId: string, uid: string, raw: unknown, catalog: Catalog, random: () => number = Math.random, keepBox = false,
 ): Promise<{ uid: string; species: string; label: string; growth: number; drawn: boolean }> {
   const owned = await ownedOf(steamId, uid, 'hộp');
   const box = await getItem(owned.itemId);
@@ -115,7 +118,7 @@ export async function openDinoBox(steamId: string, uid: string, raw: unknown, ca
   const growth = Math.round((growthMin + (growthMax - growthMin) * random()) * 100) / 100;
   await ensureItem(DINO_ITEM_ID, DINO_ITEM);
   const dino: OwnedDino = { species: option.key, growth, quest: box.data.quest };
-  const out = await openOwned(steamId, uid, DINO_ITEM_ID, dino, `Mở từ ${box.name}`);
+  const out = await openOwned(steamId, uid, DINO_ITEM_ID, dino, `Mở từ ${box.name}`, keepBox);
   if (out === null) throw new ValidationError('Hộp đã được mở.');
   return { uid: out.dino.uid, species: option.key, label: option.label, growth, drawn: box.data.pick === 'random' };
 }

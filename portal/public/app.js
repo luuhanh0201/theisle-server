@@ -1916,6 +1916,16 @@ const BAG_TICKET = {
   growth_bag: { icon: '🌱', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.1) * 100)}% tăng trưởng</b> — chỉ dùng khi dino dưới ${Math.round((g.below ?? 0.6) * 100)}%.` },
   food_box: { icon: '🍖', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.2) * 100)}% thức ăn</b> (chống đói, không tăng chất dinh dưỡng).` },
 };
+/** The bag's kinds (owner, 2026-10-05: "phân loại vật phẩm cho dễ tìm"): a tab each, a heading each in "Tất cả". */
+const BAG_CATS = [
+  { key: 'dino', label: '🦖 Dino', types: ['dino_box', 'dino'] },
+  { key: 'mutation', label: '🧬 Mutation', types: ['mutation'] },
+  { key: 'ticket', label: '🎟️ Phiếu', types: ['mutation_ticket', 'mutation_clear', 'prime_ticket'] },
+  { key: 'care', label: '🍖 Tăng trưởng & thức ăn', types: ['growth_bag', 'food_box'] },
+  { key: 'skin', label: '🎨 Skin', types: ['skin'] },
+];
+const BAG_TYPE_ORDER = BAG_CATS.flatMap((c) => c.types);
+const bagCat = (type) => BAG_CATS.find((c) => c.types.includes(type))?.key ?? 'other';
 /** Items used without a dino in game (they go into the garage). */
 const BAG_NO_DINO = new Set(['dino_box', 'dino']);
 const bagKey = (s) => String(s ?? '').replace(/^BP_/, '').replace(/_C$/, '').toLowerCase();
@@ -1963,13 +1973,21 @@ function renderBag(me) {
   $('bag-dino').innerHTML = me.prison ? '⛓️ Bạn đang ở tù: không dùng được vật phẩm.'
     : dino ? `Đang chơi: <b>${esc(dino)}</b>${me.dino.growth != null ? ` · ${Math.round(me.dino.growth * 100)}%` : ''}`
       : 'Vào game và điều khiển một con dino để dùng vật phẩm.';
+  // The tabs: everything, usable now, then each kind they hold (a kind emptied: back to everything).
+  const counts = Object.fromEntries(BAG_CATS.map((c) => [c.key, groups.filter((g) => c.types.includes(g.type)).length]));
+  if (!['all', 'usable'].includes(bag.filter) && !counts[bag.filter]) bag.filter = 'all';
   const q = $('bag-q').value.trim().toLowerCase();
-  const shown = groups.filter((g) => (bag.filter === 'all' || (bag.filter === 'usable' ? usable(g) : g.type === bag.filter))
-    && (!q || `${g.name} ${g.mutation ?? ''} ${g.species ?? ''}`.toLowerCase().includes(q)));
+  const shown = groups.filter((g) => (bag.filter === 'all' || (bag.filter === 'usable' ? usable(g) : bagCat(g.type) === bag.filter))
+    && (!q || `${g.name} ${g.mutation ?? ''} ${g.species ?? ''} ${g.dino?.label ?? ''}`.toLowerCase().includes(q)))
+    .sort((a, b) => BAG_TYPE_ORDER.indexOf(a.type) - BAG_TYPE_ORDER.indexOf(b.type) || a.name.localeCompare(b.name, 'vi'));
   // Redraw only when something changed (the page refreshes every second).
-  const sig = JSON.stringify([shown.map((g) => [g.key, g.uids.length, usable(g), g.rarity, g.locked ?? null]), dino, Boolean(me.prison), bag.busy, Boolean(me.bagUnlimited)]);
+  const sig = JSON.stringify([shown.map((g) => [g.key, g.uids.length, usable(g), g.rarity, g.locked ?? null]), counts, bag.filter, dino, Boolean(me.prison), bag.busy, Boolean(me.bagUnlimited)]);
   if (sig === bag.sig) return;
   bag.sig = sig;
+  const usableCount = groups.filter(usable).length;
+  $('bag-filter').innerHTML = [['all', 'Tất cả', groups.length], ['usable', 'Dùng được ngay', usableCount],
+    ...BAG_CATS.filter((c) => counts[c.key] > 0).map((c) => [c.key, c.label, counts[c.key]])]
+    .map(([k, label, n]) => `<button type="button" class="gara-filter-btn${bag.filter === k ? ' active' : ''}" data-bag="${k}">${esc(label)} <span class="bag-n">${n}</span></button>`).join('');
   // A card is dimmed only when it does not fit the dino played now (diet, species); out of
   // the game (or in prison) it keeps its look — only its button is off and says why.
   const mismatch = (g) => !g.locked && !BAG_NO_DINO.has(g.type) && dino !== null && (g.type === 'mutation' ? Boolean(g.refusal) : g.type === 'skin' ? bagKey(g.species) !== bagKey(dino) : false);
@@ -1981,10 +1999,10 @@ function renderBag(me) {
     const text = ok || mismatch(g) || !blocked || BAG_NO_DINO.has(g.type) ? label : blocked;
     return `<button type="button" class="btn ${cls}" ${attr}="${esc(g.key)}" ${ok ? '' : `disabled title="${esc(blocked && !mismatch(g) ? `${blocked}: điều khiển một con dino trong game` : '')}"`}>${esc(text)}</button>`;
   };
-  $('bag-list').innerHTML = shown.map((g) => {
+  const card = (g) => {
     const ok = !mismatch(g);
     const rar = `<span class="rar-label rar-${esc(g.rarity)}">${esc(BAG_RARITY[g.rarity] ?? g.rarity)}</span>`;
-    const qty = me.bagUnlimited ? '<span class="qty" title="Túi admin: dùng không hết">∞</span>' : g.uids.length > 1 ? `<span class="qty">×${g.uids.length}</span>` : '';
+    const qty = me.bagUnlimited && g.type !== 'dino' ? '<span class="qty" title="Túi admin: dùng không hết">∞</span>' : g.uids.length > 1 ? `<span class="qty">×${g.uids.length}</span>` : '';
     if (g.type === 'mutation') {
       return `<li class="bag-item rar-${esc(g.rarity)}${ok ? '' : ' off'}">
         <div class="top">${mutIcon(g.mutation)}<div class="nm"><b>${esc(g.name)}</b>${rar}</div>${qty}</div>
@@ -2011,7 +2029,17 @@ function renderBag(me) {
       ${!ok && dino ? `<div class="why">Chỉ mặc được khi đang chơi ${esc(g.species ?? '')}.</div>` : ''}
       <div class="act">${button(g, 'btn-ghost', 'data-bag-wear', 'Mặc')}</div>
     </li>`;
-  }).join('') || `<li class="muted" style="padding:16px;text-align:center;grid-column:1/-1">${items.length ? 'Không có vật phẩm nào khớp.' : 'Túi đồ trống.'}</li>`;
+  };
+  // More than one kind shown: under a heading each.
+  const kinds = [...new Set(shown.map((g) => bagCat(g.type)))];
+  const html = kinds.length > 1
+    ? kinds.map((k) => {
+      const list = shown.filter((g) => bagCat(g.type) === k);
+      const label = BAG_CATS.find((c) => c.key === k)?.label ?? 'Khác';
+      return `<li class="bag-sec">${esc(label)} <span class="bag-n">${list.length}</span></li>${list.map(card).join('')}`;
+    }).join('')
+    : shown.map(card).join('');
+  $('bag-list').innerHTML = html || `<li class="muted" style="padding:16px;text-align:center;grid-column:1/-1">${items.length ? 'Không có vật phẩm nào khớp.' : 'Túi đồ trống.'}</li>`;
 }
 
 // --- the use box ---------------------------------------------------------------
