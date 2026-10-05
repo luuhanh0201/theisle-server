@@ -8,6 +8,7 @@ import { garageRuleFor, isSteamId, readGarageCatalog, readGarageSettings, readPl
 import { claimStarter, starterOffered } from './starter.js';
 import { tierOf } from './member-tier.js';
 import { MAX_QTY, buy, shopView } from './shop.js';
+import { lootOptions, openLootBox } from './loot.js';
 import { boxOptions, dinoItemOptions, openDinoBox, speciesOptions, useDinoItem } from './dino-box.js';
 import { audit } from './audit.js';
 import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
@@ -600,6 +601,32 @@ export async function handlePlayerApi(
     }
     return true;
   }
+  // A hòm (loot.ts): its prizes and their chances; opened, one drawn into the bag.
+  const lootRoute = /^\/player-api\/items\/(\d{17})\/loot(?:-options\/([\w-]{1,40}))?$/.exec(path);
+  if (lootRoute !== null) {
+    const who = lootRoute[1] as string;
+    try {
+      if (lootRoute[2] !== undefined) {
+        if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return true; }
+        send(res, 200, await lootOptions(who, lootRoute[2]));
+        return true;
+      }
+      if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+      if (!(await bagOpen(who))) { send(res, 403, { error: 'Túi đồ đang thử nghiệm, SVip dùng trước, sẽ mở cho tất cả.' }); return true; }
+      const body = await readSmallJson(req);
+      if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+      const out = await openLootBox(who, typeof body['uid'] === 'string' ? body['uid'] : '', await bagUnlimited(who));
+      const name = ctx.store.player(who)?.player.name ?? null;
+      await audit({ action: 'loot box open', ok: true,
+        detail: `${name ?? who} mở ${out.box}: ${out.won.qty} × ${out.won.name} (tỉ lệ ${(out.chance * 100).toFixed(1)}%)` }, { steamId: who, name });
+      // The prize only: never its chance (loot.ts).
+      send(res, 200, { won: out.won, box: out.box });
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
   // The Hổ phách shop (shop.ts): what is on sale for them; a buy.
   const shopRoute = /^\/player-api\/shop\/(\d{17})(\/buy)?$/.exec(path);
   if (shopRoute !== null) {
@@ -885,6 +912,7 @@ async function ownedView(steamId: string, playing: string | null, catalog: Array
             : i.type === 'dino_box' ? { pick: i.data.pick, growthMin: i.data.growthMin, growthMax: i.data.growthMax }
               : i.type === 'dino' && o.dino ? { dino: { ...o.dino, label: labelOf(o.dino.species) } }
                 : i.type === 'growth_bag' ? { amount: i.data.amount, below: i.data.below }
-                  : i.type === 'food_box' ? { amount: i.data.amount } : {}) }];
+                  : i.type === 'food_box' ? { amount: i.data.amount }
+                    : i.type === 'loot_box' ? { prizes: i.data.pool.length } : {}) }];
   });
 }

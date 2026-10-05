@@ -3002,7 +3002,8 @@
                   <option value="dino_box">🎁 Hộp dino</option>
                   <option value="growth_bag">🌱 Túi tăng trưởng</option>
                   <option value="food_box">🍖 Hộp food</option>
-                  <option value="salt_lick">🧂 Đá muối</option></select></label>
+                  <option value="salt_lick">🧂 Đá muối</option>
+                  <option value="loot_box">🏺 Hòm (mở ra ngẫu nhiên)</option></select></label>
                 <label>Tên<input id="tkt-name" maxlength="60" placeholder="vd: Phiếu đổi mutation Hiếm"></label>
                 <label id="tkt-rarity-l">Độ hiếm<select id="tkt-rarity"></select></label>
               </div>
@@ -3011,6 +3012,13 @@
                 <label>Tăng trưởng thấp nhất (%)<input id="tkt-gmin" type="number" min="25" max="100" step="1"></label>
                 <label>Tăng trưởng cao nhất (%)<input id="tkt-gmax" type="number" min="25" max="100" step="1"></label>
                 <label style="flex-direction:row;align-items:center;gap:8px"><input id="tkt-quest" type="checkbox"> Cho chọn cả mutation nhiệm vụ</label>
+              </div>
+              <div id="tkt-loot" hidden style="display:flex;flex-direction:column;gap:8px">
+                <div class="tier-block-head"><h3 style="margin:0;font-size:14px">Phần thưởng trong hòm</h3>
+                  <span class="step-hint" style="margin:0">tỉ lệ = trọng số / tổng trọng số; skin người chơi đã có thì bị bỏ khỏi lượt mở của họ</span></div>
+                <div id="tkt-loot-list" class="qq-list"></div>
+                <div class="row" style="gap:8px"><button type="button" class="btn-ghost" id="tkt-loot-add">+ Thêm phần thưởng</button>
+                  <span class="muted" id="tkt-loot-sum" style="font-size:12.5px"></span></div>
               </div>
               <div class="itm-fields" id="tkt-boost" hidden>
                 <label id="tkt-amt-l">Cộng thêm (%)<input id="tkt-amt" type="number" min="1" max="100" step="1"></label>
@@ -4593,14 +4601,15 @@ $('mit-owners').addEventListener('click', async (e) => {
 
 // --- Vật phẩm → Phiếu (items.ts mutation_ticket / mutation_clear / prime_ticket; used in the player's Túi đồ) ---
 const TKT_TYPES = { mutation_ticket: '🎟️ Phiếu đổi mutation', mutation_clear: '🧹 Phiếu bỏ mutation', prime_ticket: '👑 Phiếu Prime',
-  dino_box: '🎁 Hộp dino', growth_bag: '🌱 Túi tăng trưởng', food_box: '🍖 Hộp food', salt_lick: '🧂 Đá muối' };
+  dino_box: '🎁 Hộp dino', growth_bag: '🌱 Túi tăng trưởng', food_box: '🍖 Hộp food', salt_lick: '🧂 Đá muối', loot_box: '🏺 Hòm' };
 /** A new item's data, by type (items.ts defaults). */
-const TKT_DATA = { dino_box: () => ({ pick: 'random', growthMin: 0.5, growthMax: 1, quest: false }), growth_bag: () => ({ amount: 0.1, below: 0.6 }), food_box: () => ({ amount: 0.2 }) };
+const TKT_DATA = { loot_box: () => ({ pool: [] }), dino_box: () => ({ pick: 'random', growthMin: 0.5, growthMax: 1, quest: false }), growth_bag: () => ({ amount: 0.1, below: 0.6 }), food_box: () => ({ amount: 0.2 }) };
 const TKT_INFO = {
   mutation_ticket: 'Người chơi tự chọn một mutation khi dùng: mọi mutation còn trong game, đúng chế độ ăn của loài. Phiếu <b>Đặc biệt</b> đổi được cả mutation nhiệm vụ; độ hiếm khác chỉ để hiển thị. Chỉ vào ô đã mở theo tăng trưởng như game (ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%).',
   mutation_clear: 'Bỏ mutation ở một ô (1–4) để người chơi chọn lại trong game.',
   prime_ticket: 'Dino 100% chưa prime: dùng là lên prime (đủ 10 điều kiện, chỉ số prime sau vài giây). Dùng cho trường hợp lỡ prime.',
   dino_box: 'Người chơi <b>mở hộp</b>: loài <b>ngẫu nhiên</b> (có hiệu ứng roll) hoặc <b>tự chọn</b>, tăng trưởng bốc ngẫu nhiên trong khoảng dưới, ra <b>vật phẩm Dino</b> trong túi. Dùng vật phẩm Dino: chọn giới tính và mutation (ô mở theo tăng trưởng như game: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%; đúng chế độ ăn, ô 2/4, mutation chỉ con cái). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>. Quà tân thủ <span class="mono">starter_box</span> (hộp tự chọn) được nhận ở trang chủ, mỗi tài khoản 1 lần. Ai dùng được: <b>Thành viên → SVip → Chức năng thử nghiệm</b> (Hộp dino).',
+  loot_box: 'Người chơi <b>mở hòm</b> (có hiệu ứng quay kiểu gacha) và nhận <b>1 phần thưởng</b> bốc ngẫu nhiên theo trọng số bên dưới; người chơi xem được tỉ lệ từng món trước khi mở. Hòm không chứa hòm khác. Bán ở cửa hàng: Nhiệm vụ → Cửa hàng Hổ phách. Túi admin mở không mất hòm.',
   salt_lick: 'Dùng lên dino <b>đang chơi</b>: hết trạng thái ốm sau khi nôn (hàm game <span class="mono">ResetVomitSickState</span>, như nút Hồi máu của admin). Không hồi máu / thức ăn / nước. Người chơi thấy: “Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay”.',
   growth_bag: 'Dùng lên dino <b>đang chơi</b>: cộng thêm tăng trưởng, chỉ khi dino dưới mốc (vd +10% khi dưới 60%: 55% → 65%; mốc 100% = mọi dino chưa trưởng thành). Chỉ số giữ theo tỉ lệ. Vật phẩm chỉ mất khi game xác nhận.',
   food_box: 'Dùng lên dino <b>đang chơi</b>: thanh thức ăn cộng thêm (tối đa đầy), chống đói, <b>không tăng chất dinh dưỡng</b>. Dino đang no: vật phẩm vẫn còn.',
@@ -4662,6 +4671,8 @@ function tktFields() {
     $('tkt-quest').checked = d.data.quest === true;
     $('tkt-gmin').disabled = $('tkt-gmax').disabled = $('tkt-quest').disabled = !can('items.edit');
   }
+  $('tkt-loot').hidden = d.type !== 'loot_box';
+  if (d.type === 'loot_box') renderTktLoot();
   $('tkt-boost').hidden = d.type !== 'growth_bag' && d.type !== 'food_box';
   if (!$('tkt-boost').hidden) {
     $('tkt-amt-l').firstChild.textContent = d.type === 'growth_bag' ? 'Tăng trưởng cộng thêm (%)' : 'Thức ăn cộng thêm (%)';
@@ -4672,11 +4683,61 @@ function tktFields() {
   }
   $('tkt-dirty').textContent = tktDirty() ? '● Có thay đổi chưa lưu' : tkt.sel ? 'Đã lưu' : '';
 }
+/** A hòm's prizes: an item each (any but a hòm or the dino item), how many, its weight and so its chance. */
+function renderTktLoot() {
+  const d = tkt.draft;
+  const edit = can('items.edit');
+  const dis = edit ? '' : ' disabled';
+  const pool = d.data.pool ?? (d.data.pool = []);
+  const choices = itm.data.items.filter((i) => i.type !== 'loot_box' && i.type !== 'dino' && !i.retired);
+  const sum = pool.reduce((n, e) => n + (Number(e.weight) || 0), 0);
+  const icon = (t) => ({ ...SP_TYPE, dino_box: '🎁' }[t] ?? '');
+  $('tkt-loot-list').innerHTML = pool.map((e, i) => `<div class="sp-row" data-lp="${i}" style="grid-template-columns:minmax(200px,3fr) repeat(2,minmax(90px,1fr)) minmax(70px,.6fr) auto">
+      <label class="sp-item">Vật phẩm<select data-lp-f="itemId"${dis}>${choices.some((c) => c.id === e.itemId) ? '' : `<option value="${esc(e.itemId ?? '')}" selected>${esc(e.itemId ?? 'chọn')} (không còn)</option>`}${choices.map((c) =>
+        `<option value="${esc(c.id)}"${c.id === e.itemId ? ' selected' : ''}>${icon(c.type)} ${esc(c.name)}</option>`).join('')}</select></label>
+      <label>Số lượng<input type="number" min="1" max="10" step="1" data-lp-f="qty" value="${e.qty ?? 1}"${dis}></label>
+      <label>Trọng số<input type="number" min="1" max="100000" step="1" data-lp-f="weight" value="${e.weight ?? 1}"${dis}></label>
+      <label>Tỉ lệ<span style="padding:9px 0;font-weight:700;font-variant-numeric:tabular-nums" data-lp-pct>${sum ? `${((Number(e.weight) || 0) / sum * 100).toFixed(1)}%` : '-'}</span></label>
+      ${edit ? `<div class="sp-btns"><button type="button" class="btn-ghost sm" data-lp-del="${i}" style="color:var(--kill,#ef4444)">Xoá</button></div>` : '<span></span>'}
+    </div>`).join('') || '<p class="step-hint" style="margin:0">Chưa có phần thưởng. Bấm "+ Thêm phần thưởng".</p>';
+  $('tkt-loot-add').hidden = !edit;
+  $('tkt-loot-sum').textContent = pool.length ? `${pool.length} món · tổng trọng số ${sum}` : '';
+}
+$('tkt-loot-list').addEventListener('input', (e) => {
+  const row = e.target.closest('[data-lp]'), f = e.target.dataset.lpF;
+  if (!row || !f || !tkt.draft) return;
+  const entry = tkt.draft.data.pool[Number(row.dataset.lp)];
+  entry[f] = f === 'itemId' ? e.target.value : Math.round(Number(e.target.value) || 0);
+  if (f === 'weight') {
+    const sum = tkt.draft.data.pool.reduce((n, x) => n + (Number(x.weight) || 0), 0);
+    for (const r of $('tkt-loot-list').querySelectorAll('[data-lp]')) {
+      const w = Number(tkt.draft.data.pool[Number(r.dataset.lp)].weight) || 0;
+      r.querySelector('[data-lp-pct]').textContent = sum ? `${(w / sum * 100).toFixed(1)}%` : '-';
+    }
+    $('tkt-loot-sum').textContent = `${tkt.draft.data.pool.length} món · tổng trọng số ${sum}`;
+  }
+  $('tkt-dirty').textContent = tktDirty() ? '● Có thay đổi chưa lưu' : tkt.sel ? 'Đã lưu' : '';
+});
+$('tkt-loot-list').addEventListener('change', (e) => { if (e.target.dataset.lpF === 'itemId') $('tkt-loot-list').dispatchEvent(new Event('input')); });
+$('tkt-loot-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-lp-del]');
+  if (!b || !tkt.draft) return;
+  tkt.draft.data.pool.splice(Number(b.dataset.lpDel), 1);
+  tktFields();
+});
+$('tkt-loot-add').addEventListener('click', () => {
+  if (!tkt.draft) return;
+  const first = itm.data.items.find((i) => i.type !== 'loot_box' && i.type !== 'dino' && !i.retired);
+  if (!first) { toast('Chưa có vật phẩm nào để cho vào hòm', 'err'); return; }
+  tkt.draft.data.pool.push({ itemId: first.id, qty: 1, weight: 10 });
+  tktFields();
+});
 $('tkt-list').addEventListener('click', (e) => { const b = e.target.closest('[data-tkt]'); if (b) tktSelect(b.dataset.tkt); });
 $('tkt-new').addEventListener('click', () => tktSelect(null));
 $('tkt-body').addEventListener('input', (e) => {
   const t = e.target, d = tkt.draft;
-  if (!d || t.closest('#tkt-own-wrap')) return;
+  // The hòm's prizes have their own listener (renderTktLoot): a redraw here would drop the focus.
+  if (!d || t.closest('#tkt-own-wrap') || t.closest('#tkt-loot')) return;
   if (t.id === 'tkt-name') d.name = t.value;
   else if (t.id === 'tkt-type') { d.type = t.value; d.data = t.value === 'mutation_ticket' ? { maxRarity: d.rarity === 'special' ? 'special' : d.rarity } : TKT_DATA[t.value]?.() ?? {}; if (t.value !== 'mutation_ticket' && d.rarity === 'special') d.rarity = 'legendary'; }
   else if (t.id === 'tkt-gmin' || t.id === 'tkt-gmax') { const v = Number(t.value); if (Number.isFinite(v)) d.data[t.id === 'tkt-gmin' ? 'growthMin' : 'growthMax'] = Math.min(1, Math.max(0.25, v / 100)); }

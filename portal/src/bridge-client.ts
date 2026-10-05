@@ -55,6 +55,9 @@ export class BridgeClient {
   /** The dino boxes (bridge dino-box.ts): what a box / a dino item offers; a box opened; a dino item used. */
   itemOptions(steamId: string, kind: 'box' | 'dino', uid: string) { return this.get(`/player-api/items/${steamId}/${kind}-options/${encodeURIComponent(uid)}`); }
   openBox(steamId: string, body: { uid: unknown; species: unknown }) { return this.post(`/player-api/items/${steamId}/open`, body); }
+  /** A hòm (bridge loot.ts): its prizes and chances; opened. */
+  lootOptions(steamId: string, uid: string) { return this.get(`/player-api/items/${steamId}/loot-options/${encodeURIComponent(uid)}`); }
+  openLoot(steamId: string, body: { uid: unknown }) { return this.post(`/player-api/items/${steamId}/loot`, body); }
   useDino(steamId: string, body: { uid: unknown; female: unknown; mutations: unknown }) {
     return this.post(`/player-api/items/${steamId}/dino`, body);
   }

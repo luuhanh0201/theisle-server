@@ -110,6 +110,8 @@ const bridge = {
   shopBuy: async (steamId, body) => { bridgeCalls.push({ shopBuy: steamId, body }); return { status: 200, body: { item: 'Hộp food nhỏ', qty: 2, spent: 100, balance: 0, left: 1 } }; },
   checkin: async (steamId) => { bridgeCalls.push(`checkin:${steamId}`); return { status: 200, body: { day: 1, reward: 50, balance: 50, item: null } }; },
   itemOptions: async (steamId, kind, uid) => { bridgeCalls.push(`opts:${steamId}:${kind}:${uid}`); return { status: 200, body: { pick: 'random' } }; },
+  openLoot: async (steamId, body) => { bridgeCalls.push({ openLoot: steamId, body }); return { status: 200, body: { won: { name: 'Phiếu Prime', qty: 1 } } }; },
+  lootOptions: async (steamId, uid) => { bridgeCalls.push(`loot:${steamId}:${uid}`); return { status: 200, body: { pool: [] } }; },
   openBox: async (steamId, body) => { bridgeCalls.push({ openBox: steamId, body }); return { status: 200, body: { uid: 'own_10', species: 'triceratops', label: 'Triceratops', growth: 0.7, drawn: true } }; },
   useDino: async (steamId, body) => { bridgeCalls.push({ useDino: steamId, body }); return { status: 200, body: { slot: '3', species: 'Tyrannosaurus', growth: 0.8, female: true, mutations: {} } }; },
   garage: async (id, body) => { bridgeCalls.push({ garage: id, body }); return { status: 202, body: { id: 5, action: body.action } }; },
@@ -189,6 +191,14 @@ test('the check-in and the dino ticket: login, same-origin; the SteamID is the s
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/items/box-options/own_8`)).status, 401);
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/items/dino-options/own_10`, { headers: { cookie } })).status, 200);
   assert.equal(bridgeCalls[bridgeCalls.length - 1], `opts:${ME}:dino:own_10`);
+  // A hòm: another player's session (the write limit, 12 a minute, is per player).
+  const LOOTER = '76561198000000077';
+  const lootCookie = `${COOKIE}=${sign(SECRET, LOOTER, Math.floor(Date.now() / 1000) + 600)}`;
+  assert.equal((await post('/api/items/loot', { ...json, cookie: lootCookie, origin: 'https://evil.example' }, '{"uid":"own_7"}')).status, 403, 'a hòm: another site');
+  assert.equal((await post('/api/items/loot', { ...json, cookie: lootCookie, origin }, '{"uid":"own_7","steamId":"76561198000000002","won":"x"}')).status, 200);
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { openLoot: LOOTER, body: { uid: 'own_7' } }, 'a hòm: the uid only');
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/items/loot-options/own_7`, { headers: { cookie: lootCookie } })).status, 200);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], `loot:${LOOTER}:own_7`);
 });
 
 test('the Steam round trip sets a Secure HttpOnly cookie', async () => {

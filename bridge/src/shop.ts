@@ -62,6 +62,7 @@ export function suggested(i: Item): { price: number; dailyLimit: number } | null
     case 'prime_ticket': return { price: 2000, dailyLimit: 1 };
     case 'mutation_ticket': return i.data.maxRarity === 'special' ? { price: 2500, dailyLimit: 1 } : { price: 800, dailyLimit: 1 };
     case 'mutation_clear': return { price: 300, dailyLimit: 2 };
+    case 'loot_box': return { price: 300, dailyLimit: 5 };
     default: return null;
   }
 }
@@ -124,7 +125,9 @@ export async function shopView(steamId: string, now = Math.floor(Date.now() / 10
     const unique = ITEM_TYPES.find((t) => t.key === item.type)?.unique === true;
     const ownedAlready = unique && owned.some((o) => o.itemId === item.id);
     return [{ id: l.id, price: l.price, dailyLimit: l.dailyLimit, bought, left: l.dailyLimit === 0 ? null : Math.max(0, l.dailyLimit - bought),
-      ...(ownedAlready ? { owned: true } : {}), item: { id: item.id, type: item.type, name: item.name, rarity: item.rarity, data: item.data,
+      // A hòm's data is its prizes with their weights: the admin's only (loot.ts), the count is enough.
+      ...(ownedAlready ? { owned: true } : {}), item: { id: item.id, type: item.type, name: item.name, rarity: item.rarity,
+        data: item.type === 'loot_box' ? { prizes: item.data.pool.length } : item.data,
         ...(item.type === 'mutation' ? { description: findReference(item.data.mutation)?.description ?? null } : {}) } }];
   });
 }

@@ -26,7 +26,7 @@ import { findReference, type Diet } from './mutation-reference.js';
  */
 
 export type ItemType = 'skin' | 'mutation' | 'mutation_ticket' | 'mutation_clear' | 'prime_ticket'
-  | 'dino_box' | 'dino' | 'growth_bag' | 'food_box' | 'salt_lick';
+  | 'dino_box' | 'dino' | 'growth_bag' | 'food_box' | 'salt_lick' | 'loot_box';
 export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: boolean; system?: boolean }> = [
   // unique: a player owns it once (a skin); a kind used up (a mutation…) may be owned several times.
   { key: 'skin', label: 'Skin dino', unique: true },
@@ -45,6 +45,8 @@ export const ITEM_TYPES: ReadonlyArray<{ key: ItemType; label: string; unique: b
   { key: 'food_box', label: 'Hộp food', unique: false },
   // Đá muối: the sickness after vomiting cleared (ResetVomitSickState).
   { key: 'salt_lick', label: 'Đá muối', unique: false },
+  // Hòm (owner, 2026-10-05, "Hòm cổ đại"): opened, one of the admin's items drawn by weight (loot.ts).
+  { key: 'loot_box', label: 'Hòm', unique: false },
 ];
 
 /**
@@ -67,6 +69,13 @@ export const GROWTH_BAG_DEFAULT: GrowthBagData = { amount: 0.1, below: 0.6 };
 /** Food box: the food bar +amount of its max on the dino played now, food only, no nutrients. */
 export interface FoodBoxData { amount: number }
 export const FOOD_BOX_DEFAULT: FoodBoxData = { amount: 0.2 };
+/**
+ * A hòm's prizes: each an item, how many copies, its weight (chance = weight / the sum). An item a player
+ * owns already and may own only once (a skin) is left out of their draw; a retired one too.
+ */
+export interface LootEntry { itemId: string; qty: number; weight: number }
+export interface LootBoxData { pool: LootEntry[] }
+export const LOOT_MAX_ENTRIES = 30;
 /** What one dino item (a box opened) is: the species key ("tyrannosaurus"), its growth, quest mutations or not. */
 export interface OwnedDino { species: string; growth: number; quest: boolean }
 export type EmptyData = Record<string, never>;
@@ -175,7 +184,8 @@ type TypedData =
   | { type: 'dino'; data: EmptyData }
   | { type: 'growth_bag'; data: GrowthBagData }
   | { type: 'food_box'; data: FoodBoxData }
-  | { type: 'salt_lick'; data: EmptyData };
+  | { type: 'salt_lick'; data: EmptyData }
+  | { type: 'loot_box'; data: LootBoxData };
 export type Item = ItemBase & TypedData;
 type ItemDef = Pick<ItemBase, 'name' | 'rarity'> & TypedData;
 
@@ -310,6 +320,22 @@ export function validateGrowthBagData(raw: unknown): GrowthBagData {
   const d = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   return { amount: share(d['amount'], GROWTH_BAG_DEFAULT.amount, 0.01, 0.5, 'amount'), below: share(d['below'], GROWTH_BAG_DEFAULT.below, 0.1, 1, 'below') };
 }
+/** A hòm's prizes, checked for shape (that each item exists: createItem / updateItem). */
+export function validateLootBoxData(raw: unknown): LootBoxData {
+  const d = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const pool = d['pool'] ?? [];
+  if (!Array.isArray(pool) || pool.length > LOOT_MAX_ENTRIES) throw new ValidationError(`pool: tối đa ${LOOT_MAX_ENTRIES} món`);
+  const whole = (v: unknown, lo: number, hi: number, what: string): number => {
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < lo || v > hi) throw new ValidationError(`${what} phải là số nguyên ${lo}–${hi}`);
+    return v;
+  };
+  return { pool: pool.map((e, n) => {
+    const o = (typeof e === 'object' && e !== null ? e : {}) as Record<string, unknown>;
+    const itemId = o['itemId'];
+    if (typeof itemId !== 'string' || !/^[\w-]{1,40}$/.test(itemId)) throw new ValidationError(`Dòng ${n + 1}: chọn vật phẩm`);
+    return { itemId, qty: whole(o['qty'] ?? 1, 1, 10, `Dòng ${n + 1}: số lượng`), weight: whole(o['weight'], 1, 100000, `Dòng ${n + 1}: trọng số`) };
+  }) };
+}
 export function validateFoodBoxData(raw: unknown): FoodBoxData {
   const d = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   return { amount: share(d['amount'], FOOD_BOX_DEFAULT.amount, 0.01, 1, 'amount') };
@@ -347,6 +373,7 @@ export function validateItem(raw: unknown): ItemDef & { retired?: boolean } {
   if (type === 'dino') return { type, name, rarity: rarity as Rarity, data: {}, ...extra };
   if (type === 'growth_bag') return { type, name, rarity: rarity as Rarity, data: validateGrowthBagData(r['data']), ...extra };
   if (type === 'food_box') return { type, name, rarity: rarity as Rarity, data: validateFoodBoxData(r['data']), ...extra };
+  if (type === 'loot_box') return { type, name, rarity: rarity as Rarity, data: validateLootBoxData(r['data']), ...extra };
   return { type: 'skin', name, rarity: rarity as Rarity, data: validateSkinData(r['data']), ...extra };
 }
 
@@ -382,12 +409,25 @@ export async function getItem(id: string): Promise<Item | null> {
   return item === undefined ? null : withRarity(item);
 }
 
+/** A hòm's prizes must be items that exist, can be given (not the dino item) and are not a hòm themselves. */
+function checkPool(def: ItemDef, items: Record<string, Item>): void {
+  if (def.type !== 'loot_box') return;
+  def.data.pool.forEach((e, n) => {
+    const it = items[e.itemId];
+    if (it === undefined) throw new ValidationError(`Dòng ${n + 1}: không có vật phẩm "${e.itemId}"`);
+    const t = legacy(it).type;
+    if (ITEM_TYPES.find((x) => x.key === t)?.system) throw new ValidationError(`Dòng ${n + 1}: ${it.name} chỉ có khi mở hộp dino`);
+    if (t === 'loot_box') throw new ValidationError(`Dòng ${n + 1}: hòm không chứa hòm khác`);
+  });
+}
+
 export function createItem(raw: unknown, by: string | null): Promise<Item> {
   const def = validateItem(raw);
   if (ITEM_TYPES.find((t) => t.key === def.type)?.system) return Promise.reject(new ValidationError('loại vật phẩm này do hệ thống tạo (mở hộp dino)'));
   return serialized(async () => {
     const file = await readJson<ItemsFile>(itemsPath(), { items: {} });
     file.items ??= {};
+    checkPool(def, file.items);
     let id: string;
     do { id = newId('it'); } while (file.items[id] !== undefined);
     const now = Math.floor(Date.now() / 1000);
@@ -426,6 +466,7 @@ export function updateItem(id: string, raw: unknown): Promise<{ before: Item; af
     if (had === undefined) throw new ValidationError('no such item');
     const before = legacy(had);
     if (def.type !== before.type) throw new ValidationError('an item keeps its type');
+    checkPool(def, file.items);
     const after = { ...before, name: def.name, rarity: def.rarity, data: def.data,
       retired: def.retired ?? before.retired, updatedAt: Math.floor(Date.now() / 1000) } as Item;
     file.items[id] = after;
@@ -574,6 +615,25 @@ export function fillBags(steamIds: Iterable<string>, skip: readonly string[] = [
     }
     if (added > 0) await writeJson(inventoryPath(), file);
     return added;
+  });
+}
+
+/**
+ * A hòm opened: its copy out (kept when `keepBox`, an admin's bag) and `qty` copies of the prize in, one
+ * write. Null when the hòm's copy is not there (opened already).
+ */
+export function swapOwned(steamId: string, uid: string, prizeId: string, qty: number, note: string, keepBox = false): Promise<{ box: Owned; given: Owned[] } | null> {
+  return serialized(async () => {
+    const file = await readJson<InventoryFile>(inventoryPath(), { players: {} });
+    file.players ??= {};
+    const list = file.players[steamId] ?? [];
+    const box = list.find((o) => o.uid === uid);
+    if (box === undefined) return null;
+    const now = Math.floor(Date.now() / 1000);
+    const given = Array.from({ length: qty }, (): Owned => ({ uid: newId('own'), itemId: prizeId, source: 'gacha', grantedAt: now, by: null, note: note.slice(0, 200) }));
+    file.players[steamId] = [...(keepBox ? list : list.filter((o) => o.uid !== uid)), ...given];
+    await writeJson(inventoryPath(), file);
+    return { box, given };
   });
 }
 

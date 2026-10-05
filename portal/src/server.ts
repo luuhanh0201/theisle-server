@@ -34,6 +34,8 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   GET  /api/items/preview/<uid>  what that would do: each slot's mutation and value, the +1 đời upgrade (login)
  *   GET  /api/items/box-options/<uid>   a dino box: drawn or picked species, the species, the growth range (login)
  *   GET  /api/items/dino-options/<uid>  a dino item: its species, growth, open slots, the mutations that fit (login)
+ *   GET  /api/items/loot-options/<uid>  a hòm: its prizes and their chances (login)
+ *   POST /api/items/loot        { uid } open a hòm: one prize drawn into the bag (login, same-origin, JSON)
  *   POST /api/items/open        { uid, species? } open a dino box: a dino item into the bag (login, same-origin, JSON)
  *   POST /api/starter/claim     the starter gift: the dino ticket into the bag, once (login, same-origin)
  *   GET  /api/shop              the Hổ phách shop: what is on sale, the price, how many left today (login)
@@ -407,15 +409,16 @@ export function createPortal(opts: PortalOptions): Server {
         send(res, r.status, r.body);
         return;
       }
-      const itemOpts = /^\/api\/items\/(box|dino)-options\/([\w-]{1,40})$/.exec(path);
+      const itemOpts = /^\/api\/items\/(box|dino|loot)-options\/([\w-]{1,40})$/.exec(path);
       if (itemOpts !== null) {
         if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return; }
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
-        const r = await opts.bridge.itemOptions(me, itemOpts[1] as 'box' | 'dino', itemOpts[2] as string);
+        const r = itemOpts[1] === 'loot' ? await opts.bridge.lootOptions(me, itemOpts[2] as string)
+          : await opts.bridge.itemOptions(me, itemOpts[1] as 'box' | 'dino', itemOpts[2] as string);
         send(res, r.status, r.body);
         return;
       }
-      if (path === '/api/items/open' || path === '/api/items/dino') {
+      if (path === '/api/items/open' || path === '/api/items/dino' || path === '/api/items/loot') {
         if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
         if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
@@ -424,7 +427,8 @@ export function createPortal(opts: PortalOptions): Server {
         const body = await readSmallJson(req);
         if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
         // Only these fields, and never a SteamID from the browser.
-        const r = path === '/api/items/open'
+        const r = path === '/api/items/loot' ? await opts.bridge.openLoot(me, { uid: body['uid'] })
+          : path === '/api/items/open'
           ? await opts.bridge.openBox(me, { uid: body['uid'], species: body['species'] })
           : await opts.bridge.useDino(me, { uid: body['uid'], female: body['female'], mutations: body['mutations'] });
         send(res, r.status, r.body);

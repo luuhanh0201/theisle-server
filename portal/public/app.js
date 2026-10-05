@@ -1922,12 +1922,15 @@ const BAG_TICKET = {
   dino_box: { icon: '🎁', action: 'Mở hộp', desc: (g) => `${g.pick === 'random' ? 'Mở ra <b>1 dino ngẫu nhiên</b>' : 'Mở hộp: <b>tự chọn loài</b>'}, tăng trưởng ngẫu nhiên ${Math.round((g.growthMin ?? 0.5) * 100)}–${Math.round((g.growthMax ?? 1) * 100)}%. Mở ra vật phẩm Dino trong túi, dùng nó để chọn giới tính và mutation.` },
   dino: { icon: '🦖', action: 'Dùng', desc: (g) => `Dùng để chọn <b>giới tính</b> và <b>mutation</b> (ô mở theo tăng trưởng: ô 1 từ 25%, ô 2 từ 50%, ô 3–4 từ 75%). Dino vào <b>gara</b> với <b>đủ 10 nhiệm vụ prime</b>.` },
   growth_bag: { icon: '🌱', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.1) * 100)}% tăng trưởng</b>, ${(g.below ?? 0.6) >= 1 ? 'dùng cho mọi dino chưa 100%' : `chỉ dùng khi dino dưới ${Math.round((g.below ?? 0.6) * 100)}%`}.` },
+  // A hòm (bridge loot.ts): one prize drawn, with a gacha roll.
+  loot_box: { icon: '🏺', action: 'Mở hòm', desc: (g) => `Mở ra <b>1 vật phẩm ngẫu nhiên</b>${g.prizes ? ` trong ${g.prizes} món` : ''}. Món càng hiếm càng khó trúng.` },
   // Written like the game's own item text (owner, 2026-10-05).
   salt_lick: { icon: '🧂', desc: () => 'Một khối khoáng mặn hiếm thấy trên đảo. Liếm vài lần, dạ dày dịu lại ngay: <b>hết trạng thái ốm sau khi nôn</b>. Dùng khi dino đang ốm sau khi nôn.' },
   food_box: { icon: '🍖', desc: (g) => `Dino đang chơi <b>+${Math.round((g.amount ?? 0.2) * 100)}% thức ăn</b> (chống đói, không tăng chất dinh dưỡng).` },
 };
 /** The bag's kinds (owner, 2026-10-05: "phân loại vật phẩm cho dễ tìm"): a tab each, a heading each in "Tất cả". */
 const BAG_CATS = [
+  { key: 'loot', label: '🏺 Hòm', types: ['loot_box'] },
   { key: 'dino', label: '🦖 Dino', types: ['dino_box', 'dino'] },
   { key: 'mutation', label: '🧬 Mutation', types: ['mutation'] },
   { key: 'ticket', label: '🎟️ Phiếu', types: ['mutation_ticket', 'mutation_clear', 'prime_ticket'] },
@@ -1937,7 +1940,7 @@ const BAG_CATS = [
 const BAG_TYPE_ORDER = BAG_CATS.flatMap((c) => c.types);
 const bagCat = (type) => BAG_CATS.find((c) => c.types.includes(type))?.key ?? 'other';
 /** Items used without a dino in game (they go into the garage). */
-const BAG_NO_DINO = new Set(['dino_box', 'dino']);
+const BAG_NO_DINO = new Set(['dino_box', 'dino', 'loot_box']);
 const bagKey = (s) => String(s ?? '').replace(/^BP_/, '').replace(/_C$/, '').toLowerCase();
 /** The icon of a mutation (img/mutations/<slug>.svg, the owner's set). */
 const mutSlug = (name) => String(name ?? '').replace(/^MUT_/i, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -2057,6 +2060,7 @@ const bagVal = (v) => (v == null ? '<span class="muted">chưa rõ số liệu</s
 function renderBagDialog() {
   const o = bag.open;
   if (!o) return;
+  if (o.loot) { renderLootDialog(o); return; }
   if (o.box) { renderBoxDialog(o); return; }
   if (o.dino) { renderDinoDialog(o); return; }
   const { g, pv, slot } = o;
@@ -2170,7 +2174,8 @@ $('bag-list').addEventListener('click', (e) => {
   const u = e.target.closest('[data-bag-use]');
   if (u && !u.disabled) {
     const g = bagGroups(lastMeData?.items ?? []).find((x) => x.key === u.dataset.bagUse);
-    if (g?.type === 'dino_box') void openBoxDialog(g);
+    if (g?.type === 'loot_box') void openLootDialog(g);
+    else if (g?.type === 'dino_box') void openBoxDialog(g);
     else if (g?.type === 'dino') void openDinoDialog(g.uids[0], g);
     else if (g) void openBagDialog(g);
     return;
@@ -2285,6 +2290,124 @@ $('bag-dlg').addEventListener('change', (e) => {
   if (!o.dino) return;
   const m = e.target.closest('[data-dino-mut]');
   if (m) { o.dino.muts[m.dataset.dinoMut] = m.value; renderBagDialog(); }
+});
+
+// --- a hòm (bridge loot.ts): what it may give, then a gacha roll onto the one drawn -----------------------
+// The draw is the bridge's; the roll only shows it: a strip of cards slides under a marker and slows
+// down onto the prize (one CSS transition, ~5 s; reduced motion: at once), then the prize lights up.
+// The page never gets the chances (owner, 2026-10-05: the admin's only): the strip's other cards are
+// drawn evenly among the prizes.
+const LOOT_CARD = 112, LOOT_GAP = 8, LOOT_LEN = 48, LOOT_AT = 42;
+const lootIcon = (p) => (p.type === 'mutation' ? mutIcon(p.mutation)
+  : `<span class="mut-ico tk-ico" aria-hidden="true">${p.type === 'skin' ? '🎨' : BAG_TICKET[p.type]?.icon ?? '🎁'}</span>`);
+const lootCard = (p, cls = '') => `<div class="loot-card rar-${esc(p.rarity)} ${cls}">${lootIcon(p)}<b>${esc(p.name)}</b>${p.qty > 1 ? `<span class="qty">×${p.qty}</span>` : ''}</div>`;
+async function openLootDialog(g) {
+  bagStatus('', 'Đang mở hòm…');
+  const r = await getJson(`/api/items/loot-options/${encodeURIComponent(g.uids[0])}`).catch(() => null);
+  if (r?.status !== 200) { bagStatus('bad', `❌ ${esc(r?.body?.error ?? 'Không đọc được hòm.')}`); return; }
+  bagStatus('', '');
+  bag.open = { g, loot: { opts: r.body, phase: 'pool', won: null, strip: null } };
+  renderBagDialog();
+  if (!$('bag-dlg').open) $('bag-dlg').showModal();
+}
+/** The roll's cards: any of the prizes, a rarer one beside the prize (a near miss), the prize at LOOT_AT. */
+function lootStrip(pool, won) {
+  const pick = () => pool[Math.floor(Math.random() * pool.length)];
+  const strip = Array.from({ length: LOOT_LEN }, pick);
+  strip[LOOT_AT] = won;
+  const order = ['common', 'rare', 'epic', 'legendary', 'special'];
+  const rarer = pool.filter((p) => p.itemId !== won.itemId).sort((a, b) => order.indexOf(b.rarity) - order.indexOf(a.rarity))[0];
+  if (rarer) strip[LOOT_AT + (Math.random() < 0.5 ? -1 : 1)] = rarer;
+  return strip;
+}
+function renderLootDialog(o) {
+  const { g, loot } = o;
+  const left = (bagGroups(lastMeData?.items ?? []).find((x) => x.key === g.key)?.uids.length ?? 0);
+  const head = `<div class="hd"><span class="mut-ico tk-ico" aria-hidden="true">🏺</span><div><b id="bag-dlg-title">${esc(loot.opts.name ?? g.name)}</b>
+      <span class="rar-label rar-${esc(g.rarity)}">${esc(BAG_RARITY[g.rarity] ?? g.rarity)}</span>
+      <div class="muted" style="font-size:12.5px">${lastMeData?.bagUnlimited ? 'Túi admin: mở không mất hòm' : `Còn ${left} hòm`}</div></div>
+      <button type="button" class="x" data-dlg="close" aria-label="Đóng">×</button></div>`;
+  if (loot.phase === 'pool') {
+    const order = ['special', 'legendary', 'epic', 'rare', 'common'];
+    const pool = [...loot.opts.pool].sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity) || a.name.localeCompare(b.name, 'vi'));
+    $('bag-dlg-in').innerHTML = `${head}
+      <div class="sec"><h4>Có thể nhận</h4>
+        ${pool.length ? `<div class="loot-pool">${pool.map((p) => `<div class="loot-row rar-${esc(p.rarity)}" title="${esc(p.description ?? '')}">${lootIcon(p)}
+          <span class="nm"><b>${esc(p.name)}</b>${p.qty > 1 ? ` ×${p.qty}` : ''}<span class="rar-label rar-${esc(p.rarity)}">${esc(BAG_RARITY[p.rarity] ?? p.rarity)}</span></span></div>`).join('')}</div>` : '<p class="muted" style="margin:0">Hòm này chưa có gì để mở (hoặc bạn đã có hết).</p>'}
+      </div>
+      <div class="act"><button type="button" class="btn btn-emerald" data-dlg="loot-open" ${pool.length && !bag.busy ? '' : 'disabled'}>🏺 Mở hòm</button></div>
+      <div class="garage-status" id="bag-dlg-status" role="status" aria-live="polite" hidden></div>`;
+    return;
+  }
+  const won = loot.won;
+  $('bag-dlg-in').innerHTML = `${head}
+    <div class="loot-win${loot.phase === 'done' ? ' landed' : ''}" id="loot-win"><div class="loot-strip" id="loot-strip">${loot.strip.map((p, i) => lootCard(p, i === LOOT_AT ? 'prize' : '')).join('')}</div></div>
+    ${loot.phase === 'done' ? `<div class="loot-result rar-${esc(won.rarity)}">${lootIcon(won)}<div><div class="muted" style="font-size:12.5px">Bạn nhận được</div>
+        <b>${won.qty > 1 ? `${won.qty} × ` : ''}${esc(won.name)}</b> <span class="rar-label rar-${esc(won.rarity)}">${esc(BAG_RARITY[won.rarity] ?? won.rarity)}</span>
+        <div class="muted" style="font-size:12.5px">Đã vào Túi đồ</div></div></div>
+      <div class="act"><button type="button" class="btn btn-ghost" data-dlg="close">Đóng</button>
+        ${left > 0 || lastMeData?.bagUnlimited ? '<button type="button" class="btn btn-emerald" data-dlg="loot-again">🏺 Mở tiếp</button>' : ''}</div>` : '<p class="muted" style="margin:0;text-align:center">Đang quay…</p>'}`;
+  if (loot.phase === 'done') {
+    const win = $('loot-win'), strip = $('loot-strip');
+    if (win && strip) strip.style.transform = `translateX(${loot.endX}px)`;
+  }
+}
+/** Slide the strip onto the prize; the prize lights up when it stops. */
+function rollLoot(o) {
+  const win = $('loot-win'), strip = $('loot-strip');
+  const finish = () => { if (bag.open === o) { o.loot.phase = 'done'; renderBagDialog(); void refreshMe(); } };
+  if (!win || !strip) { finish(); return; }
+  const step = LOOT_CARD + LOOT_GAP;
+  // Not the prize's dead centre: somewhere on its card, so it looks like it nearly went either way.
+  const jitter = (Math.random() - 0.5) * LOOT_CARD * 0.7;
+  o.loot.endX = Math.round(win.clientWidth / 2 - (LOOT_AT * step + LOOT_CARD / 2) + jitter);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { finish(); return; }
+  strip.style.transform = 'translateX(0px)';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    strip.style.transition = 'transform 5.2s cubic-bezier(.08,.72,.12,1)';
+    strip.style.transform = `translateX(${o.loot.endX}px)`;
+  }));
+  let done = false;
+  const end = () => { if (!done) { done = true; finish(); } };
+  strip.addEventListener('transitionend', end, { once: true });
+  setTimeout(end, 5600);
+}
+async function lootOpen(o) {
+  bag.busy = true;
+  renderBagDialog();
+  let error = null;
+  try {
+    const uid = bagGroups(lastMeData?.items ?? []).find((x) => x.key === o.g.key)?.uids[0] ?? o.g.uids[0];
+    const r = await fetch('/api/items/loot', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ uid }) });
+    const b = await r.json().catch(() => null);
+    if (r.status === 429) error = 'Chậm lại chút rồi mở tiếp.';
+    else if (r.status !== 200) error = `❌ ${esc(b?.error ?? 'Không mở được hòm.')} Hòm vẫn còn.`;
+    else {
+      o.loot.won = b.won;
+      o.loot.strip = lootStrip(o.loot.opts.pool.length ? o.loot.opts.pool : [b.won], b.won);
+      o.loot.phase = 'rolling';
+    }
+  } catch {
+    error = 'Mất kết nối. Thử lại.';
+  } finally {
+    bag.busy = false;
+    renderBagDialog();
+    if (error) bagDlgStatus('bad', error);
+    else if (o.loot.phase === 'rolling') rollLoot(o);
+  }
+}
+$('bag-dlg').addEventListener('click', (e) => {
+  const o = bag.open;
+  if (!o?.loot || bag.busy) return;
+  if (e.target.closest('[data-dlg="loot-open"]')) { void lootOpen(o); return; }
+  if (e.target.closest('[data-dlg="loot-again"]')) {
+    o.loot.phase = 'pool'; o.loot.won = null; o.loot.strip = null;
+    void (async () => {
+      const r = await getJson(`/api/items/loot-options/${encodeURIComponent(bagGroups(lastMeData?.items ?? []).find((x) => x.key === o.g.key)?.uids[0] ?? o.g.uids[0])}`).catch(() => null);
+      if (r?.status === 200) o.loot.opts = r.body;
+      if (bag.open === o) renderBagDialog();
+    })();
+  }
 });
 
 async function openDinoDialog(uid, g) {
