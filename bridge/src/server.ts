@@ -1596,9 +1596,13 @@ async function handlePanel(
     case '/api/voice-settings':
       sendJson(res, 200, { ...await readVoiceSettings(), enabled: config.voice !== null, url: config.voice?.publicUrl ?? null });
       return;
-    case '/api/garage-settings':
-      sendJson(res, 200, await readGarageSettings());
+    case '/api/garage-settings': {
+      // With how many are in each tier (member-tier.ts), for the panel's tier table.
+      const tiers = Object.values(await memberTiers());
+      const memberCounts = { vip: tiers.filter((t) => t === 'vip').length, svip: tiers.filter((t) => t === 'svip').length, admin: tiers.filter((t) => t === 'admin').length };
+      sendJson(res, 200, { ...await readGarageSettings(), memberCounts });
       return;
+    }
     case '/api/prime-fixes':
       sendJson(res, 200, { fixes: await listPrimeFixes() });
       return;

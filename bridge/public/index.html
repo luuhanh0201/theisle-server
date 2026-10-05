@@ -313,6 +313,38 @@
   .qq-row .qq-on { flex-direction: row; align-items: center; padding-bottom: 8px; }
   @media (max-width: 1100px) { .qq-row { grid-template-columns: auto repeat(2, minmax(0, 1fr)) auto; } .qq-row .qq-wide { grid-column: span 2; } }
   @media (max-width: 560px) { .qq-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .qq-row .qq-wide { grid-column: 1 / -1; } }
+  /* Settings by member tier (panel → Server → Gara): one column a tier. */
+  .tier-block { display: flex; flex-direction: column; gap: 10px; }
+  .tier-block-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .tier-block-head h3 { margin: 0; font-size: 14px; }
+  .tier-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+  .tier-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+  .tier-table th, .tier-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+  .tier-table tbody tr:last-child th, .tier-table tbody tr:last-child td { border-bottom: 0; }
+  .tier-table thead th { vertical-align: bottom; }
+  .tier-table th, .tier-table th small { text-transform: none; letter-spacing: normal; white-space: normal; }
+  .tier-table th small { display: block; font-weight: 500; color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+  .tier-table tbody th { color: var(--text); font-size: 13px; }
+  .tier-table tbody th { font-weight: 650; width: 30%; }
+  .tier-table td { width: 17.5%; }
+  .tier-table td.fixed, .tier-table td.info { color: var(--muted); }
+  .tier-table td.yes { color: var(--grow, #10b981); font-weight: 650; }
+  @media (max-width: 760px) {
+    /* A phone: each setting a card, the four tiers in a 2 × 2 grid, named from data-label. */
+    .tier-wrap { overflow: visible; border: 0; border-radius: 0; }
+    .tier-table { min-width: 0; }
+    .tier-table thead { display: none; }
+    .tier-table tbody, .tier-table tbody th, .tier-table td { display: block; width: auto; }
+    .tier-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; margin-bottom: 10px;
+      border: 1px solid var(--border); border-radius: 12px; }
+    .tier-table tbody th { grid-column: 1 / -1; padding: 0; border: 0; }
+    .tier-table td { padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .tier-table td::before { content: attr(data-label); font-size: 11.5px; font-weight: 650; color: var(--muted); }
+  }
+  .tier-chip { display: inline-flex; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; border: 1px solid var(--border); }
+  .tier-chip.t-vip { color: #b7791f; border-color: color-mix(in srgb, #f59e0b 45%, transparent); background: color-mix(in srgb, #f59e0b 10%, transparent); }
+  .tier-chip.t-svip { color: var(--grow, #10b981); border-color: color-mix(in srgb, #10b981 45%, transparent); background: color-mix(in srgb, #10b981 10%, transparent); }
+  .tier-chip.t-admin { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
   .sp-row { display: grid; grid-template-columns: auto minmax(200px, 3fr) repeat(2, minmax(100px, 1fr)) auto; gap: 8px; align-items: end;
     padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
   .sp-row.off { opacity: .6; }
@@ -2538,41 +2570,44 @@
               </div>
             </div>
 
-            <div class="cfg-grid">
-              <div class="cfg-field">
-                <label for="gs-max-slots">👤 Người thường: số slot tối đa <span class="mono">maxSlots</span></label>
-                <input id="gs-max-slots" type="number" min="1" max="20" step="1">
-                <div class="step-hint">Tối đa bao nhiêu dino một người được cất (kể cả slot admin tặng). Mặc định 3. Ai đang có nhiều hơn vẫn giữ và lấy ra được, chỉ không cất thêm.</div>
+            <!-- By member tier (bridge member-tier.ts): one column each, the admin's fixed. -->
+            <div class="tier-block">
+              <div class="tier-block-head"><h3>Theo mức thành viên</h3>
+                <span class="step-hint" style="margin:0">VIP: Thành viên → VIP · SVip: Thành viên → SVip · mức cao nhất được áp dụng · 0 ô = không giới hạn</span></div>
+              <div class="step-hint" id="gs-counts" style="margin:0"></div>
+              <div class="tier-wrap">
+                <table class="tier-table">
+                  <thead><tr><th scope="col"></th>
+                    <th scope="col"><span class="tier-chip t-normal">👤 Người thường</span><small id="gs-n-normal">mọi người còn lại</small></th>
+                    <th scope="col"><span class="tier-chip t-vip">⭐ VIP</span><small id="gs-n-vip"></small></th>
+                    <th scope="col"><span class="tier-chip t-svip">💎 SVip</span><small id="gs-n-svip"></small></th>
+                    <th scope="col"><span class="tier-chip t-admin">🛡️ Admin</span><small id="gs-n-admin"></small></th></tr></thead>
+                  <tbody>
+                    <tr><th scope="row">Số ô gara tối đa<small>kể cả slot admin tặng; ai đang có nhiều hơn vẫn giữ, chỉ không cất thêm</small></th>
+                      <td data-label="👤 Người thường"><input id="gs-max-slots" type="number" min="1" max="20" step="1" aria-label="Người thường: số ô gara"></td>
+                      <td data-label="⭐ VIP"><input id="gs-vip-slots" type="number" min="0" max="50" step="1" aria-label="VIP: số ô gara"></td>
+                      <td data-label="💎 SVip"><input id="gs-svip-slots" type="number" min="0" max="50" step="1" aria-label="SVip: số ô gara"></td>
+                      <td data-label="🛡️ Admin" class="fixed">Không giới hạn</td></tr>
+                    <tr><th scope="row">Chờ giữa 2 lần dùng (giây)<small>sau mỗi lần cất hoặc lấy ra thành công</small></th>
+                      <td data-label="👤 Người thường"><input id="gs-cooldown" type="number" min="0" max="86400" step="1" aria-label="Người thường: thời gian chờ"></td>
+                      <td data-label="⭐ VIP"><input id="gs-vip-cd" type="number" min="0" max="86400" step="1" aria-label="VIP: thời gian chờ"></td>
+                      <td data-label="💎 SVip"><input id="gs-svip-cd" type="number" min="0" max="86400" step="1" aria-label="SVip: thời gian chờ"></td>
+                      <td data-label="🛡️ Admin" class="fixed">0</td></tr>
+                    <tr><th scope="row">Ưu tiên vào khi server đầy<small>danh sách VIP của game; SVip được thêm lúc server khởi động</small></th>
+                      <td data-label="👤 Người thường" class="info">Không</td><td data-label="⭐ VIP" class="info yes">Có</td><td data-label="💎 SVip" class="info yes">Có</td><td data-label="🛡️ Admin" class="info">Theo danh sách VIP</td></tr>
+                    <tr><th scope="row">Dùng trước tính năng thử nghiệm<small>Thành viên → SVip → Chức năng thử nghiệm</small></th>
+                      <td data-label="👤 Người thường" class="info">Không</td><td data-label="⭐ VIP" class="info">Không</td><td data-label="💎 SVip" class="info yes">Có</td><td data-label="🛡️ Admin" class="info yes">Có</td></tr>
+                  </tbody>
+                </table>
               </div>
+            </div>
+
+            <div class="tier-block-head"><h3>Chung cho mọi người</h3></div>
+            <div class="cfg-grid">
               <div class="cfg-field">
                 <label for="gs-countdown">Thời gian đếm ngược khi cất (giây) <span class="mono">storeCountdown</span></label>
                 <input id="gs-countdown" type="number" min="0" max="300" step="1">
                 <div class="step-hint">Từ lúc bấm Cất tới khi dino vào gara. Người chơi phải đứng yên trong 5m, không nhận sát thương. Mặc định 30s.</div>
-              </div>
-              <div class="cfg-field">
-                <label for="gs-cooldown">👤 Người thường: chờ giữa 2 lần dùng gara (giây) <span class="mono">cooldown</span></label>
-                <input id="gs-cooldown" type="number" min="0" max="86400" step="1">
-                <div class="step-hint">Thời gian chờ sau mỗi lần cất hoặc lấy ra thành công, tính riêng từng người. Mặc định 180 giây.</div>
-              </div>
-              <div class="cfg-field">
-                <label for="gs-vip-slots">⭐ VIP: số slot tối đa</label>
-                <input id="gs-vip-slots" type="number" min="0" max="50" step="1">
-                <div class="step-hint">0 = không giới hạn. Mặc định 5. VIP: Thành viên → VIP.</div>
-              </div>
-              <div class="cfg-field">
-                <label for="gs-vip-cd">⭐ VIP: chờ giữa 2 lần dùng gara (giây)</label>
-                <input id="gs-vip-cd" type="number" min="0" max="86400" step="1">
-                <div class="step-hint">Mặc định 120 giây.</div>
-              </div>
-              <div class="cfg-field">
-                <label for="gs-svip-slots">💎 SVip: số slot tối đa</label>
-                <input id="gs-svip-slots" type="number" min="0" max="50" step="1">
-                <div class="step-hint">0 = không giới hạn (mặc định). SVip: Thành viên → SVip.</div>
-              </div>
-              <div class="cfg-field">
-                <label for="gs-svip-cd">💎 SVip: chờ giữa 2 lần dùng gara (giây)</label>
-                <input id="gs-svip-cd" type="number" min="0" max="86400" step="1">
-                <div class="step-hint">Mặc định 60 giây. Admin luôn không giới hạn slot và không phải chờ.</div>
               </div>
               <div class="cfg-field">
                 <label for="gs-min-health">Máu tối thiểu để được cất (%) <span class="mono">minHealthPct</span></label>
@@ -10903,6 +10938,11 @@ function renderGarageSettings(gs) {
   $('gs-vip-cd').value = gs.tiers?.vip?.cooldown ?? 120;
   $('gs-svip-slots').value = gs.tiers?.svip?.maxSlots ?? 0;
   $('gs-svip-cd').value = gs.tiers?.svip?.cooldown ?? 60;
+  const n = gs.memberCounts ?? {};
+  $('gs-n-vip').textContent = `${n.vip ?? 0} người`;
+  $('gs-n-svip').textContent = `${n.svip ?? 0} người`;
+  $('gs-n-admin').textContent = `${n.admin ?? 0} người`;
+  $('gs-counts').textContent = `Hiện có: ${n.vip ?? 0} VIP · ${n.svip ?? 0} SVip · ${n.admin ?? 0} admin; mọi người còn lại là người thường.`;
   $('gs-min-health').value = gs.minHealthPct ?? 0;
   $('gs-min-growth').value = gs.minGrowthPct ?? 0;
   $('gs-help').innerHTML = GS_HELP[gs.redeemAt] ?? '';
