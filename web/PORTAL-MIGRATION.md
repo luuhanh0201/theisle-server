@@ -16,7 +16,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 0. Foundations | **done** (below) |
 | 1. Trang chủ | **done** (below) |
 | 2. Dino Live | **done** (below) |
-| 3-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 3. Gara | **done** (below) |
+| 4-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -102,6 +103,16 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**3. Gara: done 2026-10-06.** `pages/gara/GaraPage.tsx`, `features/gara/{Commands, Garage, Slot, garage}.tsx|ts`,
+`components/SkinStrip.tsx`, `lib/dino.ts` (slotTier, when). `e2e/live-feed.mjs` now plays DinoGarage too: it reads the
+bridge's inbox.json and answers store / redeem as the mod (odd stores fail "moved", even ones land in a new slot). Two
+differences, both where the old page misbehaved: the demo cards ("Xem hiệu ứng thẻ") show real dates (the old ones fed
+milliseconds as seconds: year 58000), and without 3D models a card shows no empty 3D box. Checks: `test/gara.test.tsx`
+(8), e2e `portal-gara.mjs` (the same steps on both sites, each result compared: a store that fails in game, one that
+lands, its Lấy ra with the reply translated, the diet tabs, the search, the demo cards; Copy; Rex's 2 slots; a guest).
+The runner lists page errors of the old site (`old: true` flows) without counting them (skin3d.js throws there when
+the 3D models are missing).
 
 **2. Dino Live: done 2026-10-06.** `pages/game/GamePage.tsx`, `features/game/{DinoHero, Tele, PrimeCard, Stats}.tsx`,
 `components/TierFx.tsx` (the tier decorations + F badge, for Gara too), `lib/{commands (waitCommand, ERROR_VI), dino3d}`;

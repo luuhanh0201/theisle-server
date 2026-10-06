@@ -23,7 +23,7 @@ const COMPARE = (key) => `${SNAP}
 export default [
   {
     name: 'before React: Trang chủ read (web)',
-    path: '/#home',
+    old: true, path: '/#home',
     init: SEEN,
     wait: 3500,
     run: `await h.until(() => h.$('#home-checkin') && !h.$('#home-checkin').hidden && h.$('#lp-version')?.textContent);
@@ -44,7 +44,7 @@ export default [
   },
   {
     name: 'before React: Trang chủ read (launcher)',
-    path: '/#home',
+    old: true, path: '/#home',
     init: LAUNCHER,
     wait: 3500,
     run: `await h.until(() => h.$('#home-checkin') && !h.$('#home-checkin').hidden && h.$('#hub-dino-species')?.textContent !== 'Chưa vào game');

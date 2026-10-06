@@ -20,9 +20,10 @@ printf '{"checkinMinutes":1,"checkinRewards":[10,20,30,40,50,60,0],"checkinBonus
 printf '{"perDay":2,"defs":[{"id":"play1","kind":"play","label":"Chơi 1 phút","target":1,"reward":25,"diet":"all","period":"day","enabled":true},{"id":"walk99","kind":"distance","label":"Đi 99 km","target":99,"reward":500,"diet":"all","period":"day","enabled":true},{"id":"week-play","kind":"play","label":"Chơi 10 giờ trong tuần","target":600,"reward":400,"diet":"all","period":"week","enabled":true}]}\n' > "$R/data/quests-settings.json"
 printf '{"offered":{"76561198000000011":%s},"claimed":{}}\n' "$T" > "$R/data/starter.json"
 sh "$REPO/web/e2e/local-bridge.sh" "$R" | grep -v '^PANEL_COOKIE=' | tee "$R/bridge.out"
-# "Live Tester" in game (a snapshot every 3 s, live-feed.mjs) for the Dino Live flows: its cookie is LIVE_COOKIE.
+# "Live Tester" in game (a snapshot every 3 s, live-feed.mjs, which also answers the web garage's commands as
+# DinoGarage would) for the in-game flows: its cookie is LIVE_COOKIE.
 BRIDGE_PID=$(sed -n 's/^bridge pid \([0-9]*\).*/\1/p' "$R/bridge.out")
-nohup node "$REPO/web/e2e/live-feed.mjs" "$R/Mods/StatsLogger/Saved" "$BRIDGE_PID" > "$R/feed.log" 2>&1 &
+nohup node "$REPO/web/e2e/live-feed.mjs" "$R/Mods/StatsLogger/Saved" "$BRIDGE_PID" "$R/Mods/DinoGarage/Saved" > "$R/feed.log" 2>&1 &
 echo "feed pid $! (stops with the bridge)"
 SECRET=e2e-local-portal-session-secret-0123456789
 mkdir -p "$R/downloads"

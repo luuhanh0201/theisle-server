@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Tab } from '../app/router';
 import { GamePage } from './game/GamePage';
+import { GaraPage } from './gara/GaraPage';
 import { HomePage } from './home/HomePage';
 import { LegacyPage } from './LegacyPage';
 
@@ -14,6 +15,7 @@ export const TITLES: Record<Tab, string> = {
 const MOVED: Partial<Record<Tab, () => ReactNode>> = {
   home: () => <HomePage />,
   game: () => <GamePage />,
+  gara: () => <GaraPage />,
 };
 
 export function Page({ tab }: { tab: Tab }) {

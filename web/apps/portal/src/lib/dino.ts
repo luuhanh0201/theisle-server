@@ -43,3 +43,20 @@ export function heroTier(dino: { prime?: unknown; elderStacks?: number | null; g
 
 /** The card's tier classes, as app.js puts them (amber: just tier-amber; any prime: + prime). */
 export const tierClasses = (t: DinoTier): string => `${t.key === 'amber' ? 'tier-amber' : t.className}${t.level > 0 ? ' prime' : ''}`;
+
+/** A slot's tier: the bridge's own when it says one, else from its elder stacks and prime (app.js getDinoTier). */
+export function slotTier(g: { tier?: string | number; elderStacks?: number | null; generation?: number; prime?: boolean }): DinoTier {
+  if (g.tier === 'apex' || g.tier === 4) return DINO_TIERS.apex;
+  if (g.tier === 'rex' || g.tier === 3) return DINO_TIERS.rex;
+  if (g.tier === 'dna' || g.tier === 2) return DINO_TIERS.dna;
+  if (g.tier === 'amber' || g.tier === 1) return DINO_TIERS.amber;
+  if (g.tier === 'fossil' || g.tier === 0) return DINO_TIERS.fossil;
+  const stacks = typeof g.elderStacks === 'number' ? g.elderStacks : typeof g.generation === 'number' ? Math.max(0, g.generation - 1) : 0;
+  if (stacks >= 3) return DINO_TIERS.apex;
+  if (stacks === 2) return DINO_TIERS.rex;
+  if (stacks === 1) return DINO_TIERS.dna;
+  return g.prime ? DINO_TIERS.amber : DINO_TIERS.fossil;
+}
+
+/** "6/10/2026, 14:05:09" (vi-VN, 24 h), a unix time; '' without one (app.js when). */
+export const when = (t: number | null | undefined): string => (t ? new Date(t * 1000).toLocaleString('vi-VN', { hour12: false }) : '');

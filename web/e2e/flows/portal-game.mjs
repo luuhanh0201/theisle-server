@@ -22,7 +22,7 @@ const ALL = [...PARTS, ...vitalsParts];
 const ready = `await h.until(() => h.$('#game-stats-grid')?.children.length > 0 && h.$('#game-vitals [data-v=health] .vital-val')?.textContent.includes('/'));`;
 
 export default [
-  { name: 'before React: Dino Live, in game', path: '/#game', init: SEEN, wait: 3500, run: `${ready} ${save('e2e.old.game', ALL)}` },
+  { name: 'before React: Dino Live, in game', old: true, path: '/#game', init: SEEN, wait: 3500, run: `${ready} ${save('e2e.old.game', ALL)}` },
   {
     name: 'Dino Live in React, in game = before React',
     path: '/next/#game',
@@ -35,7 +35,7 @@ export default [
   },
   {
     name: 'before React: a wrong tele code',
-    path: '/#game',
+    old: true, path: '/#game',
     init: SEEN,
     wait: 3500,
     run: `await h.until(() => h.$('#game-tele-card') && !h.$('#game-tele-card').hidden && !h.$('#tele-go').disabled);
@@ -91,11 +91,11 @@ export default [
       check('the page still works', h.$('#game-vitals [data-v=health] .vital-val').textContent === '600 / 1000');
       localStorage.removeItem('xg.lab');`,
   },
-  { name: 'before React: Dino Live, logged in, not in game', path: '/#game', init: AS_REX, wait: 3500,
+  { name: 'before React: Dino Live, logged in, not in game', old: true, path: '/#game', init: AS_REX, wait: 3500,
     run: `await h.until(() => h.$('#game-stats-grid')?.children.length > 0); ${save('e2e.old.game.rex', PARTS)}` },
   { name: 'Dino Live in React, not in game = before React', path: '/next/#game', init: AS_REX,
     run: `await h.until(() => h.$('#game-stats-grid')?.children.length > 0 && h.$('.auth-name')?.textContent.includes('Rex')); ${same('e2e.old.game.rex', PARTS)}` },
-  { name: 'before React: Dino Live, a guest', path: '/#game', init: AS_GUEST, wait: 3500,
+  { name: 'before React: Dino Live, a guest', old: true, path: '/#game', init: AS_GUEST, wait: 3500,
     run: `await h.until(() => h.$('#auth-actions a')); ${save('e2e.old.game.guest', PARTS)}` },
   { name: 'Dino Live in React, a guest = before React', path: '/next/#game', init: AS_GUEST,
     run: `await h.until(() => h.$('#auth-actions a')); ${same('e2e.old.game.guest', PARTS)}` },

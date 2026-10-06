@@ -3,7 +3,8 @@
 //   PANEL_URL=http://127.0.0.1:8091 PANEL_COOKIE=<panel_session> node e2e/run.mjs e2e/flows/mods.mjs
 // No local copy of the data at hand: sh e2e/local-bridge.sh <empty dir> starts one on fake data.
 // The player site: sh e2e/local-portal.sh <empty dir>, then PANEL_URL=http://127.0.0.1:8092 COOKIE_NAME=isle_session.
-// A flow may set: init (a script run before the page's own, e.g. a stub window.isleLauncher), width (a phone).
+// A flow may set: init (a script run before the page's own, e.g. a stub window.isleLauncher), width (a phone),
+// old (the site before React: its own page errors are listed, not counted).
 // Prints every check; exit code 1 when one fails.
 import { spawn } from 'node:child_process';
 import { rmSync } from 'node:fs';
@@ -20,8 +21,10 @@ let tabs = null;
 for (let i = 0; i < 40 && !tabs; i++) { await sleep(250); try { tabs = await (await fetch('http://127.0.0.1:9336/json')).json(); } catch {} }
 const ws = new WebSocket(tabs.find((t) => t.type === 'page').webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener('open', r));
-let id = 0; const wait = new Map(); const errs = [];
-ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); if (m.method === 'Runtime.exceptionThrown') errs.push(m.params.exceptionDetails.exception?.description?.slice(0, 300)); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } });
+let id = 0; const wait = new Map(); const errs = []; const oldErrs = [];
+// The flow running now: a page error during a flow marked `old` (the site before React) is reported, not counted.
+let current = null;
+ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); if (m.method === 'Runtime.exceptionThrown') (current?.old ? oldErrs : errs).push(m.params.exceptionDetails.exception?.description?.slice(0, 300)); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } });
 const cdp = (method, params = {}) => new Promise((r) => { const i = ++id; wait.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
 await cdp('Network.enable'); await cdp('Runtime.enable'); await cdp('Page.enable');
 if (cookie) await cdp('Network.setCookie', { name: cookieName, value: cookie, url: `${BASE}/` });
@@ -48,6 +51,7 @@ for (const f of flows) {
   // A fresh page each flow (the same address with another #hash would not reload it).
   await cdp('Page.navigate', { url: 'about:blank' });
   await sleep(100);
+  current = f;
   await cdp('Page.navigate', { url: `${BASE}${f.path}` });
   await sleep(f.wait ?? 2500);
   await cdp('Runtime.evaluate', { expression: HELPERS });
@@ -58,6 +62,7 @@ for (const f of flows) {
   if (init) await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: init });
   if (f.width) await cdp('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
 }
+if (oldErrs.length) console.log(`\npage errors on the site before React (not counted): ${[...new Set(oldErrs)].join(' | ')}`);
 if (errs.length) { fails++; console.log(`\npage errors:\n${errs.join('\n')}`); }
 console.log(`\n${fails === 0 ? 'ALL OK' : `${fails} FAILED`}`);
 ws.close(); chrome.kill();
