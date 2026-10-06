@@ -4,7 +4,7 @@
 .back svg { width: 16px; height: 16px; }
 .heroCard { margin-bottom: 18px; }
 .hero { display: flex; gap: 18px; align-items: center; padding: 22px; flex-wrap: wrap; }
-.hero h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hero h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; text-wrap: balance; }
 .sub { color: var(--muted); font-size: 13px; margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .actions { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .status { font-size: 12px; max-width: 280px; text-align: right; }

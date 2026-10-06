@@ -12,6 +12,8 @@ export default [
       check('KPI kill', h.$$('div').some((d) => d.textContent === String(kills)) && document.body.textContent.includes('Kill được quy người'));
       const st = await h.api('/api/server/status');
       check('cảnh báo khi server không chạy', st.phase === 'running' || document.body.textContent.includes('Server: '), st.phase);
+      // The bridge measures every 10 s and the page asks every 10 s: on a fresh bridge, wait for the first sample.
+      await h.until(() => h.$$('svg[role=img]').length > 0, 25000).catch(() => {});
       check('4 biểu đồ hiệu năng', ['ServerFPS', 'Người online', 'CPU của game', 'RAM'].every((t) => h.$$('h3').some((x) => x.textContent.startsWith(t))) && h.$$('svg[role=img]').length === 4);
       check('biểu đồ đủ rộng', h.$('svg[role=img]').getBoundingClientRect().width > 600, h.$('svg[role=img]').getBoundingClientRect().width);
       h.click(h.byText('1 giờ', 'button')); await h.sleep(1500);

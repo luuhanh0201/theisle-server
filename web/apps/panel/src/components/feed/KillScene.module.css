@@ -3,7 +3,7 @@
 .modal { width: min(880px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 .head { display: flex; align-items: flex-start; gap: 12px; }
-.head h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text); }
+.head h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text); text-wrap: balance; }
 .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .close { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
 .close:hover { color: var(--kill); background: var(--kill-soft); }

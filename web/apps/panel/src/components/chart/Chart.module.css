@@ -1,6 +1,6 @@
 /* Charts and number tiles, as the panel before React (.perf-chart, .perf-tip, .perf-tiles .tile). */
 .chart { position: relative; }
-.chart h3 { margin: 10px 0 2px; font-size: 13px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.chart h3 { margin: 10px 0 2px; font-size: 13px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; text-wrap: balance; }
 .unit { color: var(--muted); font-weight: 500; font-size: 12px; }
 .legend { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .legend i { width: 14px; height: 2px; border-radius: 2px; display: inline-block; }

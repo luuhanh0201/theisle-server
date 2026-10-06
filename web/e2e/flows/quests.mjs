@@ -42,6 +42,20 @@ export default [
     `,
   },
   {
+    // "+ Thêm món" needs an item to sell: on a fresh local bridge (no items flow before) make one.
+    name: 'Cửa hàng: có vật phẩm để bán',
+    path: '/#quests',
+    wait: 1500,
+    run: `
+      if ((await h.api('/api/items')).items.length === 0) {
+        const { token } = await h.api('/api/me');
+        await fetch('/api/items', { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({ type: 'growth_bag', name: 'Túi e2e', data: { amount: 0.1, below: 0.6 } }) });
+      }
+      check('danh mục có vật phẩm', (await h.api('/api/items')).items.length > 0);
+    `,
+  },
+  {
     name: 'Cửa hàng: thêm món, đổi giá, đưa lên đầu, lưu, trả lại',
     path: '/#quests',
     wait: 3000,

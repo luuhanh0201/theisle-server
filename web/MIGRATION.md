@@ -28,7 +28,7 @@ this file, and push after each block.
 | Bản đồ | the one page: the live map (layers, search, hover, path of a life) and its tabs Vùng AI, Thả AI, Làm mới, Dino nhỏ, Người chơi | `features/map/MapPage.tsx` | `e2e/flows/map.mjs` (28) |
 | Tổng quan | the one page: KPIs, alerts, Hiệu năng server (tiles, 4 charts, table), Sức chứa, Diễn biến with filters, Thao tác nhanh | `pages/overview/OverviewPage.tsx` | `e2e/flows/overview.mjs` (11) |
 | Truy cập | the one page: tiles, six line charts, ranges, hover box | `pages/traffic/TrafficPage.tsx` | `e2e/flows/traffic.mjs` (8) |
-| Nhiệm vụ | the one page: Điểm danh, Hổ phách, Cửa hàng, Sổ giao dịch, Nhiệm vụ ngày / tuần | `pages/quests/QuestsPage.tsx` | `e2e/flows/quests.mjs` (13) |
+| Nhiệm vụ | the one page: Điểm danh, Hổ phách, Cửa hàng, Sổ giao dịch, Nhiệm vụ ngày / tuần | `pages/quests/QuestsPage.tsx` | `e2e/flows/quests.mjs` (14) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
 (`#server/cfg:spawn`): `pickSub` keeps it, `BlockPage` shows the sub-page before the colon and the
@@ -137,5 +137,7 @@ text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký a
    to a long path: Chromium then fails to start.) The fake data uses the game's class names
    (`BP_Tyrannosaurus_C`): a flow that needs more data, add it to `local-bridge.sh`. The flows
    change the data (a ban removed, a player jailed): run them on a NEW empty folder each time.
+   Each flow passes alone on a new bridge (checked 2026-10-06, all 13): overview waits for the
+   first perf sample (the bridge measures every 10 s), quests makes an item to sell when there is none.
 3. Screenshots at 380 and 1366 px, light and dark: `node web/scripts/shots.mjs <out> <tab/sub>...`
    (answers `/api/*` from `web/scripts/shots-fixtures.mjs`), compared with the old page.
