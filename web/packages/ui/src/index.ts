@@ -6,6 +6,7 @@ export { Checkbox, CheckGrid } from './components/Checkbox/Checkbox';
 export { DateTimeInput } from './components/DateTimeInput/DateTimeInput';
 export { Dialog } from './components/Dialog/Dialog';
 export { Field, FieldGrid } from './components/Field/Field';
+export { FileInput } from './components/FileInput/FileInput';
 export { GroupLabel } from './components/GroupLabel/GroupLabel';
 export { Hint, Mono } from './components/Hint/Hint';
 export { Icon, type IconName } from './components/Icon/Icon';

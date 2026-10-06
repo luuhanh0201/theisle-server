@@ -1,0 +1,17 @@
+/* Server → Dữ liệu, as the panel before React. */
+.page { display: flex; flex-direction: column; gap: 16px; }
+.banner { font-size: 12.5px; border-radius: 10px; padding: 10px 12px; color: var(--dmg); background: var(--dmg-soft); }
+.right { margin-left: auto; }
+.row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.keep { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+.keepBox { width: 110px; }
+.file { max-width: 260px; overflow-wrap: anywhere; }
+.small { color: var(--muted); font-size: 12px; }
+.actions { white-space: nowrap; display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.table td { vertical-align: top; }
+.link { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 600; text-decoration: none;
+  color: var(--text); background: var(--surface-3); border: 1px solid var(--border-strong); }
+.link:hover { border-color: var(--accent); }
+.fileBox { flex: 1; min-width: 220px; }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.muted { color: var(--muted); }

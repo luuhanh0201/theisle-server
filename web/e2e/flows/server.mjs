@@ -87,4 +87,27 @@ export default [
       check('sang nhóm Loài & điểm spawn', document.body.textContent.includes('Cấu hình game · Loài & điểm spawn') && location.hash.includes('spawn'));
     `,
   },
+  {
+    name: 'Dữ liệu: backup ngay, hiện trong danh sách, đổi số bản giữ, trả lại, xoá bản vừa tạo (không khôi phục, không xoá dữ liệu)',
+    path: '/next/#server/data',
+    run: `
+      const d0 = await h.api('/api/backups');
+      check('khoá khôi phục / xoá dữ liệu khi server chưa tắt', d0.phase === 'stopped' || h.byText('Xoá dữ liệu…', 'button').disabled);
+      h.click(h.byText('Backup ngay', 'button')); await h.sleep(2000);
+      const d1 = await h.api('/api/backups');
+      const made = d1.backups.find((b) => !d0.backups.some((x) => x.name === b.name));
+      check('đã tạo một bản', !!made, d1.backups.length);
+      check('hiện trong danh sách', !!made && document.body.textContent.includes(made.name));
+      h.click(h.$('input[aria-label="Số bản giữ lại"]').parentElement.querySelector('[aria-label="Tăng"]')); await h.sleep(200);
+      h.click(h.byText('Lưu', 'button')); await h.sleep(1200);
+      check('đã lưu giữ +1', (await h.api('/api/backups')).settings.keep === d0.settings.keep + 1);
+      h.click(h.$('input[aria-label="Số bản giữ lại"]').parentElement.querySelector('[aria-label="Giảm"]')); await h.sleep(200);
+      h.click(h.byText('Lưu', 'button')); await h.sleep(1200);
+      check('trả lại như cũ', (await h.api('/api/backups')).settings.keep === d0.settings.keep);
+      const row = h.$$('tr').find((tr) => tr.textContent.includes(made.name));
+      h.click([...row.querySelectorAll('button')].find((b) => b.textContent === 'Xoá')); await h.sleep(300);
+      h.click([...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent === 'Xoá')); await h.sleep(1500);
+      check('đã xoá bản vừa tạo', !(await h.api('/api/backups')).backups.some((b) => b.name === made.name));
+    `,
+  },
 ];

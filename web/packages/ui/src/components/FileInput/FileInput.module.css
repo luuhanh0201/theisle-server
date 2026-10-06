@@ -1,0 +1,10 @@
+/* As the panel before React drew input[type=file]::file-selector-button. */
+.wrap { position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 13px; color: var(--text-2); }
+.native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.btn { flex: none; border: 1px solid var(--border-strong); background: var(--surface-3); color: var(--text); padding: 5px 12px; border-radius: 8px;
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s; }
+.btn:hover:not(:disabled) { background: var(--border-strong); border-color: var(--accent); }
+.wrap:focus-within .btn { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.disabled { opacity: .5; }
+.disabled .btn { cursor: not-allowed; }

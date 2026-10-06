@@ -23,7 +23,7 @@ EOF
 for s in a b; do for p in 11 12; do
   printf '{"version":1,"slot":"%s","capturedAt":%s,"classPath":"%s","growth":0.7}\n' "$s" "$T" "$REX" > "$R/Mods/DinoGarage/Saved/stored/765611980000000${p}__$s.json"
 done; done
-export GARAGE_ROOT="$R/Mods/DinoGarage/Saved" EVENTS_PATH="$R/Mods/StatsLogger/Saved/events.ndjson" DATA_DIR="$R/data" GAME_CONFIG_DIR="$R/Config"
+export BACKUP_DIR="$R/backups" GARAGE_ROOT="$R/Mods/DinoGarage/Saved" EVENTS_PATH="$R/Mods/StatsLogger/Saved/events.ndjson" DATA_DIR="$R/data" GAME_CONFIG_DIR="$R/Config"
 export PORTAL_PUBLIC_DIR="$REPO/portal/public" ADMIN_TOKEN=e2e-local-token SUPER_ADMIN_STEAM_ID=76561198000000001
 export ADMIN_STEAM_IDS=76561198000000001,76561198000000002 HTTP_PORT=8091 SUDO=none SYSTEMCTL=true RCON_PORT=1 GAME_UNIT=none.service
 cd "$REPO/bridge"

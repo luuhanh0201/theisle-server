@@ -257,3 +257,13 @@ export interface GameConfig {
   /** Saved after the server last started: waiting for a restart. */
   pendingRestart: boolean;
 }
+
+/** One backup file (bridge/src/backup.ts BackupInfo). */
+export interface BackupInfo { name: string; kind: 'data' | 'settings'; size: number; createdAt: number; reason: string; parts: string[] }
+/** GET /api/backups (server.ts): the files, the settings, what a wipe may take, the game's phase. */
+export interface BackupsView {
+  backups: BackupInfo[];
+  settings: { atScheduledRestart: boolean; keep: number };
+  parts: Array<{ key: string; label: string }>;
+  phase: string;
+}
