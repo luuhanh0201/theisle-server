@@ -1,0 +1,40 @@
+/* List pages, as the panel before React (.players-toolbar, .players-search-wrap, .seg, .players-pager, th.sortable, .garage-stats-pill). */
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.search { position: relative; flex: 1; min-width: 240px; }
+.search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.search input { padding-left: 34px; font-size: 13px; }
+.seg { display: inline-flex; align-self: flex-start; border: 1px solid var(--border-strong); border-radius: 10px; padding: 3px; gap: 3px; background: var(--surface-2); }
+.seg button { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 650; font-size: 13px; padding: 6px 14px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.pager { display: flex; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; font-size: 12.5px; }
+.pager button { min-width: 34px; }
+.pager button.on { background: var(--accent-2); color: #fff; border-color: transparent; }
+.count { color: var(--muted); margin-right: auto; }
+.item { display: inline-flex; align-items: center; gap: 6px; }
+.gap { color: var(--muted); }
+.sortable button { all: unset; cursor: pointer; white-space: nowrap; }
+.sortable:hover, .sorted { color: var(--text); }
+.ico { font-size: 10px; opacity: .7; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border);
+  font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; margin-left: auto; }
+@media (max-width: 640px) { .search { min-width: 0; flex-basis: 100%; } }
+
+/* The panel's plain data table (numbers right-aligned, the first column left; .table-wrap table). */
+.wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13.5px; }
+.table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; text-align: right; padding: 0 10px 10px; white-space: nowrap; }
+.table td { padding: 10px; border-top: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.table th:first-child, .table td:first-child { text-align: left; padding-left: 0; }
+.table th:last-child, .table td:last-child { padding-right: 0; }
+.table .left { text-align: left; }
+.table th.sorted, .table th.sorted .ico { color: var(--accent-2); }
+.rowLink { cursor: pointer; }
+.rowLink:hover td { background: var(--surface-2); }
+.empty { color: var(--muted); padding: 28px 0; text-align: center !important; font-size: 13px; }
+.muted { color: var(--muted); }
+.notice { border: 1px solid var(--border); background: var(--surface-2); border-radius: 12px; padding: 10px 14px; margin-bottom: 18px; font-size: 12.5px; color: var(--text-2); }
+.notice summary { cursor: pointer; font-weight: 600; display: flex; gap: 8px; align-items: center; list-style: none; }
+.notice summary::-webkit-details-marker { display: none; }
+.notice p { margin: 8px 0 2px; }
+@media (max-width: 640px) { .hideSm { display: none; } }

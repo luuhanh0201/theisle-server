@@ -181,6 +181,12 @@ export interface GarageIndex { schema?: number; players: Record<string, Record<s
 export interface PlayerRow {
   steamId: string; name: string | null; species: string | null; online: boolean; growth: number | null; lastSeen?: number | null;
   tier?: string; garage?: number;
+  /** Their garage's slots by tier (null = no limit). */
+  garageMax?: number | null;
+  ping?: number | null;
+  kills?: number; deaths?: number; damageDealt?: number; damageTaken?: number; playtime?: number; spawns?: number; chats?: number; stored?: number;
+  /** Serving a prison sentence (bridge/src/prison.ts playerView). */
+  prison?: { offense: string; remainingSec: number; escaped: boolean } | null;
   [k: string]: unknown;
 }
 

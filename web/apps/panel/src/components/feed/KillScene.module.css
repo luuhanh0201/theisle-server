@@ -1,0 +1,34 @@
+/* A death's scene, as the panel before React (.scene-modal, .scene-map, .scene-tip, .scene-people, .scene-fight). */
+.back { position: fixed; inset: 0; z-index: 80; background: rgba(2, 6, 23, .6); display: grid; place-items: center; padding: 16px; }
+.modal { width: min(880px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.head { display: flex; align-items: flex-start; gap: 12px; }
+.head h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text); }
+.sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.close { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.close:hover { color: var(--kill); background: var(--kill-soft); }
+.map { position: relative; flex: none; height: min(460px, 58vh); border-radius: 12px; overflow: hidden; background: #0b1220; border: 1px solid var(--border); touch-action: none; }
+.map canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.map canvas.drag { cursor: grabbing; }
+.msg { position: absolute; inset: 0; display: grid; place-items: center; color: #cbd5e1; font-size: 13px; text-align: center; padding: 16px; }
+.tip { position: absolute; z-index: 2; pointer-events: none; min-width: 150px; padding: 8px 10px; border-radius: 10px; font-size: 12px;
+  background: rgba(2, 6, 23, .92); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, .3); box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.tip b { color: #fff; font-size: 13px; }
+.r { color: #94a3b8; }
+.people { display: flex; flex-wrap: wrap; gap: 6px; }
+.people span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; font-size: 12px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }
+.people i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.people span.hl { border-color: var(--text-2); }
+.people span.note { border: 0; background: none; color: var(--muted); }
+.fight { display: flex; flex-direction: column; gap: 10px; }
+.fight table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.fight th, .fight td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.fight th { color: var(--muted); font-weight: 700; font-size: 11.5px; }
+.fight th.n { text-align: right; }
+.fight td.n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.hits { max-height: 240px; overflow: auto; }
+.dealt { color: var(--dmg); }
+.taken { color: var(--kill); }
+.dead { color: var(--kill); font-weight: 700; }
+.killer { color: var(--dmg); font-weight: 700; }
+.mutedLine { color: var(--muted); }

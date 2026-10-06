@@ -1,0 +1,30 @@
+/* Xếp hạng, as the panel before React (.grid.boards, .rank-list, .rank, .meter). */
+.boards { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .boards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1250px) { .boards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.prey { margin-top: 18px; }
+.title { display: inline-flex; align-items: center; gap: 10px; }
+.ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; }
+.ico svg { width: 15px; height: 15px; }
+.tone-kill { background: var(--kill-soft); color: var(--kill); }
+.tone-accent { background: var(--accent-soft); color: var(--accent); }
+.tone-dmg { background: var(--dmg-soft); color: var(--dmg); }
+.tone-chat { background: var(--chat-soft); color: var(--chat); }
+.tone-grow { background: var(--grow-soft); color: var(--grow); }
+.rankList { list-style: none; margin: 0; padding: 0; }
+.rankList li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+.rankList li:first-child { border-top: 0; }
+.empty { color: var(--muted); justify-content: center; padding: 28px 0 !important; font-size: 13px; }
+.rank { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 800; background: var(--surface-3); color: var(--muted); }
+.r1 { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); }
+.r2 { background: color-mix(in srgb, var(--silver) 22%, transparent); color: var(--silver); }
+.r3 { background: color-mix(in srgb, var(--bronze) 20%, transparent); color: var(--bronze); }
+.who { min-width: 0; }
+.nm { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.score { margin-left: auto; font-weight: 750; font-variant-numeric: tabular-nums; text-align: right; }
+.score small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+.meter { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+.track { flex: 1; height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--grow), var(--chat)); }
+.n { font-size: 12px; font-weight: 600; color: var(--text-2); width: 36px; text-align: right; font-variant-numeric: tabular-nums; }

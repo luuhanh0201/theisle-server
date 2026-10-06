@@ -1,7 +1,7 @@
 #!/bin/sh
 # A local bridge for the e2e flows, on fake data (never the live server's): two players who
 # spawned (BP_ class names, as StatsLogger sends them, with mutations seen), four garage slots,
-# a second admin for the Phân quyền flow. Prints the cookie to pass as PANEL_COOKIE.
+# a second admin for the Phân quyền flow; a chat, a bite and a kill (Người chơi), a growth step. Prints the cookie to pass as PANEL_COOKIE.
 #   sh web/e2e/local-bridge.sh /tmp/isle-e2e        (then, from web/:)
 #   PANEL_URL=http://127.0.0.1:8091 PANEL_COOKIE=<printed> CHROME=<chromium> node e2e/run.mjs e2e/flows/mods.mjs
 # Stop it: kill the pid it prints. Needs `npm run build` in bridge/ and web/ first.
@@ -19,6 +19,11 @@ cat > "$R/Mods/StatsLogger/Saved/events.ndjson" <<EOF
 {"type":"spawn","t":$((T-590)),"steamId":"76561198000000011","name":"Rex Tester","species":"BP_Tyrannosaurus_C","classPath":"$REX","growth":0.6,"mutations":{"Slot1":"Cellular Regeneration","Slot2":"Congenital Hypoalgesia"}}
 {"type":"session_start","t":$((T-500)),"steamId":"76561198000000012","name":"Carno Tester"}
 {"type":"spawn","t":$((T-490)),"steamId":"76561198000000012","name":"Carno Tester","species":"BP_Carnotaurus_C","classPath":"$CARNO","growth":0.8}
+{"type":"chat","t":$((T-480)),"steamId":"76561198000000011","name":"Rex Tester","message":"chào cả nhà"}
+{"type":"chat","t":$((T-470)),"steamId":"76561198000000012","name":"Carno Tester","message":"!status"}
+{"type":"damage","t":$((T-460)),"attacker":"76561198000000011","victim":"76561198000000012","amount":350,"attackerName":"Rex Tester","attackerSpecies":"BP_Tyrannosaurus_C","victimName":"Carno Tester","victimSpecies":"BP_Carnotaurus_C","loc":{"x":148697,"y":349211,"z":2000}}
+{"type":"death","t":$((T-455)),"steamId":"76561198000000012","name":"Carno Tester","species":"BP_Carnotaurus_C","growth":0.8,"loc":{"x":148697,"y":349211,"z":2000},"lifeSeconds":35,"killer":"76561198000000011","killerName":"Rex Tester","killerSpecies":"BP_Tyrannosaurus_C","killerGrowth":0.6,"lastHit":350,"attributed":true}
+{"type":"growth","t":$((T-400)),"steamId":"76561198000000011","name":"Rex Tester","species":"BP_Tyrannosaurus_C","milestone":0.75,"growth":0.75,"lifeSeconds":190}
 EOF
 for s in a b; do for p in 11 12; do
   printf '{"version":1,"slot":"%s","capturedAt":%s,"classPath":"%s","growth":0.7}\n' "$s" "$T" "$REX" > "$R/Mods/DinoGarage/Saved/stored/765611980000000${p}__$s.json"

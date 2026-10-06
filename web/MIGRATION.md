@@ -20,6 +20,7 @@ this file, and push after each block.
 | Thành viên | Admin, Phân quyền, Whitelist, VIP, SVip (all) | `pages/members/MembersPage.tsx` | `e2e/flows/members.mjs` (17) |
 | Quản trị | Truy cập panel, Nhật ký admin, Discord (all) | `pages/admin/AdminPage.tsx` | `e2e/flows/admin.mjs` (13) |
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
+| Người chơi | Danh sách, Killfeed, Xếp hạng, Chat (Ban, Nhà tù: not yet) | `pages/players/PlayersPage.tsx` | `e2e/flows/players.mjs` (25) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
 (`#server/cfg:spawn`): `pickSub` keeps it, `BlockPage` shows the sub-page before the colon and the
@@ -38,8 +39,10 @@ admins use, until every block is moved and `/` switches to the React build.
    restart, restore or wipe (local bridge: `SYSTEMCTL=true`, `BACKUP_DIR` in its folder). Once, the
    first run after a build had one step fail and three runs after it passed: if a server step
    fails, run it again before hunting.
-2. **Người chơi** (next): Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page
-   (`#player/<id>`, opened from many places).
+2. **Người chơi** (in progress): ~~Danh sách, Killfeed, Xếp hạng, Chat~~ done (`features/players/`).
+   Next: Ban, Nhà tù, then the player page (`#player/<id>`): every player name in React already
+   links there (`components/dino/Identity.tsx` PlayerLink), and until that page exists the address
+   falls back to Tổng quan.
 3. **Vật phẩm**: Skin dino (3D viewer `/skin3d.js`, `portal/public/skin-editor.js`), Mutation,
    Phiếu & hộp.
 4. **Nhiệm vụ** (Hổ phách, điểm danh, nhiệm vụ, cửa hàng), **Truy cập** (traffic), **Tổng quan**
@@ -69,6 +72,13 @@ text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký a
 - `test/fakeBridge.tsx`: `fakeBridge(url, get, put)` for a settings page, `fakeApi({ 'GET /api/x': …,
   'POST /api/y': (body) => … })` for a page of many routes (with the confirm dialog).
 - `node web/scripts/shots.mjs` also shoots a running local bridge (`PANEL_URL` + `PANEL_COOKIE`).
+- `components/list/List.tsx`: `ListTools` (search + filters), `Seg`, `SortTh`, `Pager` ("Hiển thị a-b /
+  n … · trang x/y"), `pageOf`, `Pill`, and `List.module.css` `.table` (the old `.table-wrap table`:
+  numbers right, first column left), `.rowLink`, `.notice`, `.hideSm`.
+- `components/feed/`: `Feed` (the game's log as columns, every event type of the old `describe()`),
+  `KillScene` (a death's 📍: map, people within 200 m, the fight). `lib/map.ts`: the island map
+  (gateway.json + image) and its projection, for the scene now and Bản đồ later.
+- `lib/players.ts`: `prDur`, `lastSeenText`, `pingTone`, `copyText`.
 - `app/confirm.tsx`: the confirm dialog (never the browser's confirm()).
 - Mutations: `features/mutations/` (reference, notes, catalog), the picker and tooltip in
   `features/garage/creator/`.
