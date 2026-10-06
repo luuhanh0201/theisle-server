@@ -22,6 +22,7 @@ this file, and push after each block.
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
 | Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (57) |
 | Vật phẩm | Skin dino, Mutation, Phiếu & hộp (all) | `pages/items/ItemsPage.tsx` | `e2e/flows/items.mjs` (26) |
+| Truy cập | the one page: tiles, six line charts, ranges, hover box | `pages/traffic/TrafficPage.tsx` | `e2e/flows/traffic.mjs` (8) |
 | Nhiệm vụ | the one page: Điểm danh, Hổ phách, Cửa hàng, Sổ giao dịch, Nhiệm vụ ngày / tuần | `pages/quests/QuestsPage.tsx` | `e2e/flows/quests.mjs` (13) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
@@ -58,7 +59,8 @@ admins use, until every block is moved and `/` switches to the React build.
    (`skins/Viewer3D.tsx`); without the model registry (local copy) it says so. Admins hold a copy
    of every item (items.ts fillBags): the e2e flow looks at the test player's rows only.
 4. ~~**Nhiệm vụ**~~ done (`features/quests/Quests.tsx`: three settings forms with `useSettingsForm`
-   (`putUrl` for the check-in), the amber +/- and the ledger as live lists). **Truy cập** (traffic), **Tổng quan**
+   (`putUrl` for the check-in), the amber +/- and the ledger as live lists). ~~**Truy cập**~~ done
+   (`features/traffic/`, charts from `components/chart/LineChart.tsx`, shared with Tổng quan). **Tổng quan**
    (overview, live), **Bản đồ** (live map).
 5. When every block is in React: `/` serves the React build, the old `index.html` goes.
 
@@ -97,6 +99,9 @@ text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký a
 - `components/feed/`: `Feed` (the game's log as columns, every event type of the old `describe()`),
   `KillScene` (a death's 📍: map, people within 200 m, the fight). `lib/map.ts`: the island map
   (gateway.json + image) and its projection, for the scene now and Bản đồ later.
+- `components/chart/LineChart.tsx`: `LineChart` (the old .perf-chart: round top, grid, x labels, dashed
+  reference, broken lines on gaps, legend, crosshair; measured width via `useWidth`), `ChartTip`, `Tile` /
+  `Tiles`, `niceCeil`.
 - `lib/players.ts`: `prDur`, `lastSeenText`, `pingTone`, `copyText`.
 - `app/confirm.tsx`: the confirm dialog (never the browser's confirm()).
 - Mutations: `features/mutations/` (reference, notes, catalog), the picker and tooltip in

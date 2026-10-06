@@ -9,6 +9,7 @@ import { ServerPage } from '../pages/server/ServerPage';
 import { PlayersPage } from '../pages/players/PlayersPage';
 import { ItemsPage } from '../pages/items/ItemsPage';
 import { QuestsPage } from '../pages/quests/QuestsPage';
+import { TrafficPage } from '../pages/traffic/TrafficPage';
 import { PlayerPage } from '../features/players/player/PlayerPage';
 import { prefillCreator } from '../features/garage/creator/DinoCreator';
 import { LegacyPage } from './LegacyPage';
@@ -46,6 +47,7 @@ export function Routes() {
   if (tab === 'players' && sub !== null) return <PlayersPage sub={sub} />;
   if (tab === 'items' && sub !== null) return <ItemsPage sub={sub} />;
   if (tab === 'quests') return <QuestsPage />;
+  if (tab === 'traffic') return <TrafficPage />;
   return <NotMoved tab={tab} sub={sub} />;
 }
 

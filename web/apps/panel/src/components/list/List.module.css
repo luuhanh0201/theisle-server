@@ -7,6 +7,7 @@
 .seg { display: inline-flex; align-self: flex-start; border: 1px solid var(--border-strong); border-radius: 10px; padding: 3px; gap: 3px; background: var(--surface-2); }
 .seg button { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 650; font-size: 13px; padding: 6px 14px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
 .seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+@media (max-width: 480px) { .seg { max-width: 100%; } .seg button { padding: 6px 9px; flex: 1 1 auto; } }
 .pager { display: flex; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; font-size: 12.5px; }
 .pager button { min-width: 34px; }
 .pager button.on { background: var(--accent-2); color: #fff; border-color: transparent; }
