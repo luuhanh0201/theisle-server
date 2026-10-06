@@ -22,6 +22,7 @@ this file, and push after each block.
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
 | Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (57) |
 | Vật phẩm | Skin dino, Mutation, Phiếu & hộp (all) | `pages/items/ItemsPage.tsx` | `e2e/flows/items.mjs` (26) |
+| Nhiệm vụ | the one page: Điểm danh, Hổ phách, Cửa hàng, Sổ giao dịch, Nhiệm vụ ngày / tuần | `pages/quests/QuestsPage.tsx` | `e2e/flows/quests.mjs` (13) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
 (`#server/cfg:spawn`): `pickSub` keeps it, `BlockPage` shows the sub-page before the colon and the
@@ -56,7 +57,8 @@ admins use, until every block is moved and `/` switches to the React build.
    dialog); the 3D is the portal's `/skin3d.js`, loaded at run time, one shared viewer
    (`skins/Viewer3D.tsx`); without the model registry (local copy) it says so. Admins hold a copy
    of every item (items.ts fillBags): the e2e flow looks at the test player's rows only.
-4. **Nhiệm vụ** (Hổ phách, điểm danh, nhiệm vụ, cửa hàng), **Truy cập** (traffic), **Tổng quan**
+4. ~~**Nhiệm vụ**~~ done (`features/quests/Quests.tsx`: three settings forms with `useSettingsForm`
+   (`putUrl` for the check-in), the amber +/- and the ledger as live lists). **Truy cập** (traffic), **Tổng quan**
    (overview, live), **Bản đồ** (live map).
 5. When every block is in React: `/` serves the React build, the old `index.html` goes.
 

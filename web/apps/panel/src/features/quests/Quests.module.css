@@ -1,0 +1,41 @@
+/* Nhiệm vụ, as the panel before React (.itm-fields, .qs-days, .qq-row, .sp-row, .audit-table). */
+.gap { margin-top: 16px; }
+.muted { color: var(--muted); }
+.hint { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.mono { font-family: var(--font-mono); }
+.amber { width: 1.3em; height: 1.3em; vertical-align: -0.3em; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.fields label, .days label, .adjust label, .qqRow label, .spRow label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; min-width: 0; }
+.days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 700px) { .days { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.foot { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; align-items: center; }
+.dirty { margin-right: auto; font-size: 12.5px; color: var(--muted); }
+.adjust { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.f1 { flex: 1 1 200px; } .f0 { flex: 0 1 140px; } .f2 { flex: 2 1 240px; }
+.wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table .r { text-align: right; }
+.nowrap { white-space: nowrap; }
+.plus { color: var(--grow); } .minus { color: var(--kill); }
+.filter { margin-left: auto; max-width: 220px; width: 100%; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.qqRow { display: grid; grid-template-columns: auto minmax(180px, 2.4fr) minmax(150px, 1.6fr) repeat(2, minmax(80px, .8fr)) repeat(2, minmax(110px, 1fr)) auto; gap: 8px; align-items: end;
+  padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+@media (max-width: 1100px) { .qqRow { grid-template-columns: auto repeat(2, minmax(0, 1fr)) auto; } .qqRow .wide { grid-column: span 2; } }
+@media (max-width: 560px) { .qqRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .qqRow .wide { grid-column: 1 / -1; } }
+.off { opacity: .6; }
+.on { display: flex; align-items: center; padding-bottom: 8px; }
+.onLbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.spRow { display: grid; grid-template-columns: auto minmax(200px, 3fr) repeat(2, minmax(100px, 1fr)) auto; gap: 8px; align-items: end; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+.btns { display: flex; gap: 4px; }
+.del { color: var(--kill); }
+@media (max-width: 700px) {
+  .spRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .spRow .on { grid-column: 1 / -1; padding-bottom: 0; }
+  .spRow .onLbl { position: static; width: auto; height: auto; clip: auto; font-size: 13px; }
+  .spItem, .spRow .btns { grid-column: 1 / -1; }
+  .spRow .btns { justify-content: flex-end; }
+}
+.hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
