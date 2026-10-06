@@ -129,8 +129,7 @@ export function Lives({ id, lives, online }: { id: string; lives: Life[]; online
                     <td className={`${l.hideSm} ${d.muted}`}>{dateTime(x.spawnedAt)}</td>
                     <td><div className={s.rowActs}>
                       {det && <Restore det={det} onRestore={() => restore(det)} />}
-                      {/* Bản đồ is still the panel before React: the path opens there. */}
-                      {recent.has(x.spawnedAt) && <a className={s.softLink} href={`/#map/path/${encodeURIComponent(id)}/${x.spawnedAt}`}>Đường đi</a>}
+                      {recent.has(x.spawnedAt) && <a className={s.softLink} href={`#map/path/${encodeURIComponent(id)}/${x.spawnedAt}`}>Đường đi</a>}
                     </div></td>
                   </tr>
                 );

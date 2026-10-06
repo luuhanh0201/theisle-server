@@ -20,7 +20,7 @@ this file, and push after each block.
 | Thành viên | Admin, Phân quyền, Whitelist, VIP, SVip (all) | `pages/members/MembersPage.tsx` | `e2e/flows/members.mjs` (17) |
 | Quản trị | Truy cập panel, Nhật ký admin, Discord (all) | `pages/admin/AdminPage.tsx` | `e2e/flows/admin.mjs` (13) |
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
-| Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (57) |
+| Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (59) |
 | Vật phẩm | Skin dino, Mutation, Phiếu & hộp (all) | `pages/items/ItemsPage.tsx` | `e2e/flows/items.mjs` (26) |
 | Bản đồ | the one page: the live map (layers, search, hover, path of a life) and its tabs Vùng AI, Thả AI, Làm mới, Dino nhỏ, Người chơi | `features/map/MapPage.tsx` | `e2e/flows/map.mjs` (28) |
 | Tổng quan | the one page: KPIs, alerts, Hiệu năng server (tiles, 4 charts, table), Sức chứa, Diễn biến with filters, Thao tác nhanh | `pages/overview/OverviewPage.tsx` | `e2e/flows/overview.mjs` (11) |
@@ -49,8 +49,8 @@ admins use, until every block is moved and `/` switches to the React build.
    ban reasons, as always). The player page `#player/<id>` (`features/players/player/`: hero + kill,
    vitals, Thao tác admin, Thành tích, Nhật ký, garage cards with delete, Các đời dino with filters,
    restore to the garage) is routed in `app/Routes.tsx` by `usePlayerId()` (router.ts), outside the
-   blocks, its address kept; the sidebar lights Người chơi there. Its "Đường đi" link still opens the
-   old panel (`/#map/path/<id>/<spawnedAt>`): point it at `#map/path/...` when Bản đồ moves.
+   blocks, its address kept; the sidebar lights Người chơi there. Its "Đường đi" link opens the React
+   map (`#map/path/<id>/<spawnedAt>`).
 3. ~~**Vật phẩm**~~ done (`features/items/`): one editor hook for the three pages
    (`useItemEditor`: selected item, draft kept while away, "Bỏ thay đổi chưa lưu?" before another,
    POST / PUT then reselect, retire / issue again), `ItemParts.tsx` (list row with rarity frame,
@@ -75,7 +75,7 @@ admins use, until every block is moved and `/` switches to the React build.
    checks). Not done yet on purpose: it changes what admins open on the live panel, so it waits for the
    owner's go-ahead after a look at `/next/` on the live server. Then: the bridge serves `bridge/public/next/`
    at `/`, keep the old `index.html` reachable (e.g. `/old/`) for a while, switch the sidebar links ("Về
-   panel cũ" / "Panel mới"), and the player page's "Đường đi" link to `#map/path/...` inside React.
+   panel cũ" / "Panel mới").
 
 A list page redraws every 2 s but never while the admin is busy (popup open, typing, dialog,
 text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký admin do it.

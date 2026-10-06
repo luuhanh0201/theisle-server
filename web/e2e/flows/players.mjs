@@ -163,6 +163,10 @@ export default [
       check('trang vẽ lại', document.body.textContent.includes(after.garage.length + ' dino'));
       h.click(h.$$('[role=tab]').find((b) => b.textContent.includes('Xem tất cả'))); await h.sleep(300);
       check('xem tất cả: ba mục', ['Mức tăng trưởng mục tiêu', 'Tới người chơi online', 'Tới toạ độ bản đồ'].every((t) => document.body.textContent.includes(t)));
+      const pathLink = h.$$('a').find((a) => a.textContent === 'Đường đi');
+      check('Đường đi trỏ vào bản đồ React', pathLink?.getAttribute('href').startsWith('#map/path/76561198000000011/'), pathLink?.getAttribute('href'));
+      pathLink.click(); await h.sleep(3000);
+      check('mở bản đồ với đường đi', location.hash.startsWith('#map/path/') && (document.body.textContent.includes('Đường đi ·') || document.body.textContent.includes('Không còn đường đi')));
       location.hash = '#player/76561198999999999'; await h.sleep(2500);
       check('người chưa thấy', document.body.textContent.includes('Chưa thấy người chơi này'));
     `,
