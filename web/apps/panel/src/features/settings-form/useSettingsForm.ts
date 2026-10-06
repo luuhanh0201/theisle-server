@@ -51,18 +51,21 @@ export function useSettingsForm<R extends object, T extends object = R>(url: str
   const dirty = base !== null && draft !== null && !same(draft, base);
   const serverChanged = base !== null && server !== undefined && !same(server, base) && Date.now() > mineUntil.current;
 
-  const save = useCallback(async (): Promise<boolean> => {
+  /** Save the draft; `opts.extra` goes into the body too (e.g. a restart), `opts.saved` replaces the toast. */
+  const save = useCallback(async (opts?: { extra?: object; saved?: string }): Promise<boolean> => {
     if (draft === null) return false;
     const p = pageRef.current;
     setSaving(true);
     try {
       return await withToken(`lưu ${p.label}`, async (token) => {
-        const answer = await adminFetch<unknown>(url, 'PUT', token, p.toBody ? p.toBody(draft) : draft);
+        const body = p.toBody ? p.toBody(draft) : draft;
+        const answer = await adminFetch<unknown>(url, 'PUT', token, opts?.extra ? { ...(body as object), ...opts.extra } : body);
         mineUntil.current = Date.now() + 15_000;
         const fresh = pick(await qc.fetchQuery({ queryKey: [url], queryFn: () => getJson<R>(url), staleTime: 0 }));
         setBase(fresh);
         setDraftState(fresh);
-        if (p.saved !== undefined) toast(typeof p.saved === 'string' ? p.saved : p.saved(answer));
+        const said = opts?.saved ?? p.saved;
+        if (said !== undefined) toast(typeof said === 'string' ? said : said(answer));
       });
     } finally {
       setSaving(false);
@@ -92,5 +95,5 @@ export function useSettingsForm<R extends object, T extends object = R>(url: str
     setDraftState(data);
   }, [q.data, pick]);
 
-  return { draft, set, update, latest: q.data, dirty, saving, save, serverChanged, reload, error: base === null ? (q.error as Error | null) : null };
+  return { draft, base, set, update, latest: q.data, dirty, saving, save, serverChanged, reload, error: base === null ? (q.error as Error | null) : null };
 }

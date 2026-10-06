@@ -1,0 +1,21 @@
+/* Server → Cấu hình game, as the panel before React (.subtabs-inner, .cfg-unverified, .cfg-grid, .check-grid). */
+.groups { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.groups a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-2); font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.groups a:hover { color: var(--text); border-color: var(--border-strong); }
+.groups a.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #fb923c; }
+.unverified { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--dmg); background: var(--dmg-soft); vertical-align: middle; white-space: nowrap; }
+.banner { font-size: 12.5px; border-radius: 10px; padding: 10px 12px; color: var(--dmg); background: var(--dmg-soft); }
+.warnbox { font-size: 12.5px; color: var(--dmg); background: var(--dmg-soft); border-radius: 10px; padding: 8px 12px; }
+.zones { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px; border-radius: 10px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); }
+.zonesLink { margin-left: auto; padding: 5px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 650; text-decoration: none; white-space: nowrap; }
+.wide { margin-top: 4px; }
+.listLabel { margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.key { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-weight: 500; }
+.extra { margin-top: 8px; }
+.hint { margin-top: 4px; }
+.muted { color: var(--muted); font-size: 12.5px; }
+.kill { color: var(--kill); font-weight: 700; }
+.mono { font-family: var(--font-mono); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

@@ -32,3 +32,9 @@ test('before /api/me answers nothing is hidden: a deep link to a super-admin pag
   expect(pickSub(pending, 'members', 'perms')).toBe('perms');
   expect(subAllowed({ perms: new Set(), super: false }, 'members', 'perms')).toBe(false);
 });
+
+test('a sub-page with a part after a colon (#server/cfg:spawn) is kept; an unknown one falls back', () => {
+  expect(parseHash('#server/cfg%3Aspawn')).toEqual({ tab: 'server', sub: 'cfg:spawn' });
+  expect(pickSub(all, 'server', 'cfg:spawn')).toBe('cfg:spawn');
+  expect(pickSub(all, 'server', 'nope:x')).toBe('ops');
+});

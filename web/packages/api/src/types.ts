@@ -232,3 +232,28 @@ export interface DiscordData {
     channels: Record<string, { webhook?: { name?: string; channelId?: string; error?: string }; lastError?: string | null; lastOkAt?: number | null; queued?: number }>;
   };
 }
+
+/** One Game.ini key the panel owns (bridge/src/gameini.ts MANAGED, without the list item RegExp). */
+export type GameKeySpec = {
+  section: string; group: string; label: string; help: string; verified?: false;
+} & (
+  | { type: 'int'; min: number; max: number; default: number }
+  | { type: 'float'; min: number; max: number; step: number; default: number }
+  | { type: 'bool'; default: boolean }
+  | { type: 'text'; maxLen: number; default: string }
+  | { type: 'list'; itemHelp: string; max: number; min?: number; suggest?: string[] }
+);
+/** GET /api/game-config (server.ts). PUT { settings, restart?: { countdownSeconds, reason } } answers { settings, operation }. */
+export interface GameConfig {
+  /** What the panel has set. */
+  settings: Record<string, unknown>;
+  /** The managed keys as the live Game.ini has them now. */
+  effective: Record<string, unknown>;
+  iniWrittenAt: number | null;
+  error?: string;
+  schema: Record<string, GameKeySpec>;
+  knownPlayables: string[];
+  groups: Record<string, string>;
+  /** Saved after the server last started: waiting for a restart. */
+  pendingRestart: boolean;
+}

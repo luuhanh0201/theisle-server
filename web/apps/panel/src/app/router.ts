@@ -9,11 +9,15 @@ export function parseHash(hash: string): { tab: TabId; sub: string | null } {
   return isTab(tab) ? { tab, sub } : { tab: 'overview', sub: null };
 }
 
-/** The sub-page to show: the one asked for when it exists and is allowed, else the first allowed. */
+/**
+ * The sub-page to show: the one asked for when it exists and is allowed, else the first allowed.
+ * A sub-page may carry a part after a colon (#server/cfg:spawn, the Game.ini group): kept as asked.
+ */
 export function pickSub(a: Access, tab: TabId, asked: string | null): string | null {
   const subs = SUBS[tab];
   if (subs === undefined) return null;
-  if (asked !== null && subs.some(([id]) => id === asked) && subAllowed(a, tab, asked)) return asked;
+  const id = asked?.split(':')[0] ?? null;
+  if (asked !== null && id !== null && subs.some(([x]) => x === id) && subAllowed(a, tab, id)) return asked;
   return subs.find(([id]) => subAllowed(a, tab, id))?.[0] ?? subs[0]?.[0] ?? null;
 }
 

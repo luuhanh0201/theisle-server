@@ -66,4 +66,25 @@ export default [
       check('trả lại như cũ', (await h.api('/api/ddos')).pps === before.pps);
     `,
   },
+  {
+    name: 'Cấu hình game: mở thẳng một nhóm, đổi số người chơi tối đa, lưu, trả lại (không khởi động lại)',
+    path: '/next/#server/cfg%3Aserver',
+    run: `
+      const c0 = await h.api('/api/game-config');
+      check('mở đúng nhóm Máy chủ', document.body.textContent.includes('Cấu hình game · Máy chủ'));
+      const before = c0.settings.MaxPlayerCount ?? c0.effective.MaxPlayerCount ?? c0.schema.MaxPlayerCount.default;
+      check('hiện đúng giá trị', h.value('Số người chơi tối đa') === String(before), h.value('Số người chơi tối đa'));
+      h.click(h.minus('Số người chơi tối đa')); await h.sleep(300);
+      check('nhóm có chấm thay đổi', !!h.$('nav[aria-label="Nhóm cấu hình game"] [title="Có thay đổi chưa lưu"]'));
+      h.click(h.byText('Lưu cấu hình', 'button')); await h.sleep(1500);
+      const c1 = await h.api('/api/game-config');
+      check('đã lưu -1', c1.settings.MaxPlayerCount === before - 1, c1.settings.MaxPlayerCount);
+      check('không khởi động lại', (await h.api('/api/server/status')).operation === null);
+      h.click(h.plus('Số người chơi tối đa')); await h.sleep(300);
+      h.click(h.byText('Lưu cấu hình', 'button')); await h.sleep(1500);
+      check('trả lại như cũ', (await h.api('/api/game-config')).settings.MaxPlayerCount === before);
+      h.click(h.$('a[href="#server/cfg%3Aspawn"]')); await h.sleep(800);
+      check('sang nhóm Loài & điểm spawn', document.body.textContent.includes('Cấu hình game · Loài & điểm spawn') && location.hash.includes('spawn'));
+    `,
+  },
 ];

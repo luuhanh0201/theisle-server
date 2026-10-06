@@ -15,12 +15,14 @@ export function BlockPage({ tab, sub, title, intro, pages }:
   const { access } = useSession();
   const drafts = useDrafts();
   const subs = (SUBS[tab] ?? []).filter(([id]) => subAllowed(access, tab, id));
-  const Page = pages[sub];
-  const label = subs.find(([id]) => id === sub)?.[1] ?? sub;
+  // "cfg:spawn" is the sub-page "cfg" (its page reads the rest from the address).
+  const id = sub.split(':')[0] ?? sub;
+  const Page = pages[id];
+  const label = subs.find(([x]) => x === id)?.[1] ?? id;
   return (
     <div>
       <PageHead title={title} sub={intro} />
-      <SubTabs label={`Mục của ${title}`} active={sub}
+      <SubTabs label={`Mục của ${title}`} active={id}
         tabs={subs.map(([id, l]) => ({ id, label: l, href: hrefOf(tab, id), dot: drafts.some(([, d]) => d.href === hrefOf(tab, id)) }))} />
       {Page ? <Page /> : <LegacyPage title={`${title} · ${label}`} hash={hrefOf(tab, sub)} />}
     </div>
