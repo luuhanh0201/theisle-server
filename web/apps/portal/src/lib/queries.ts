@@ -29,6 +29,19 @@ export function useServer(): PortalServer | null | undefined {
   }).data;
 }
 
+export const LEADERBOARD = '/api/leaderboard';
+/** A board entry (bridge player-api.ts rank): the player's name, the value, maybe their species. */
+export interface BoardRow { name: string | null; value: number; species?: string | null }
+export type Leaderboard = Partial<Record<'kills' | 'playtime' | 'longestLife' | 'hunters', BoardRow[]>>;
+/** The players' boards, every 15 s (with /api/server, as before React). */
+export function useLeaderboard(): Leaderboard | null | undefined {
+  return useQuery({
+    queryKey: [LEADERBOARD],
+    queryFn: async () => { try { return await portalGet<Leaderboard>(LEADERBOARD); } catch { return null; } },
+    refetchInterval: 15_000, staleTime: 10_000,
+  }).data;
+}
+
 /** How often the page redraws while the launcher sits behind the game (app.js BACKGROUND_DRAW_MS). */
 export const BACKGROUND_DRAW_MS = 5000;
 

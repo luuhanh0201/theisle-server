@@ -3,6 +3,7 @@ import type { Tab } from '../app/router';
 import { GamePage } from './game/GamePage';
 import { GaraPage } from './gara/GaraPage';
 import { HomePage } from './home/HomePage';
+import { RankingPage } from './ranking/RankingPage';
 import { LegacyPage } from './LegacyPage';
 
 /** Each page's title (the menu's), for the pages not moved yet. */
@@ -16,6 +17,7 @@ const MOVED: Partial<Record<Tab, () => ReactNode>> = {
   home: () => <HomePage />,
   game: () => <GamePage />,
   gara: () => <GaraPage />,
+  ranking: () => <RankingPage />,
 };
 
 export function Page({ tab }: { tab: Tab }) {

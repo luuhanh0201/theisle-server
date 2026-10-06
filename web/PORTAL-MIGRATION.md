@@ -17,7 +17,9 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 1. Trang chủ | **done** (below) |
 | 2. Dino Live | **done** (below) |
 | 3. Gara | **done** (below) |
-| 4-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 4. Bản đồ + Kết bạn | not started (next) |
+| 5. Xếp hạng | **done** (below) |
+| 6-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -103,6 +105,10 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**5. Xếp hạng: done 2026-10-06** (before Bản đồ, the bigger block). `pages/ranking/RankingPage.tsx`,
+`features/ranking/Ranking.tsx`, `lib/queries.ts useLeaderboard` (every 15 s). Checks: `test/ranking.test.tsx` (4), e2e
+`portal-ranking.mjs` (every tab on both sites as Live Tester, Rex and a guest: the same text, item classes and decorations).
 
 **3. Gara: done 2026-10-06.** `pages/gara/GaraPage.tsx`, `features/gara/{Commands, Garage, Slot, garage}.tsx|ts`,
 `components/SkinStrip.tsx`, `lib/dino.ts` (slotTier, when). `e2e/live-feed.mjs` now plays DinoGarage too: it reads the
