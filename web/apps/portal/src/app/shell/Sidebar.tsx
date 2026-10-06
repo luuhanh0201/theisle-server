@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { PlayerMe } from '@isle/api';
-import { REL_BADGE, homeRelease } from '../../lib/releases';
+import { RelBadge } from '../../components/RelBadge';
+import { homeRelease } from '../../lib/releases';
 import { inLauncher, launcher, updateAction, updateLabel, useUpdateState } from '../../lib/launcher';
 import { useServer } from '../../lib/queries';
 import { useVoiceDot } from '../../lib/voiceDot';
@@ -12,11 +13,7 @@ import { Svg, type IconName } from './icons';
 /** Whether the shop shows in the menu (bridge svip.ts: null = admins only; an older bridge: with Hổ phách). */
 export const shopShown = (me: PlayerMe | null | undefined): boolean => (me?.shop !== undefined ? Boolean(me.shop) : Boolean(me?.economy));
 
-function Rel({ b }: { b: string | undefined }) {
-  const r = b ? REL_BADGE[b] : undefined;
-  if (!r) return null;
-  return <span className={`nav-rel rel-badge rel-${b}`} title={r[1]}>{r[0]}</span>;
-}
+const Rel = ({ b }: { b: string | undefined }) => <RelBadge b={b} nav />;
 
 function NavBtn({ tab, icon, label, title, children }: { tab: Tab; icon: IconName; label: string; title: string; children?: ReactNode }) {
   const now = useTab();

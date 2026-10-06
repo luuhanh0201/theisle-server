@@ -7,9 +7,16 @@ import { isLab } from './lib/lab';
 import { inLauncher } from './lib/launcher';
 
 const html = document.documentElement;
-// Inside Xóm Gáy Launcher: html.in-launcher (CSS), and nothing about downloading the launcher.
+/**
+ * html.in-launcher: off, as on the live site before React. Its <head> script set it, but the portal's CSP
+ * (script-src 'self', no inline) has always refused that script, so inside the launcher players get the
+ * page as on the web, less what app.js hides (the download links): no launcher hub on Trang chủ, the server
+ * status, features and rules shown. Turning it on shows the hub and hides those (portal.css html.in-launcher):
+ * a change the owner decides (web/PORTAL-MIGRATION.md). The download links are not drawn in the launcher either way.
+ */
+export const MARK_IN_LAUNCHER = false;
 if (inLauncher()) {
-  html.classList.add('in-launcher');
+  if (MARK_IN_LAUNCHER) html.classList.add('in-launcher');
   // The window often sits behind the game: while it is not focused, looping CSS animations pause
   // (html.app-idle), so the launcher draws only when data changes.
   const idle = (): void => { html.classList.toggle('app-idle', !document.hasFocus() || document.hidden); };

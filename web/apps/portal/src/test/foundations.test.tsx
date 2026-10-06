@@ -10,6 +10,8 @@ import { Sidebar, shopShown } from '../app/shell/Sidebar';
 import { DrawerProvider } from '../app/shell/drawer';
 import { portalGet, portalPost } from '../lib/http';
 
+const CK = { claimed: false, day: 1, rewards: [10], bonusItem: null, minutes: 0, needed: 30, ready: false };
+const Q = { daily: [], weekly: null };
 const me = (x: Partial<PlayerMe> = {}): PlayerMe => ({
   steamId: '76561198000000011', name: 'Rex', online: false, dino: null,
   stats: { kills: 0, deaths: 0, spawns: 0, playtime: 0, longestLife: 0, sessions: 0 }, lives: [], garage: [], ...x,
@@ -49,14 +51,14 @@ describe('the launcher update button', () => {
 describe('the menu marks', () => {
   it('Trang chủ carries a mark only when its features share one', () => {
     expect(homeRelease(null)).toBe('');
-    expect(homeRelease(me({ economy: { currency: 'amber', balance: 0, checkin: {} }, quests: {}, releases: { amber: 'new', quests: 'new' } }))).toBe('new');
-    expect(homeRelease(me({ economy: { currency: 'amber', balance: 0, checkin: {} }, quests: {}, releases: { amber: 'new', quests: 'svip' } }))).toBe('');
+    expect(homeRelease(me({ economy: { currency: 'amber', balance: 0, checkin: CK }, quests: Q, releases: { amber: 'new', quests: 'new' } }))).toBe('new');
+    expect(homeRelease(me({ economy: { currency: 'amber', balance: 0, checkin: CK }, quests: Q, releases: { amber: 'new', quests: 'svip' } }))).toBe('');
   });
   it('the shop by its own level, else with Hổ phách (older bridges)', () => {
     expect(shopShown(null)).toBe(false);
     expect(shopShown(me({ shop: {} }))).toBe(true);
-    expect(shopShown(me({ shop: null, economy: { currency: 'a', balance: 1, checkin: {} } }))).toBe(false);
-    expect(shopShown(me({ economy: { currency: 'a', balance: 1, checkin: {} } }))).toBe(true);
+    expect(shopShown(me({ shop: null, economy: { currency: 'a', balance: 1, checkin: CK } }))).toBe(false);
+    expect(shopShown(me({ economy: { currency: 'a', balance: 1, checkin: CK } }))).toBe(true);
   });
   it('Discord: only an invite link', () => {
     expect(discordOk('https://discord.gg/abc')).toBe(true);
@@ -94,7 +96,7 @@ describe('the menu', () => {
     expect(container.querySelector('#nav-gara-badge')?.textContent).toBe('1');
   });
   it('locked friends: no badge', () => {
-    const { container } = draw(me({ friends: { incoming: 3, locked: true } }));
+    const { container } = draw(me({ friends: { incoming: 3, locked: 'Đang thử nghiệm' } }));
     expect(container.querySelector('#nav-map-badge')).toBeNull();
   });
 });

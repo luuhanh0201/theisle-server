@@ -7,7 +7,7 @@
 /** "Đang phát triển" (admins), "Ưu tiên" (SVip first), "NEW" (public < 7 days): bridge svip.ts releasesFor. */
 export type ReleaseBadge = 'dev' | 'svip' | 'new' | '';
 /** A feature being tried may be shown locked (bridge svip.ts `shown`). */
-export type Shown<T> = (T & { locked?: boolean }) | null;
+export type Shown<T> = (T & { locked?: string }) | null;
 
 export interface PlayerVitals {
   health: number | null; stamina: number | null; hunger: number | null; thirst: number | null; blood: number | null; oxygen: number | null;
@@ -35,6 +35,18 @@ export interface PlayerSlot {
   max: { health: number | null; stamina: number | null; thirst: number | null };
 }
 
+/** The daily check-in (bridge economy.ts checkinStatus). */
+export interface Checkin {
+  claimed: boolean; day: number; rewards: number[]; bonusItem: string | null; minutes: number; needed: number; ready: boolean;
+}
+/** A daily / weekly quest (bridge quests.ts QuestView). */
+export interface Quest {
+  id: string; label: string; kind: string; unit: string; target: number; progress: number; reward: number;
+  done: boolean; claimed: boolean; period: string;
+}
+/** The quests of today and this week (bridge quests.ts questsOf). */
+export interface Quests { daily: Quest[]; weekly: Quest | null }
+
 /** GET /api/me: the logged-in player (401 when not logged in). */
 export interface PlayerMe {
   steamId: string;
@@ -49,13 +61,14 @@ export interface PlayerMe {
   items?: Array<Record<string, unknown>>;
   /** The bag's menu entry: open to them, or they own something. */
   bag?: boolean;
+  /** The starter gift (bridge starter.ts), while it waits on Trang chủ; locked: the text why. */
   starter?: Shown<Record<string, unknown>>;
   /** The shop's menu entry: {} open, { locked } shown locked, null none (older bridges: undefined, then by `economy`). */
   shop?: Shown<Record<string, never>>;
   svip?: boolean;
   releases?: Partial<Record<'bag' | 'shop' | 'amber' | 'quests' | 'starter' | string, ReleaseBadge>>;
-  economy?: Shown<{ currency: string; balance: number; checkin: Record<string, unknown> }>;
-  quests?: Shown<Record<string, unknown>>;
+  economy?: Shown<{ currency: string; balance: number; checkin: Checkin }>;
+  quests?: Shown<Quests>;
   bagUnlimited?: boolean;
   prison?: Record<string, unknown> | null;
   tele?: Shown<Record<string, unknown>>;

@@ -1,17 +1,7 @@
 // The player site's frame in React (/next/): the menu, the pages as #addresses, the header, the
 // launcher's parts, the phone's menu, a guest. On the local portal (e2e/local-portal.sh), logged in
 // as Rex Tester (2 garage slots), the server named "Test".
-const LAUNCHER = `window.isleLauncher = {
-  version: '2.8.0',
-  updateGet: () => window.__upd ?? { phase: 'idle', current: '2.8.0' },
-  updateCheck() { window.__checks = (window.__checks || 0) + 1; },
-  updateInstall() { window.__installs = (window.__installs || 0) + 1; },
-  onUpdate(cb) { window.__updCb = cb; },
-  gameModeGet: () => ({ on: false, keep: {} }),
-  gameModeSet(on) { window.__gm = on; },
-  onGameMode(cb) { window.__gmCb = cb; },
-  playGame() {},
-};`;
+import { LAUNCHER } from './launcher-stub.mjs';
 
 export default [
   {
@@ -20,10 +10,11 @@ export default [
     run: `
       await h.until(() => h.$('.auth-name'));
       const labels = h.$$('.sidebar .nav-label').map((e) => e.textContent.trim());
-      check('the menu entries', JSON.stringify(labels) === JSON.stringify(['Trang chủ', 'Dino Live Monitor', 'Bản đồ Gateway', 'Gara Khủng Long', 'Bảng Xếp Hạng', 'Skin Studio', 'Voice 3D', 'Tải Launcher', 'Luật & Dinh Dưỡng']), labels);
-      // The site before React shows the same entries (its hidden ones left out).
+      // Rex's bag is open, the shop shown (locked): local-portal.sh.
+      check('the menu entries', JSON.stringify(labels) === JSON.stringify(['Trang chủ', 'Dino Live Monitor', 'Bản đồ Gateway', 'Gara Khủng Long', 'Bảng Xếp Hạng', 'Skin Studio', 'Túi đồ', 'Cửa hàng', 'Voice 3D', 'Tải Launcher', 'Luật & Dinh Dưỡng']), labels);
+      // The site before React has the same entries (less the overlay, launcher only, and the hidden tour button).
       const old = new DOMParser().parseFromString(await (await fetch('/')).text(), 'text/html');
-      const oldLabels = [...old.querySelectorAll('.sidebar .nav-btn:not([hidden]) .nav-label')].map((e) => e.textContent.trim());
+      const oldLabels = [...old.querySelectorAll('.sidebar .nav-btn:not(#nav-overlay):not(#sidebar-tour-btn) .nav-label')].map((e) => e.textContent.trim());
       check('same entries as the site before React', JSON.stringify(labels) === JSON.stringify(oldLabels), oldLabels);
       check('Trang chủ lit', h.$('.sidebar .nav-btn.active')?.dataset.nav === 'home');
       check('the garage badge (2 slots)', h.$('#nav-gara-badge')?.textContent === '2', h.$('#nav-gara-badge')?.textContent);
@@ -57,9 +48,8 @@ export default [
       await h.until(() => h.$('.sidebar .nav-btn.active')?.dataset.nav === 'home');
       check('an unknown address shows Trang chủ', !h.$('#page-home').hidden);
       location.hash = 'bag';
-      await h.sleep(300);
-      await h.until(() => location.hash === '#home');
-      check('the bag, not open to this player: back home', h.$('.sidebar .nav-btn.active')?.dataset.nav === 'home');
+      await h.until(() => h.$('#page-bag') && !h.$('#page-bag').hidden);
+      check('the bag, open to this player', h.$('.sidebar .nav-btn.active')?.dataset.nav === 'bag');
       location.hash = 'gara';
       await h.sleep(200);
       h.click('[data-action=open-rules]');
@@ -129,29 +119,30 @@ export default [
     init: LAUNCHER,
     run: `
       await h.until(() => h.$('.auth-name'));
-      check('html.in-launcher', document.documentElement.classList.contains('in-launcher'));
+      // As on the live site before React: its in-launcher script was refused by the CSP (main.tsx MARK_IN_LAUNCHER).
+      check('no html.in-launcher (as before React)', !document.documentElement.classList.contains('in-launcher'));
       check('nothing about downloading the launcher', h.$$('.web-only').length === 0 && h.$$('a[href*="tai"]').length === 0, h.$$('.web-only').map((e) => e.id));
       check('overlay page in the menu', Boolean(h.$('.sidebar [data-nav=overlay]')));
       check('launcher version under the name', h.$('.launcher-version')?.textContent === 'Launcher v2.8.0');
       const up = h.$('.launcher-update');
       check('update button', up?.textContent === '⟳ Kiểm tra cập nhật' && !up.disabled, up?.textContent);
       h.click(up);
-      check('a click looks for an update', window.__checks === 1);
+      check('a click looks for an update', window.__calls.updateCheck === 1);
       window.__upd = { phase: 'downloading', version: '2.9.0', percent: 40, current: '2.8.0' };
-      window.__updCb(window.__upd);
+      window.__cb.update(window.__upd);
       await h.until(() => h.$('.launcher-update').textContent.startsWith('Đang tải'));
       check('downloading: disabled, percent', h.$('.launcher-update').disabled && h.$('.launcher-update').textContent === 'Đang tải v2.9.0… 40%', h.$('.launcher-update').textContent);
       window.__upd = { phase: 'ready', version: '2.9.0', current: '2.8.0' };
-      window.__updCb(window.__upd);
+      window.__cb.update(window.__upd);
       await h.until(() => h.$('.launcher-update.ready'));
       check('ready: install', h.$('.launcher-update').textContent === '⬆ Cập nhật lên v2.9.0');
       h.click('.launcher-update');
-      check('a click installs', window.__installs === 1);
+      check('a click installs', window.__calls.updateInstall === 1);
       const gm = h.$('#game-mode');
       check('game mode button', gm && gm.getAttribute('aria-pressed') === 'false');
       h.click(gm);
       check('a click asks game mode on', window.__gm === true);
-      window.__gmCb({ on: true, keep: {} });
+      window.__cb.gameMode({ on: true, keep: {} });
       await h.until(() => h.$('#game-mode').getAttribute('aria-pressed') === 'true');
       check('pressed while on', true);
       location.hash = 'overlay';
@@ -194,6 +185,10 @@ export default [
       check('Steam login link', h.$('#auth-actions a.btn-steam')?.getAttribute('href') === '/auth/steam' && h.$('#auth-actions a').textContent.trim() === 'Đăng nhập Steam');
       check('garage badge 0', h.$('#nav-gara-badge')?.textContent === '0');
       check('no shop, no bag', !h.$('[data-nav=shop]') && !h.$('[data-nav=bag]'));
+      location.hash = 'bag';
+      await h.sleep(300);
+      await h.until(() => location.hash === '#home' && !h.$('#page-home').hidden);
+      check('the bag, not open to a guest: back home', h.$('.sidebar .nav-btn.active')?.dataset.nav === 'home');
     `,
   },
 ];

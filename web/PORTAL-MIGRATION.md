@@ -14,7 +14,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | Step | State |
 |---|---|
 | 0. Foundations | **done** (below) |
-| 1-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 1. Trang chủ | **done** (below) |
+| 2-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -32,6 +33,15 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   `OLD=1` the site before React, `LAUNCHER=1` as inside the launcher (dark only, 380 and 1366 px; the tour marked seen).
 - Moving a page: build it under `apps/portal/src/pages/<tab>/` (+ `features/` as the panel), add it to `MOVED` in
   `pages/index.tsx`, an e2e flow `e2e/flows/portal-<tab>.mjs` comparing with the old page, screenshots old / new.
+
+### Owner's decision pending: html.in-launcher
+
+The site before React set `html.in-launcher` from an inline `<head>` script, which the portal's CSP (`script-src 'self'`)
+has always refused (since 2026-10-03, the script's first day). So inside the launcher the live site shows Trang chủ as on
+the web (server status, features, rules) and never the launcher hub (`#launcher-hub`, shown only under html.in-launcher);
+the download links are hidden by app.js (`.web-only`). The React site keeps that (`main.tsx MARK_IN_LAUNCHER = false`).
+Setting it true would show the hub and hide the status / features / rules / promo inside the launcher (portal.css), as the
+markup intended: the owner decides. The flows check the current behaviour (`portal-home.mjs`, `portal-frame.mjs`).
 
 ### Notes for the next blocks
 
@@ -84,6 +94,14 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**1. Trang chủ: done 2026-10-06.** `pages/home/HomePage.tsx`, `features/home/{Rewards, LauncherHub, ServerStatus,
+LauncherPromo, Guide}.tsx`, `lib/{dino, amber}`, `components/RelBadge`; types `Checkin`, `Quest(s)` in `@isle/api`.
+`local-portal.sh` seeds Trang chủ's data (features open, Hổ phách NEW, the shop SVip-first, check-in after 1 minute, a
+done and an undone quest, the starter gift, the launcher's version.json). Checks: `test/home.test.tsx` (8), e2e
+`portal-home.mjs` (50: the old page read into localStorage, the new must show the same text part by part, web and launcher;
+check-in / quest / starter claims with their toasts and the balance; the balance opens the shop; Luật scrolls and lights
+the rules; a guest), screenshots old / new (web, launcher; 380, 1366): the same to 5-7 pixels (animated dots).
 
 | # | Page | Now in | What it holds |
 |---|---|---|---|
