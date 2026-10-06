@@ -1,3 +1,4 @@
-.label { margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--text-2); }
-.checks { display: flex; flex-wrap: wrap; gap: 10px 22px; }
-.after { margin-top: 8px; }
+.label { display: block; font-size: 12px; color: var(--text-2); font-weight: 600; margin-bottom: 6px; }
+.grid { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.item { padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
+.after { margin-top: 6px; }

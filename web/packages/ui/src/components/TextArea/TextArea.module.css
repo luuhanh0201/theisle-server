@@ -1,9 +1,4 @@
-.area {
-  display: block; width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
-  background: var(--surface-2); color: var(--text); font: inherit; font-size: 13px; line-height: 1.45; resize: vertical;
-  /* Grows with its text (a long one wraps instead of hiding under a one-row box). */
-  field-sizing: content; max-height: 240px;
-  transition: border-color .15s, box-shadow .15s;
-}
+.area { width: 100%; min-height: 110px; resize: vertical; padding: 9px 12px; border: 1px solid var(--border-strong);
+  border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; }
 .area:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.area:disabled { opacity: .45; cursor: not-allowed; }
+.area:disabled { opacity: .45; }

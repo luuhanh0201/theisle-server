@@ -1,0 +1,34 @@
+.timing { display: flex; flex-direction: column; gap: 14px; }
+.line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13px; }
+.line > label { margin: 0; min-width: 230px; font-weight: 600; color: var(--text); font-size: 13px; }
+.line > label.inline { min-width: 0; font-weight: 500; }
+.marks { flex: 1; min-width: 220px; width: auto; }
+.bad { border-color: var(--kill); }
+.num { width: 120px; }
+.full { flex-basis: 100%; }
+.periodic { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.periodic li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ptext { flex: 1; min-width: 200px; width: auto; }
+.pnum { width: 110px; }
+.del { color: var(--kill); }
+.add { margin-top: 8px; }
+.textsCard { margin-top: 18px; }
+.search { margin-left: auto; max-width: 220px; height: 34px; }
+.intro { margin-bottom: 10px; }
+.group { margin-bottom: 18px; }
+.item { display: grid; grid-template-columns: minmax(170px, 240px) 1fr; gap: 6px 14px; padding: 10px 0; border-top: 1px solid var(--border); }
+@media (max-width: 640px) { .item { grid-template-columns: minmax(0, 1fr); } }
+.what { font-size: 13px; font-weight: 600; }
+.key { font-size: 11px; color: var(--muted); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.tag { font-size: 11px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted); }
+.edited { color: #fb923c; border-color: #fb923c; }
+.off { color: var(--kill); border-color: var(--kill); }
+.area { min-height: 40px; font-size: 13px; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; }
+.var { font-family: var(--font-mono); font-size: 11.5px; padding: 1px 6px; border-radius: 6px; border: 1px dashed var(--border-strong); background: none; color: var(--text); cursor: pointer; }
+.reset { margin-left: auto; }
+.ex { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.ex span { color: var(--text-2); }
+.savebar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 0; background: var(--bg); z-index: 2; }
+.dirty { color: #fb923c; font-size: 12px; }
