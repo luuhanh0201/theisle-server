@@ -18,7 +18,8 @@
       "@isle/ui": ["packages/ui/src/index.ts"],
       "@isle/ui/*": ["packages/ui/src/*"],
       "@isle/api": ["packages/api/src/index.ts"],
-      "@panel/*": ["apps/panel/src/*"]
+      "@panel/*": ["apps/panel/src/*"],
+      "@portal/skin-editor": ["packages/types/skin-editor.d.ts"]
     }
   },
   "include": ["packages", "apps", "test", "vitest.config.ts", "aliases.ts"]

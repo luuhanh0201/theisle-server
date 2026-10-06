@@ -96,6 +96,7 @@
 .mico { width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; margin-right: 5px; }
 .mico:not([src]) { display: none; }
 .micoMd { width: 28px; height: 28px; border-radius: 7px; vertical-align: middle; flex: none; }
+.micoLg { width: 56px; height: 56px; border-radius: 12px; float: left; margin: 0 12px 4px 0; }
 .tip { position: fixed; z-index: 70; width: min(320px, calc(100vw - 24px)); pointer-events: none;
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35); padding: 12px 14px; font-size: 12.5px; color: var(--text-2); }

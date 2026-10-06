@@ -7,4 +7,6 @@ export const aliases = [
   { find: /^@isle\/ui\/(.*)$/, replacement: at('./packages/ui/src/$1') },
   { find: /^@isle\/api$/, replacement: at('./packages/api/src/index.ts') },
   { find: /^@panel\/(.*)$/, replacement: at('./apps/panel/src/$1') },
+  // The skin colour editor's data and colour maths, shared with the players' Skin Studio (AGENTS.md "UI").
+  { find: /^@portal\/skin-editor$/, replacement: at('../portal/public/skin-editor.js') },
 ];

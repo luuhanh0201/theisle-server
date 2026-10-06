@@ -1,0 +1,18 @@
+/* A hòm's prizes, as the panel before React (.sp-row, .tier-block-head). */
+.mono { font-family: var(--font-mono); font-size: 12px; }
+.loot { display: flex; flex-direction: column; gap: 8px; }
+.lootHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.lootHead h3 { margin: 0; font-size: 14px; white-space: nowrap; }
+.prizes { display: flex; flex-direction: column; gap: 8px; }
+.prize { display: grid; grid-template-columns: minmax(200px, 3fr) repeat(2, minmax(90px, 1fr)) minmax(70px, .6fr) auto; gap: 8px; align-items: end;
+  padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+.prize label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); font-weight: 650; min-width: 0; }
+.pct { padding: 9px 0; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.btns { display: flex; gap: 4px; }
+.del { color: var(--kill); }
+.addRow { display: flex; gap: 8px; align-items: center; }
+@media (max-width: 700px) {
+  .prize { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .item, .btns { grid-column: 1 / -1; }
+  .btns { justify-content: flex-end; }
+}

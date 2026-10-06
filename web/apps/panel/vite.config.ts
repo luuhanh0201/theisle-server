@@ -24,6 +24,8 @@ export default defineConfig({
   // npm run dev:panel: the bridge on this machine (or an SSH tunnel to the VPS on 8080) answers /api.
   server: {
     port: 5180,
+    // The skin editor's shared data comes from the portal's folder (@portal/skin-editor).
+    fs: { allow: [at('../..'), at('../../../portal/public')] },
     proxy: Object.fromEntries(['/api', '/img', '/auth', '/login', '/ui-select.js', '/ui-inputs.js', '/mut-icons.js']
       .map((p) => [p, 'http://127.0.0.1:8080'])),
   },

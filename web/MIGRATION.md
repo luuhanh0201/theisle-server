@@ -21,6 +21,7 @@ this file, and push after each block.
 | Quản trị | Truy cập panel, Nhật ký admin, Discord (all) | `pages/admin/AdminPage.tsx` | `e2e/flows/admin.mjs` (13) |
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
 | Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (57) |
+| Vật phẩm | Skin dino, Mutation, Phiếu & hộp (all) | `pages/items/ItemsPage.tsx` | `e2e/flows/items.mjs` (26) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
 (`#server/cfg:spawn`): `pickSub` keeps it, `BlockPage` shows the sub-page before the colon and the
@@ -46,8 +47,15 @@ admins use, until every block is moved and `/` switches to the React build.
    restore to the garage) is routed in `app/Routes.tsx` by `usePlayerId()` (router.ts), outside the
    blocks, its address kept; the sidebar lights Người chơi there. Its "Đường đi" link still opens the
    old panel (`/#map/path/<id>/<spawnedAt>`): point it at `#map/path/...` when Bản đồ moves.
-3. **Vật phẩm**: Skin dino (3D viewer `/skin3d.js`, `portal/public/skin-editor.js`), Mutation,
-   Phiếu & hộp.
+3. ~~**Vật phẩm**~~ done (`features/items/`): one editor hook for the three pages
+   (`useItemEditor`: selected item, draft kept while away, "Bỏ thay đổi chưa lưu?" before another,
+   POST / PUT then reselect, retire / issue again), `ItemParts.tsx` (list row with rarity frame,
+   Người sở hữu with grant / revoke). Skin: the colour editor is React (`skins/SkinEditor.tsx`) over
+   the portal's `skin-editor.js` data and maths (`@portal/skin-editor` alias, types in
+   `packages/types/skin-editor.d.ts`), the colour box is `@isle/ui` `ColorInput` (never the OS
+   dialog); the 3D is the portal's `/skin3d.js`, loaded at run time, one shared viewer
+   (`skins/Viewer3D.tsx`); without the model registry (local copy) it says so. Admins hold a copy
+   of every item (items.ts fillBags): the e2e flow looks at the test player's rows only.
 4. **Nhiệm vụ** (Hổ phách, điểm danh, nhiệm vụ, cửa hàng), **Truy cập** (traffic), **Tổng quan**
    (overview, live), **Bản đồ** (live map).
 5. When every block is in React: `/` serves the React build, the old `index.html` goes.
@@ -73,6 +81,8 @@ text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký a
   value, save })` from `features/settings-form/drafts.ts`, as `features/players/bans/Bans.tsx` does.
 - `@isle/ui` **FileInput** (a file chooser in the panel's colours) and **Table** (`cards`: rows
   become cards on a phone, cells named by `data-label`; or the plain `components/table/Table.module.css`).
+- `@isle/ui` **ColorInput** (swatch + picker: saturation square, hue bar, hex, Xong; Esc puts the
+  first colour back): the React twin of `ui-inputs.js`'s colour picker.
 - `@isle/ui` **DateTimeInput** (`kind` time / date / datetime, the native input's value text): the
   React twin of `ui-inputs.js`'s date / time picker.
 - `test/fakeBridge.tsx`: `fakeBridge(url, get, put)` for a settings page, `fakeApi({ 'GET /api/x': …,

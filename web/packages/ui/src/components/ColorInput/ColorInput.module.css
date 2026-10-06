@@ -1,0 +1,19 @@
+/* The colour box, as ui-inputs.js draws it (.cp-btn, .cp-pop). */
+.btn { width: 26px; height: 26px; flex: none; padding: 0; border-radius: 6px; cursor: pointer; vertical-align: middle;
+  border: 1.5px solid var(--border-strong); box-shadow: inset 0 0 0 2px rgba(0,0,0,.25); }
+.btn:hover:not(:disabled), .btn[aria-expanded="true"] { border-color: var(--accent); }
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.pop { position: fixed; z-index: 1000; width: 232px; padding: 10px; display: flex; flex-direction: column; gap: 10px; border-radius: 12px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); box-shadow: 0 12px 32px rgba(15, 23, 42, .3); }
+.sv { position: relative; height: 140px; border-radius: 8px; cursor: crosshair; touch-action: none;
+  background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent), var(--cp-hue, red); }
+.hue { position: relative; height: 12px; border-radius: 999px; cursor: pointer; touch-action: none;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.knob { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none; }
+.hueKnob { top: 50%; }
+.row { display: flex; gap: 8px; align-items: center; }
+.prev { width: 30px; height: 30px; border-radius: 8px; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+.hex { flex: 1; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface-2); color: inherit;
+  font: inherit; font-size: 13px; font-family: ui-monospace, monospace; text-transform: uppercase; }
+.ok { padding: 7px 12px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }

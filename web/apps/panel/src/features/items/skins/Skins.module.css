@@ -1,0 +1,16 @@
+/* Skin dino, as the panel before React (.itm-editor, .itm-3d, .itm-reg.all). */
+.editor { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 1280px) { .editor { grid-template-columns: 1fr; } }
+.view { position: relative; height: 420px; border-radius: 12px; background: radial-gradient(ellipse at 50% 40%, #1e293b, #0b1220 70%); border: 1px solid var(--border); overflow: hidden; }
+.view canvas { width: 100% !important; height: 100% !important; display: block; }
+.note { position: absolute; left: 10px; bottom: 8px; font-size: 11.5px; color: #94a3b8; }
+.sex { position: absolute; right: 10px; top: 10px; display: flex; gap: 4px; z-index: 1; }
+.sex button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(148,163,184,.35); background: rgba(2,6,23,.6); color: #cbd5e1; cursor: pointer; }
+.sex button.on { background: var(--accent); color: #fff; border-color: transparent; }
+.hint { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.warn { margin-top: 6px; border: 1px solid rgba(245,158,11,.5); border-radius: 8px; padding: 6px 8px; }
+.all { display: grid; grid-template-columns: 110px 40px minmax(0, 1fr) 74px; gap: 10px; align-items: center; padding: 5px 0; margin-top: 6px; font-size: 13px; font-weight: 700; color: var(--text); }
+.v { font-size: 12px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dark { color: #60a5fa; } .bright { color: #fbbf24; }
+.presetsTitle { margin: 14px 0 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.presetsTitle span { font-weight: 500; }

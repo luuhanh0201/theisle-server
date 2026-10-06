@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { PageHead, SubTabs } from '@isle/ui';
 import { useDrafts } from '../features/settings-form/drafts';
 import { LegacyPage } from './LegacyPage';
@@ -11,7 +11,7 @@ import { useSession } from './session';
  * sub-page shown. A sub-page not in `pages` yet: a link to the panel before React.
  */
 export function BlockPage({ tab, sub, title, intro, pages }:
-  { tab: TabId; sub: string; title: string; intro: string; pages: Record<string, () => JSX.Element> }) {
+  { tab: TabId; sub: string; title: string; intro: ReactNode; pages: Record<string, () => JSX.Element> }) {
   const { access } = useSession();
   const drafts = useDrafts();
   const subs = (SUBS[tab] ?? []).filter(([id]) => subAllowed(access, tab, id));

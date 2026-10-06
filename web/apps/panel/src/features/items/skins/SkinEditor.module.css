@@ -1,0 +1,25 @@
+/* The skin colour editor, as portal skin-editor.js draws it (.se-regions, .se-light, .se-presets). */
+.regions { display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.region { display: flex; flex-direction: column; gap: 4px; padding: 5px 8px; border-radius: 8px; }
+.region:hover { background: rgba(255,255,255,.04); }
+.off { opacity: .45; }
+.row { display: flex; align-items: center; gap: 10px; margin: 0; }
+.name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.hex { width: 84px; flex-shrink: 0; background: rgba(2,6,23,.5); border: 1px solid var(--border); border-radius: 6px; color: var(--muted);
+  padding: 4px 7px; font: 12px ui-monospace, monospace; box-shadow: none; }
+:global(html[data-theme="light"]) .hex { background: var(--surface); }
+.hex:focus { outline: none; border-color: rgba(52,211,153,.55); color: var(--text); }
+.bad { border-color: rgba(248,113,113,.7); }
+.light { display: grid; grid-template-columns: minmax(0, 1fr) 82px; gap: 8px; align-items: center; padding-left: 36px; }
+.v { font-size: 11.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+.dark { color: #60a5fa; } .bright { color: #fbbf24; }
+.presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 640px) { .presets { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.preset { display: flex; flex-direction: column; gap: 6px; padding: 7px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  font: inherit; cursor: pointer; text-align: left; min-width: 0; transition: transform .15s, border-color .15s; }
+.preset:hover:not(:disabled) { border-color: rgba(52,211,153,.55); transform: translateY(-1px); }
+.preset:disabled { cursor: not-allowed; opacity: .6; }
+.on { border-color: #34d399; box-shadow: 0 0 0 1px #34d399 inset; }
+.stripe { display: flex; height: 16px; border-radius: 5px; overflow: hidden; }
+.stripe i { flex: 1; }
+.preset span { font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

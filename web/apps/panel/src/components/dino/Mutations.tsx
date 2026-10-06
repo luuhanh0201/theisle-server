@@ -8,8 +8,8 @@ import { useMutationData } from '../../features/mutations/useMutationData';
 import s from './dino.module.css';
 
 /** A mutation's icon (filled in by /mut-icons.js from one bundle; nothing shows for a name with no icon). */
-export function MutIcon({ name, md = false }: { name: string; md?: boolean }) {
-  return <img className={`${s.mico}${md ? ` ${s.micoMd}` : ''}`} data-mut-icon={mutSlug(name)} alt="" />;
+export function MutIcon({ name, md = false, lg = false }: { name: string; md?: boolean; lg?: boolean }) {
+  return <img className={`${s.mico}${md ? ` ${s.micoMd}` : ''}${lg ? ` ${s.micoLg}` : ''}`} data-mut-icon={mutSlug(name)} alt="" />;
 }
 
 const GROUPS: ReadonlyArray<[string, 'active' | 'parent' | 'elder', string[]]> = [

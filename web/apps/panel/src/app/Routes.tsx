@@ -7,6 +7,7 @@ import { MembersPage } from '../pages/members/MembersPage';
 import { AdminPage } from '../pages/admin/AdminPage';
 import { ServerPage } from '../pages/server/ServerPage';
 import { PlayersPage } from '../pages/players/PlayersPage';
+import { ItemsPage } from '../pages/items/ItemsPage';
 import { PlayerPage } from '../features/players/player/PlayerPage';
 import { prefillCreator } from '../features/garage/creator/DinoCreator';
 import { LegacyPage } from './LegacyPage';
@@ -42,6 +43,7 @@ export function Routes() {
   if (tab === 'admin' && sub !== null) return <AdminPage sub={sub} />;
   if (tab === 'server' && sub !== null) return <ServerPage sub={sub} />;
   if (tab === 'players' && sub !== null) return <PlayersPage sub={sub} />;
+  if (tab === 'items' && sub !== null) return <ItemsPage sub={sub} />;
   return <NotMoved tab={tab} sub={sub} />;
 }
 

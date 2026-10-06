@@ -3,6 +3,7 @@
 export { Button } from './components/Button/Button';
 export { Card, CardHead, CardBody } from './components/Card/Card';
 export { Checkbox, CheckGrid } from './components/Checkbox/Checkbox';
+export { ColorInput } from './components/ColorInput/ColorInput';
 export { DateTimeInput } from './components/DateTimeInput/DateTimeInput';
 export { Dialog } from './components/Dialog/Dialog';
 export { Field, FieldGrid } from './components/Field/Field';
