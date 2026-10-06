@@ -2,9 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/portal.css';
 import './styles/tokens.css';
-import { App } from './app/App';
+import { App, queryClient } from './app/App';
 import { isLab } from './lib/lab';
 import { inLauncher } from './lib/launcher';
+import { startOverlay } from './lib/overlay';
 import { startVoice } from './lib/voice';
 
 const html = document.documentElement;
@@ -34,6 +35,8 @@ try { navigator.sendBeacon?.('/api/track/view', '{}'); } catch { /* not counted 
 // Proximity voice for the whole visit (voice.js before React loaded with the page): the keys, the launcher's
 // push-to-talk, window.isleVoice; the room is joined from Voice 3D and stays on every page.
 startVoice();
+// The launcher's overlay (its widgets' data, the mini map, the big map), whatever page is shown.
+startOverlay(queryClient);
 
 const root = document.getElementById('root');
 if (root === null) throw new Error('index.html has no #root');

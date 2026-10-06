@@ -15,11 +15,11 @@ export const shopShown = (me: PlayerMe | null | undefined): boolean => (me?.shop
 
 const Rel = ({ b }: { b: string | undefined }) => <RelBadge b={b} nav />;
 
-function NavBtn({ tab, icon, label, title, children }: { tab: Tab; icon: IconName; label: string; title: string; children?: ReactNode }) {
+function NavBtn({ tab, icon, label, title, id, children }: { tab: Tab; icon: IconName; label: string; title: string; id?: string; children?: ReactNode }) {
   const now = useTab();
   const { setOpen } = useDrawer();
   return (
-    <button type="button" className={`nav-btn${now === tab ? ' active' : ''}`} data-nav={tab} title={title} onClick={() => { goTo(tab); setOpen(false); }}>
+    <button type="button" className={`nav-btn${now === tab ? ' active' : ''}`} data-nav={tab} id={id} title={title} onClick={() => { goTo(tab); setOpen(false); }}>
       <span className="nav-icon"><Svg name={icon} /></span>
       <span className="nav-label">{label}</span>
       {children}
@@ -107,7 +107,7 @@ export function Sidebar({ me }: { me: PlayerMe | null | undefined }) {
               {voice && <span className={`nav-voice-dot ${voice.kind}`} id="nav-voice-dot" role="img" title={voice.text} aria-label={voice.text} />}
             </NavBtn>
             {/* The overlay is the launcher's: its page only shows there. */}
-            {inLauncher() && <NavBtn tab="overlay" icon="overlay" label="Game Overlay HUD" title="Game Overlay HUD" />}
+            {inLauncher() && <NavBtn tab="overlay" icon="overlay" label="Game Overlay HUD" title="Game Overlay HUD" id="nav-overlay" />}
           </div>
 
           <div className="nav-group">

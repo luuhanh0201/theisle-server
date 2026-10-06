@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMe, useServer } from '../lib/queries';
+import { CommandPalette } from './CommandPalette';
+import { Tour, useTour } from './Tour';
 import { Page } from '../pages';
 import { goTo, useTab, type Tab } from './router';
 import { DrawerProvider } from './shell/drawer';
@@ -21,6 +23,7 @@ export function Shell() {
   const srv = useServer();
   const tab = useTab();
   const [error] = useState(readLoginError);
+  const tour = useTour();
 
   // The tab's title is the server's name once known (Game.ini).
   useEffect(() => { if (srv?.name) document.title = srv.name; }, [srv?.name]);
@@ -38,7 +41,7 @@ export function Shell() {
       <div className="app-layout" id="app-layout">
         <Sidebar me={me} />
         <div className="main-viewport">
-          <Header me={me} />
+          <Header me={me} onTour={tour.start} />
           <main className="page-container">
             <div id="error" className="err" hidden={error === null}>{error}</div>
             {(seen.includes(tab) ? seen : [...seen, tab]).map((t) => (
@@ -50,6 +53,8 @@ export function Shell() {
         </div>
         <ThumbBar />
       </div>
+      <CommandPalette onTour={tour.start} />
+      <Tour step={tour.step} setStep={tour.setStep} />
     </DrawerProvider>
   );
 }

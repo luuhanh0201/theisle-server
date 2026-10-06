@@ -39,12 +39,13 @@ export const launcher = (): IsleLauncher | undefined => window.isleLauncher;
 export const inLauncher = (): boolean => Boolean(window.isleLauncher);
 
 /** A value the launcher pushes (game mode, update state): read once, then kept up to date. */
-function pushed<T>(get: () => T, on: ((cb: (v: T) => void) => void) | undefined): { use: () => T; now: () => T } {
+function pushed<T>(get: () => T, on: ((cb: (v: T) => void) => void) | undefined): { use: () => T; now: () => T; listen: (cb: (v: T) => void) => () => void } {
   let value = get();
   const subs = new Set<() => void>();
   on?.((v) => { value = v; for (const s of subs) s(); });
   const subscribe = (cb: () => void): (() => void) => { subs.add(cb); return () => subs.delete(cb); };
-  return { use: () => useSyncExternalStore(subscribe, () => value, () => value), now: () => value };
+  // One launcher listener for the whole page (app.js registered each once): others listen here.
+  return { use: () => useSyncExternalStore(subscribe, () => value, () => value), now: () => value, listen: (cb) => subscribe(() => cb(value)) };
 }
 
 let gm: ReturnType<typeof pushed<GameMode>> | null = null;

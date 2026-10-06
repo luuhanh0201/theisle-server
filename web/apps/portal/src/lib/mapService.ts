@@ -10,6 +10,11 @@ let map: MapApi | null = null;
 let root: HTMLDivElement | null = null;
 /** The friends' spots last read (/api/friends), given to the map when it is made later. */
 let friendSpots: Parameters<MapApi['setFriends']>[0] = null;
+/** What the map was last given: the launcher's overlay gets it too (lib/overlay.ts, app.js pushOverlayGame). */
+const last: { ai: unknown[]; fish: unknown[]; escapees: unknown[]; aiZones: unknown[] | null; heat: unknown } = {
+  ai: [], fish: [], escapees: [], aiZones: null, heat: null,
+};
+export const mapData = (): Readonly<typeof last> & { friends: typeof friendSpots } => ({ ...last, friends: friendSpots });
 
 export function getMap(): { map: MapApi; root: HTMLDivElement } {
   if (!map || !root) {
@@ -33,22 +38,28 @@ export async function loadAi(): Promise<void> {
   if (!map) return;
   const ai = await portalGet<{ list?: unknown[]; fish?: unknown[]; escapees?: unknown[] }>('/api/ai').catch(() => null);
   if (!ai) return;
-  map.setAi(ai.list ?? []);
-  map.setFish(Array.isArray(ai.fish) ? ai.fish : []);
-  map.setEscapees(Array.isArray(ai.escapees) ? ai.escapees : []);
+  last.ai = ai.list ?? [];
+  last.fish = Array.isArray(ai.fish) ? ai.fish : [];
+  last.escapees = Array.isArray(ai.escapees) ? ai.escapees : [];
+  map.setAi(last.ai);
+  map.setFish(last.fish);
+  map.setEscapees(last.escapees);
 }
 /** The AI zones the admins drew (public, like the map). */
 export async function loadAiZones(): Promise<void> {
   if (!map) return;
   const r = await portalGet<{ zones?: unknown[] }>('/api/ai-zones').catch(() => null);
-  if (r) map.setAiZones(r.zones ?? []);
+  if (r) { last.aiZones = r.zones ?? []; map.setAiZones(last.aiZones); }
 }
 /** Where players are (counts per 500 m square, every 5 minutes; logged in). */
 export async function loadHeat(): Promise<void> {
   if (!map) return;
   const r = await portalGet<unknown>('/api/heatmap').catch(() => null);
-  if (r) map.setHeat(r);
+  if (r) { last.heat = r; map.setHeat(r); }
 }
 
 /** For tests: forget the map. */
-export function resetMapForTest(): void { map = null; root = null; friendSpots = null; }
+export function resetMapForTest(): void {
+  map = null; root = null; friendSpots = null;
+  Object.assign(last, { ai: [], fish: [], escapees: [], aiZones: null, heat: null });
+}

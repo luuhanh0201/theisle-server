@@ -23,8 +23,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 7. Voice 3D | **done** (below) |
 | 8. Túi đồ | **done** (below) |
 | 9. Cửa hàng | **done** (below) |
-| 10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
-| 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
+| 10. Overlay HUD | **done** (below; every page of section 1 is now in React) |
+| 2. Across pages | **done** (below: Ctrl+K, the tour) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
 
@@ -50,8 +50,7 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   game, gara, ranking, map) was stopped before it ran: run it first when picking up (the commands under "How to work on
   it"; LIVE_COOKIE for game / gara / ranking / map, PANEL_COOKIE for frame / home, both REX_COOKIE=<PANEL_COOKIE> and
   LIVE_COOKIE set in the env for the map flow). The live AI added for the map could change a count another flow checks.
-- Next: 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
-  `lib/mapService.ts`), 2 across pages (Ctrl+K, the tour, its first-visit opening), 3 other pages, 4 the switch.
+- Next (after 6-10 and 2, done the same day): 3 other pages, 4 the switch.
 - Still open with the owner: html.in-launcher (below).
 - Stop the local servers: `for p in $(pgrep -f "^node dist/index.js") $(pgrep -f "^isle-e2e-feed"); do kill $p; done`
   (never `pkill -f` with a pattern: it matches the shell running it).
@@ -123,6 +122,21 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**10. Overlay HUD: done 2026-10-06.** Two parts. The page: `pages/overlay/OverlayPage.tsx`, `features/overlay/Overlay.tsx`
+(overlay-settings.js in React, same ids `ov-*`): in a browser only the card saying it is a preview; in the launcher the
+widget tabs and their settings (style, size, background, opacity, shown parts, reset), the whole overlay on / off, preview,
+edit on screen, the layout (each box dragged or resized, `overlayPlace`), the keys (a refused capture says why), game
+mode's kept widgets, the big map's screen and the black-edge fix; changes grouped and sent 80 ms after the last one, as
+before. The service, for the whole visit (`lib/overlay.ts`, `startOverlay(queryClient)` in main.tsx; app.js's
+pushOverlayGame / sendMiniFrame): on each /api/me it hands the overlay your dino, the AI, the zones, the heat, escaped
+inmates, your friends and the map's target; draws the mini map widget from the map (map.js paintMini, through
+`lib/mapService.ts`, which now keeps the last data it loaded: `mapData()`) and sends it as a webp picture while the
+widget is on; feeds the big map (key M) while it is open; polls AI / zones / heat / friends when the map page is not
+shown. Nothing in a browser. Checks: `test/overlay.test.tsx` (3), e2e `portal-overlay.mjs` (4 flows, 28 checks:
+`overlay-stub.mjs` stands in for the launcher's overlay calls, recorded in `window.__ov`; every step and every call
+compared with the old page; what is handed over each second and to the big map; the mini map got pictures; a browser),
+screenshots old / new at 380 and 1366: the same but the animated status dot.
 
 **9. Cửa hàng: done 2026-10-06.** `pages/shop/ShopPage.tsx`, `features/shop/{Shop.tsx, Shop.module.css}`: read when the page is
 shown, then every 30 s while it is (not while buying or the box is open), the balance, tabs by kind (the bag's), a card per
@@ -233,6 +247,20 @@ the rules; a guest), screenshots old / new (web, launcher; 380, 1366): the same 
 
 - Command palette (Ctrl+K, `#cmd-palette-modal`).
 - The onboarding tour (app.js ~2851-3125: steps, spotlight, skip, the AI map highlight).
+
+**Done 2026-10-06.** `app/CommandPalette.tsx` (app.js PALETTE_DATA, 40 entries: pages, species, chat commands, places; Ctrl
+or ⌘+K opens and closes it, a search by title / text / group, ↓ ↑ wrap, Enter, Esc, ESC, a click outside; a chat command
+copied with its toast, a species opens Skin Studio with its toast, a place the map, the tour) and `app/Tour.tsx` (TOUR_STEPS,
+5 steps: the step's page opened when the step is shown, its target lit, the step beside it or in the middle on a phone; →
+← Enter Esc, the dots, ✕ Bỏ qua; done: `isle_portal_tour_done` and the toast; opened by itself a second after a first
+visit; the header's 💡 Hướng dẫn and the palette open it), both mounted in `app/Shell.tsx`. Differences, all kept: a step's
+page is in the address (#gara...), before React the address did not change; Enter on the palette's tour entry opens step
+1 (before React the same key also reached the tour, which went on to step 2); out of the launcher the last step lights the
+header (before React a 12 px box in the corner: the hidden overlay entry, which in React is only there in the launcher,
+`#nav-overlay` as before). Enter right after an arrow takes the entry the arrow chose. The overlay service listens to game mode
+through `lib/launcher.ts` (`gameMode().listen`): one launcher listener for the page, as app.js. Checks:
+`test/across.test.tsx` (5), e2e `portal-across.mjs` (6 flows, 41 checks: every palette and tour step compared with the
+old page; a page opened during a step stays; seen already: not opened).
 
 ## 3. The other pages
 
