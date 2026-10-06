@@ -36,4 +36,20 @@ export const API = {
   }),
   '/api/garage-settings': { redeemAt: 'stored', maxSlots: 3, storeCountdown: 30, cooldown: 180, minHealthPct: 20, minGrowthPct: 0,
     tiers: { vip: { maxSlots: 5, cooldown: 120 }, svip: { maxSlots: 0, cooldown: 60 } }, memberCounts: { vip: 4, svip: 2, admin: 3 } },
+  '/api/panel-access': { ips: ['113.161.0.0/16', '2405:4802:1d32:eec0::/64'], saved: true, yourIp: '2405:4802:1d32:eec0::9', yourRule: '2405:4802:1d32:eec0::/64', webEnabled: true },
+  '/api/discord': () => ({
+    enabled: true, routes: { join: 'a', leave: 'a', kill: 'b', ban: 'c', server: 'c' }, mentions: { ban: 'here', server: '123456789012345678' },
+    channels: [{ id: 'a', name: 'nguoi-choi', hint: 'webhook 1234567890 · …ab12' }, { id: 'b', name: 'killfeed', hint: 'webhook 1234567891 · …cd34' }, { id: 'c', name: 'admin-log', hint: 'webhook 1234567892 · …ef56' }],
+    relay: { url: 'https://theisle-discord-relay.xomgay.workers.dev', hasSecret: true }, board: 'c',
+    kinds: [
+      { key: 'join', group: 'Người chơi', label: 'Vào server' }, { key: 'leave', group: 'Người chơi', label: 'Rời server' },
+      { key: 'kill', group: 'Chiến đấu', label: 'Người chơi giết người chơi' }, { key: 'ban', group: 'Quản trị', label: 'Ban, gỡ ban, sửa ban (lý do, ngày, người làm)' },
+      { key: 'server', group: 'Server', label: 'Server bật / tắt / lỗi' },
+    ],
+    status: { queued: 0, dropped: 0, relay: { lastOkAt: now() - 60, lastError: null }, channels: {
+      a: { queued: 0, lastOkAt: now() - 20, lastError: null, waitUntil: 0, webhook: { name: 'Xóm Gáy Log', channelId: '99990001', error: null, at: 0 } },
+      b: { queued: 3, lastOkAt: null, lastError: 'HTTP 429', waitUntil: 0, webhook: { name: 'Killfeed', channelId: '99990002', error: null, at: 0 } },
+      c: { queued: 0, lastOkAt: now() - 300, lastError: null, waitUntil: 0, webhook: { name: 'Admin', channelId: '99990003', error: null, at: 0 } },
+    } },
+  }),
 };

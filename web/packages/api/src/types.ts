@@ -162,3 +162,22 @@ export interface PanelAccess {
   yourRule: string | null;
   webEnabled: boolean;
 }
+
+/** A Discord channel as the panel sees it: the webhook URL only as a hint (bridge/src/discord.ts publicView). */
+export interface DiscordChannelView { id: string; name: string; hint: string }
+/** What the bridge knows of a channel's webhook and its sending (discord.ts status()). */
+export interface DiscordChannelState {
+  queued: number; lastOkAt: number | null; lastError: string | null; waitUntil: number;
+  webhook: { name: string | null; channelId: string | null; error: string | null; at: number } | null;
+}
+/** GET /api/discord and the PUT's answer (server.ts). */
+export interface DiscordView {
+  enabled: boolean;
+  routes: Record<string, string>;
+  mentions: Record<string, string>;
+  channels: DiscordChannelView[];
+  relay: { url: string; hasSecret: boolean } | null;
+  board: string | null;
+  kinds: Array<{ key: string; group: string; label: string }>;
+  status: { queued: number; dropped: number; relay: { lastOkAt: number | null; lastError: string | null }; channels: Record<string, DiscordChannelState> };
+}

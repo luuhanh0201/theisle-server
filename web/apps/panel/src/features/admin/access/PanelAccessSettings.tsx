@@ -22,7 +22,7 @@ export function PanelAccessSettings() {
     <>
       <SectionTitle first icon="🔒" title="Truy cập admin panel" sub="có hiệu lực ngay" />
       <SettingsPage form={form} saveLabel="Lưu danh sách" intro={pa && (
-        <>
+        <div style={{ display: 'grid', gap: 4 }}>
           <div>Vào panel phải qua <b>2 lượt</b>: (1) địa chỉ IP nằm trong danh sách dưới đây, vào qua SSH tunnel thì luôn qua lượt này;
             (2) đăng nhập Steam bằng tài khoản có trong danh sách Admin (Thành viên → Admin).</div>
           <div>{pa.webEnabled ? 'Panel đang mở qua web.' : 'Panel chưa mở qua web (chưa đặt PANEL_BASE_URL), hiện chỉ vào được qua SSH tunnel; danh sách này dùng khi mở.'}</div>
@@ -31,7 +31,7 @@ export function PanelAccessSettings() {
           <div>{pa.yourIp
             ? <>Bạn đang vào từ <Mono>{pa.yourIp}</Mono>, không thể bỏ địa chỉ này khỏi danh sách. Mạng nhà dùng IPv6 thì phần cuối địa chỉ đổi vài giờ một lần: hãy cho cả dải /64 (nút bên dưới).</>
             : 'Bạn đang vào qua SSH tunnel.'}</div>
-        </>
+        </div>
       )}>
         {d && (
           <>

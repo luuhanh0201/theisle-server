@@ -15,6 +15,7 @@ picks the next step below, and updates this file in the same commit as the pages
 | Thế giới | Thực vật | `features/world/flora/FloraSettings.tsx` | `/api/flora-settings` | 2026-10-06 |
 | Thế giới | Cá | `features/world/fish/FishSettings.tsx` | `/api/fish-settings` | 2026-10-06 |
 | Quản trị | Truy cập panel | `features/admin/access/PanelAccessSettings.tsx` | `/api/panel-access` | 2026-10-06 |
+| Quản trị | Discord | `features/admin/discord/DiscordSettings.tsx` | `/api/discord` (+ `/url`, `/test`, `/register-commands`) | 2026-10-06 |
 | Gara | Cài đặt gara | `features/garage/settings/GarageSettings.tsx` | `/api/garage-settings` | 2026-10-06 |
 
 Which pages a block has in React: `pages/<tab>/index.ts`, all listed in `app/blocks.ts`. The frame
