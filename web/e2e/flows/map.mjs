@@ -15,7 +15,7 @@ window.tab = (t) => h.click(h.$$('[role=tab]').find((b) => b.textContent === t))
 export default [
   {
     name: 'Bản đồ: vẽ xong, lớp hiển thị nhớ theo trình duyệt, tìm địa điểm và toạ độ, toạ độ khi rê chuột',
-    path: '/next/#map',
+    path: '/#map',
     wait: 4000,
     run: `${CLICK}
       check('bản đồ đã tải', !document.body.textContent.includes('Đang tải bản đồ') && !!h.$('canvas[aria-label="Bản đồ"]'));
@@ -43,7 +43,7 @@ export default [
   },
   {
     name: 'Vùng AI: vùng mới bằng một cú bấm, bầu dục, vẽ đa giác, lưu, xoá lại',
-    path: '/next/#map',
+    path: '/#map',
     wait: 4000,
     run: `${CLICK}
       tab('Vùng AI'); await h.sleep(200);
@@ -75,7 +75,7 @@ export default [
   },
   {
     name: 'Dino nhỏ (lưu, trả lại), Làm mới AI (bắt đầu rồi huỷ), Thả AI và Người chơi khi không ai online',
-    path: '/next/#map',
+    path: '/#map',
     wait: 4000,
     run: `${CLICK}
       tab('Dino nhỏ'); await h.sleep(300);
@@ -105,7 +105,7 @@ export default [
   },
   {
     name: 'Đường đi của một đời dino bridge không còn giữ',
-    path: '/next/#map/path/76561198000000011/1',
+    path: '/#map/path/76561198000000011/1',
     wait: 4000,
     run: `
       check('địa chỉ giữ nguyên', location.hash === '#map/path/76561198000000011/1');
@@ -116,7 +116,7 @@ export default [
   },
   {
     name: 'Kéo một vùng trên bản đồ (không lưu)',
-    path: '/next/#map',
+    path: '/#map',
     wait: 4000,
     run: `${CLICK}
       tab('Vùng AI'); await h.sleep(200);

@@ -33,7 +33,8 @@ export function Sidebar() {
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
           <span>{theme === 'dark' ? 'Giao diện sáng' : 'Giao diện tối'}</span>
         </button>
-        <a className={styles.legacy} href="/">Về panel cũ</a>
+        {/* The panel before React, kept for a while at /old: opened on the same page. */}
+        <a className={styles.legacy} href="/old" onClick={(e) => { e.preventDefault(); location.href = `/old${location.hash}`; }}>Về panel cũ</a>
       </div>
     </aside>
   );

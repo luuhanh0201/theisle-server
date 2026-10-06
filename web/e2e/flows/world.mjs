@@ -3,7 +3,7 @@ const save = `h.click(h.byText('Lưu cài đặt')); await h.sleep(1500);`;
 export default [
   {
     name: 'Tổng quan: 5 thẻ, số liệu từ bridge, nút dẫn tới trang cài đặt',
-    path: '/next/#world/overview',
+    path: '/#world/overview',
     wait: 3500,
     run: `
       const flora = await h.api('/api/flora-settings'); const fish = await h.api('/api/fish-settings');
@@ -17,7 +17,7 @@ export default [
   },
   {
     name: 'Thực vật: công tắc, số, thống kê, lưu và trả lại',
-    path: '/next/#world/flora',
+    path: '/#world/flora',
     run: `
       const before = (await h.api('/api/flora-settings')).settings;
       check('hiện % di cư', h.value('Di cư: % cây có chất') === String(before.migrationNutrientPct));
@@ -36,7 +36,7 @@ export default [
   },
   {
     name: 'Cá: số thập phân, chọn loài, lưu (RCON local không có) và trả lại',
-    path: '/next/#world/fish',
+    path: '/#world/fish',
     run: `
       const before = (await h.api('/api/fish-settings')).settings;
       h.click(h.plus('Giây giữa hai lần sinh')); await h.sleep(100);

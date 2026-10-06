@@ -5,7 +5,7 @@ const REX = '76561198000000011';
 export default [
   {
     name: 'Skin: tạo mới, đổi màu (mã hex, bảng màu), lưu, bản sao, ngừng / phát hành lại, tặng, thu hồi',
-    path: '/next/#items/skins',
+    path: '/#items/skins',
     wait: 3500,
     run: `
       const before = (await h.api('/api/items')).items.filter((i) => i.type === 'skin').length;
@@ -48,7 +48,7 @@ export default [
   },
   {
     name: 'Mutation: vật phẩm mutation nhiệm vụ (độ hiếm Đặc biệt cố định), tặng, thu hồi',
-    path: '/next/#items/mutations',
+    path: '/#items/mutations',
     wait: 3000,
     run: `
       const d = await h.api('/api/items');
@@ -76,7 +76,7 @@ export default [
   },
   {
     name: 'Phiếu & hộp: túi tăng trưởng, hòm có phần thưởng và tỉ lệ, tặng',
-    path: '/next/#items/tickets',
+    path: '/#items/tickets',
     wait: 3000,
     run: `
       h.click(h.byText('+ Tạo mới', 'button')); await h.sleep(400);

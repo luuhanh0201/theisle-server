@@ -5,6 +5,9 @@ only: every page does what it did in the panel before React (`bridge/public/inde
 texts, same saves, same rules. A new session reads this first, picks the next step below, and
 updates this file in the same commit as the pages it moves.
 
+**Status (2026-10-06): done.** Every block is in React and `/` serves it; the panel before React
+stays at `/old` for a while (step 5 below). New work on the panel goes into `web/` only.
+
 **One session at a time.** On 2026-10-06 two sessions moved the same blocks and both pushed to
 main: the code got mixed and main stopped building (113 type errors). It was repaired by keeping
 one version (the one `Routes.tsx` used, with the e2e flows). Before starting: `git pull`, read
@@ -71,11 +74,12 @@ admins use, until every block is moved and `/` switches to the React build.
    `MapView.tsx` (canvas, tools, search, hint bar, pointer / wheel / keys), `ZonesPane.tsx`, `Panes.tsx`.
    `#map/path/<id>/<spawnedAt>` is kept by Routes (not rewritten to `#map`). Dino nhỏ's per-species
    maximum is a select (5..100 %, "mặc định") instead of a blank-able number box: same values saved.
-5. **Next (the only step left): `/` serves the React build.** Every block is in React (12 e2e flows, 268
-   checks). Not done yet on purpose: it changes what admins open on the live panel, so it waits for the
-   owner's go-ahead after a look at `/next/` on the live server. Then: the bridge serves `bridge/public/next/`
-   at `/`, keep the old `index.html` reachable (e.g. `/old/`) for a while, switch the sidebar links ("Về
-   panel cũ" / "Panel mới").
+5. ~~`/` serves the React build~~ done (2026-10-06, bridge/src/server.ts): `/` and `/next/` open the React
+   panel (and fall back to the old one when `public/next/` is missing); the panel before React is at
+   `/old` (no slash, so its relative `img/`, `map/` still resolve; `/old/` redirects there), behind the same
+   login. Each panel links to the other on the same `#page` ("Về panel cũ" / "Về panel mới"; e2e
+   `panels.mjs`). The e2e flows now open `/#…`. Still to decide with the owner, later: when to delete
+   `/old` and `bridge/public/index.html` (nothing in React depends on them).
 
 A list page redraws every 2 s but never while the admin is busy (popup open, typing, dialog,
 text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký admin do it.

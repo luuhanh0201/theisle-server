@@ -3,7 +3,7 @@
 export default [
   {
     name: 'Truy cập: số liệu, biểu đồ, khoảng thời gian, rê chuột',
-    path: '/next/#traffic',
+    path: '/#traffic',
     wait: 3000,
     run: `
       const today = await h.api('/api/traffic?from=' + new Date().toISOString().slice(0, 10) + '&to=' + new Date().toISOString().slice(0, 10));

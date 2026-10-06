@@ -4,7 +4,7 @@ const saveAndWait = `h.click(h.byText('Lưu cài đặt')); await h.sleep(1200);
 export default [
   {
     name: 'Lệnh chat: cooldown và bật / tắt lệnh',
-    path: '/next/#mods/commands',
+    path: '/#mods/commands',
     run: `
       const before = await h.api('/api/commands-settings');
       check('hiện đúng giá trị !slay', h.value('Chờ giữa hai lần !slay') === String(before.slayCooldown), h.value('Chờ giữa hai lần !slay'));
@@ -28,7 +28,7 @@ export default [
   },
   {
     name: 'Ptera gắp: công tắc và số',
-    path: '/next/#mods/ptera',
+    path: '/#mods/ptera',
     run: `
       const before = await h.api('/api/ptera-carry');
       check('hiện maxKg', h.value('Cân nặng tối đa') === String(before.maxKg), h.value('Cân nặng tối đa'));
@@ -47,7 +47,7 @@ export default [
   },
   {
     name: 'Tele con non: 6 số, gõ tay và giới hạn',
-    path: '/next/#mods/tele',
+    path: '/#mods/tele',
     run: `
       const before = await h.api('/api/tele-settings');
       const box = h.$('#tl-maxGrowthPct');
@@ -64,7 +64,7 @@ export default [
   },
   {
     name: 'Voice gần: ô chọn kiểu hệ thống',
-    path: '/next/#mods/voice',
+    path: '/#mods/voice',
     run: `
       const before = await h.api('/api/voice-settings');
       const btn = h.$('#vs-name-mode');
@@ -87,7 +87,7 @@ export default [
   },
   {
     name: 'Thông báo: mốc, định kỳ, sửa tin, tắt tin, tìm',
-    path: '/next/#mods/messages',
+    path: '/#mods/messages',
     run: `
       const before = await h.api('/api/messages');
       check('đếm tin đúng', document.body.textContent.includes(before.catalog.length + ' tin'));

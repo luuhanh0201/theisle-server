@@ -34,8 +34,8 @@ for (const theme of ['dark', 'light']) for (const w of [380, 1366]) for (const p
     try { return r.fulfill({ body: await readFile(root + f), contentType: TYPES[f.split('.').pop()] ?? 'application/octet-stream' }); }
     catch { return r.fulfill({ status: 404, body: '' }); }
   });
-  // OLD=1 (with PANEL_URL): the panel before React, for the side-by-side check.
-  await page.goto(`${process.env.PANEL_URL ?? 'http://panel.test'}${process.env.OLD ? '/' : '/next/'}#${p}`);
+  // OLD=1 (with PANEL_URL): the panel before React (/old), for the side-by-side check.
+  await page.goto(`${process.env.PANEL_URL ?? 'http://panel.test'}${process.env.OLD ? '/old' : '/next/'}#${p}`);
   await page.waitForTimeout(1200);
   const name = `${process.env.OLD ? 'old-' : ''}${p.replace('/', '-')}-${w}-${theme}.png`;
   await page.screenshot({ path: join(out, name), fullPage: true });

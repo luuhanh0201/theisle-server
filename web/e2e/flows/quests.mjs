@@ -5,7 +5,7 @@ const REX = '76561198000000011';
 export default [
   {
     name: 'Điểm danh: đổi thưởng ngày 7, lưu, trả lại',
-    path: '/next/#quests',
+    path: '/#quests',
     wait: 3000,
     run: `
       const before = (await h.api('/api/economy')).settings;
@@ -20,7 +20,7 @@ export default [
   },
   {
     name: 'Hổ phách: thiếu lý do bị từ chối; +50 rồi −20 cho Rex, sổ giao dịch, lọc',
-    path: '/next/#quests',
+    path: '/#quests',
     wait: 3000,
     run: `
       const sid = h.$('input[placeholder="7656119…"]'), delta = h.$$('label').find((l) => l.textContent.startsWith('Cộng (+)')).querySelector('input');
@@ -43,7 +43,7 @@ export default [
   },
   {
     name: 'Cửa hàng: thêm món, đổi giá, đưa lên đầu, lưu, trả lại',
-    path: '/next/#quests',
+    path: '/#quests',
     wait: 3000,
     run: `
       const before = (await h.api('/api/shop')).listings;
@@ -63,7 +63,7 @@ export default [
   },
   {
     name: 'Nhiệm vụ ngày / tuần: thêm, đổi tên, lưu, xoá',
-    path: '/next/#quests',
+    path: '/#quests',
     wait: 3000,
     run: `
       const before = (await h.api('/api/quests')).settings;

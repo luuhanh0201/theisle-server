@@ -4,7 +4,7 @@
 export default [
   {
     name: 'Vận hành: trạng thái, nút bật / tắt đúng theo trạng thái, sẵn sàng trên game',
-    path: '/next/#server/ops',
+    path: '/#server/ops',
     run: `
       const st = await h.api('/api/server/status');
       check('hiện trạng thái', document.body.textContent.includes(st.phase === 'running' ? 'Đang chạy' : st.phase === 'stopped' ? 'Đã tắt' : 'Không rõ trạng thái'));
@@ -18,7 +18,7 @@ export default [
   },
   {
     name: 'Lịch khởi động lại: thêm giờ, lưu, trả lại',
-    path: '/next/#server/ops',
+    path: '/#server/ops',
     run: `
       const before = (await h.api('/api/server/status')).schedule;
       h.click(h.$('button[aria-label="Giờ"]')); await h.sleep(200);
@@ -37,7 +37,7 @@ export default [
   },
   {
     name: 'Sự kiện tốc độ lớn: thêm (cuối tuần tới, ×2), hiện trong danh sách, xoá',
-    path: '/next/#server/ops',
+    path: '/#server/ops',
     run: `
       const n0 = (await h.api('/api/server/growth-events')).events.length;
       h.type(h.$('input[placeholder="vd: Cuối tuần x2"]'), 'e2e x2'); await h.sleep(100);
@@ -54,7 +54,7 @@ export default [
   },
   {
     name: 'Cảnh báo DDoS: đổi ngưỡng, lưu, trả lại',
-    path: '/next/#server/ops',
+    path: '/#server/ops',
     run: `
       const before = await h.api('/api/ddos');
       h.click(h.$('input[aria-label="Từ (gói/giây)"]').parentElement.querySelector('[aria-label="Tăng"]')); await h.sleep(200);
@@ -68,7 +68,7 @@ export default [
   },
   {
     name: 'Cấu hình game: mở thẳng một nhóm, đổi số người chơi tối đa, lưu, trả lại (không khởi động lại)',
-    path: '/next/#server/cfg%3Aserver',
+    path: '/#server/cfg%3Aserver',
     run: `
       const c0 = await h.api('/api/game-config');
       check('mở đúng nhóm Máy chủ', document.body.textContent.includes('Cấu hình game · Máy chủ'));
@@ -89,7 +89,7 @@ export default [
   },
   {
     name: 'Dữ liệu: backup ngay, hiện trong danh sách, đổi số bản giữ, trả lại, xoá bản vừa tạo (không khôi phục, không xoá dữ liệu)',
-    path: '/next/#server/data',
+    path: '/#server/data',
     run: `
       const d0 = await h.api('/api/backups');
       check('khoá khôi phục / xoá dữ liệu khi server chưa tắt', d0.phase === 'stopped' || h.byText('Xoá dữ liệu…', 'button').disabled);

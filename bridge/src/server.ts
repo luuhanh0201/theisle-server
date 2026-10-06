@@ -1,7 +1,7 @@
 import { QUEST_KINDS, readQuestSettings, saveQuestSettings, type QuestProgress } from './quests.js';
 import { CURRENCY, credit, economySummary, readEconomySettings, readLedger, saveEconomySettings, type PlayDays } from './economy.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, normalize } from 'node:path';
 import { config } from './config.js';
@@ -1640,17 +1640,25 @@ async function handlePanel(
     case '/api/health':
       sendJson(res, 200, { ...store.health(), writesEnabled: config.adminToken !== null });
       return;
+    // The panel is the React one (web/apps/panel, built into public/next/); its pages are
+    // #addresses, so this is its only page. /next/ (where it was tried first) still opens it.
     case '/':
-      await sendFile(res, 'index.html');
+    case '/next/':
+      // No React build on this machine (web/ not built): the panel before React, never a dead end.
+      await sendFile(res, await access(join(publicDir, 'next', 'index.html')).then(() => 'next/index.html', () => 'index.html'));
       return;
-    // The panel in React (web/apps/panel, built into public/next/), beside this one until every
-    // page is moved; its pages are #addresses, so /next/ is its only page.
     case '/next':
       res.writeHead(302, { location: '/next/' });
       res.end();
       return;
-    case '/next/':
-      await sendFile(res, 'next/index.html');
+    // The panel before React, kept for a while at /old: no slash after it, so its own relative
+    // addresses (img/…, map/…) still resolve from the site's root.
+    case '/old':
+      await sendFile(res, 'index.html');
+      return;
+    case '/old/':
+      res.writeHead(302, { location: '/old' });
+      res.end();
       return;
     default:
       // The skin page's 3D: the portal's own viewer and models (config.portalPublicDir).

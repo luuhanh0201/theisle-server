@@ -6,7 +6,7 @@
 export default [
   {
     name: 'Danh sách: mọi người chơi, tìm, lọc, sắp xếp, SteamID sao chép được',
-    path: '/next/#players/list',
+    path: '/#players/list',
     run: `
       const ps = (await h.api('/api/players')).players;
       check('hiện mọi người chơi', ps.every((p) => document.body.textContent.includes(p.name ?? p.steamId)));
@@ -30,7 +30,7 @@ export default [
   },
   {
     name: 'Killfeed: lần giết hiện đủ, tìm, mở hiện trường',
-    path: '/next/#players/killfeed',
+    path: '/#players/killfeed',
     run: `
       const evs = (await h.api('/api/killfeed?limit=200')).events;
       const k = evs.find((e) => e.attributed && e.killer);
@@ -53,7 +53,7 @@ export default [
   },
   {
     name: 'Xếp hạng: năm bảng và con mồi lớn nhất',
-    path: '/next/#players/leaderboard',
+    path: '/#players/leaderboard',
     run: `
       const b = await h.api('/api/leaderboard');
       for (const t of ['Nhiều kill nhất', 'K/D (≥ 3 kill)', 'Gây damage', 'Giờ chơi', 'Sống lâu nhất']) check('bảng ' + t, document.body.textContent.includes(t));
@@ -63,7 +63,7 @@ export default [
   },
   {
     name: 'Chat: tin hiện đủ, lệnh ! kiểu mono, tìm; admin tổng thấy nút xoá (không bấm)',
-    path: '/next/#players/chat',
+    path: '/#players/chat',
     run: `
       const lines = (await h.api('/api/chat?limit=300')).events;
       check('hiện mọi tin', lines.every((e) => document.body.textContent.includes(e.message)));
@@ -75,7 +75,7 @@ export default [
   },
   {
     name: 'Ban: không có RCON thì báo lỗi, sửa lý do, gỡ ban, mẫu lý do lưu và trả lại',
-    path: '/next/#players/bans',
+    path: '/#players/bans',
     wait: 3000,
     run: `
       const before = await h.api('/api/bans');
@@ -111,7 +111,7 @@ export default [
   },
   {
     name: 'Nhà tù: tắt thì không bỏ tù được; bật, bỏ tù, đổi án, thả, tắt lại',
-    path: '/next/#players/prison',
+    path: '/#players/prison',
     wait: 3000,
     run: `
       const before = await h.api('/api/prison');
@@ -143,7 +143,7 @@ export default [
   },
   {
     name: 'Trang người chơi: hồ sơ, thành tích, nhật ký, gara (xoá một slot), các đời dino; offline thì khoá thao tác',
-    path: '/next/#player/76561198000000011',
+    path: '/#player/76561198000000011',
     wait: 3000,
     run: `
       const d = await h.api('/api/player/76561198000000011');
@@ -173,7 +173,7 @@ export default [
   },
   {
     name: 'Danh sách: bấm tên mở trang người chơi',
-    path: '/next/#players/list',
+    path: '/#players/list',
     run: `
       const a = h.$$('a[href^="#player/"]').find((x) => x.textContent.includes('Carno Tester'));
       check('có link', !!a);

@@ -115,8 +115,9 @@ if (( DO_CONFIG || DO_BRIDGE )); then
 fi
 
 if (( DO_BRIDGE )); then
-    # The panel in React (web/apps/panel): built into bridge/public/next/, shipped with the
-    # bridge's public/ below. Its tests and typecheck stop the deploy too.
+    # The panel in React (web/apps/panel): built into bridge/public/next/, served at /, shipped
+    # with the bridge's public/ below (the panel before React stays at /old). Its tests and
+    # typecheck stop the deploy too.
     say "building panel (React)"
     ( cd web && npm ci --silent && npm test && npm run build )
 fi

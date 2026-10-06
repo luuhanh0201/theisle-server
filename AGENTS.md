@@ -77,10 +77,11 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   from one bundle); never one `<img src=".../<slug>.svg">` each, many at once
   trip the proxy (503). After adding an icon: `node scripts/build-mutation-icons.mjs`.
 
-## Panel in React (web/), being moved page by page
+## Panel in React (web/): the admin panel (every page moved, 2026-10-06)
 - `web/` (React 19 + Vite + TypeScript, TanStack Query, CSS Modules), one `npm install` there.
   Built into `bridge/public/next/` (gitignored; `deploy.sh` builds it with the bridge), served at
-  `/next/` beside the panel before React (`/`). Same `#tab/sub` addresses on both.
+  `/` (and `/next/`). The panel before React (`bridge/public/index.html`) is kept for a while at
+  `/old`, with the same `#tab/sub` addresses; `/` falls back to it when there is no React build.
 - Progress and the next steps: `web/MIGRATION.md` (read it first, update it with each page moved).
   One session at a time moves pages: two sessions pushing the same blocks to main mix their code
   (2026-10-06). Before starting, `git pull` and read MIGRATION.md; push after each block.

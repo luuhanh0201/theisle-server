@@ -1636,7 +1636,7 @@
       </div>
       <button class="theme-btn" id="theme" type="button"></button>
       <!-- The panel in React (web/apps/panel), being moved page by page: the same page there. -->
-      <a class="theme-btn" id="to-next" href="/next/" style="text-decoration:none">Panel mới (React, thử)</a>
+      <a class="theme-btn" id="to-next" href="/" style="text-decoration:none">Về panel mới</a>
     </div>
   </aside>
 
@@ -5037,7 +5037,7 @@ function setCount(tab, n) {
 }
 
 // --- theme --------------------------------------------------------------------
-$('to-next').addEventListener('click', (e) => { e.preventDefault(); location.href = `/next/${location.hash}`; });
+$('to-next').addEventListener('click', (e) => { e.preventDefault(); location.href = `/${location.hash}`; });
 
 function storedTheme() {
   try { return localStorage.getItem('theme'); } catch { return null; }

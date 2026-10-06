@@ -4,7 +4,7 @@ const TEST_ID = '76561190000000777';
 export default [
   {
     name: 'VIP: thêm, sai SteamID bị chặn, bỏ',
-    path: '/next/#members/vips',
+    path: '/#members/vips',
     run: `
       const box = h.$('#mb-vips-id');
       h.type(box, '123'); h.click(h.byText('Thêm', 'button')); await h.sleep(300);
@@ -20,7 +20,7 @@ export default [
   },
   {
     name: 'Admin: admin cố định không có nút Bỏ',
-    path: '/next/#members/admins',
+    path: '/#members/admins',
     run: `
       const m = await h.api('/api/members');
       const fixed = [...(m.owners ?? []), m.superAdmin].filter(Boolean).find((id) => m.admins.includes(id));
@@ -31,7 +31,7 @@ export default [
   },
   {
     name: 'Whitelist: bật / tắt lưu Game.ini, trả lại',
-    path: '/next/#members/whitelist',
+    path: '/#members/whitelist',
     run: `
       const before = (await h.api('/api/members')).whitelistOn;
       h.$('[aria-label="Chỉ cho whitelist vào"]').click(); await h.sleep(200);
@@ -44,7 +44,7 @@ export default [
   },
   {
     name: 'Phân quyền: mở thẳng địa chỉ, tắt một quyền khỏi vai trò, lưu, trả lại',
-    path: '/next/#members/perms',
+    path: '/#members/perms',
     run: `
       check('mở thẳng #members/perms vẫn đúng trang', location.hash === '#members/perms' && document.body.textContent.includes('Phân quyền admin'));
       const data = await h.api('/api/permissions');
@@ -65,7 +65,7 @@ export default [
   },
   {
     name: 'SVip: thêm kèm ghi chú, đổi mức phát hành qua hộp xác nhận, trả lại',
-    path: '/next/#members/svip',
+    path: '/#members/svip',
     run: `
       const before = await h.api('/api/svip');
       h.type(h.$('#sv-id'), '${TEST_ID}'); h.type(h.$('#sv-note'), 'e2e'); h.click(h.byText('Thêm SVip', 'button')); await h.sleep(1500);

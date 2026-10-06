@@ -3,7 +3,7 @@
 export default [
   {
     name: 'Tổng quan: số liệu, cảnh báo, hiệu năng, diễn biến lọc theo loại, thao tác nhanh',
-    path: '/next/#overview',
+    path: '/#overview',
     wait: 3500,
     run: `
       const ps = (await h.api('/api/players')).players;

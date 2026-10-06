@@ -4,7 +4,7 @@
 export default [
   {
     name: 'Truy cập panel: thêm một dải IP, lưu, trả lại',
-    path: '/next/#admin/access',
+    path: '/#admin/access',
     run: `
       const before = (await h.api('/api/panel-access')).ips;
       check('hiện danh sách đang cho phép', before.every((ip) => document.body.textContent.includes(ip)));
@@ -18,7 +18,7 @@ export default [
   },
   {
     name: 'Nhật ký admin: tên thao tác tiếng Việt, tìm, sang trang, xoá một dòng (admin tổng)',
-    path: '/next/#admin/audit',
+    path: '/#admin/audit',
     wait: 3000,
     run: `
       const first = await h.api('/api/server/audit?page=1&limit=30');
@@ -46,7 +46,7 @@ export default [
   },
   {
     name: 'Discord: bật / tắt, trạm ngoài, lưu và trả lại (không đụng webhook)',
-    path: '/next/#admin/discord',
+    path: '/#admin/discord',
     run: `
       const before = await h.api('/api/discord');
       h.$('#dc-enabled').click();

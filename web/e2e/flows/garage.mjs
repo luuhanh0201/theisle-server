@@ -4,7 +4,7 @@ const TEST_SLOT = 'e2etest';
 export default [
   {
     name: 'Danh sách: đếm, tìm theo loài và theo SteamID',
-    path: '/next/#garage/stored',
+    path: '/#garage/stored',
     wait: 3500,
     run: `
       const idx = await h.api('/api/garage');
@@ -24,7 +24,7 @@ export default [
   },
   {
     name: 'Tạo dino: người chơi, loài, growth, prime, mutation, gửi; đọc lại; xoá từ danh sách',
-    path: '/next/#garage/stored',
+    path: '/#garage/stored',
     wait: 3500,
     run: `
       const players = (await h.api('/api/players')).players;
@@ -72,7 +72,7 @@ export default [
   },
   {
     name: 'Cài đặt gara: chọn vị trí, bảng theo mức thành viên, lưu và trả lại',
-    path: '/next/#garage/settings',
+    path: '/#garage/settings',
     run: `
       const before = await h.api('/api/garage-settings');
       const pick = (o) => ({ redeemAt: o.redeemAt, maxSlots: o.maxSlots, storeCountdown: o.storeCountdown, cooldown: o.cooldown, minHealthPct: o.minHealthPct, minGrowthPct: o.minGrowthPct, tiers: o.tiers });
