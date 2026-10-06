@@ -5,6 +5,7 @@ import { GaraPage } from './gara/GaraPage';
 import { HomePage } from './home/HomePage';
 import { MapPage } from './map/MapPage';
 import { RankingPage } from './ranking/RankingPage';
+import { SkinPage } from './skin/SkinPage';
 import { LegacyPage } from './LegacyPage';
 
 /** Each page's title (the menu's), for the pages not moved yet. */
@@ -20,6 +21,7 @@ const MOVED: Partial<Record<Tab, () => ReactNode>> = {
   gara: () => <GaraPage />,
   ranking: () => <RankingPage />,
   map: () => <MapPage />,
+  skin: () => <SkinPage />,
 };
 
 export function Page({ tab }: { tab: Tab }) {

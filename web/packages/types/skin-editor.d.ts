@@ -9,3 +9,4 @@ export const LIGHT_MIN: number;
 export const LIGHT_MAX: number;
 export function lightText(f: number): [string, '' | 'dark' | 'bright'];
 export const lightSlider: { min: number; max: number; toSlider: (f: number) => number; value: (el: { value: string; min: string; max: string }) => number };
+export function injectCss(): void;

@@ -29,6 +29,9 @@ SECRET=e2e-local-portal-session-secret-0123456789
 mkdir -p "$R/downloads"
 # The map's picture and places: the bridge's copy, as the portal deploy ships it (portal/public/map/ is gitignored).
 [ -f "$REPO/portal/public/map/gateway.json" ] || cp -r "$REPO/bridge/public/map" "$REPO/portal/public/map"
+# No 3D models in a local copy (portal/public/dino3d/ is gitignored): an empty model list, as a server without them.
+# Without it the 404's JSON is taken for the list and skin3d.js throws in the old page's renderGame every second.
+[ -f "$REPO/portal/public/dino3d/registry.json" ] || { mkdir -p "$REPO/portal/public/dino3d"; printf '{"species":{},"files":{}}\n' > "$REPO/portal/public/dino3d/registry.json"; }
 # The launcher's version file (Trang chủ's download button reads it).
 printf '{"version":"2.8.1","windows":{"file":"XomGay-Launcher-Setup-2.8.1.exe","size":104857600}}\n' > "$R/downloads/version.json"
 cd "$REPO/portal"

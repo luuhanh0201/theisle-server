@@ -19,7 +19,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 3. Gara | **done** (below) |
 | 4. Bản đồ + Kết bạn | **done** (below; the whole-site regression run was stopped by the owner, see "Paused") |
 | 5. Xếp hạng | **done** (below) |
-| 6-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 6. Skin Studio | **done** (below) |
+| 7-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -46,7 +47,7 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   game, gara, ranking, map) was stopped before it ran: run it first when picking up (the commands under "How to work on
   it"; LIVE_COOKIE for game / gara / ranking / map, PANEL_COOKIE for frame / home, both REX_COOKIE=<PANEL_COOKIE> and
   LIVE_COOKIE set in the env for the map flow). The live AI added for the map could change a count another flow checks.
-- Next: 6 Skin Studio (mind the notes below on skin3d.js and what renderGame did for it), then 7 Voice 3D, 8 Túi đồ,
+- Next: 7 Voice 3D, 8 Túi đồ,
   9 Cửa hàng, 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
   `lib/mapService.ts`), 2 across pages (Ctrl+K, the tour, its first-visit opening), 3 other pages, 4 the switch.
 - Still open with the owner: html.in-launcher (below).
@@ -120,6 +121,21 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**6. Skin Studio: done 2026-10-06.** `pages/skin/SkinPage.tsx`, `features/skin/{SkinStudio.tsx, useSkinViewer.ts, skin.ts}`.
+The editor as before React (same ids and classes: `.se-*` from skin-editor.js, whose `injectCss` is now exported for it):
+regions (colour box + hex), palettes, pattern / theme / variation, sex, Lấy màu (through `Dino3D.fromGame`), Áp dụng
+(POST /api/skin, `waitCommand`), the XG1 code out / in, skins saved in this browser (`xg.skins.v1`), in lab the effects,
+"keep" and the kept colours' chips (✕ = `{ forget }`). The 3D preview is driven from React (`useSkinViewer`: made once
+the models load, follows the dino played now, a new species or sex shown at once, else the first species): the page has
+no `#skin-species`, so skin3d.js's own editor part never binds to React's markup. Two differences, both fixes: with no
+model on the server the menu says "-" and the note says so (the old one kept "Đang tải…"), and the effects grid is
+dimmed by its tick box whatever set it (the old one stayed dimmed when a code turned the effects on).
+`live-feed.mjs` now gives Live Tester a skin and answers a skin command (odd tries refused, even ones written, the dino's
+own colours back 6 s later); `local-portal.sh` writes an empty `portal/public/dino3d/registry.json` when there is none
+(the 404's JSON was read as the model list and the old page's renderGame threw every second once Skin was opened).
+Checks: `test/skin.test.tsx` (14, the viewer mocked), e2e `portal-skin.mjs` (68: in game, Rex, a guest, lab; every step
+compared with the old page), screenshots old / new at 380 and 1366: the same but the species menu and the note.
 
 **4. Bản đồ + Kết bạn: done 2026-10-06.** The map engine stays `portal/public/map.js` (shared with the launcher's big map,
 bigmap.js), imported as `@portal/map` (aliases.ts, typed by `packages/types/map.d.ts`) and bundled into the React build.

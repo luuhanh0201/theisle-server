@@ -124,7 +124,8 @@ const STYLE = `
 .se-preset .se-stripe i { flex: 1; }
 .se-preset span { font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 `;
-function injectCss() {
+/** The editor's look (.se-*), once per page: mountRegions / mountPresets call it; the React site's Skin Studio too. */
+export function injectCss() {
   if (document.getElementById('skin-editor-css')) return;
   const s = document.createElement('style');
   s.id = 'skin-editor-css';
