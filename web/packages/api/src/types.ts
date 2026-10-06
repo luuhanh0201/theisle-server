@@ -103,3 +103,41 @@ export interface FishState {
   census: { t: number; online: number; total: number; species: Record<string, number>; perPlayer?: number; perWater?: number; cooldownSec?: number } | null;
   disallowed: string[];
 }
+
+/** One mutation in the community reference (bridge/src/mutation-reference.ts). */
+export interface MutationRef {
+  name: string; en: string; description: string; diet?: string; kind?: string; stat?: string; tiers?: string;
+  status: string; statusNote?: string; sources: string[]; aliases?: string[]; femaleOnly?: boolean; groupLeaderOnly?: boolean;
+  slots?: string; unlock?: string; unlockEn?: string;
+}
+/** GET /api/mutations: the admins' notes, the reference, which in-game name matches which entry. */
+export interface MutationsData {
+  notes: Record<string, { description: string; updatedAt?: number }>;
+  reference: MutationRef[];
+  referenceChecked?: string;
+  sources: Record<string, string>;
+  matches: Record<string, string>;
+}
+/** One species the server has seen (bridge/src/catalog.ts), with the mutations seen on it. */
+export interface CatalogSpecies {
+  species: string;
+  classPath: string | null;
+  mutations: { active: string[]; parent: string[]; elder: string[] };
+  evidence?: Record<string, { count: number; players: number; lastSeen?: number; groups: string[] }>;
+}
+/** GET /api/garage: every stored slot, by player, as the index has it. */
+export interface GarageIndex { schema?: number; players: Record<string, Record<string, { classPath: string; growth?: number; capturedAt?: number; isPrime?: boolean }>> }
+/** A row of GET /api/players (bridge/src/store.ts PlayerStats + live view), what the panel reads of it. */
+export interface PlayerRow {
+  steamId: string; name: string | null; species: string | null; online: boolean; growth: number | null; lastSeen?: number | null;
+  tier?: string; garage?: number;
+  [k: string]: unknown;
+}
+
+/** GET / PUT /api/garage-settings (bridge/src/garage.ts GarageSettings); the GET adds memberCounts. */
+export interface GarageSettings {
+  redeemAt: 'current' | 'stored' | 'choice';
+  maxSlots: number; storeCountdown: number; cooldown: number; minHealthPct: number; minGrowthPct: number;
+  tiers: { vip: { maxSlots: number; cooldown: number }; svip: { maxSlots: number; cooldown: number } };
+}
+export interface GarageSettingsState extends GarageSettings { memberCounts?: { vip?: number; svip?: number; admin?: number } }

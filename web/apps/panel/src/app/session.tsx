@@ -13,6 +13,8 @@ interface Session {
    * prefixed with `label`; the promise then resolves to false.
    */
   withToken: (label: string, fn: (token: string) => Promise<void>) => Promise<boolean>;
+  /** The admin token now (asked in a dialog when the login has none), null when the admin cancels. */
+  tokenNow: (label: string) => Promise<string | null>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -47,7 +49,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [tokenFor, me, toast]);
 
-  const value = useMemo(() => ({ me, access, withToken }), [me, access, withToken]);
+  const tokenNow = useCallback(async (label: string) => {
+    const t = await tokenFor(label);
+    if (t !== null && !me?.token) typed.current = t;
+    return t;
+  }, [tokenFor, me]);
+  const value = useMemo(() => ({ me, access, withToken, tokenNow }), [me, access, withToken, tokenNow]);
   return (
     <SessionContext.Provider value={value}>
       {children}

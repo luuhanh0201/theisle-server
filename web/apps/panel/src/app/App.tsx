@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@isle/ui';
 import { UnsavedBar } from '../features/settings-form/UnsavedBar';
+import { MutTipLayer } from '../components/dino/Mutations';
 import { Routes } from './Routes';
 import { SessionProvider } from './session';
+import { ConfirmProvider } from './confirm';
 import { Shell } from './shell/Shell';
 import { hrefOf, useHashRoute } from './router';
 
@@ -14,8 +16,11 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <SessionProvider>
-          <Shell><Routes /></Shell>
-          <Unsaved />
+          <ConfirmProvider>
+            <Shell><Routes /></Shell>
+            <Unsaved />
+            <MutTipLayer />
+          </ConfirmProvider>
         </SessionProvider>
       </ToastProvider>
     </QueryClientProvider>

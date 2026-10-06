@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { PageHead, SubTabs } from '@isle/ui';
 import { ModsPage } from '../pages/mods/ModsPage';
 import { WorldPage } from '../pages/world/WorldPage';
+import { GaragePage } from '../pages/garage/GaragePage';
+import { prefillCreator } from '../features/garage/creator/DinoCreator';
 import { LegacyPage } from './LegacyPage';
 import { SUBS, TABS, subAllowed, tabAllowed, type TabId } from './nav';
 import { hrefOf, pickSub, useHashRoute } from './router';
@@ -14,6 +16,8 @@ import { useSession } from './session';
 export function Routes() {
   const { access } = useSession();
   const route = useHashRoute();
+  // #garage/<SteamID> (a player's page, "tạo dino cho người này"): the creator filled in for them.
+  if (route.tab === 'garage' && route.sub !== null && /^\d{17}$/.test(route.sub)) prefillCreator(route.sub);
   const tab: TabId = tabAllowed(access, route.tab) ? route.tab : TABS.find(([id]) => tabAllowed(access, id))?.[0] ?? 'overview';
   const sub = pickSub(access, tab, route.sub);
   // The address says where the panel is (a bookmark, the back button): the sub-page picked goes into it.
@@ -23,6 +27,7 @@ export function Routes() {
   }, [tab, sub]);
   if (tab === 'mods' && sub !== null) return <ModsPage sub={sub} />;
   if (tab === 'world' && sub !== null) return <WorldPage sub={sub} />;
+  if (tab === 'garage' && sub !== null) return <GaragePage sub={sub} />;
   return <NotMoved tab={tab} sub={sub} />;
 }
 

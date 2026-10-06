@@ -13,6 +13,8 @@ export { PageHead } from './components/PageHead/PageHead';
 export { Segmented, type SegmentOption } from './components/Segmented/Segmented';
 export { Select, type SelectOption } from './components/Select/Select';
 export { SectionTitle } from './components/SectionTitle/SectionTitle';
+export { Slider } from './components/Slider/Slider';
+export { SuggestInput, type Suggestion } from './components/SuggestInput/SuggestInput';
 export { Select, type SelectOption } from './components/Select/Select';
 export { SubTabs, type SubTab } from './components/SubTabs/SubTabs';
 export { Switch } from './components/Switch/Switch';

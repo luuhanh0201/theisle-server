@@ -1,0 +1,8 @@
+.input { width: 100%; height: 38px; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
+  background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; transition: border-color .15s, box-shadow .15s; }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pop { position: fixed; z-index: 1000; max-height: 260px; overflow-y: auto; padding: 4px; border-radius: 10px; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong); box-shadow: 0 12px 32px rgba(15, 23, 42, .3); overscroll-behavior: contain; }
+.opt { display: flex; flex-direction: column; gap: 1px; padding: 7px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; }
+.opt small { color: var(--muted); font-size: 11.5px; font-family: var(--font-mono); }
+.on, .opt:hover { background: var(--accent-soft); }

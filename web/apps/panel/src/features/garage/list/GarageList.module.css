@@ -1,0 +1,20 @@
+.card { margin-bottom: 20px; }
+.toCreator { margin-left: auto; text-decoration: none; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.searchWrap { position: relative; flex: 1; min-width: 240px; }
+.searchWrap > svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
+.search { width: 100%; padding: 9px 12px 9px 34px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13px; }
+.search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.slot { border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--surface-2); display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.slot:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tags { display: flex; align-items: center; gap: 6px; }
+.right { display: flex; align-items: center; gap: 6px; }
+.speciesRow { display: flex; justify-content: space-between; align-items: baseline; }
+.species { font-size: 16px; font-weight: 750; letter-spacing: -0.02em; color: var(--text); }
+.growth { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.meter { margin: 8px 0 10px; }
+.owner { margin-top: 2px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; }
