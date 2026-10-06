@@ -11,7 +11,7 @@ const MODES: ReadonlyArray<{ value: Settings['nameMode']; label: string; help: s
 
 /** Mods → Voice gần: what players see of who is talking near them (bridge/src/voice-settings.ts). */
 export function VoiceSettings() {
-  const form = useSettingsForm<Settings>('/api/voice-settings', { label: 'Voice gần', href: '#mods/voice', toBody: (d) => ({ nameMode: d.nameMode }) });
+  const form = useSettingsForm<Settings>('/api/voice-settings', { label: 'Voice gần', href: '#mods/voice', toBody: (d) => ({ nameMode: d.nameMode }), saved: 'Đã lưu, danh sách người đang nói đổi ngay.' });
   const d = form.draft;
   return (
     <>

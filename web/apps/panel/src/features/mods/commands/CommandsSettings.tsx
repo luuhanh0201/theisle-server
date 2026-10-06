@@ -15,7 +15,7 @@ const COOLDOWNS: ReadonlyArray<{ key: CdKey; label: string; hint: ReactNode }> =
 
 /** Mods → Lệnh chat: the cooldowns and which commands are on (mods/PlayerCommands). */
 export function CommandsSettings() {
-  const form = useSettingsForm<Settings>('/api/commands-settings', { label: 'Lệnh chat', href: '#mods/commands' });
+  const form = useSettingsForm<Settings>('/api/commands-settings', { label: 'Lệnh chat', href: '#mods/commands', saved: 'Đã lưu, có hiệu lực ngay.' });
   const d = form.draft;
   return (
     <>

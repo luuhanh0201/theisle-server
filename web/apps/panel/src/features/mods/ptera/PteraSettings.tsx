@@ -15,7 +15,7 @@ const FIELDS: ReadonlyArray<{ key: NumKey; label: string; min: number; max: numb
 
 /** Mods → Ptera gắp (mods/PteraCarry, bridge/src/ptera-settings.ts). */
 export function PteraSettings() {
-  const form = useSettingsForm<Settings>('/api/ptera-carry', { label: 'Ptera gắp', href: '#mods/ptera' });
+  const form = useSettingsForm<Settings>('/api/ptera-carry', { label: 'Ptera gắp', href: '#mods/ptera', saved: 'Đã lưu, mod đọc lại trong vài giây.' });
   return (
     <>
       <SectionTitle first icon="🦅" title="Cấu hình · Ptera gắp" sub="mod PteraCarry · lưu riêng, có hiệu lực trong vài giây" />

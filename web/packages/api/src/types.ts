@@ -84,11 +84,22 @@ export interface MessagesSettings {
   catalog: MessageDef[];
 }
 
-/** A feature's release level (bridge/src/svip.ts FEATURE_MODES): admin only, SVip first, everyone. */
-export type FeatureMode = 'admin' | 'testing' | 'all';
-/** GET /api/svip and the PUT's answer (server.ts svipView). PUT body: { players: [{ steamId, note }], features: { key: mode } }. */
-export interface SvipView {
-  players: Array<{ steamId: string; note: string; addedAt: number; by: string | null; name: string | null }>;
-  features: Array<{ key: string; label: string; mode: FeatureMode }>;
-  modes: Array<{ key: FeatureMode; label: string; note: string }>;
+/** GET /api/flora-settings (bridge/src/flora-settings.ts): the settings, the mod's last round, when the plants were read. */
+export interface FloraSettings {
+  control: boolean;
+  migrationNutrientPct: number; migrationMultiplier: number;
+  massNutrientPct: number; massMultiplier: number;
+  outsideAmountPct: number;
+  migrationMaxPerArea: number; massMaxPerArea: number; outsideMaxPerArea: number;
+}
+export interface FloraRound { t: number; on: boolean; active: number; plants: number; plantsNutri: number; fruits: number; fruitsNutri: number; trimmed?: number }
+export interface FloraState { settings: FloraSettings; control: FloraRound | null; t: number | null }
+
+/** GET /api/fish-settings (bridge/src/fish-settings.ts); PUT takes the settings, answers { rcon }. */
+export interface FishSettings { control: boolean; perPlayer: number; perWater: number; cooldownSec: number; species: string[] }
+export interface FishState {
+  settings: FishSettings;
+  species: Array<{ key: string; cls: string; label: string }>;
+  census: { t: number; online: number; total: number; species: Record<string, number>; perPlayer?: number; perWater?: number; cooldownSec?: number } | null;
+  disallowed: string[];
 }

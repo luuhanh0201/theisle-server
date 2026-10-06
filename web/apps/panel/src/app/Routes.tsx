@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
-import { Block } from './Block';
-import { BLOCKS } from './blocks';
-import { TABS, tabAllowed, type TabId } from './nav';
+import { PageHead, SubTabs } from '@isle/ui';
+import { ModsPage } from '../pages/mods/ModsPage';
+import { WorldPage } from '../pages/world/WorldPage';
+import { LegacyPage } from './LegacyPage';
+import { SUBS, TABS, subAllowed, tabAllowed, type TabId } from './nav';
 import { hrefOf, pickSub, useHashRoute } from './router';
 import { useSession } from './session';
 
@@ -19,5 +21,23 @@ export function Routes() {
     const want = hrefOf(tab, sub);
     if (location.hash !== want) history.replaceState(null, '', want);
   }, [tab, sub]);
-  return <Block tab={tab} sub={sub} pages={BLOCKS[tab] ?? {}} />;
+  if (tab === 'mods' && sub !== null) return <ModsPage sub={sub} />;
+  if (tab === 'world' && sub !== null) return <WorldPage sub={sub} />;
+  return <NotMoved tab={tab} sub={sub} />;
+}
+
+function NotMoved({ tab, sub }: { tab: TabId; sub: string | null }) {
+  const { access } = useSession();
+  const label = TABS.find(([id]) => id === tab)?.[1] ?? tab;
+  const subs = (SUBS[tab] ?? []).filter(([id]) => subAllowed(access, tab, id));
+  const subLabel = subs.find(([id]) => id === sub)?.[1];
+  return (
+    <div>
+      <PageHead title={label} />
+      {subs.length > 0 && sub !== null && (
+        <SubTabs label={`Mục của ${label}`} active={sub} tabs={subs.map(([id, l]) => ({ id, label: l, href: hrefOf(tab, id) }))} />
+      )}
+      <LegacyPage title={subLabel ? `${label} · ${subLabel}` : label} hash={hrefOf(tab, sub)} />
+    </div>
+  );
 }

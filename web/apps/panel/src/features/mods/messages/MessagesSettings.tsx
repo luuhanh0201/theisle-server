@@ -9,7 +9,7 @@ import styles from './MessagesSettings.module.css';
 /** Mods → Thông báo: every text players get, and how often (bridge/src/messages.ts). */
 export function MessagesSettings() {
   const form = useSettingsForm<Settings>('/api/messages', {
-    label: 'Thông báo', href: '#mods/messages',
+    label: 'Thông báo', href: '#mods/messages', saved: 'Đã lưu thông báo, tin của mod đổi trong vòng 5 giây.',
     toBody: ({ texts, countdownMarks, periodic, corpseWipe }) => ({ texts, countdownMarks, periodic, corpseWipe }),
   });
   const d = form.draft;

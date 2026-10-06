@@ -1,18 +1,18 @@
 import type { ReactNode } from 'react';
 import styles from './Checkbox.module.css';
 
-/** The system's tick box (one of a set: species, rights), with its label. On / off alone is a Switch. */
+/** A tick box for choosing several things (on / off is a Switch), as ui-inputs.js draws it. */
 export function Checkbox({ id, checked, onChange, label, disabled = false }:
-  { id?: string; checked: boolean; onChange: (v: boolean) => void; label: ReactNode; disabled?: boolean }) {
+  { id?: string; checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; disabled?: boolean }) {
   return (
     <label className={styles.wrap}>
       <input id={id} type="checkbox" className={styles.box} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-      <span>{label}</span>
+      {label !== undefined && <span>{label}</span>}
     </label>
   );
 }
 
-/** Tick boxes in a grid of tiles (the panel's .check-grid). */
+/** Tick boxes in tiles, several per row (a list of species, of commands…). */
 export function CheckGrid({ children }: { children: ReactNode }) {
   return <div className={styles.grid}>{children}</div>;
 }

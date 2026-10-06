@@ -15,7 +15,7 @@ const FIELDS: ReadonlyArray<{ key: keyof Settings; label: string; min: number; m
 
 /** Mods → Tele con non: the limits of the players' tele (Dino Live page; mods/DinoGarage garage/tele.lua). */
 export function TeleSettings() {
-  const form = useSettingsForm<Settings>('/api/tele-settings', { label: 'Tele con non', href: '#mods/tele' });
+  const form = useSettingsForm<Settings>('/api/tele-settings', { label: 'Tele con non', href: '#mods/tele', saved: 'Đã lưu, có hiệu lực ngay.' });
   return (
     <>
       <SectionTitle first icon="🌀" title="Cấu hình · Tele con non" sub="trang Dino Live của người chơi · lưu riêng, có hiệu lực ngay" />
