@@ -3,6 +3,7 @@ import type { Tab } from '../app/router';
 import { GamePage } from './game/GamePage';
 import { GaraPage } from './gara/GaraPage';
 import { HomePage } from './home/HomePage';
+import { MapPage } from './map/MapPage';
 import { RankingPage } from './ranking/RankingPage';
 import { LegacyPage } from './LegacyPage';
 
@@ -18,6 +19,7 @@ const MOVED: Partial<Record<Tab, () => ReactNode>> = {
   game: () => <GamePage />,
   gara: () => <GaraPage />,
   ranking: () => <RankingPage />,
+  map: () => <MapPage />,
 };
 
 export function Page({ tab }: { tab: Tab }) {

@@ -19,7 +19,8 @@
       "@isle/ui/*": ["packages/ui/src/*"],
       "@isle/api": ["packages/api/src/index.ts"],
       "@panel/*": ["apps/panel/src/*"],
-      "@portal/skin-editor": ["packages/types/skin-editor.d.ts"]
+      "@portal/skin-editor": ["packages/types/skin-editor.d.ts"],
+      "@portal/map": ["packages/types/map.d.ts"]
     }
   },
   "include": ["packages", "apps", "test", "vitest.config.ts", "aliases.ts"]

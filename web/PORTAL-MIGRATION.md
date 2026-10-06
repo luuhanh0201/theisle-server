@@ -17,7 +17,7 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 1. Trang chủ | **done** (below) |
 | 2. Dino Live | **done** (below) |
 | 3. Gara | **done** (below) |
-| 4. Bản đồ + Kết bạn | not started (next) |
+| 4. Bản đồ + Kết bạn | **done** (below; the whole-site regression run was stopped by the owner, see "Paused") |
 | 5. Xếp hạng | **done** (below) |
 | 6-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
@@ -37,6 +37,21 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   `OLD=1` the site before React, `LAUNCHER=1` as inside the launcher (dark only, 380 and 1366 px; the tour marked seen).
 - Moving a page: build it under `apps/portal/src/pages/<tab>/` (+ `features/` as the panel), add it to `MOVED` in
   `pages/index.tsx`, an e2e flow `e2e/flows/portal-<tab>.mjs` comparing with the old page, screenshots old / new.
+
+### Paused (2026-10-06, owner's request) and where to pick up
+
+- Done: 0 foundations, 1 Trang chủ, 2 Dino Live, 3 Gara, 4 Bản đồ + Kết bạn, 5 Xếp hạng. Web unit tests: 135 (46 of them
+  the portal's, `apps/portal/src/test/`), all passing at the last commit.
+- Each block's own e2e flow passed when it was done. After block 4 the full re-run of every portal flow (frame, home,
+  game, gara, ranking, map) was stopped before it ran: run it first when picking up (the commands under "How to work on
+  it"; LIVE_COOKIE for game / gara / ranking / map, PANEL_COOKIE for frame / home, both REX_COOKIE=<PANEL_COOKIE> and
+  LIVE_COOKIE set in the env for the map flow). The live AI added for the map could change a count another flow checks.
+- Next: 6 Skin Studio (mind the notes below on skin3d.js and what renderGame did for it), then 7 Voice 3D, 8 Túi đồ,
+  9 Cửa hàng, 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
+  `lib/mapService.ts`), 2 across pages (Ctrl+K, the tour, its first-visit opening), 3 other pages, 4 the switch.
+- Still open with the owner: html.in-launcher (below).
+- Stop the local servers: `for p in $(pgrep -f "^node dist/index.js") $(pgrep -f "^isle-e2e-feed"); do kill $p; done`
+  (never `pkill -f` with a pattern: it matches the shell running it).
 
 ### Owner's decision pending: html.in-launcher
 
@@ -105,6 +120,17 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**4. Bản đồ + Kết bạn: done 2026-10-06.** The map engine stays `portal/public/map.js` (shared with the launcher's big map,
+bigmap.js), imported as `@portal/map` (aliases.ts, typed by `packages/types/map.d.ts`) and bundled into the React build.
+`lib/mapService.ts` keeps the one map of the visit (made for a logged-in player, as app.js renderMap; its AI / zones /
+heat loaders; the friends' spots), for the Overlay block's mini map and big map too. `features/map/{MapCard, Friends}.tsx`,
+`pages/map/MapPage.tsx`: AI every 2 s, zones and heat every minute while the page is shown; Kết bạn (search, ask,
+accept, decline, cancel, remove with a second click in 4 s, Xem centres the map), its lists every 2 s on the page.
+`live-feed.mjs` writes 3 AI and a fish in live.json; `local-portal.sh` copies the map data (bridge/public/map) into the
+gitignored portal/public/map. Checks: `test/map.test.tsx` (5, map.js mocked), e2e `portal-map.mjs` (8 flows, all OK:
+old vs new for Live Tester, Rex and a guest: status, chips, message, note, friends card, menu badge, and the picture
+drawn (24 x 16 grey, mean difference < 12); Live Tester asks Rex, Rex accepts, Live Tester ends it).
 
 **5. Xếp hạng: done 2026-10-06** (before Bản đồ, the bigger block). `pages/ranking/RankingPage.tsx`,
 `features/ranking/Ranking.tsx`, `lib/queries.ts useLeaderboard` (every 15 s). Checks: `test/ranking.test.tsx` (4), e2e

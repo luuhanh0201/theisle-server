@@ -9,4 +9,6 @@ export const aliases = [
   { find: /^@panel\/(.*)$/, replacement: at('./apps/panel/src/$1') },
   // The skin colour editor's data and colour maths, shared with the players' Skin Studio (AGENTS.md "UI").
   { find: /^@portal\/skin-editor$/, replacement: at('../portal/public/skin-editor.js') },
+  // The players' map engine, shared with the launcher's big map (bigmap.js): the Bản đồ page draws with it.
+  { find: /^@portal\/map$/, replacement: at('../portal/public/map.js') },
 ];

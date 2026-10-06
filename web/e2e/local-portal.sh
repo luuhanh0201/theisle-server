@@ -27,6 +27,8 @@ nohup node "$REPO/web/e2e/live-feed.mjs" "$R/Mods/StatsLogger/Saved" "$BRIDGE_PI
 echo "feed pid $! (stops with the bridge)"
 SECRET=e2e-local-portal-session-secret-0123456789
 mkdir -p "$R/downloads"
+# The map's picture and places: the bridge's copy, as the portal deploy ships it (portal/public/map/ is gitignored).
+[ -f "$REPO/portal/public/map/gateway.json" ] || cp -r "$REPO/bridge/public/map" "$REPO/portal/public/map"
 # The launcher's version file (Trang chủ's download button reads it).
 printf '{"version":"2.8.1","windows":{"file":"XomGay-Launcher-Setup-2.8.1.exe","size":104857600}}\n' > "$R/downloads/version.json"
 cd "$REPO/portal"

@@ -26,9 +26,13 @@ const snap = () => line('snapshots.ndjson', {
   loc: { x: 148697, y: 349211, z: 2000 }, yaw: 90, ping: 40,
 });
 // live.json (the 1 s file, replaced): the tele and the map read the player from it.
+// Three AI and a fish around them, for the map.
 const live = () => writeFileSync(join(dir, 'live.json'), JSON.stringify({ t: now(), players: [{
   id: ID, x: 148697, y: 349211, z: 2000, yaw: 90, health: 600, stamina: 80, hunger: 20, thirst: 50, oxygen: 90, blood: 100, growth: 0.35,
-}] }));
+}], ai: { t: now(), aiAlive: 3, list: [
+  { c: 'BP_Boar_C', x: 150697, y: 349211, z: 2000, hp: 100 }, { c: 'BP_Boar_C', x: 148697, y: 352211, z: 2000, hp: 100 },
+  { c: 'BP_Deer_C', x: 146697, y: 347211, z: 2000, hp: 100 }, { c: 'BP_Fish_Catfish_C', x: 149697, y: 350211, z: 1900, hp: 10, f: true },
+] } }));
 const tick = () => { snap(); live(); };
 tick();
 // --- the fake DinoGarage ---------------------------------------------------------------------
