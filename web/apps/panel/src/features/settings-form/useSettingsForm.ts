@@ -19,10 +19,12 @@ const same = (a: unknown, b: unknown): boolean => JSON.stringify(canon(a)) === J
  *
  * When the GET carries more than the PUT takes (a status line, a catalog), `select` picks the
  * editable part out of it; `raw` is the latest GET, whole. The PUT's answer goes through
- * `fromSave` (default: `select`), and to `onSaved` (a toast that depends on it).
+ * `fromSave` (default: `select`), and to `onSaved` (a toast that depends on it). `toBody` turns the
+ * draft into the PUT's body when the form edits another shape (a text of lines for a list).
  */
 export function useSettingsForm<T extends object, R = T>(url: string, page: {
   label: string; href: string; select?: (raw: R) => T; fromSave?: (answer: any) => T; onSaved?: (answer: any) => void;
+  toBody?: (draft: T) => unknown;
 }) {
   const { withToken } = useSession();
   const qc = useQueryClient();
@@ -30,8 +32,8 @@ export function useSettingsForm<T extends object, R = T>(url: string, page: {
   const pickRef = useRef(pick);
   pickRef.current = pick;
   const fromSave: (answer: any) => T = page.fromSave ?? pick;
-  const savedRef = useRef({ fromSave, onSaved: page.onSaved });
-  savedRef.current = { fromSave, onSaved: page.onSaved };
+  const savedRef = useRef({ fromSave, onSaved: page.onSaved, toBody: page.toBody });
+  savedRef.current = { fromSave, onSaved: page.onSaved, toBody: page.toBody };
   const q = useQuery({ queryKey: [url], queryFn: () => getJson<R>(url), refetchInterval: 2000 });
   const server = q.data === undefined ? undefined : pickRef.current(q.data);
   // What the form was loaded from, and what the admin made of it.
@@ -56,7 +58,8 @@ export function useSettingsForm<T extends object, R = T>(url: string, page: {
     setSaving(true);
     try {
       return await withToken(`lưu ${page.label}`, async (token) => {
-        const answer = await adminFetch<unknown>(url, 'PUT', token, draft);
+        const { toBody } = savedRef.current;
+        const answer = await adminFetch<unknown>(url, 'PUT', token, toBody ? toBody(draft) : draft);
         const saved = savedRef.current.fromSave(answer);
         mineUntil.current = Date.now() + 15_000;
         setBase(saved);

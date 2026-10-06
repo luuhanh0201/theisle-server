@@ -151,3 +151,14 @@ export interface GarageSettings {
 
 /** GET /api/garage-settings (server.ts): with how many members each tier has. */
 export interface GarageSettingsStatus extends GarageSettings { memberCounts: { vip: number; svip: number; admin: number } }
+
+/** GET /api/panel-access and the PUT's answer (bridge/src/panel-access.ts, server.ts). PUT body: { ips }. */
+export interface PanelAccess {
+  ips: string[];
+  /** false: the list comes from PANEL_ALLOWED_IPS in .env, never saved on the panel. */
+  saved: boolean;
+  /** Where this admin comes from (null through the SSH tunnel), and the rule that lets it in (an IPv6 /64). */
+  yourIp: string | null;
+  yourRule: string | null;
+  webEnabled: boolean;
+}

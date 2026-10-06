@@ -14,6 +14,7 @@ picks the next step below, and updates this file in the same commit as the pages
 | Tính năng mod | Thông báo | `features/mods/messages/MessagesSettings.tsx` | `/api/messages` | 2026-10-06 |
 | Thế giới | Thực vật | `features/world/flora/FloraSettings.tsx` | `/api/flora-settings` | 2026-10-06 |
 | Thế giới | Cá | `features/world/fish/FishSettings.tsx` | `/api/fish-settings` | 2026-10-06 |
+| Quản trị | Truy cập panel | `features/admin/access/PanelAccessSettings.tsx` | `/api/panel-access` | 2026-10-06 |
 | Gara | Cài đặt gara | `features/garage/settings/GarageSettings.tsx` | `/api/garage-settings` | 2026-10-06 |
 
 Which pages a block has in React: `pages/<tab>/index.ts`, all listed in `app/blocks.ts`. The frame
@@ -46,6 +47,8 @@ until every block is moved and `/` switches to the React build.
   reads the PUT's answer when it has another shape (default `select`); `onSaved(answer)` for a
   toast; `update(fn)` edits nested parts (a list item, one text). Comparison ignores key order.
   After a save the GET is fetched again (no "Có thay đổi mới" for 15 s: it is the admin's own).
+- `toBody(draft)` in `useSettingsForm` when the form edits another shape than the PUT takes
+  (panel access: a text of lines, PUT `{ ips }`).
 - Tests of a page: `apps/panel/src/test/fakeBridge.tsx` fakes `/api/me` and one route.
 
 ## How each move is checked
