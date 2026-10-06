@@ -23,6 +23,9 @@ sh "$REPO/web/e2e/local-bridge.sh" "$R" | grep -v '^PANEL_COOKIE=' | tee "$R/bri
 # "Live Tester" in game (a snapshot every 3 s, live-feed.mjs, which also answers the web garage's commands as
 # DinoGarage would) for the in-game flows: its cookie is LIVE_COOKIE.
 BRIDGE_PID=$(sed -n 's/^bridge pid \([0-9]*\).*/\1/p' "$R/bridge.out")
+# The bag's items (Túi đồ, Cửa hàng), made through the bridge's admin API once it answers.
+for i in 1 2 3 4 5 6 7 8 9 10; do curl -s -o /dev/null http://127.0.0.1:8091/api/health && break; sleep 0.5; done
+node "$REPO/web/e2e/seed-bag.mjs" http://127.0.0.1:8091 e2e-local-token
 nohup node "$REPO/web/e2e/live-feed.mjs" "$R/Mods/StatsLogger/Saved" "$BRIDGE_PID" "$R/Mods/DinoGarage/Saved" > "$R/feed.log" 2>&1 &
 echo "feed pid $! (stops with the bridge)"
 SECRET=e2e-local-portal-session-secret-0123456789

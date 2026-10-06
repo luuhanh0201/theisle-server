@@ -21,7 +21,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 5. Xếp hạng | **done** (below) |
 | 6. Skin Studio | **done** (below) |
 | 7. Voice 3D | **done** (below) |
-| 8-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 8. Túi đồ | **done** (below) |
+| 9-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -48,8 +49,7 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   game, gara, ranking, map) was stopped before it ran: run it first when picking up (the commands under "How to work on
   it"; LIVE_COOKIE for game / gara / ranking / map, PANEL_COOKIE for frame / home, both REX_COOKIE=<PANEL_COOKIE> and
   LIVE_COOKIE set in the env for the map flow). The live AI added for the map could change a count another flow checks.
-- Next: 8 Túi đồ,
-  9 Cửa hàng, 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
+- Next: 9 Cửa hàng, 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
   `lib/mapService.ts`), 2 across pages (Ctrl+K, the tour, its first-visit opening), 3 other pages, 4 the switch.
 - Still open with the owner: html.in-launcher (below).
 - Stop the local servers: `for p in $(pgrep -f "^node dist/index.js") $(pgrep -f "^isle-e2e-feed"); do kill $p; done`
@@ -122,6 +122,18 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**8. Túi đồ: done 2026-10-06.** `pages/bag/BagPage.tsx`, `features/bag/{Bag, BagDialog, parts}.tsx`, `bag.ts` (groups, what can be
+used now, what does not fit, the tabs, the dino item's slot choices, the hòm's strip). The cards, tabs, search, the use box
+(care items, prime, a mutation / ticket / clear into a slot), a dino box opened with its roll, the dino item into the garage,
+a hòm's gacha roll, a skin worn: the same texts, ids (`bag-*`, `#bag-dlg`), requests and answers as app.js. The dialog is
+shown when a use asks for it (showModal once, as before) and a late "close" event of the box before never drops a new one.
+One difference, a fix: a refusal inside the use box stays there (before React the box redrew over it at once).
+`e2e/seed-bag.mjs` (run by local-portal.sh) makes one item of each kind through the bridge's admin API and gives them to
+Live Tester (5 copies) and Rex (1); `live-feed.mjs` answers a use per kind (odd refused, even done, the copy then taken by
+the bridge). Checks: `test/bag.test.tsx` (9), e2e `portal-bag.mjs` (6 flows, 34 checks: the in-game steps compared with the
+old page, counts as N since each run uses some; Rex; a guest sent home; each in-game run waits for a fresh minute, the
+portal takes 12 writes a player a minute), screenshots old / new at 380 and 1366: the same but the rare cards' shine.
 
 **7. Voice 3D: done 2026-10-06.** voice.js ported to `lib/voice.ts`, an engine for the whole visit (`startVoice()` in
 main.tsx: the keys, the launcher's push-to-talk and range key, `window.isleVoice`, /api/me for the login card): the room

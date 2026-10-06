@@ -4,7 +4,7 @@
 // It also plays DinoGarage for the web garage: it reads the bridge's inbox.json and answers as the mod
 // would (portal_command, then garage_store_result): a store's odd tries fail (moved), the even ones
 // succeeds and the dino lands in a new slot; a redeem starts ("Restoring ..."); a skin from Skin Studio: odd tries
-// refused (no live dino), even ones written (then a "skin" event with the new colours). Other commands: unanswered.
+// refused (no live dino), even ones written (then a "skin" event with the new colours). An item used from the bag, per kind of use: odd tries refused, even ones done. Other commands: unanswered.
 //   node e2e/live-feed.mjs <dir of events.ndjson> <bridge pid> <DinoGarage Saved dir>
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -45,6 +45,7 @@ tick();
 let lastId = 0;
 let stores = 0;
 let skins = 0;
+const uses = {};
 const event = (o) => line('events.ndjson', { t: now(), ...o });
 function game() {
   if (!garage) return;
@@ -74,6 +75,12 @@ function game() {
         event({ type: 'skin', steamId: c.steamId, name: NAME, skin: { ...SKIN, colors: c.skin.colors } });
         setTimeout(() => event({ type: 'skin', steamId: c.steamId, name: NAME, skin: SKIN }), 6000);
       }
+    } else if (c.type === 'mutation') {
+      // An item used from the bag (Túi đồ): per kind of use, odd tries refused, even ones done (the bridge then takes the copy).
+      const n = uses[c.mode] = (uses[c.mode] ?? 0) + 1;
+      const ok = n % 2 === 0;
+      event({ type: 'portal_command', id: c.id, steamId: c.steamId, action: 'mutation', ok,
+        messages: [ok ? `Đã dùng vật phẩm (${c.mode}).` : 'Bạn cần đang điều khiển một con dino còn sống.'] });
     } else if (c.type === 'redeem') {
       event({ type: 'portal_command', id: c.id, steamId: c.steamId, action: 'redeem', ok: true, slot: c.slot, messages: [`Restoring '${c.slot}'. Stand still.`] });
     }

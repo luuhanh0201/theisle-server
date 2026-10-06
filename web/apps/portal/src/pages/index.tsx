@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Tab } from '../app/router';
+import { BagPage } from './bag/BagPage';
 import { GamePage } from './game/GamePage';
 import { GaraPage } from './gara/GaraPage';
 import { HomePage } from './home/HomePage';
@@ -24,6 +25,7 @@ const MOVED: Partial<Record<Tab, () => ReactNode>> = {
   map: () => <MapPage />,
   skin: () => <SkinPage />,
   voice: () => <VoicePage />,
+  bag: () => <BagPage />,
 };
 
 export function Page({ tab }: { tab: Tab }) {
