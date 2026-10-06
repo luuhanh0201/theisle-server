@@ -1643,6 +1643,15 @@ async function handlePanel(
     case '/':
       await sendFile(res, 'index.html');
       return;
+    // The panel in React (web/apps/panel, built into public/next/), beside this one until every
+    // page is moved; its pages are #addresses, so /next/ is its only page.
+    case '/next':
+      res.writeHead(302, { location: '/next/' });
+      res.end();
+      return;
+    case '/next/':
+      await sendFile(res, 'next/index.html');
+      return;
     default:
       // The skin page's 3D: the portal's own viewer and models (config.portalPublicDir).
       // …and the skin colour editor, shared with the players' Skin Studio (skin-editor.js).

@@ -1,0 +1,77 @@
+/*
+ * The panel's colour tokens and page base (copied from bridge/public/index.html, the panel before
+ * React, so both look the same while they live side by side). Global on purpose: every component's
+ * CSS Module reads these variables. Light by default, dark with <html data-theme="dark">.
+ */
+:root {
+  color-scheme: light;
+  --bg: #f4f6f9;
+  --bg-glow: radial-gradient(1200px 600px at 10% -10%, rgba(16, 185, 129, 0.10), transparent 60%),
+             radial-gradient(900px 500px at 110% 10%, rgba(99, 102, 241, 0.08), transparent 60%);
+  --surface: #ffffff;
+  --surface-2: #f7f8fb;
+  --surface-3: #eef1f5;
+  --border: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.14);
+  --text: #0f172a;
+  --text-2: #334155;
+  --muted: #64748b;
+  --accent: #059669;
+  --accent-2: #10b981;
+  --accent-soft: rgba(16, 185, 129, 0.12);
+  --kill: #dc2626;     --kill-soft: rgba(220, 38, 38, 0.10);
+  --dmg: #d97706;      --dmg-soft: rgba(217, 119, 6, 0.12);
+  --chat: #2563eb;     --chat-soft: rgba(37, 99, 235, 0.10);
+  --grow: #7c3aed;     --grow-soft: rgba(124, 58, 237, 0.10);
+  --gar: #0891b2;      --gar-soft: rgba(8, 145, 178, 0.10);
+  --neutral-soft: rgba(100, 116, 139, 0.12);
+  --gold: #d4a017; --silver: #94a3b8; --bronze: #c2703d;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+  --map-bg: #0d2350;
+  --radius: 14px;
+  --series-1: #2a78d6; --series-2: #eb6834;
+  --status-good: #0ca30c; --status-warning: #fab219; --status-critical: #d03b3b;
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --series-1: #3987e5; --series-2: #d95926;
+  --bg: #090b10;
+  --bg-glow: radial-gradient(1200px 600px at 10% -10%, rgba(16, 185, 129, 0.13), transparent 60%),
+             radial-gradient(900px 500px at 110% 10%, rgba(99, 102, 241, 0.10), transparent 60%);
+  --surface: #10141b;
+  --surface-2: #151a23;
+  --surface-3: #1b212c;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.11);
+  --text: #eef1f6;
+  --text-2: #c5ccd8;
+  --muted: #8590a3;
+  --accent: #34d399;
+  --accent-2: #10b981;
+  --accent-soft: rgba(52, 211, 153, 0.12);
+  --kill: #f87171;     --kill-soft: rgba(248, 113, 113, 0.12);
+  --dmg: #fbbf24;      --dmg-soft: rgba(251, 191, 36, 0.12);
+  --chat: #60a5fa;     --chat-soft: rgba(96, 165, 250, 0.12);
+  --grow: #a78bfa;     --grow-soft: rgba(167, 139, 250, 0.12);
+  --gar: #22d3ee;      --gar-soft: rgba(34, 211, 238, 0.12);
+  --neutral-soft: rgba(148, 163, 184, 0.12);
+  --gold: #facc15; --silver: #cbd5e1; --bronze: #f59e0b;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg-glow), var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  font: 14px/1.5 var(--font);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+a { color: inherit; }
+button { font: inherit; }
+[hidden] { display: none !important; }

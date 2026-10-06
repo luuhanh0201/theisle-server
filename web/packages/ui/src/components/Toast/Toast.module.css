@@ -1,0 +1,5 @@
+.wrap { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: flex; flex-direction: column; gap: 8px; max-width: min(420px, calc(100vw - 32px)); }
+.toast { padding: 12px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow); border: 1px solid var(--border); background: var(--surface); animation: slide-in .3s ease; }
+.ok { border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
+.err { border-color: color-mix(in srgb, var(--kill) 40%, transparent); color: var(--kill); }
+@keyframes slide-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }

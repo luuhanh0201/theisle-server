@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "baseUrl": ".",
+    "paths": {
+      "@isle/ui": ["packages/ui/src/index.ts"],
+      "@isle/ui/*": ["packages/ui/src/*"],
+      "@isle/api": ["packages/api/src/index.ts"],
+      "@panel/*": ["apps/panel/src/*"]
+    }
+  },
+  "include": ["packages", "apps", "test", "vitest.config.ts", "aliases.ts"]
+}

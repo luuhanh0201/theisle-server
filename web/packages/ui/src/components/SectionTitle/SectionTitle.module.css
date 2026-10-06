@@ -1,0 +1,13 @@
+.title { display: flex; align-items: center; gap: 10px; margin: 26px 0 12px; flex-wrap: wrap; }
+.first { margin-top: 0; }
+.title h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+@media (max-width: 480px) { .title h2 { white-space: normal; text-wrap: balance; } }
+.sub { color: var(--muted); font-size: 12.5px; }
+.ico { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; font-size: 15px; }
+.accent { background: var(--accent-soft); color: var(--accent); }
+.chat { background: var(--chat-soft); color: var(--chat); }
+.kill { background: var(--kill-soft); color: var(--kill); }
+.dmg { background: var(--dmg-soft); color: var(--dmg); }
+.grow { background: var(--grow-soft); color: var(--grow); }
+.gar { background: var(--gar-soft); color: var(--gar); }
+.neutral { background: var(--neutral-soft); color: var(--muted); }

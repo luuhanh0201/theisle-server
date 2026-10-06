@@ -1,0 +1,8 @@
+.unsaved { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50; max-width: calc(100% - 32px);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; border-radius: 12px;
+  background: var(--surface); border: 1px solid #fb923c; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: 13px; }
+.unsaved a { color: #fb923c; }
+.fresh { position: fixed; left: 16px; right: 16px; top: 14px; z-index: 60; width: fit-content; margin: 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--accent-2); box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: 13px; }
+.muted { color: var(--muted); }

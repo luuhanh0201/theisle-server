@@ -165,6 +165,8 @@
     main { padding: 20px 16px 48px; }
   }
   @media (max-width: 480px) { aside .me-card .me-who b { max-width: 76px; } }
+  /* The link to the panel in React: the sidebar only, it does not fit the narrow top bar. */
+  @media (max-width: 880px) { #to-next { display: none; } }
 
   /* ---- cards ---------------------------------------------------------- */
   .card {
@@ -1633,6 +1635,8 @@
         <button type="button" class="btn-ghost" id="logout">Đăng xuất</button>
       </div>
       <button class="theme-btn" id="theme" type="button"></button>
+      <!-- The panel in React (web/apps/panel), being moved page by page: the same page there. -->
+      <a class="theme-btn" id="to-next" href="/next/" style="text-decoration:none">Panel mới (React, thử)</a>
     </div>
   </aside>
 
@@ -5033,6 +5037,7 @@ function setCount(tab, n) {
 }
 
 // --- theme --------------------------------------------------------------------
+$('to-next').addEventListener('click', (e) => { e.preventDefault(); location.href = `/next/${location.hash}`; });
 
 function storedTheme() {
   try { return localStorage.getItem('theme'); } catch { return null; }

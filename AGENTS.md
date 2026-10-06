@@ -77,6 +77,22 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   from one bundle); never one `<img src=".../<slug>.svg">` each, many at once
   trip the proxy (503). After adding an icon: `node scripts/build-mutation-icons.mjs`.
 
+## Panel in React (web/), being moved page by page
+- `web/` (React 19 + Vite + TypeScript, TanStack Query, CSS Modules), one `npm install` there.
+  Built into `bridge/public/next/` (gitignored; `deploy.sh` builds it with the bridge), served at
+  `/next/` beside the panel before React (`/`). Same `#tab/sub` addresses on both.
+- Layout: `web/packages/ui` (shared controls: Button, Card, Field, NumberInput, Switch, SubTabs,
+  Dialog, Toast… never the browser's own controls), `web/packages/api` (getJson / adminFetch, the
+  bridge's answer types: keep them in step with bridge/src), `web/apps/panel/src/{app,pages,features}`:
+  `app/` the frame (nav.ts pages + permissions, router.ts, session.tsx token), `pages/<tab>/` puts
+  a block's sub-pages together, `features/<area>/<thing>/` one feature (component, hook, CSS, test).
+- A settings page: `useSettingsForm(url, { label, href })` + `<SettingsPage>` (loads once,
+  "Có thay đổi mới" bar, unsaved drafts kept across pages, Lưu with the login's token).
+- Moving a page: build it in React, add it to its `pages/<tab>`, keep the old one until the whole
+  block is done; a page not moved yet shows a link to the old panel (`LegacyPage`).
+- Check: `cd web && npm test && npm run build`; screenshots of the old and new page at 380 and
+  1366 px, light and dark, look the same.
+
 ## Launcher
 - Inside Xóm Gáy Launcher (`window.isleLauncher`, `html.in-launcher`) nothing about
   downloading the launcher shows: no download page, link, button, badge or promo.

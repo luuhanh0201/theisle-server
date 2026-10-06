@@ -1,0 +1,10 @@
+.card { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 12px; }
+.who { display: flex; flex-direction: column; min-width: 0; }
+.who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); }
+@media (max-width: 880px) {
+  .card { padding: 5px 6px 5px 10px; min-width: 0; }
+  .sub { display: none; }
+  .who b { max-width: 130px; }
+}
+@media (max-width: 480px) { .who b { max-width: 76px; } }

@@ -1,0 +1,8 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import '@isle/ui/tokens.css';
+import { App } from './app/App';
+
+const root = document.getElementById('root');
+if (root === null) throw new Error('index.html has no #root');
+createRoot(root).render(<StrictMode><App /></StrictMode>);

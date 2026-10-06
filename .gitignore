@@ -35,3 +35,6 @@ launcher/dist/
 portal/public/dino3d/
 .agy
 .claude
+# the panel in React, built from web/ (npm run build) at deploy
+bridge/public/next/
+web/node_modules/
