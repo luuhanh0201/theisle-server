@@ -65,7 +65,8 @@ export const can = (a: Access, key: string): boolean => a.super || a.perms === n
 export function subAllowed(a: Access, tab: TabId, sub: string): boolean {
   const need = SUB_NEED[tab]?.[sub];
   if (need === undefined) return true;
-  return need === '*' ? a.super : can(a, need);
+  // Not known yet (/api/me pending): nothing hidden, as `can` (the bridge refuses anyway).
+  return need === '*' ? a.super || a.perms === null : can(a, need);
 }
 
 export function tabAllowed(a: Access, tab: TabId): boolean {

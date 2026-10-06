@@ -26,3 +26,9 @@ test('permissions: pages hidden without theirs; "*" is the super admin only', ()
   expect(subAllowed({ perms: new Set(), super: true }, 'members', 'perms')).toBe(true);
   expect(tabAllowed(all, 'traffic')).toBe(true);
 });
+
+test('before /api/me answers nothing is hidden: a deep link to a super-admin page stays', () => {
+  const pending = { perms: null, super: false };
+  expect(pickSub(pending, 'members', 'perms')).toBe('perms');
+  expect(subAllowed({ perms: new Set(), super: false }, 'members', 'perms')).toBe(false);
+});

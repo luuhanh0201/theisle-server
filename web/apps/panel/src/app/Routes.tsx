@@ -3,6 +3,7 @@ import { PageHead, SubTabs } from '@isle/ui';
 import { ModsPage } from '../pages/mods/ModsPage';
 import { WorldPage } from '../pages/world/WorldPage';
 import { GaragePage } from '../pages/garage/GaragePage';
+import { MembersPage } from '../pages/members/MembersPage';
 import { prefillCreator } from '../features/garage/creator/DinoCreator';
 import { LegacyPage } from './LegacyPage';
 import { SUBS, TABS, subAllowed, tabAllowed, type TabId } from './nav';
@@ -21,13 +22,16 @@ export function Routes() {
   const tab: TabId = tabAllowed(access, route.tab) ? route.tab : TABS.find(([id]) => tabAllowed(access, id))?.[0] ?? 'overview';
   const sub = pickSub(access, tab, route.sub);
   // The address says where the panel is (a bookmark, the back button): the sub-page picked goes into it.
+  // Not while /api/me is pending: who may see what is not known yet (a deep link must not be lost).
+  const known = access.perms !== null;
   useEffect(() => {
     const want = hrefOf(tab, sub);
-    if (location.hash !== want) history.replaceState(null, '', want);
-  }, [tab, sub]);
+    if (known && location.hash !== want) history.replaceState(null, '', want);
+  }, [tab, sub, known]);
   if (tab === 'mods' && sub !== null) return <ModsPage sub={sub} />;
   if (tab === 'world' && sub !== null) return <WorldPage sub={sub} />;
   if (tab === 'garage' && sub !== null) return <GaragePage sub={sub} />;
+  if (tab === 'members' && sub !== null) return <MembersPage sub={sub} />;
   return <NotMoved tab={tab} sub={sub} />;
 }
 

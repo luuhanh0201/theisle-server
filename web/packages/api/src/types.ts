@@ -141,3 +141,23 @@ export interface GarageSettings {
   tiers: { vip: { maxSlots: number; cooldown: number }; svip: { maxSlots: number; cooldown: number } };
 }
 export interface GarageSettingsState extends GarageSettings { memberCounts?: { vip?: number; svip?: number; admin?: number } }
+
+/** GET /api/members (bridge/src/server.ts): the Game.ini lists and who is fixed. */
+export interface MembersData {
+  admins: string[]; whitelist: string[]; vips: string[]; whitelistOn: boolean;
+  names: Record<string, string>; owners?: string[]; superAdmin?: string | null; pendingRestart?: boolean;
+}
+/** GET / PUT /api/svip (bridge/src/svip.ts). */
+export interface SvipData {
+  players: Array<{ steamId: string; note: string; addedAt: number; by: string | null; name?: string | null }>;
+  features: Array<{ key: string; label: string; mode: 'admin' | 'testing' | 'all' }>;
+  modes?: Array<{ key: 'admin' | 'testing' | 'all'; label: string; note: string }>;
+}
+/** GET /api/permissions (bridge/src/permissions.ts): the super admin's page. */
+export interface PermDraft { role: string; allow: string[]; deny: string[]; ingame: boolean }
+export interface PermissionsData {
+  perms: Array<{ key: string; group: string; label: string }>;
+  roles: Record<string, { label: string; perms: string[] }>;
+  admins: Array<{ steamId: string; name: string | null; super: boolean; owner: boolean; perm: PermDraft; set: boolean; inGameNow: boolean }>;
+  superAdmin: string | null;
+}

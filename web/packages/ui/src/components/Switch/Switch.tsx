@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 import styles from './Switch.module.css';
 
 /** An on / off switch (never a tick box for on / off), with its label beside it. */
-export function Switch({ id, checked, onChange, label, disabled = false }:
-  { id?: string; checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; disabled?: boolean }) {
+export function Switch({ id, checked, onChange, label, disabled = false, 'aria-label': ariaLabel }:
+  { id?: string; checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; disabled?: boolean; 'aria-label'?: string }) {
   return (
     <label className={styles.wrap}>
-      <input id={id} type="checkbox" role="switch" className={styles.sw} checked={checked} disabled={disabled}
+      <input id={id} type="checkbox" role="switch" className={styles.sw} checked={checked} disabled={disabled} aria-label={ariaLabel}
         onChange={(e) => onChange(e.target.checked)} />
       {label !== undefined && <span>{label}</span>}
     </label>
