@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Tab } from '../app/router';
+import { GamePage } from './game/GamePage';
 import { HomePage } from './home/HomePage';
 import { LegacyPage } from './LegacyPage';
 
@@ -12,6 +13,7 @@ export const TITLES: Record<Tab, string> = {
 /** The pages moved to React so far (PORTAL-MIGRATION.md); the rest link to the site before React. */
 const MOVED: Partial<Record<Tab, () => ReactNode>> = {
   home: () => <HomePage />,
+  game: () => <GamePage />,
 };
 
 export function Page({ tab }: { tab: Tab }) {

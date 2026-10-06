@@ -13,6 +13,29 @@ export interface PlayerVitals {
   health: number | null; stamina: number | null; hunger: number | null; thirst: number | null; blood: number | null; oxygen: number | null;
 }
 
+/** The prime tasks of the dino played now (bridge prime.ts primeBoard). */
+export interface PrimeBoard {
+  isPrime: boolean | null; eligible: boolean | null; elder: boolean | null; elderStacks: number | null;
+  met: number; needed: number; growth: number | null; deadline: number; locked: boolean;
+  conditions: Array<{ n: number; label: string; short?: string; passive: boolean; verified?: boolean; met: boolean | null }>;
+}
+
+/** Tele con non as /me shows it (bridge player-api.ts teleView). */
+export interface TeleView {
+  maxGrowthPct: number; targetMaxGrowthPct: number; codeMinutes: number; countdownS: number; combatS: number; cooldownS: number;
+  code: { code: string; expiresAt: number; inUse?: boolean } | null;
+  cooldownLeft: number;
+}
+
+/** Serving a prison sentence (bridge prison.ts playerView). */
+export interface PrisonView { escaped?: boolean; remainingSec: number; offense: string; reason: string }
+
+/** GET /api/command/<id>: a command's outcome (bridge player-api.ts). */
+export interface CommandResult {
+  status: 'pending' | 'done'; action?: string; ok?: boolean; messages?: string[]; error?: string | null;
+  final?: { ok: boolean; reason: string | null } | null;
+}
+
 /** The dino played now (playerView `dino`), null when not in game. */
 export interface PlayerDino {
   species: string | null;
@@ -20,7 +43,7 @@ export interface PlayerDino {
   vitals: PlayerVitals;
   max: PlayerVitals;
   skin: Record<string, unknown> | null;
-  prime: Record<string, unknown> | null;
+  prime: PrimeBoard | null;
   position: { x: number; y: number; z: number | null; yaw: number | null } | null;
   trail: Array<{ x: number; y: number; t: number }>;
   elderStacks?: number | null;
@@ -70,8 +93,8 @@ export interface PlayerMe {
   economy?: Shown<{ currency: string; balance: number; checkin: Checkin }>;
   quests?: Shown<Quests>;
   bagUnlimited?: boolean;
-  prison?: Record<string, unknown> | null;
-  tele?: Shown<Record<string, unknown>>;
+  prison?: PrisonView | null;
+  tele?: Shown<TeleView>;
   /** Kết bạn: how many ask them (the Map's badge). */
   friends?: Shown<{ incoming: number }>;
 }

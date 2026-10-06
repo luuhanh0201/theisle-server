@@ -23,7 +23,7 @@ export default [
       check('Đăng xuất button', h.$('#logout-btn')?.textContent === 'Đăng xuất');
       await h.until(() => h.$('#srv-name')?.textContent === 'Test');
       check('server name in the menu and the tab', h.$('#srv-name').textContent === 'Test' && document.title === 'Test', document.title);
-      check('slots in the menu', h.$('#sidebar-slots')?.textContent === '0 / 100 slot', h.$('#sidebar-slots')?.textContent);
+      check('slots in the menu (Live Tester online)', h.$('#sidebar-slots')?.textContent === '1 / 100 slot', h.$('#sidebar-slots')?.textContent);
       check('no Discord without an invite', !h.$('#srv-discord'));
       check('download links on the web', h.$('#get-launcher')?.getAttribute('href') === '/tai.html' && h.$('#sidebar-launcher-link')?.getAttribute('href') === '/tai.html');
       check('no overlay page, no game mode outside the launcher', !h.$('[data-nav=overlay]') && !h.$('#game-mode'));

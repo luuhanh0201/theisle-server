@@ -11,6 +11,7 @@ const me = (x: Partial<PlayerMe> = {}): PlayerMe => ({
   steamId: '76561198000000011', name: 'Rex', online: false, dino: null,
   stats: { kills: 0, deaths: 0, spawns: 0, playtime: 0, longestLife: 0, sessions: 0 }, lives: [], garage: [], ...x,
 });
+const BOARD = { isPrime: true, eligible: true, elder: false, elderStacks: 0, met: 6, needed: 5, growth: 0.8, deadline: 0.75, locked: true, conditions: [] };
 const wrap = (ui: React.ReactNode) => render(<QueryClientProvider client={new QueryClient()}><ToastProvider>{ui}</ToastProvider></QueryClientProvider>);
 
 describe('dino helpers', () => {
@@ -106,7 +107,7 @@ describe('the launcher hub', () => {
     expect(q('#hub-dino-badge')).toBe('○ SẢNH CHỜ');
     expect(q('#hub-gara-sub')).toBe('1/∞ dino');
     re(me({ online: true, dino: { species: 'Tyrannosaurus', growth: 0.8, vitals: { health: 500, stamina: 50, hunger: null, thirst: 10, blood: null, oxygen: null },
-      max: { health: 1000, stamina: 100, hunger: 100, thirst: 0, blood: null, oxygen: null }, skin: null, prime: { prime: true }, position: null, trail: [] } }));
+      max: { health: 1000, stamina: 100, hunger: 100, thirst: 0, blood: null, oxygen: null }, skin: null, prime: BOARD, position: null, trail: [] } }));
     expect(q('#hub-dino-badge')).toBe('● ĐANG CHƠI');
     expect(q('#hub-dino-growth')).toBe('🦕 Growth: 80%');
     expect(q('#hub-val-health')).toBe('500');
@@ -114,6 +115,7 @@ describe('the launcher hub', () => {
     expect(q('#hub-val-hunger')).toBe('--');
     expect((container.querySelector('#hub-fill-thirst') as HTMLElement).style.width).toBe('0%');
     expect(q('#hub-prime-text')).toBe('👑 Đã đạt danh hiệu Prime');
-    expect(container.querySelector('#hub-dino-card')?.className).toBe('hub-card hub-dino-card tier-amber prime');
+    // A prime board alone (no elder stack) keeps the plain tier, as before React (getHeroCardTier reads .prime.prime).
+    expect(container.querySelector('#hub-dino-card')?.className).toBe('hub-card hub-dino-card tier-fossil');
   });
 });

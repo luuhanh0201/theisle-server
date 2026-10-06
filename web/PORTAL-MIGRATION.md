@@ -15,7 +15,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 |---|---|
 | 0. Foundations | **done** (below) |
 | 1. Trang chủ | **done** (below) |
-| 2-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 2. Dino Live | **done** (below) |
+| 3-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -54,8 +55,15 @@ markup intended: the owner decides. The flows check the current behaviour (`port
   `pushOverlayGame` (launcher overlay, each second), the mini map frames (`sendMiniFrame`), the big map's AI / zones / heat,
   `voice.js` (the room stays joined across pages; `lib/voiceDot.ts` already carries the menu dot), `overlay-settings.js`.
 - The tour opens by itself on a first visit (`isle_portal_tour_done` in localStorage): keep that (block 2).
-- The fake data's player is not in game (`online: false`): the Dino Live / tele / skin blocks need a live snapshot seeded
-  in `local-bridge.sh` (or a stubbed /api/me in the flow) to test the "in game" side.
+- In game on fake data: `local-portal.sh` also starts `e2e/live-feed.mjs` ("Live Tester", a snapshot and live.json every
+  3 s) and prints `LIVE_COOKIE`; a flow run with it sees a player in game. A flow can switch the login with an `init`
+  setting `document.cookie` (see `portal-game.mjs`: REX_COOKIE, a guest); put those flows last.
+- `e2e/flows/compare.mjs`: `save(key, parts)` on the old page, `same(key, parts)` on the new one, part by part (shown
+  text, or `sel@attr`); use it for every page.
+- What app.js renderGame did for the Skin page, still to move with Skin Studio: `window.skin3d.follow` (the preview shows
+  the dino played now), the active colour swatches (`skin-active-swatches-box`), the kept colours (`renderKept`).
+- skin3d.js, once imported (lib/dino3d.ts), binds its skin editor to `#skin-species` if present at that moment: the Skin
+  block must mind that (load it after its markup, or drive the viewer itself as the panel does).
 - No inline script anywhere (the portal's CSP): `index.html` has none, the build none (checked by portal/test).
 
 ## 0. Foundations (before any page): done 2026-10-06
@@ -94,6 +102,16 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**2. Dino Live: done 2026-10-06.** `pages/game/GamePage.tsx`, `features/game/{DinoHero, Tele, PrimeCard, Stats}.tsx`,
+`components/TierFx.tsx` (the tier decorations + F badge, for Gara too), `lib/{commands (waitCommand, ERROR_VI), dino3d}`;
+types `PrimeBoard`, `TeleView`, `PrisonView`, `CommandResult`. Two things differ from before React, both fixes: the vitals
+show as soon as a dino spawns (the old grid kept "Chưa có chỉ số" until a reload when the page was opened without a dino),
+and the lab 3D box stays hidden when no model loads (the old one stayed empty and logged an error). Kept as it was: a prime
+board alone (no elder stack) leaves the card's plain tier (getHeroCardTier read `.prime.prime`). Checks:
+`test/game.test.tsx` (10), e2e `portal-game.mjs` (95: old vs new in game, not in game, a guest; tele typing, a wrong code
+and your own code refused as before React, a code taken / copied / dropped; lab), screenshots old / new: the same but the
+running play time.
 
 **1. Trang chủ: done 2026-10-06.** `pages/home/HomePage.tsx`, `features/home/{Rewards, LauncherHub, ServerStatus,
 LauncherPromo, Guide}.tsx`, `lib/{dino, amber}`, `components/RelBadge`; types `Checkin`, `Quest(s)` in `@isle/api`.

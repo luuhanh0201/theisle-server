@@ -1,7 +1,8 @@
 #!/bin/sh
 # The player site on fake data for the e2e flows: the local bridge (local-bridge.sh, port 8091) with
 # its /player-api open to a local portal server (port 8092), logged in as "Rex Tester"
-# (76561198000000011, a Tyrannosaurus): Trang chủ's rewards open (below). Prints the cookie to pass as PANEL_COOKIE:
+# (76561198000000011, not in game): Trang chủ's rewards open (below). Prints the cookie to pass as PANEL_COOKIE,
+# and LIVE_COOKIE for "Live Tester" (76561198000000013), in game (live-feed.mjs):
 #   sh web/e2e/local-portal.sh /tmp/isle-portal-e2e        (then, from web/:)
 #   PANEL_URL=http://127.0.0.1:8092 COOKIE_NAME=isle_session PANEL_COOKIE=<printed> CHROME=<chromium> node e2e/run.mjs e2e/flows/portal-frame.mjs
 # The React pages are at /next/ (npm run build in web/), the site before React at /.
@@ -18,7 +19,11 @@ printf '{"players":[],"features":{"bag":"all","starter":"all","amber":"all","que
 printf '{"checkinMinutes":1,"checkinRewards":[10,20,30,40,50,60,0],"checkinBonusItem":null}\n' > "$R/data/economy-settings.json"
 printf '{"perDay":2,"defs":[{"id":"play1","kind":"play","label":"Chơi 1 phút","target":1,"reward":25,"diet":"all","period":"day","enabled":true},{"id":"walk99","kind":"distance","label":"Đi 99 km","target":99,"reward":500,"diet":"all","period":"day","enabled":true},{"id":"week-play","kind":"play","label":"Chơi 10 giờ trong tuần","target":600,"reward":400,"diet":"all","period":"week","enabled":true}]}\n' > "$R/data/quests-settings.json"
 printf '{"offered":{"76561198000000011":%s},"claimed":{}}\n' "$T" > "$R/data/starter.json"
-sh "$REPO/web/e2e/local-bridge.sh" "$R" | grep -v '^PANEL_COOKIE='
+sh "$REPO/web/e2e/local-bridge.sh" "$R" | grep -v '^PANEL_COOKIE=' | tee "$R/bridge.out"
+# "Live Tester" in game (a snapshot every 3 s, live-feed.mjs) for the Dino Live flows: its cookie is LIVE_COOKIE.
+BRIDGE_PID=$(sed -n 's/^bridge pid \([0-9]*\).*/\1/p' "$R/bridge.out")
+nohup node "$REPO/web/e2e/live-feed.mjs" "$R/Mods/StatsLogger/Saved" "$BRIDGE_PID" > "$R/feed.log" 2>&1 &
+echo "feed pid $! (stops with the bridge)"
 SECRET=e2e-local-portal-session-secret-0123456789
 mkdir -p "$R/downloads"
 # The launcher's version file (Trang chủ's download button reads it).
@@ -27,4 +32,5 @@ cd "$REPO/portal"
 PORTAL_PORT=8092 PORTAL_BASE_URL=http://127.0.0.1:8092 BRIDGE_URL=http://127.0.0.1:8091 PORTAL_SESSION_SECRET=$SECRET \
   PORTAL_TRUST_PROXY=0 PORTAL_DOWNLOADS_DIR="$R/downloads" nohup node dist/index.js > "$R/portal.log" 2>&1 &
 echo "portal pid $! (log $R/portal.log)"
-node -e "import('./dist/session.js').then((m) => console.log('PANEL_COOKIE=' + m.sign('$SECRET', '76561198000000011', Math.floor(Date.now() / 1000) + 86400)))"
+node -e "import('./dist/session.js').then((m) => { const exp = Math.floor(Date.now() / 1000) + 86400;
+  console.log('PANEL_COOKIE=' + m.sign('$SECRET', '76561198000000011', exp)); console.log('LIVE_COOKIE=' + m.sign('$SECRET', '76561198000000013', exp)); })"

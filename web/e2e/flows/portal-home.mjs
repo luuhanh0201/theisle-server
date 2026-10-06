@@ -127,6 +127,6 @@ export default [
       check('hub as at first', h.$('#hub-dino-species').textContent === 'Chưa vào game' && h.$('#hub-dino-badge').textContent === '○ CHƯA VÀO' && h.$('#hub-dino-growth').textContent === 'Growth: 0%');
       check('hub without a tier', h.$('#hub-dino-card').className === 'hub-card hub-dino-card', h.$('#hub-dino-card').className);
       check('dock: Cất & Khôi phục', h.$('#hub-gara-sub').textContent === 'Cất & Khôi phục');
-      check('server status', h.$('#srv-slots-text').textContent === '0 / 100' && h.$('#srv-status-text').textContent === 'Máy chủ đang khởi động lại…', h.$('#srv-status-text').textContent);`,
+      check('server status', h.$('#srv-slots-text').textContent === '1 / 100' && h.$('#srv-status-text').textContent === 'Máy chủ đang khởi động lại…', h.$('#srv-status-text').textContent);`,
   },
 ];
