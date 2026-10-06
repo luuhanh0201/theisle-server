@@ -429,11 +429,12 @@ H.timed(MOD .. ": damage hook", function(selfParam, targetParam, amountParam)
         -- Only a hit with an identifiable player behind it can explain a
         -- death later. Recording an unattributable one would overwrite a real
         -- killer and turn an attributed death into an anonymous one.
+        local attackerGrowth = vital(attacker, "growth")
         if victimId and attackerId then
             recentHits[victimId] = {
                 by      = attackerId,
                 species = attackerSpecies,
-                growth  = vital(attacker, "growth"),
+                growth  = attackerGrowth,
                 at      = os.time(),
                 amount  = amount,
             }
@@ -452,6 +453,12 @@ H.timed(MOD .. ": damage hook", function(selfParam, targetParam, amountParam)
             tick            = tick,
             clockMs         = math.floor(clock * 1000),
             loc             = locationOf(target),
+            -- Where the attacker stood and both sizes (2026-10-07): the bridge
+            -- measures the bite's reach and flags one far beyond its species'
+            -- usual (bridge/src/damage-range.ts).
+            attackerLoc     = locationOf(attacker),
+            attackerGrowth  = attackerGrowth,
+            victimGrowth    = vital(target, "growth"),
         })
     end)
 end))

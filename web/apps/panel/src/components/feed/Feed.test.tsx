@@ -32,6 +32,14 @@ test('a hold bite: its ticks under the damage', () => {
   expect(screen.getByText(/−350/).closest('span')).toHaveTextContent('−350cắn giữ ×3');
 });
 
+test('a bite\'s reach: the metres, and the tag when far beyond its species\' usual', () => {
+  show([{ ...bite, reach: { distM: 7.25, limitM: 9.4, basis: 'learned', far: false } }, { ...bite, id: 5, reach: { distM: 22.5, limitM: 9.4, basis: 'learned', far: true } }]);
+  expect(screen.getByText('7,3 m')).toBeInTheDocument();
+  expect(screen.getByText('22,5 m')).toBeInTheDocument();
+  expect(screen.getAllByText('xa bất thường')).toHaveLength(1);
+  expect(screen.getByText('xa bất thường')).toHaveAttribute('title', 'Tầm cắn thường của loài này tới 9,4 m');
+});
+
 test('the 📍 opens the scene; without one saved, only the death\'s spot (and it closes)', async () => {
   show([death]);
   await userEvent.click(screen.getByRole('button', { name: /📍 148\.697, 349\.211/ }));

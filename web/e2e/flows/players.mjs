@@ -29,6 +29,24 @@ export default [
     `,
   },
   {
+    name: 'Sát thương: đòn cắn 30 m bị đánh dấu xa bất thường, người có đòn xa, lọc chỉ đòn xa',
+    path: '/#players/damage',
+    run: `
+      const d = await h.api('/api/damage-reach');
+      check('bridge: đòn 30 m là xa (chưa học: giới hạn mặc định)', d.far.length === 1 && d.far[0].reach.distM === 30 && d.far[0].reach.far === true, d.far.map((b) => b.reach));
+      check('mục Sát thương trong thanh mục', h.$$('a').some((a) => a.textContent.trim() === 'Sát thương' && a.getAttribute('href') === '#players/damage'));
+      check('bảng đòn xa: khoảng cách, giới hạn, hai vị trí', document.body.textContent.includes('30 m') && document.body.textContent.includes('giới hạn 25 m')
+        && document.body.textContent.includes('145.697, 349.211') && document.body.textContent.includes('148.697, 349.211'));
+      check('người có đòn xa: Rex Tester, 1 đòn, ×1,2', h.$$('tr').some((r) => r.textContent.includes('Rex Tester') && r.textContent.includes('×1,2')));
+      check('log: cách 30 m, nhãn xa bất thường', document.body.textContent.includes('cách 30 m') && h.byText('xa bất thường', 'span') !== null);
+      h.click(h.byText('Chỉ đòn xa', 'button')); await h.sleep(300);
+      check('lọc chỉ đòn xa: vẫn còn đòn đó', document.body.textContent.includes('cách 30 m'));
+      h.type(h.$('input[type=search]'), 'không-có-ai'); await h.sleep(300);
+      check('tìm không thấy', document.body.textContent.includes('Không có đòn nào phù hợp'));
+      check('tầm cắn theo loài: chưa học (đòn xa không được học)', document.body.textContent.includes('Chưa có đòn cắn bình thường nào để học'));
+    `,
+  },
+  {
     name: 'Killfeed: lần giết hiện đủ, tìm, mở hiện trường',
     path: '/#players/killfeed',
     run: `

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import type { MutationsData } from '@isle/api';
+import type { BiteReach, MutationsData } from '@isle/api';
 import { PlayerLink } from '../dino/Identity';
 import { MutIcon } from '../dino/Mutations';
 import { refFor } from '../../features/mutations/reference';
-import { dinoName, isNum, mutName, num, pct } from '../../lib/format';
+import { dinoName, isNum, meters, mutName, num, pct } from '../../lib/format';
 import { dur } from '../../lib/time';
 import s from './Feed.module.css';
 
@@ -37,10 +37,14 @@ const lastLine = (e: FeedEvent): string => (Array.isArray(e.messages) && e.messa
 export function describe(e: FeedEvent, ref: MutationsData | null, scene: (e: FeedEvent) => ReactNode): [ReactNode, ReactNode] {
   const mico = (m: string) => (refFor(ref, m) ? <MutIcon name={refFor(ref, m)!.name} /> : null);
   switch (e.type) {
-    case 'damage':
+    case 'damage': {
       // One entry per bite; the damage (a hold bite: its ticks summed) is in the value column.
+      // `reach` (bridge damage-reach.ts): how far the bite reached, far beyond its species' usual or not.
+      const r = e.reach as BiteReach | undefined;
       return [<><W id={e.attacker} name={e.attackerName} /> <span className={s.muted}>cắn</span> <W id={e.victim} name={e.victimName} /></>,
-        `${dinoName(e.attackerSpecies)} → ${dinoName(e.victimSpecies)}${loc(e.loc)}`];
+        <>{dinoName(e.attackerSpecies)} → {dinoName(e.victimSpecies)}{loc(e.loc)}{r && <> · cách <b className={r.far ? s.kill : undefined}>{meters(r.distM)}</b>
+          {r.far && <span className={s.farTag} title={`Tầm cắn thường của loài này tới ${meters(r.limitM)}`}>xa bất thường</span>}</>}</>];
+    }
     case 'death': {
       if (e.cause === 'garage') return [<><W id={e.steamId} name={e.name} /> cất dino vào gara</>, 'cái chết này không được tính'];
       if (e.cause === 'admin') return [<><W id={e.steamId} name={e.name} />, dino bị admin xoá</>, 'cái chết này không được tính'];

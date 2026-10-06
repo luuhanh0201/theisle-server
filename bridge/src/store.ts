@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { Catalog } from './catalog.js';
 import { SpeciesStats } from './species-stats.js';
 import { GroundPoints } from './ground-points.js';
+import { DamageReach } from './damage-reach.js';
 
 export interface KillRecord {
   t: number;
@@ -205,6 +206,9 @@ function moved(points: readonly TrailPoint[], next: TrailPoint): boolean {
   return Math.hypot(next.x - last.x, next.y - last.y) >= config.trailMinMove;
 }
 
+/** Far bites kept for the panel (Người chơi → Sát thương). */
+const FAR_BITES_KEPT = 500;
+
 function pushBounded<T>(list: T[], item: T, max: number): void {
   list.push(item);
   if (list.length > max) list.splice(0, list.length - max);
@@ -222,6 +226,10 @@ export class Store {
   readonly #feed: FeedEntry[] = [];
   readonly #kills: FeedEntry[] = [];
   readonly #chat: FeedEntry[] = [];
+  /** Bites far beyond their species' reach (damage-reach.ts), the newest FAR_BITES_KEPT. */
+  readonly #farBites: FeedEntry[] = [];
+  /** Each species' usual bite reach, learned from the bites (damage-reach.ts). */
+  readonly reach = new DamageReach();
   readonly #timelines = new Map<string, FeedEntry[]>();
   readonly #trails = new Map<string, TrailPoint[]>();
   /** steamId -> life spawnedAt -> the whole path of that life (last few lives only). */
@@ -391,11 +399,17 @@ export class Store {
           if (life !== null) life.damageTaken += amount;
         }
         if (kind === 'bite') {
+          // How far a player's bite reached, learned per species (damage-reach.ts); a hold
+          // bite's ticks keep its first one. Bites on AI teach the limits too.
+          const reach = event.attacker === 'ai' ? null : this.reach.judge(event);
           // A bite on or by AI counts in the stats above but is not logged (most
           // of the hits, and nothing an admin looks for): kept off the feed and the
           // timelines, still tracked so its hold ticks merge into one bite.
           const withAi = event.attacker === 'ai' || event.victim === 'ai';
-          const entry = (withAi ? { ...event, ticks: 1, id: 0 } : this.#push({ ...event, ticks: 1 }, [event.attacker, event.victim])) as FeedEntry & DamageBite;
+          const bite = { ...event, ticks: 1, ...(reach !== null ? { reach } : {}) };
+          const entry = (withAi ? { ...bite, id: 0 } : this.#push(bite, [event.attacker, event.victim])) as FeedEntry & DamageBite;
+          // A far bite is listed even on AI (Người chơi → Sát thương): a reach cheat bites AI too.
+          if (reach?.far) pushBounded(this.#farBites, entry, FAR_BITES_KEPT);
           this.#lastBite.set(`${event.attacker}>${event.victim}`, { t: event.t, last: amount, bite: event.bite, entry });
         }
         break;
@@ -621,6 +635,11 @@ export class Store {
 
   killfeed(limit: number): FeedEntry[] {
     return this.#kills.slice(-limit).reverse();
+  }
+
+  /** Far bites, newest first (Người chơi → Sát thương). */
+  farBites(limit: number): FeedEntry[] {
+    return this.#farBites.slice(-limit).reverse();
   }
 
   chat(limit: number): FeedEntry[] {

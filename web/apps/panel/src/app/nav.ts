@@ -27,7 +27,7 @@ export const HEADS: Record<TabId, readonly [string, string]> = {
 };
 
 export const SUBS: Partial<Record<TabId, ReadonlyArray<readonly [string, string]>>> = {
-  players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban'], ['prison', 'Nhà tù']],
+  players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['damage', 'Sát thương'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban'], ['prison', 'Nhà tù']],
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
   items: [['skins', 'Skin dino'], ['mutations', 'Mutation'], ['tickets', 'Phiếu & hộp']],
@@ -39,7 +39,7 @@ export const SUBS: Partial<Record<TabId, ReadonlyArray<readonly [string, string]
 
 const TAB_NEED: Partial<Record<TabId, string>> = { overview: 'players.view', map: 'map.view', traffic: 'traffic.view', quests: 'economy.view' };
 const SUB_NEED: Partial<Record<TabId, Record<string, string>>> = {
-  players: { list: 'players.view', killfeed: 'players.view', leaderboard: 'players.view', chat: 'players.view', bans: 'bans.view', prison: 'prison.view' },
+  players: { list: 'players.view', killfeed: 'players.view', damage: 'players.view', leaderboard: 'players.view', chat: 'players.view', bans: 'bans.view', prison: 'prison.view' },
   world: { overview: 'world.view', flora: 'world.view', fish: 'world.view' },
   garage: { stored: 'garage.view', settings: 'garage.view' },
   items: { skins: 'items.view', mutations: 'items.view', tickets: 'items.view' },

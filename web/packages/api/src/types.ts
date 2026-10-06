@@ -273,3 +273,16 @@ export interface BackupsView {
   parts: Array<{ key: string; label: string }>;
   phase: string;
 }
+
+/** How far a bite reached (bridge/src/damage-reach.ts Reach), on a damage line as `reach`. */
+export interface BiteReach { distM: number; limitM: number; basis: 'learned' | 'species' | 'default'; far: boolean }
+/** One species' usual bite reach as learned (damage-reach.ts ReachGroup). */
+export interface ReachGroup { species: string; size: 'young' | 'grown' | 'all'; samples: number; medianM: number; p95M: number; limitM: number | null }
+/** GET /api/damage-reach: the rules, each species' reach, the far bites (damage lines, newest first). */
+export interface DamageReachView {
+  rules: { MIN_SAMPLES: number; KEEP: number; FLOOR_M: number; DEFAULT_M: number; HARD_M: number; FENCE: number; YOUNG: number };
+  groups: ReachGroup[];
+  far: Array<{ id: number; t: number; type: 'damage'; attacker: string; victim: string; amount: number | null; ticks: number;
+    attackerName?: string; victimName?: string; attackerSpecies?: string; victimSpecies?: string; attackerGrowth?: number; victimGrowth?: number;
+    loc?: { x: number; y: number; z?: number }; attackerLoc?: { x: number; y: number; z?: number }; reach: BiteReach }>;
+}

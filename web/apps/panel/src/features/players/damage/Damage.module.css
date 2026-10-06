@@ -1,0 +1,5 @@
+.stack { display: grid; gap: 16px; }
+.hint { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.sub { margin: 14px 0 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.far { color: var(--kill); }
+.nowrap { white-space: nowrap; }

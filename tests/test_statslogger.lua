@@ -140,6 +140,10 @@ if dmg then
         dmg.attackerName == "Alpha" and dmg.victimName == "Bravo"
         and dmg.victimSpecies ~= nil, json.encode(dmg))
   check("victim position carried", dmg.loc and dmg.loc.y == 2)
+  check("attacker position carried (the bite's reach)", dmg.attackerLoc and dmg.attackerLoc.x == 1 and dmg.attackerLoc.z == 3,
+        json.encode(dmg.attackerLoc or {}))
+  check("both growths carried", dmg.attackerGrowth == 0.9 and dmg.victimGrowth == 0.2,
+        tostring(dmg.attackerGrowth) .. " / " .. tostring(dmg.victimGrowth))
 end
 
 say("")

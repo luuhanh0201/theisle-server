@@ -36,3 +36,6 @@
   .feed li { grid-template-columns: 58px 26px minmax(0, 1fr) auto; }
   .kind { display: none; }
 }
+/* A bite far beyond its species' usual reach (bridge damage-reach.ts). */
+.farTag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap;
+  color: var(--kill); background: color-mix(in srgb, var(--kill) 14%, transparent); border: 1px solid color-mix(in srgb, var(--kill) 35%, transparent); }

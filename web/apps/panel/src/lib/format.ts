@@ -30,3 +30,5 @@ export function initials(name: string | null | undefined, id: string): string {
   if (s) return ([...s][0] ?? '?').toUpperCase();
   return String(id).slice(-2);
 }
+/** 7.25 → "7,3 m" (one decimal, vi-VN). */
+export const meters = (v: number | null | undefined): string => (isNum(v) ? `${v.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} m` : '-');

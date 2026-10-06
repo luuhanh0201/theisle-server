@@ -206,7 +206,7 @@ export function permissionFor(method: string, path: string): string | null {
   if (path === '/api/chat/delete' || path === '/api/server/audit/delete') return '*';
 
   if (read) {
-    if (['/api/players', '/api/online', '/api/feed', '/api/killfeed', '/api/chat', '/api/leaderboard', '/api/kill-scene'].includes(path)
+    if (['/api/players', '/api/online', '/api/feed', '/api/killfeed', '/api/chat', '/api/leaderboard', '/api/kill-scene', '/api/damage-reach'].includes(path)
       || /^\/api\/player\/[^/]+(\/path\/\d+)?$/.test(path) || /^\/api\/lives\/\d{17}$/.test(path)) return 'players.view';
     if (path === '/api/bans') return 'bans.view';
     if (path === '/api/prison') return 'prison.view';

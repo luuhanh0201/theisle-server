@@ -81,6 +81,7 @@ import {
 import { addPrimeFix, listPrimeFixes } from './prime-fixes.js';
 import type { Prison } from './prison.js';
 import type { KillScenes } from './kill-scene.js';
+import { REACH_RULES } from './damage-reach.js';
 import { type Item, ITEM_TYPES, RARITIES, LIGHT_MAX, LIGHT_MIN, createItem, getItem, grantItem, listItems, ownerCounts, ownersOf, resolveSkin,
   fillBags, inventoryOf, revokeItem, speciesKey, updateItem } from './items.js';
 import { queueSkinRepaint } from './commands.js';
@@ -1386,6 +1387,10 @@ async function handlePanel(
     }
     case '/api/killfeed':
       sendJson(res, 200, { events: store.killfeed(parseLimit(url, 100, 500)) });
+      return;
+    case '/api/damage-reach':
+      // Người chơi → Sát thương: each species' usual bite reach as learned, and the far bites (damage-reach.ts).
+      sendJson(res, 200, { rules: REACH_RULES, groups: store.reach.groups(), far: store.farBites(parseLimit(url, 200, 500)) });
       return;
     case '/api/chat': {
       // Lines the super admin deleted are left out; they alone get each line's key (to delete).

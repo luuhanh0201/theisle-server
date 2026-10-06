@@ -7,6 +7,8 @@
  * resolved, which happens until the VITALS names are verified.
  */
 
+import type { Reach } from './damage-reach.js';
+
 export interface BaseEvent {
   /** Unix seconds, set by the Lua side. */
   t: number;
@@ -37,8 +39,14 @@ export interface DamageEvent extends BaseEvent {
   victimSpecies?: string;
   /** Where the victim was. */
   loc?: Loc;
+  /** StatsLogger (from 2026-10-07): where the attacker was, and both growths (damage-reach.ts). */
+  attackerLoc?: Loc;
+  attackerGrowth?: number;
+  victimGrowth?: number;
   /** Set by the bridge (store.ts): the hold bite's ticks this bite is the sum of (1: a plain bite). */
   ticks?: number;
+  /** Set by the bridge (damage-reach.ts): how far the bite reached, and whether that is far for its species. */
+  reach?: Reach;
   /** StatsLogger (from 2026-09-28): the bite this hit belongs to, its tick in it, ms clock. */
   bite?: string;
   tick?: number;
