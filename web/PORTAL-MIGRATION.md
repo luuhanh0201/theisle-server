@@ -51,6 +51,11 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   it"; LIVE_COOKIE for game / gara / ranking / map, PANEL_COOKIE for frame / home, both REX_COOKIE=<PANEL_COOKIE> and
   LIVE_COOKIE set in the env for the map flow). The live AI added for the map could change a count another flow checks.
 - Next (after 6-10 and 2, done the same day): 3 other pages, 4 the switch.
+- Regression after 10 and 2 (2026-10-06): web unit tests 181 / 181, the build; every portal flow (frame, home, voice,
+  across, game, gara, ranking, map, skin, bag, shop, overlay) and every panel flow (overview, players, members, mods,
+  world, map, garage, items, quests, server, traffic, admin, panels) ALL OK on fresh local stacks; portal/ tests 35 / 35.
+  bridge/ tests: 365 / 366, the one failing (`bans.test.mjs`, the Discord ban line's times: 17:56 where it expects 10:56)
+  fails on main as it is, outside the player site.
 - Still open with the owner: html.in-launcher (below).
 - Stop the local servers: `for p in $(pgrep -f "^node dist/index.js") $(pgrep -f "^isle-e2e-feed"); do kill $p; done`
   (never `pkill -f` with a pattern: it matches the shell running it).
