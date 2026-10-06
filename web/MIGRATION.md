@@ -14,6 +14,7 @@ picks the next step below, and updates this file in the same commit as the pages
 | Tính năng mod | Thông báo | `features/mods/messages/MessagesSettings.tsx` | `/api/messages` | 2026-10-06 |
 | Thế giới | Thực vật | `features/world/flora/FloraSettings.tsx` | `/api/flora-settings` | 2026-10-06 |
 | Thế giới | Cá | `features/world/fish/FishSettings.tsx` | `/api/fish-settings` | 2026-10-06 |
+| Gara | Cài đặt gara | `features/garage/settings/GarageSettings.tsx` | `/api/garage-settings` | 2026-10-06 |
 
 Which pages a block has in React: `pages/<tab>/index.ts`, all listed in `app/blocks.ts`. The frame
 of every block (heading, sub-tabs, a `LegacyPage` link for a page not moved) is `app/Block.tsx`, so
@@ -25,8 +26,7 @@ until every block is moved and `/` switches to the React build.
 ## Next steps (in this order)
 
 1. ~~Thế giới → Thực vật, Cá~~ done. Thế giới → Tổng quan is a live page: step 4.
-2. **Gara → Cài đặt gara** (`garage/settings`): `select` drops `memberCounts` (the old panel's
-   FORM_PAGES does the same); the tier table shows the counts from `form.raw`.
+2. ~~Gara → Cài đặt gara~~ done.
 3. **Quản trị → Truy cập panel, Discord**, **Thành viên → SVip / Phân quyền**, **Server → Cấu hình
    game**: settings pages too (see FORM_PAGES in `bridge/public/index.html` for each GET and what
    it leaves out of the comparison).

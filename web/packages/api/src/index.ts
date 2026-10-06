@@ -2,6 +2,6 @@
 export { ApiError, LOGIN_URL, adminFetch, getJson, onLoginEnded } from './http';
 export type {
   CommandName, CommandsSettings, FishCensus, FishSaved, FishSettings, FishSettingsStatus, FloraControl, FloraSettings,
-  FloraSettingsStatus, Health, Me, MessageDef, MessagesSettings, MessagesWithCatalog, PeriodicMessage,
-  PteraSettings, ServerStatus, TeleSettings, VoiceNameMode, VoiceSettings, VoiceSettingsStatus,
+  FloraSettingsStatus, GarageSettings, GarageSettingsStatus, Health, Me, MessageDef, MessagesSettings, MessagesWithCatalog, PeriodicMessage,
+  PteraSettings, RedeemAt, ServerStatus, TeleSettings, TierRule, VoiceNameMode, VoiceSettings, VoiceSettingsStatus,
 } from './types';

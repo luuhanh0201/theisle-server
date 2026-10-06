@@ -132,3 +132,22 @@ export interface FishSettingsStatus {
 
 /** PUT /api/fish-settings's answer: `rcon` 'sent' | 'not needed' | 'unavailable' | 'restart needed' | 'failed: …'. */
 export interface FishSaved { settings: FishSettings; disallowed: string[]; rcon: string }
+
+/** Where a dino comes out of the garage (bridge/src/garage.ts RedeemAt). */
+export type RedeemAt = 'current' | 'stored' | 'choice';
+/** One member tier's garage rule (maxSlots 0 = no limit). */
+export interface TierRule { maxSlots: number; cooldown: number }
+
+/** PUT /api/garage-settings and its answer (bridge/src/garage.ts GarageSettings). */
+export interface GarageSettings {
+  redeemAt: RedeemAt;
+  maxSlots: number;
+  storeCountdown: number;
+  cooldown: number;
+  minHealthPct: number;
+  minGrowthPct: number;
+  tiers: { vip: TierRule; svip: TierRule };
+}
+
+/** GET /api/garage-settings (server.ts): with how many members each tier has. */
+export interface GarageSettingsStatus extends GarageSettings { memberCounts: { vip: number; svip: number; admin: number } }

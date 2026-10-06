@@ -34,4 +34,6 @@ export const API = {
     census: { t: now() - 30, online: 3, total: 21, species: { BP_Catfish_C: 9, BP_Hoplo_C: 7, BP_Longear_C: 5 }, perPlayer: 12, perWater: 28, cooldownSec: 0.5 },
     disallowed: ['Forktail', 'Muskel'],
   }),
+  '/api/garage-settings': { redeemAt: 'stored', maxSlots: 3, storeCountdown: 30, cooldown: 180, minHealthPct: 20, minGrowthPct: 0,
+    tiers: { vip: { maxSlots: 5, cooldown: 120 }, svip: { maxSlots: 0, cooldown: 60 } }, memberCounts: { vip: 4, svip: 2, admin: 3 } },
 };
