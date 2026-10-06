@@ -21,10 +21,12 @@ const same = (a: unknown, b: unknown): boolean => JSON.stringify(canon(a)) === J
  * R is what the GET answers, T what the form edits (R itself unless `select` picks it out: a GET
  * with a status or a catalog beside the settings). `latest` is the last GET, whole (live numbers).
  * `toBody` turns the draft into what the PUT takes. `saved`: the toast after a save (a text, or one
- * made from the PUT's answer). After a save the GET is read again: what it says is what the form holds.
+ * made from the PUT's answer); `putUrl` when the PUT has its own address. After a save the GET is read again: what it says is what the form holds.
  */
 export function useSettingsForm<R extends object, T extends object = R>(url: string, page: {
   label: string; href: string; select?: (raw: R) => T; toBody?: (draft: T) => unknown; saved?: string | ((answer: unknown) => string);
+  /** Where the PUT goes when it is not `url` (a GET with more than the settings: /api/prison → /api/prison/settings). */
+  putUrl?: string;
 }) {
   const { withToken } = useSession();
   const toast = useToast();
@@ -59,7 +61,7 @@ export function useSettingsForm<R extends object, T extends object = R>(url: str
     try {
       return await withToken(`lưu ${p.label}`, async (token) => {
         const body = p.toBody ? p.toBody(draft) : draft;
-        const answer = await adminFetch<unknown>(url, 'PUT', token, opts?.extra ? { ...(body as object), ...opts.extra } : body);
+        const answer = await adminFetch<unknown>(p.putUrl ?? url, 'PUT', token, opts?.extra ? { ...(body as object), ...opts.extra } : body);
         mineUntil.current = Date.now() + 15_000;
         const fresh = pick(await qc.fetchQuery({ queryKey: [url], queryFn: () => getJson<R>(url), staleTime: 0 }));
         setBase(fresh);

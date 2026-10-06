@@ -34,9 +34,10 @@ for (const theme of ['dark', 'light']) for (const w of [380, 1366]) for (const p
     try { return r.fulfill({ body: await readFile(root + f), contentType: TYPES[f.split('.').pop()] ?? 'application/octet-stream' }); }
     catch { return r.fulfill({ status: 404, body: '' }); }
   });
-  await page.goto(`${process.env.PANEL_URL ?? 'http://panel.test'}/next/#${p}`);
+  // OLD=1 (with PANEL_URL): the panel before React, for the side-by-side check.
+  await page.goto(`${process.env.PANEL_URL ?? 'http://panel.test'}${process.env.OLD ? '/' : '/next/'}#${p}`);
   await page.waitForTimeout(1200);
-  const name = `${p.replace('/', '-')}-${w}-${theme}.png`;
+  const name = `${process.env.OLD ? 'old-' : ''}${p.replace('/', '-')}-${w}-${theme}.png`;
   await page.screenshot({ path: join(out, name), fullPage: true });
   if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) console.log('SIDEWAYS SCROLL:', name);
   await ctx.close();

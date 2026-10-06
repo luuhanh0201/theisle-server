@@ -1,7 +1,8 @@
 #!/bin/sh
 # A local bridge for the e2e flows, on fake data (never the live server's): two players who
 # spawned (BP_ class names, as StatsLogger sends them, with mutations seen), four garage slots,
-# a second admin for the Phân quyền flow; a chat, a bite and a kill (Người chơi), a growth step. Prints the cookie to pass as PANEL_COOKIE.
+# a second admin for the Phân quyền flow; a chat, a bite and a kill (Người chơi), a growth step,
+# two bans in the game's list and a prison zone. Prints the cookie to pass as PANEL_COOKIE.
 #   sh web/e2e/local-bridge.sh /tmp/isle-e2e        (then, from web/:)
 #   PANEL_URL=http://127.0.0.1:8091 PANEL_COOKIE=<printed> CHROME=<chromium> node e2e/run.mjs e2e/flows/mods.mjs
 # Stop it: kill the pid it prints. Needs `npm run build` in bridge/ and web/ first.
@@ -28,6 +29,15 @@ EOF
 for s in a b; do for p in 11 12; do
   printf '{"version":1,"slot":"%s","capturedAt":%s,"classPath":"%s","growth":0.7}\n' "$s" "$T" "$REX" > "$R/Mods/DinoGarage/Saved/stored/765611980000000${p}__$s.json"
 done; done
+# The game's ban list (one active ban, one expired) and a prison zone (Người chơi → Ban / Nhà tù).
+D0=$(date -d "@$((T-3600))" +%Y.%m.%d-%H.%M.%S); D1=$(date -d "@$((T+3*86400-3600))" +%Y.%m.%d-%H.%M.%S)
+D2=$(date -d "@$((T-10*86400))" +%Y.%m.%d-%H.%M.%S); D3=$(date -d "@$((T-9*86400))" +%Y.%m.%d-%H.%M.%S)
+cat > "$R/PlayerBans.json" <<BANS
+{"bannedPlayerData":[{"steamId":"76561198000000099","playerName":"Griefer","banReason":"Phá game","bannedTime":"$D0","endBanTime":"$D1","bannerName":"Rcon"},
+{"steamId":"76561198000000098","playerName":"Old Ban","banReason":"Spam","bannedTime":"$D2","endBanTime":"$D3","bannerName":"Rcon"}]}
+BANS
+printf '{"enabled":false,"globalMax":0,"zones":[{"id":"jail1","name":"Đảo tù","enabled":true,"x":148697,"y":349211,"radiusM":200,"species":[],"min":0,"max":0,"perTurnMin":1,"perTurnMax":1,"everySec":60,"growthMin":0.5,"growthMax":1,"prison":true}]}\n' > "$R/data/ai-zones.json"
+export PLAYER_BANS_PATH="$R/PlayerBans.json"
 export BACKUP_DIR="$R/backups" GARAGE_ROOT="$R/Mods/DinoGarage/Saved" EVENTS_PATH="$R/Mods/StatsLogger/Saved/events.ndjson" DATA_DIR="$R/data" GAME_CONFIG_DIR="$R/Config"
 export PORTAL_PUBLIC_DIR="$REPO/portal/public" ADMIN_TOKEN=e2e-local-token SUPER_ADMIN_STEAM_ID=76561198000000001
 export ADMIN_STEAM_IDS=76561198000000001,76561198000000002 HTTP_PORT=8091 SUDO=none SYSTEMCTL=true RCON_PORT=1 GAME_UNIT=none.service

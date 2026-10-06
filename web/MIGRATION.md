@@ -20,7 +20,7 @@ this file, and push after each block.
 | Thành viên | Admin, Phân quyền, Whitelist, VIP, SVip (all) | `pages/members/MembersPage.tsx` | `e2e/flows/members.mjs` (17) |
 | Quản trị | Truy cập panel, Nhật ký admin, Discord (all) | `pages/admin/AdminPage.tsx` | `e2e/flows/admin.mjs` (13) |
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
-| Người chơi | Danh sách, Killfeed, Xếp hạng, Chat (Ban, Nhà tù: not yet) | `pages/players/PlayersPage.tsx` | `e2e/flows/players.mjs` (25) |
+| Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù (all sub-pages; the player page `#player/<id>` not yet) | `pages/players/PlayersPage.tsx` | `e2e/flows/players.mjs` (42) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
 (`#server/cfg:spawn`): `pickSub` keeps it, `BlockPage` shows the sub-page before the colon and the
@@ -39,8 +39,10 @@ admins use, until every block is moved and `/` switches to the React build.
    restart, restore or wipe (local bridge: `SYSTEMCTL=true`, `BACKUP_DIR` in its folder). Once, the
    first run after a build had one step fail and three runs after it passed: if a server step
    fails, run it again before hunting.
-2. **Người chơi** (in progress): ~~Danh sách, Killfeed, Xếp hạng, Chat~~ done (`features/players/`).
-   Next: Ban, Nhà tù, then the player page (`#player/<id>`): every player name in React already
+2. **Người chơi** (in progress): ~~Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù~~ done
+   (`features/players/`; Ban: no RCON on the local bridge, so the e2e flow checks the refusal, then
+   edit / unban on the fake `PlayerBans.json`; the bridge drops commas from ban reasons, as always).
+   Next: the player page (`#player/<id>`, old `index.html` "player" view): every player name in React already
    links there (`components/dino/Identity.tsx` PlayerLink), and until that page exists the address
    falls back to Tổng quan.
 3. **Vật phẩm**: Skin dino (3D viewer `/skin3d.js`, `portal/public/skin-editor.js`), Mutation,
@@ -57,21 +59,25 @@ text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký a
 - `@isle/ui` (`web/packages/ui/src/index.ts`): Button, Card, Checkbox / CheckGrid, Dialog, Field,
   GroupLabel, Hint / Mono, Icon, NumberInput, PageHead, Select, SectionTitle, Slider, SuggestInput,
   SubTabs, Switch, Table, TextArea, TextInput, Toast. Never the browser's own controls.
-- `useSettingsForm<R, T = R>(url, { label, href, select?, toBody?, saved? })`
+- `useSettingsForm<R, T = R>(url, { label, href, select?, toBody?, saved?, putUrl? })`
   (`features/settings-form/useSettingsForm.ts`): R is the GET's answer, T what the form edits;
   `select` picks T out of R (a status or catalog beside the settings), `latest` is the last GET
   whole (live numbers, status lines), `toBody` turns the draft into the PUT's body, `saved` is the
   toast after a save (a text, or a function of the PUT's answer). After a save the GET is read
   again. Comparison ignores key order. Edits survive leaving the page (unsaved bar). `form.base` is
   what the draft was loaded from; `form.save({ extra, saved })` sends more with the body and
-  another toast (Lưu & khởi động lại).
+  another toast (Lưu & khởi động lại). `putUrl`: the PUT has its own address (Nhà tù: GET
+  `/api/prison`, PUT `/api/prison/settings`).
+- A text kept as a draft outside useSettingsForm (Ban → Mẫu lý do): `setDraft(key, { label, href,
+  value, save })` from `features/settings-form/drafts.ts`, as `features/players/bans/Bans.tsx` does.
 - `@isle/ui` **FileInput** (a file chooser in the panel's colours) and **Table** (`cards`: rows
   become cards on a phone, cells named by `data-label`; or the plain `components/table/Table.module.css`).
 - `@isle/ui` **DateTimeInput** (`kind` time / date / datetime, the native input's value text): the
   React twin of `ui-inputs.js`'s date / time picker.
 - `test/fakeBridge.tsx`: `fakeBridge(url, get, put)` for a settings page, `fakeApi({ 'GET /api/x': …,
   'POST /api/y': (body) => … })` for a page of many routes (with the confirm dialog).
-- `node web/scripts/shots.mjs` also shoots a running local bridge (`PANEL_URL` + `PANEL_COOKIE`).
+- `node web/scripts/shots.mjs` also shoots a running local bridge (`PANEL_URL` + `PANEL_COOKIE`);
+  with `OLD=1` too it shoots the old panel at `/` (files `old-<tab>-<sub>-…png`) for the comparison.
 - `components/list/List.tsx`: `ListTools` (search + filters), `Seg`, `SortTh`, `Pager` ("Hiển thị a-b /
   n … · trang x/y"), `pageOf`, `Pill`, and `List.module.css` `.table` (the old `.table-wrap table`:
   numbers right, first column left), `.rowLink`, `.notice`, `.hideSm`.
@@ -94,6 +100,7 @@ text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký a
    ```
    (On a machine with Google Chrome, leave `CHROME` out. In a cloud session do not set `TMPDIR`
    to a long path: Chromium then fails to start.) The fake data uses the game's class names
-   (`BP_Tyrannosaurus_C`): a flow that needs more data, add it to `local-bridge.sh`.
+   (`BP_Tyrannosaurus_C`): a flow that needs more data, add it to `local-bridge.sh`. The flows
+   change the data (a ban removed, a player jailed): run them on a NEW empty folder each time.
 3. Screenshots at 380 and 1366 px, light and dark: `node web/scripts/shots.mjs <out> <tab/sub>...`
    (answers `/api/*` from `web/scripts/shots-fixtures.mjs`), compared with the old page.

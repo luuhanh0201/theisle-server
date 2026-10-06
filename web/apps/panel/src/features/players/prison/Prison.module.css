@@ -1,0 +1,9 @@
+/* Nhà tù, as the panel before React (#pr-zone-status, the offense rows, the three sting boxes). */
+.zone { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 12px; }
+.small { font-size: 11.5px; color: var(--muted); }
+.three { display: flex; gap: 8px; flex-wrap: wrap; }
+.three > * { flex: 1 1 auto; min-width: 110px; }
+.three label { white-space: nowrap; }
+.off { display: flex; gap: 8px; align-items: center; }
+.off > :first-child { flex: 1 1 auto; min-width: 0; width: auto; }
+.off > :nth-child(2) { flex: 0 0 128px; width: 128px; }

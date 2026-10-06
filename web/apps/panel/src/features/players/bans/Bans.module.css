@@ -1,0 +1,13 @@
+/* Ban, as the panel before React (.ban-grid, .ban-preview, .ban-off). */
+.grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.list { margin-top: 16px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > * { flex: 1 1 180px; width: auto; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.preview { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px dashed var(--border-strong); }
+.warn { color: var(--dmg); }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.off { opacity: .55; }
+.tag { font-size: 11px; font-weight: 700; color: var(--dmg); }
+.nowrap { white-space: nowrap; }
