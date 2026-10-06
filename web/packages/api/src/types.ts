@@ -161,3 +161,24 @@ export interface PermissionsData {
   admins: Array<{ steamId: string; name: string | null; super: boolean; owner: boolean; perm: PermDraft; set: boolean; inGameNow: boolean }>;
   superAdmin: string | null;
 }
+
+/** GET /api/panel-access (bridge/src/panel-auth.ts): who may open the panel; PUT { ips }. */
+export interface PanelAccess { ips: string[]; saved: boolean; yourIp: string | null; yourRule: string | null; webEnabled: boolean }
+/** GET /api/server/audit?page&limit&q (bridge/src/audit.ts); `key` only for the super admin (to delete a line). */
+export interface AuditEntry { t: number; action: string; detail?: string; ok: boolean; error?: string; by?: string | null; byId?: string | null; byName?: string | null; key?: string }
+export interface AuditPage { entries: AuditEntry[]; page: number; pages: number; total: number }
+/** GET /api/discord (bridge/src/discord.ts): the log by webhook, its routes, and how it is going. */
+export interface DiscordData {
+  enabled: boolean;
+  routes: Record<string, string>;
+  mentions?: Record<string, string>;
+  channels: Array<{ id: string; name: string; hint: string }>;
+  relay: { url: string; hasSecret: boolean } | null;
+  board: string | null;
+  kinds: Array<{ key: string; group: string; label: string }>;
+  status: {
+    queued: number; dropped: number;
+    relay?: { lastOkAt: number | null; lastError: string | null };
+    channels: Record<string, { webhook?: { name?: string; channelId?: string; error?: string }; lastError?: string | null; lastOkAt?: number | null; queued?: number }>;
+  };
+}

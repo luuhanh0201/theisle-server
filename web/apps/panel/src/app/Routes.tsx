@@ -4,6 +4,7 @@ import { ModsPage } from '../pages/mods/ModsPage';
 import { WorldPage } from '../pages/world/WorldPage';
 import { GaragePage } from '../pages/garage/GaragePage';
 import { MembersPage } from '../pages/members/MembersPage';
+import { AdminPage } from '../pages/admin/AdminPage';
 import { prefillCreator } from '../features/garage/creator/DinoCreator';
 import { LegacyPage } from './LegacyPage';
 import { SUBS, TABS, subAllowed, tabAllowed, type TabId } from './nav';
@@ -32,6 +33,7 @@ export function Routes() {
   if (tab === 'world' && sub !== null) return <WorldPage sub={sub} />;
   if (tab === 'garage' && sub !== null) return <GaragePage sub={sub} />;
   if (tab === 'members' && sub !== null) return <MembersPage sub={sub} />;
+  if (tab === 'admin' && sub !== null) return <AdminPage sub={sub} />;
   return <NotMoved tab={tab} sub={sub} />;
 }
 
