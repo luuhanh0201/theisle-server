@@ -82,18 +82,22 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   Built into `bridge/public/next/` (gitignored; `deploy.sh` builds it with the bridge), served at
   `/next/` beside the panel before React (`/`). Same `#tab/sub` addresses on both.
 - Progress and the next steps: `web/MIGRATION.md` (read it first, update it with each page moved).
+  One session at a time moves pages: two sessions pushing the same blocks to main mix their code
+  (2026-10-06). Before starting, `git pull` and read MIGRATION.md; push after each block.
 - Layout: `web/packages/ui` (shared controls: Button, Card, Field, NumberInput, Select, Switch,
   TextArea, SubTabs, Dialog, Toast… never the browser's own controls), `web/packages/api` (getJson / adminFetch, the
   bridge's answer types: keep them in step with bridge/src), `web/apps/panel/src/{app,pages,features}`:
   `app/` the frame (nav.ts pages + permissions, router.ts, session.tsx token), `pages/<tab>/` puts
   a block's sub-pages together, `features/<area>/<thing>/` one feature (component, hook, CSS, test).
-- A settings page: `useSettingsForm(url, { label, href })` + `<SettingsPage>` (loads once,
-  "Có thay đổi mới" bar, unsaved drafts kept across pages, Lưu with the login's token). A GET
-  with more than the PUT takes (status, catalog): `select` the editable part, read the rest from `raw`.
+- A settings page: `useSettingsForm<R, T = R>(url, { label, href, select?, toBody?, saved? })` +
+  `<SettingsPage>` (loads once, "Có thay đổi mới" bar, unsaved drafts kept across pages, Lưu with
+  the login's token, toast `saved`). A GET with more than the form edits (status, catalog):
+  `select` the editable part, read the rest from `latest`.
 - Moving a page: build it in React, add it to its `pages/<tab>`, keep the old one until the whole
   block is done; a page not moved yet shows a link to the old panel (`LegacyPage`).
-- Check: `cd web && npm test && npm run build`; screenshots of the old and new page at 380 and
-  1366 px, light and dark, look the same.
+- Check: `cd web && npm test && npm run build`; the block's e2e flow (`web/e2e/flows/<tab>.mjs`,
+  on a local bridge: `web/e2e/local-bridge.sh`); screenshots of the old and new page at 380 and
+  1366 px, light and dark, look the same (`node web/scripts/shots.mjs`).
 
 ## Launcher
 - Inside Xóm Gáy Launcher (`window.isleLauncher`, `html.in-launcher`) nothing about

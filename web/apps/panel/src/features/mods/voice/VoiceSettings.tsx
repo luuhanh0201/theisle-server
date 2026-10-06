@@ -11,17 +11,21 @@ const MODES: ReadonlyArray<{ value: Settings['nameMode']; label: string; help: s
 
 /** Mods → Voice gần: what players see of who is talking near them (bridge/src/voice-settings.ts). */
 export function VoiceSettings() {
-  const form = useSettingsForm<Settings>('/api/voice-settings', { label: 'Voice gần', href: '#mods/voice', toBody: (d) => ({ nameMode: d.nameMode }), saved: 'Đã lưu, danh sách người đang nói đổi ngay.' });
+  // The status (voice on, its server) is shown from the latest GET: it is no setting, and a change of it is no "Có thay đổi mới".
+  const form = useSettingsForm<Settings, Pick<Settings, 'nameMode'>>('/api/voice-settings', {
+    label: 'Voice gần', href: '#mods/voice', select: (r) => ({ nameMode: r.nameMode }), saved: 'Đã lưu, danh sách người đang nói đổi ngay.',
+  });
   const d = form.draft;
+  const st = form.latest;
   return (
     <>
       <SectionTitle first icon="🎙" title="Cấu hình · Voice gần" sub="lưu riêng, có hiệu lực ngay" />
       <SettingsPage form={form}>
         {d && (
           <>
-            <Hint>{d.enabled
-              ? <>Voice đang bật · máy chủ <Mono>{d.url ?? ''}</Mono>. Tên trong kênh đổi theo cài đặt này từ lần vào kênh kế tiếp của mỗi người; danh sách "đang nói" đổi ngay.</>
-              : 'Voice chưa bật trên bridge (thiếu LIVEKIT_API_KEY / LIVEKIT_API_SECRET), cài đặt vẫn lưu được.'}</Hint>
+            {st && <Hint>{st.enabled
+              ? <>Voice đang bật · máy chủ <Mono>{st.url ?? ''}</Mono>. Tên trong kênh đổi theo cài đặt này từ lần vào kênh kế tiếp của mỗi người; danh sách "đang nói" đổi ngay.</>
+              : 'Voice chưa bật trên bridge (thiếu LIVEKIT_API_KEY / LIVEKIT_API_SECRET), cài đặt vẫn lưu được.'}</Hint>}
             <FieldGrid>
               <Field label="Người chơi thấy gì về người đang nói gần họ" keyName="nameMode" htmlFor="vs-name-mode"
                 hint={MODES.find((m) => m.value === d.nameMode)?.help}>

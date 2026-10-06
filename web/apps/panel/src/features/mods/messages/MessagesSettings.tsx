@@ -40,7 +40,7 @@ function Timing({ d, update }: { d: Settings; update: Update }) {
         <div className={styles.line}>
           <label htmlFor="msg-marks">Mốc đếm ngược khi khởi động lại / tắt server</label>
           <TextInput id="msg-marks" className={`${styles.marks}${bad ? ` ${styles.bad}` : ''}`} placeholder="15p, 10p, 5p, 3p, 2p, 1p, 30s, 10s" value={marks}
-            title={bad ? 'Ví dụ: 15p, 5p, 1p, 30s' : undefined}
+            title={bad ? 'Ví dụ: 15p, 5p, 1p, 30s' : undefined} aria-invalid={bad}
             onChange={(e) => {
               setMarks(e.target.value);
               const m = parseMarks(e.target.value);
@@ -115,14 +115,20 @@ function Texts({ d, update }: { d: Settings; update: Update }) {
 
 function MessageItem({ def, own, update }: { def: MessageDef; own: string | undefined; update: Update }) {
   const area = useRef<HTMLTextAreaElement>(null);
-  const { off, text, tag } = msgState(def, own);
-  const setText = (v: string): void => update((x) => ({ ...x, texts: withText(x.texts, def, v) }));
+  const st = msgState(def, own);
+  // What is being typed, as typed: emptying the box turns the text off ("" = not sent, as the
+  // panel before React), but the box stays open and empty until it is left.
+  const [editing, setEditing] = useState<string | null>(null);
+  const text = editing ?? st.text;
+  const off = st.off && editing === null;
+  const { tag } = st;
+  const setText = (v: string): void => { setEditing(v); update((x) => ({ ...x, texts: withText(x.texts, def, v) })); };
   const insert = (name: string): void => {
     const el = area.current;
     if (!el) return;
     const ins = `{${name}}`;
-    const at = el.selectionStart ?? el.value.length;
-    const value = el.value.slice(0, at) + ins + el.value.slice(el.selectionEnd ?? at);
+    const at = el.selectionStart ?? text.length;
+    const value = text.slice(0, at) + ins + text.slice(el.selectionEnd ?? at);
     setText(value);
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(at + ins.length, at + ins.length); });
   };
@@ -134,13 +140,15 @@ function MessageItem({ def, own, update }: { def: MessageDef; own: string | unde
         <div className={styles.tags}>{tag && <span className={`${styles.tag} ${tag === 'edited' || tag === 'on' ? styles.edited : styles.off}`}>{TAG_LABEL[tag]}</span>}</div>
       </div>
       <div>
-        <TextArea ref={area} rows={1} maxLength={300} className={styles.area} disabled={off} aria-label={def.label} value={text} onChange={(e) => setText(e.target.value)} />
+        <TextArea ref={area} rows={1} maxLength={300} className={styles.area} disabled={off} aria-label={def.label} value={text} onChange={(e) => setText(e.target.value)} onBlur={() => setEditing(null)} />
         <div className={styles.tools}>
-          <Switch checked={!off} label="Gửi" onChange={(v) => update((x) => ({ ...x, texts: withSend(x.texts, def, v, text) }))} />
-          {def.vars.map((v) => <button key={v} type="button" className={styles.var} title="Chèn" onClick={() => insert(v)}>{`{${v}}`}</button>)}
-          {own !== undefined && <Button variant="ghost" small className={styles.reset} onClick={() => update((x) => { const t = { ...x.texts }; delete t[def.key]; return { ...x, texts: t }; })}>Về mặc định</Button>}
+          <Switch checked={!st.off} label="Gửi" onChange={(v) => { setEditing(null); update((x) => ({ ...x, texts: withSend(x.texts, def, v, st.text) })); }} />
+          {/* mousedown kept off the button: the text box keeps its focus and cursor. */}
+          {def.vars.map((v) => <button key={v} type="button" className={styles.var} title="Chèn" disabled={off}
+            onMouseDown={(e) => e.preventDefault()} onClick={() => insert(v)}>{`{${v}}`}</button>)}
+          {own !== undefined && <Button variant="ghost" small className={styles.reset} onClick={() => { setEditing(null); update((x) => { const t = { ...x.texts }; delete t[def.key]; return { ...x, texts: t }; }); }}>Về mặc định</Button>}
         </div>
-        {!off && <div className={styles.ex}>Ví dụ: <span>{msgExample(text)}</span></div>}
+        {!st.off && <div className={styles.ex}>Ví dụ: <span>{msgExample(text)}</span></div>}
       </div>
     </div>
   );

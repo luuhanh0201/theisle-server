@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { FishSettings as Settings, FishSettingsStatus } from '@isle/api';
+import type { FishSettings as Settings, FishState } from '@isle/api';
 import { clearDrafts } from '../../settings-form/drafts';
 import { fakeBridge } from '../../../test/fakeBridge';
 import { FishSettings, savedText } from './FishSettings';
@@ -10,7 +10,7 @@ const SPECIES = [
   { key: 'Forktail', cls: 'BP_Forktail_C', label: 'Forktail' },
   { key: 'Hoplo', cls: 'BP_Hoplo_C', label: 'Hoplo' },
 ];
-let server: FishSettingsStatus;
+let server: FishState;
 beforeEach(() => {
   clearDrafts();
   server = { settings: { control: true, perPlayer: 12, perWater: 28, cooldownSec: 0.5, species: ['Catfish', 'Hoplo'] }, species: SPECIES,
@@ -37,6 +37,6 @@ test('species ticked in the bridge\'s order, the census, the toast from the RCON
 });
 
 test('the save texts', () => {
-  expect(savedText('sent')).toBe('Đã lưu, mật độ áp dụng trong ~30 giây.');
-  expect(savedText('failed: timeout')).toBe('Đã lưu, nhưng RCON lỗi (failed: timeout), loài áp dụng ở lần restart tới.');
+  expect(savedText({ rcon: 'sent' })).toBe('Đã lưu, mật độ áp dụng trong ~30 giây.');
+  expect(savedText({ rcon: 'failed: timeout' })).toBe('Đã lưu, nhưng RCON lỗi (failed: timeout), loài áp dụng ở lần restart tới.');
 });

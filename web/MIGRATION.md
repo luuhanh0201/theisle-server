@@ -1,67 +1,73 @@
 # Moving the panel to React: where it stands
 
-The progress log of the move (AGENTS.md "Panel in React"). A new session reads this first,
-picks the next step below, and updates this file in the same commit as the pages it moves.
+The progress log of the move (AGENTS.md "Panel in React"). The goal is a change of technology
+only: every page does what it did in the panel before React (`bridge/public/index.html`), same
+texts, same saves, same rules. A new session reads this first, picks the next step below, and
+updates this file in the same commit as the pages it moves.
 
-## Done
+**One session at a time.** On 2026-10-06 two sessions moved the same blocks and both pushed to
+main: the code got mixed and main stopped building (113 type errors). It was repaired by keeping
+one version (the one `Routes.tsx` used, with the e2e flows). Before starting: `git pull`, read
+this file, and push after each block.
 
-| Block | Sub-page | React file | Bridge route | Moved |
-|---|---|---|---|---|
-| Tính năng mod | Lệnh chat | `features/mods/commands/CommandsSettings.tsx` | `/api/commands-settings` | 2026-10-06 |
-| Tính năng mod | Ptera gắp | `features/mods/ptera/PteraSettings.tsx` | `/api/ptera-carry` | phase 1 |
-| Tính năng mod | Tele con non | `features/mods/tele/TeleSettings.tsx` | `/api/tele-settings` | phase 1 |
-| Tính năng mod | Voice gần | `features/mods/voice/VoiceSettings.tsx` | `/api/voice-settings` | 2026-10-06 |
-| Tính năng mod | Thông báo | `features/mods/messages/MessagesSettings.tsx` | `/api/messages` | 2026-10-06 |
-| Thế giới | Thực vật | `features/world/flora/FloraSettings.tsx` | `/api/flora-settings` | 2026-10-06 |
-| Thế giới | Cá | `features/world/fish/FishSettings.tsx` | `/api/fish-settings` | 2026-10-06 |
-| Quản trị | Truy cập panel | `features/admin/access/PanelAccessSettings.tsx` | `/api/panel-access` | 2026-10-06 |
-| Quản trị | Discord | `features/admin/discord/DiscordSettings.tsx` | `/api/discord` (+ `/url`, `/test`, `/register-commands`) | 2026-10-06 |
-| Thành viên | SVip | `features/members/svip/SvipPage.tsx` | `/api/svip` (each change saves at once) | 2026-10-06 |
-| Gara | Cài đặt gara | `features/garage/settings/GarageSettings.tsx` | `/api/garage-settings` | 2026-10-06 |
+## Done (served at /next/)
 
-Which pages a block has in React: `pages/<tab>/index.ts`, all listed in `app/blocks.ts`. The frame
-of every block (heading, sub-tabs, a `LegacyPage` link for a page not moved) is `app/Block.tsx`, so
-moving a page = its feature folder + one line in `pages/<tab>/index.ts` (+ `app/blocks.ts` for a
-new block). The whole **Tính năng mod** block is in React.
-Its old pages in `bridge/public/index.html` stay: the panel at `/` is still the one admins use,
-until every block is moved and `/` switches to the React build.
+| Block | Sub-pages in React | Block page | e2e flow |
+|---|---|---|---|
+| Tính năng mod | Lệnh chat, Ptera gắp, Tele con non, Voice gần, Thông báo (all) | `pages/mods/ModsPage.tsx` | `e2e/flows/mods.mjs` (28 checks) |
+| Thế giới | Tổng quan, Thực vật, Cá (all) | `pages/world/WorldPage.tsx` | `e2e/flows/world.mjs` (20) |
+| Gara | Dino & tạo dino, Cài đặt gara (all) | `pages/garage/GaragePage.tsx` | `e2e/flows/garage.mjs` (20) |
+| Thành viên | Admin, Phân quyền, Whitelist, VIP, SVip (all) | `pages/members/MembersPage.tsx` | `e2e/flows/members.mjs` (17) |
+| Quản trị | Truy cập panel, Nhật ký admin, Discord (all) | `pages/admin/AdminPage.tsx` | `e2e/flows/admin.mjs` (13) |
 
-## Next steps (in this order)
+Routing: `app/Routes.tsx` sends a tab to its block page; each block page is a `app/BlockPage.tsx`
+with `pages={{ <sub>: Component }}`. A sub-page not listed there shows a link to the old panel
+(`LegacyPage`). The old pages in `bridge/public/index.html` stay: the panel at `/` is still the one
+admins use, until every block is moved and `/` switches to the React build.
 
-1. ~~Thế giới → Thực vật, Cá~~ done. Thế giới → Tổng quan is a live page: step 4.
-2. ~~Gara → Cài đặt gara~~ done.
-3. **Quản trị → Truy cập panel, Discord**, **Thành viên → SVip / Phân quyền**, **Server → Cấu hình
-   game**: settings pages too (see FORM_PAGES in `bridge/public/index.html` for each GET and what
-   it leaves out of the comparison).
-4. **List pages** (Người chơi, Ban, Nhà tù, Gara → Dino, Vật phẩm…): first build the shared list
-   refresh in React (redraw every 2 s, paused while the admin is busy: a popup open, typing, a
-   dialog, text selected; the old panel's `busyUI`), then move them block by block.
+## Not moved yet (next steps, in this order)
+
+1. **Server**: Vận hành (`server/ops`: start / stop / restart, schedule, DDoS warning), Cấu hình game
+   (`server/cfg`, `/api/game-config`, groups of Game.ini keys, "Lưu & khởi động lại"), Dữ liệu
+   (`server/data`, backups). Mind the power actions: the e2e flow must never restart anything
+   (local bridge: `SYSTEMCTL=true`).
+2. **Người chơi**: Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page
+   (`#player/<id>`, opened from many places).
+3. **Vật phẩm**: Skin dino (3D viewer `/skin3d.js`, `portal/public/skin-editor.js`), Mutation,
+   Phiếu & hộp.
+4. **Nhiệm vụ** (Hổ phách, điểm danh, nhiệm vụ, cửa hàng), **Truy cập** (traffic), **Tổng quan**
+   (overview, live), **Bản đồ** (live map).
 5. When every block is in React: `/` serves the React build, the old `index.html` goes.
 
-## Shared pieces added along the way
+A list page redraws every 2 s but never while the admin is busy (popup open, typing, dialog,
+text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký admin do it.
 
-- `@isle/ui`: Button, Card, Dialog, Field, Hint / Mono, Icon, NumberInput, PageHead, SectionTitle,
-  **Select** (the system select, keys: arrows / Enter / Esc), SubTabs, Switch, **TextArea** (grows
-  with its text), TextInput, Toast.
-- `@isle/ui` **Checkbox / CheckGrid**: tick boxes of a set (fish species), tiles like `.check-grid`.
-- `useSettingsForm<T, R>(url, { label, href, select?, fromSave?, onSaved? })`: `select` picks the
-  editable part when the GET carries more (status, catalog); `raw` is the whole GET; `fromSave`
-  reads the PUT's answer when it has another shape (default `select`); `onSaved(answer)` for a
-  toast; `update(fn)` edits nested parts (a list item, one text). Comparison ignores key order.
-  After a save the GET is fetched again (no "Có thay đổi mới" for 15 s: it is the admin's own).
-- `toBody(draft)` in `useSettingsForm` when the form edits another shape than the PUT takes
-  (panel access: a text of lines, PUT `{ ips }`).
-- `@isle/ui` **Table** (`cards`: rows become cards on a phone, cells named by `data-label`) and
-  **Segmented** (a few choices side by side, the old `.lvl-seg`).
-- `components/PlayerLink.tsx`: a player's name, linking to the old panel's player page (`/#player/<id>`)
-  until that page is in React: then change its href to `#player/<id>`.
-- A page that saves each action at once (SVip): `useQuery` + `adminFetch` in `withToken`, then
-  `qc.setQueryData` with the answer; no draft, no unsaved bar.
-- Tests of a page: `apps/panel/src/test/fakeBridge.tsx` fakes `/api/me` and one route.
+## Shared pieces
 
-## How each move is checked
+- `@isle/ui` (`web/packages/ui/src/index.ts`): Button, Card, Checkbox / CheckGrid, Dialog, Field,
+  GroupLabel, Hint / Mono, Icon, NumberInput, PageHead, Select, SectionTitle, Slider, SuggestInput,
+  SubTabs, Switch, Table, TextArea, TextInput, Toast. Never the browser's own controls.
+- `useSettingsForm<R, T = R>(url, { label, href, select?, toBody?, saved? })`
+  (`features/settings-form/useSettingsForm.ts`): R is the GET's answer, T what the form edits;
+  `select` picks T out of R (a status or catalog beside the settings), `latest` is the last GET
+  whole (live numbers, status lines), `toBody` turns the draft into the PUT's body, `saved` is the
+  toast after a save (a text, or a function of the PUT's answer). After a save the GET is read
+  again. Comparison ignores key order. Edits survive leaving the page (unsaved bar).
+- `app/confirm.tsx`: the confirm dialog (never the browser's confirm()).
+- Mutations: `features/mutations/` (reference, notes, catalog), the picker and tooltip in
+  `features/garage/creator/`.
 
-`cd web && npm test && npm run build`, then screenshots at 380 and 1366 px, light and dark,
-without the live bridge: `node web/scripts/shots.mjs <out dir> world/fish mods/messages ...`
-(serves `bridge/public`, answers `/api/*` from `web/scripts/shots-fixtures.mjs`: add the GET
-routes of each page you move there; prints `SIDEWAYS SCROLL` when a page scrolls sideways).
+## How a move is checked
+
+1. `cd web && npm test && npm run build` (typecheck included).
+2. The block's e2e flow on a local bridge, never the live one (the flows save):
+   ```
+   (cd bridge && npm run build) && (cd web && npm run build)
+   sh web/e2e/local-bridge.sh /tmp/isle-e2e        # prints PANEL_COOKIE=..., fake data only
+   cd web && CHROME=/opt/pw-browsers/chromium PANEL_URL=http://127.0.0.1:8091 PANEL_COOKIE=... node e2e/run.mjs e2e/flows/<tab>.mjs
+   ```
+   (On a machine with Google Chrome, leave `CHROME` out. In a cloud session do not set `TMPDIR`
+   to a long path: Chromium then fails to start.) The fake data uses the game's class names
+   (`BP_Tyrannosaurus_C`): a flow that needs more data, add it to `local-bridge.sh`.
+3. Screenshots at 380 and 1366 px, light and dark: `node web/scripts/shots.mjs <out> <tab/sub>...`
+   (answers `/api/*` from `web/scripts/shots-fixtures.mjs`), compared with the old page.

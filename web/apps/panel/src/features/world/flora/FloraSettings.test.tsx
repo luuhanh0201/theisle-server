@@ -1,11 +1,11 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { FloraSettings as Settings, FloraSettingsStatus } from '@isle/api';
+import type { FloraSettings as Settings, FloraState } from '@isle/api';
 import { clearDrafts } from '../../settings-form/drafts';
 import { fakeBridge } from '../../../test/fakeBridge';
 import { FloraSettings } from './FloraSettings';
 
-let server: FloraSettingsStatus;
+let server: FloraState;
 beforeEach(() => {
   clearDrafts();
   server = {

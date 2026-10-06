@@ -1,6 +1,7 @@
 // Functional checks of the React panel, in headless Chrome: each flow runs in the page (helpers h.*).
 // Run against a LOCAL bridge (a copy of the data, no RCON): never the live one, the flows save.
 //   PANEL_URL=http://127.0.0.1:8091 PANEL_COOKIE=<panel_session> node e2e/run.mjs e2e/flows/mods.mjs
+// No local copy of the data at hand: sh e2e/local-bridge.sh <empty dir> starts one on fake data.
 // Prints every check; exit code 1 when one fails.
 import { spawn } from 'node:child_process';
 import { rmSync } from 'node:fs';
@@ -9,7 +10,8 @@ const TMP = process.env.TMPDIR ?? '/tmp';
 const flows = (await import(new URL(process.argv[2], `file://${process.cwd()}/`).href)).default;
 const cookie = process.env.PANEL_COOKIE ?? '';
 rmSync(`${TMP}/isle-e2e-chrome`, { recursive: true, force: true });
-const chrome = spawn('google-chrome', ['--headless=new', '--remote-debugging-port=9336', `--user-data-dir=${TMP}/isle-e2e-chrome`, 'about:blank'], { stdio: 'ignore' });
+// CHROME: another Chromium (e.g. /opt/pw-browsers/chromium in a cloud session, which needs --no-sandbox).
+const chrome = spawn(process.env.CHROME ?? 'google-chrome', [...(process.env.CHROME ? ['--no-sandbox'] : []), '--headless=new', '--remote-debugging-port=9336', `--user-data-dir=${TMP}/isle-e2e-chrome`, 'about:blank'], { stdio: 'ignore' });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let tabs = null;
 for (let i = 0; i < 40 && !tabs; i++) { await sleep(250); try { tabs = await (await fetch('http://127.0.0.1:9336/json')).json(); } catch {} }

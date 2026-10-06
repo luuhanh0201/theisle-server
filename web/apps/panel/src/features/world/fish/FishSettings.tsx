@@ -6,7 +6,7 @@ import { useSettingsForm } from '../../settings-form/useSettingsForm';
 import styles from './FishSettings.module.css';
 
 /** What the save did to the game's species list (the bridge's RCON answer). */
-function savedText(answer: unknown): string {
+export function savedText(answer: unknown): string {
   const rcon = String((answer as { rcon?: unknown } | null)?.rcon ?? '');
   if (rcon === 'restart needed') return 'Đã lưu, loài vừa mở lại sẽ có sau lần restart tới.';
   if (rcon.startsWith('failed')) return `Đã lưu, nhưng RCON lỗi (${rcon}), loài áp dụng ở lần restart tới.`;
@@ -46,7 +46,8 @@ export function FishSettings() {
               <CheckGrid>
                 {(live?.species ?? []).map((f) => (
                   <Checkbox key={f.key} label={f.label} checked={d.species.includes(f.key)}
-                    onChange={(on) => form.set('species', on ? [...d.species, f.key] : d.species.filter((k) => k !== f.key))} />
+                    // In the bridge's order (FISH_SPECIES), as the panel before React sent them.
+                    onChange={(on) => form.set('species', (live?.species ?? []).map((x) => x.key).filter((k) => (k === f.key ? on : d.species.includes(k))))} />
                 ))}
               </CheckGrid>
               <Hint className={styles.after}>Loài bỏ chọn được thêm vào danh sách cấm AI của game (<Mono>DisallowedAIClasses</Mono>),

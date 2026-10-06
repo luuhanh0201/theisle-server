@@ -1,11 +1,11 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { VoiceSettingsStatus } from '@isle/api';
+import type { VoiceSettings as Voice } from '@isle/api';
 import { clearDrafts } from '../../settings-form/drafts';
 import { fakeBridge } from '../../../test/fakeBridge';
 import { VoiceSettings } from './VoiceSettings';
 
-let server: VoiceSettingsStatus;
+let server: Voice;
 beforeEach(() => {
   clearDrafts();
   server = { nameMode: 'name', enabled: true, url: 'wss://voice.example' };

@@ -1,11 +1,11 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { GarageSettings as Settings, GarageSettingsStatus } from '@isle/api';
+import type { GarageSettings as Settings, GarageSettingsState } from '@isle/api';
 import { clearDrafts } from '../../settings-form/drafts';
 import { fakeBridge } from '../../../test/fakeBridge';
 import { GarageSettings } from './GarageSettings';
 
-let server: GarageSettingsStatus;
+let server: GarageSettingsState;
 beforeEach(() => {
   clearDrafts();
   server = { redeemAt: 'current', maxSlots: 3, storeCountdown: 30, cooldown: 180, minHealthPct: 0, minGrowthPct: 0,
