@@ -1,0 +1,52 @@
+# Moving the panel to React: where it stands
+
+The progress log of the move (AGENTS.md "Panel in React"). A new session reads this first,
+picks the next step below, and updates this file in the same commit as the pages it moves.
+
+## Done
+
+| Block | Sub-page | React file | Bridge route | Moved |
+|---|---|---|---|---|
+| Tính năng mod | Lệnh chat | `features/mods/commands/CommandsSettings.tsx` | `/api/commands-settings` | 2026-10-06 |
+| Tính năng mod | Ptera gắp | `features/mods/ptera/PteraSettings.tsx` | `/api/ptera-carry` | phase 1 |
+| Tính năng mod | Tele con non | `features/mods/tele/TeleSettings.tsx` | `/api/tele-settings` | phase 1 |
+| Tính năng mod | Voice gần | `features/mods/voice/VoiceSettings.tsx` | `/api/voice-settings` | 2026-10-06 |
+| Tính năng mod | Thông báo | `features/mods/messages/MessagesSettings.tsx` | `/api/messages` | 2026-10-06 |
+
+The whole **Tính năng mod** block is in React (`pages/mods/ModsPage.tsx`, no `LegacyPage` left).
+Its old pages in `bridge/public/index.html` stay: the panel at `/` is still the one admins use,
+until every block is moved and `/` switches to the React build.
+
+## Next steps (in this order)
+
+1. **Thế giới → Thực vật, Cá** (`world/flora`, `world/fish`): settings pages. The GET carries a
+   status part (flora `{ settings, control, t }`, fish `{ settings, species, census, disallowed }`):
+   use `useSettingsForm`'s `select` for `settings` and show the rest from `form.raw`. Fish's PUT
+   answers `{ rcon }` too: its toast text depends on it (see `fs-save` in the old panel).
+   Thế giới → Tổng quan is a live page: needs the list-page refresh (step 4) first.
+2. **Gara → Cài đặt gara** (`garage/settings`): `select` drops `memberCounts` (the old panel's
+   FORM_PAGES does the same); the tier table shows the counts from `form.raw`.
+3. **Quản trị → Truy cập panel, Discord**, **Thành viên → SVip / Phân quyền**, **Server → Cấu hình
+   game**: settings pages too (see FORM_PAGES in `bridge/public/index.html` for each GET and what
+   it leaves out of the comparison).
+4. **List pages** (Người chơi, Ban, Nhà tù, Gara → Dino, Vật phẩm…): first build the shared list
+   refresh in React (redraw every 2 s, paused while the admin is busy: a popup open, typing, a
+   dialog, text selected; the old panel's `busyUI`), then move them block by block.
+5. When every block is in React: `/` serves the React build, the old `index.html` goes.
+
+## Shared pieces added along the way
+
+- `@isle/ui`: Button, Card, Dialog, Field, Hint / Mono, Icon, NumberInput, PageHead, SectionTitle,
+  **Select** (the system select, keys: arrows / Enter / Esc), SubTabs, Switch, **TextArea** (grows
+  with its text), TextInput, Toast.
+- `useSettingsForm<T, R>(url, { label, href, select? })`: `select` picks the editable part when
+  the GET carries more (status, catalog); `raw` is the whole GET; `update(fn)` edits nested parts
+  (a list item, one text). Comparison ignores key order.
+- Tests of a mods page: `features/mods/fakeBridge.tsx` fakes `/api/me` and one route.
+
+## How each move is checked
+
+`cd web && npm test && npm run build`, then screenshots at 380 and 1366 px, light and dark.
+Without the live bridge: serve `bridge/public` and fake `/api/*` with Playwright's `page.route`
+(Chromium at `/opt/pw-browsers/chromium` in the cloud sessions), and check there is no
+horizontal scroll.

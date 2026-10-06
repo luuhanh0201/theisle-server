@@ -4,7 +4,10 @@ import { adminFetch, getJson } from '@isle/api';
 import { useSession } from '../../app/session';
 import { getDraft, setDraft } from './drafts';
 
-const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
+/** Same content, whatever order an object's keys came in (a text removed then written again). */
+const canon = (v: unknown): unknown => (Array.isArray(v) ? v.map(canon)
+  : v !== null && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon((v as Record<string, unknown>)[k])])) : v);
+const same = (a: unknown, b: unknown): boolean => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 
 /**
  * A settings page (AGENTS.md "Panel refresh"): loaded once per visit, never overwritten while the
@@ -13,11 +16,18 @@ const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.str
  *
  *   const f = useSettingsForm<TeleSettings>('/api/tele-settings', { label: 'Tele con non', href: '#mods/tele' });
  *   f.draft.maxGrowthPct, f.set('maxGrowthPct', 50), f.save(), f.dirty, f.serverChanged, f.reload()
+ *
+ * When the GET carries more than the PUT takes (a status line, a catalog), `select` picks the
+ * editable part out of both the GET and the PUT's answer; `raw` is the latest GET, whole.
  */
-export function useSettingsForm<T extends object>(url: string, page: { label: string; href: string }) {
+export function useSettingsForm<T extends object, R = T>(url: string, page: { label: string; href: string; select?: (raw: R) => T }) {
   const { withToken } = useSession();
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: [url], queryFn: () => getJson<T>(url), refetchInterval: 2000 });
+  const pick = page.select ?? ((r: R) => r as unknown as T);
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  const q = useQuery({ queryKey: [url], queryFn: () => getJson<R>(url), refetchInterval: 2000 });
+  const server = q.data === undefined ? undefined : pickRef.current(q.data);
   // What the form was loaded from, and what the admin made of it.
   const [base, setBase] = useState<T | null>(null);
   const [draft, setDraftState] = useState<T | null>(() => (getDraft(url) as T | undefined) ?? null);
@@ -26,23 +36,24 @@ export function useSettingsForm<T extends object>(url: string, page: { label: st
   const mineUntil = useRef(0);
 
   useEffect(() => {
-    const data = q.data;
-    if (data === undefined || base !== null) return;
+    if (q.data === undefined || base !== null) return;
+    const data = pickRef.current(q.data);
     setBase(data);
     setDraftState((d) => d ?? data);
   }, [q.data, base]);
 
   const dirty = base !== null && draft !== null && !same(draft, base);
-  const serverChanged = base !== null && q.data !== undefined && !same(q.data, base) && Date.now() > mineUntil.current;
+  const serverChanged = base !== null && server !== undefined && !same(server, base) && Date.now() > mineUntil.current;
 
   const save = useCallback(async (): Promise<boolean> => {
     if (draft === null) return false;
     setSaving(true);
     try {
       return await withToken(`lưu ${page.label}`, async (token) => {
-        const saved = await adminFetch<T>(url, 'PUT', token, draft);
+        const saved = pickRef.current(await adminFetch<R>(url, 'PUT', token, draft));
         mineUntil.current = Date.now() + 15_000;
-        qc.setQueryData([url], saved);
+        // The GET's other parts (status, catalog) stay as they were until its next answer.
+        qc.setQueryData<R>([url], (old) => (old === undefined ? old : ({ ...(old as object), ...saved } as unknown as R)));
         setBase(saved);
         setDraftState(saved);
       });
@@ -65,9 +76,15 @@ export function useSettingsForm<T extends object>(url: string, page: { label: st
   /** Take the server's copy (dropping unsaved edits). */
   const reload = useCallback(() => {
     if (q.data === undefined) return;
-    setBase(q.data);
-    setDraftState(q.data);
+    const data = pickRef.current(q.data);
+    setBase(data);
+    setDraftState(data);
   }, [q.data]);
 
-  return { draft, set, dirty, saving, save, serverChanged, reload, error: base === null ? (q.error as Error | null) : null };
+  /** Change the draft with a function of it (a list's item, a text inside an object). */
+  const update = useCallback((fn: (d: T) => T) => {
+    setDraftState((d) => (d === null ? d : fn(d)));
+  }, []);
+
+  return { draft, set, update, base, raw: q.data, dirty, saving, save, serverChanged, reload, error: base === null ? (q.error as Error | null) : null };
 }

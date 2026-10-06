@@ -46,3 +46,53 @@ export interface PteraSettings {
   hintMeters: number;
   grabMeters: number;
 }
+
+/** The chat commands the PlayerCommands mod has (bridge/src/commands-settings.ts COMMANDS). */
+export type CommandName = 'slay' | 'unstuck' | 'prime' | 'status' | 'food';
+
+/** GET / PUT /api/commands-settings (bridge/src/commands-settings.ts CommandsSettings). */
+export interface CommandsSettings {
+  slayCooldown: number;
+  unstuckCooldown: number;
+  foodCooldown: number;
+  enabled: Record<CommandName, boolean>;
+}
+
+/** What players see of who is talking near them (bridge/src/voice-settings.ts NAME_MODES). */
+export type VoiceNameMode = 'name' | 'id' | 'none';
+
+/** PUT /api/voice-settings and its answer (bridge/src/voice-settings.ts VoiceSettings). */
+export interface VoiceSettings { nameMode: VoiceNameMode }
+
+/** GET /api/voice-settings: the settings, and whether voice runs on the bridge (server.ts). */
+export interface VoiceSettingsStatus extends VoiceSettings { enabled: boolean; url: string | null }
+
+/** One in-game text the admin may change (bridge/src/messages.ts MessageDef). */
+export interface MessageDef {
+  key: string;
+  group: string;
+  label: string;
+  default: string;
+  /** The {names} it may use. */
+  vars: string[];
+  /** Not sent unless the admin writes a text (the default is only the suggested wording). */
+  offByDefault?: boolean;
+  fromBridge?: boolean;
+}
+
+/** A periodic announcement (bridge/src/messages.ts Periodic); a new one has no id until saved. */
+export interface PeriodicMessage { id?: string; text: string; everyMin: number; enabled: boolean }
+
+/** PUT /api/messages and its answer (bridge/src/messages.ts MessagesSettings). */
+export interface MessagesSettings {
+  /** Only the texts an admin changed; "" = do not send. */
+  texts: Record<string, string>;
+  /** Seconds left at which a restart / stop countdown announces, largest first. */
+  countdownMarks: number[];
+  periodic: PeriodicMessage[];
+  /** Clear corpses every `everyMin` minutes (0 = off), announced `warnSec` before. */
+  corpseWipe: { everyMin: number; warnSec: number };
+}
+
+/** GET /api/messages: the settings and every text there is (server.ts). */
+export interface MessagesWithCatalog extends MessagesSettings { catalog: MessageDef[] }

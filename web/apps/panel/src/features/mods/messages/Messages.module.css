@@ -1,0 +1,48 @@
+/* Thông báo (as the panel before React: .msg-line, .msg-periodic, .msg-item, .msg-savebar). */
+.page { display: flex; flex-direction: column; gap: 16px; }
+.line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13px; }
+.line > label { margin: 0; min-width: 230px; font-weight: 600; color: var(--text); }
+.line > label.inline { min-width: 0; font-weight: 500; }
+.marks { flex: 1; min-width: 220px; width: auto; }
+.marks[aria-invalid="true"] { border-color: var(--kill); }
+.bad { color: var(--kill); }
+.full { flex-basis: 100%; }
+.num { width: 120px; flex: none; }
+.groupLabel { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.periodic { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.periodic li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ptext { flex: 1; min-width: 200px; width: auto; }
+/* "mỗi [n] phút Xoá" moves to the next line as one piece on a narrow screen. */
+.every { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.periodic li { padding-bottom: 6px; }
+.periodic .num { width: 110px; }
+.del { color: var(--kill); }
+.add { margin-top: 8px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.search { margin-left: auto; max-width: 220px; width: auto; }
+.lead { margin-bottom: 10px; }
+.group { margin-bottom: 18px; }
+.item { display: grid; grid-template-columns: minmax(170px, 240px) 1fr; gap: 6px 14px; padding: 10px 0; border-top: 1px solid var(--border); }
+.what { font-size: 13px; font-weight: 600; }
+.key { font-size: 11px; color: var(--muted); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.tag { font-size: 11px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.tag.edited { color: #fb923c; border-color: #fb923c; }
+.tag.off { color: var(--kill); border-color: var(--kill); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; }
+.tools > label { font-weight: 500; font-size: 12px; margin-right: 4px; }
+.var { font-family: var(--font-mono); font-size: 11.5px; padding: 1px 6px; border-radius: 6px; border: 1px dashed var(--border-strong); background: none; color: var(--text); cursor: pointer; }
+.var:disabled { opacity: .45; cursor: not-allowed; }
+.reset { margin-left: auto; }
+.ex { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.ex span { color: var(--text-2); }
+/* Not sticky: the unsaved bar at the bottom has its own Lưu while the page is long. */
+.savebar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.dirty { color: #fb923c; font-size: 13px; }
+@media (max-width: 700px) {
+  .item { grid-template-columns: 1fr; } .line > label { min-width: 0; }
+  .ptext { min-width: 0; flex-basis: calc(100% - 52px); }
+  .every { margin-left: 44px; }
+  .periodic li { border-bottom: 1px solid var(--border); }
+  .periodic li:last-child { border-bottom: 0; }
+}

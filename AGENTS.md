@@ -81,13 +81,15 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 - `web/` (React 19 + Vite + TypeScript, TanStack Query, CSS Modules), one `npm install` there.
   Built into `bridge/public/next/` (gitignored; `deploy.sh` builds it with the bridge), served at
   `/next/` beside the panel before React (`/`). Same `#tab/sub` addresses on both.
-- Layout: `web/packages/ui` (shared controls: Button, Card, Field, NumberInput, Switch, SubTabs,
-  Dialog, Toast… never the browser's own controls), `web/packages/api` (getJson / adminFetch, the
+- Progress and the next steps: `web/MIGRATION.md` (read it first, update it with each page moved).
+- Layout: `web/packages/ui` (shared controls: Button, Card, Field, NumberInput, Select, Switch,
+  TextArea, SubTabs, Dialog, Toast… never the browser's own controls), `web/packages/api` (getJson / adminFetch, the
   bridge's answer types: keep them in step with bridge/src), `web/apps/panel/src/{app,pages,features}`:
   `app/` the frame (nav.ts pages + permissions, router.ts, session.tsx token), `pages/<tab>/` puts
   a block's sub-pages together, `features/<area>/<thing>/` one feature (component, hook, CSS, test).
 - A settings page: `useSettingsForm(url, { label, href })` + `<SettingsPage>` (loads once,
-  "Có thay đổi mới" bar, unsaved drafts kept across pages, Lưu with the login's token).
+  "Có thay đổi mới" bar, unsaved drafts kept across pages, Lưu with the login's token). A GET
+  with more than the PUT takes (status, catalog): `select` the editable part, read the rest from `raw`.
 - Moving a page: build it in React, add it to its `pages/<tab>`, keep the old one until the whole
   block is done; a page not moved yet shows a link to the old panel (`LegacyPage`).
 - Check: `cd web && npm test && npm run build`; screenshots of the old and new page at 380 and
