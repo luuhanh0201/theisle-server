@@ -2,6 +2,7 @@
 // browser's own select / number / date / checkbox controls (AGENTS.md "UI").
 export { Button } from './components/Button/Button';
 export { Card, CardHead, CardBody } from './components/Card/Card';
+export { Checkbox, CheckGrid } from './components/Checkbox/Checkbox';
 export { Dialog } from './components/Dialog/Dialog';
 export { Field, FieldGrid } from './components/Field/Field';
 export { Hint, Mono } from './components/Hint/Hint';

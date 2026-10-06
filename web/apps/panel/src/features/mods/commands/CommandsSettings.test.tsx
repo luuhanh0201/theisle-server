@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { CommandsSettings as Settings } from '@isle/api';
 import { clearDrafts } from '../../settings-form/drafts';
-import { fakeBridge } from '../fakeBridge';
+import { fakeBridge } from '../../../test/fakeBridge';
 import { CommandsSettings } from './CommandsSettings';
 
 let server: Settings;

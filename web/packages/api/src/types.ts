@@ -96,3 +96,39 @@ export interface MessagesSettings {
 
 /** GET /api/messages: the settings and every text there is (server.ts). */
 export interface MessagesWithCatalog extends MessagesSettings { catalog: MessageDef[] }
+
+/** PUT /api/flora-settings and its answer (bridge/src/flora-settings.ts FloraSettings). */
+export interface FloraSettings {
+  control: boolean;
+  migrationNutrientPct: number;
+  migrationMultiplier: number;
+  massNutrientPct: number;
+  massMultiplier: number;
+  outsideAmountPct: number;
+  migrationMaxPerArea: number;
+  massMaxPerArea: number;
+  outsideMaxPerArea: number;
+}
+
+/** The Flora mod's last control round (mods/Flora, flora.json `control`). */
+export interface FloraControl { t: number; on: boolean; active: number; plants: number; plantsNutri: number; fruits: number; fruitsNutri: number; trimmed?: number }
+
+/** GET /api/flora-settings (server.ts): the settings, the last round, when the plants were read. */
+export interface FloraSettingsStatus { settings: FloraSettings; control: FloraControl | null; t: number | null }
+
+/** PUT /api/fish-settings's body (bridge/src/fish-settings.ts FishSettings). */
+export interface FishSettings { control: boolean; perPlayer: number; perWater: number; cooldownSec: number; species: string[] }
+
+/** The fish counted near players (bridge/src/fish-settings.ts FishCensus). */
+export interface FishCensus { t: number; online: number; total: number; species: Record<string, number>; perPlayer?: number; perWater?: number; cooldownSec?: number }
+
+/** GET /api/fish-settings (server.ts). */
+export interface FishSettingsStatus {
+  settings: FishSettings;
+  species: Array<{ key: string; cls: string; label: string }>;
+  census: FishCensus | null;
+  disallowed: string[];
+}
+
+/** PUT /api/fish-settings's answer: `rcon` 'sent' | 'not needed' | 'unavailable' | 'restart needed' | 'failed: …'. */
+export interface FishSaved { settings: FishSettings; disallowed: string[]; rcon: string }

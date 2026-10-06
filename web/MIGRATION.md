@@ -12,18 +12,19 @@ picks the next step below, and updates this file in the same commit as the pages
 | Tính năng mod | Tele con non | `features/mods/tele/TeleSettings.tsx` | `/api/tele-settings` | phase 1 |
 | Tính năng mod | Voice gần | `features/mods/voice/VoiceSettings.tsx` | `/api/voice-settings` | 2026-10-06 |
 | Tính năng mod | Thông báo | `features/mods/messages/MessagesSettings.tsx` | `/api/messages` | 2026-10-06 |
+| Thế giới | Thực vật | `features/world/flora/FloraSettings.tsx` | `/api/flora-settings` | 2026-10-06 |
+| Thế giới | Cá | `features/world/fish/FishSettings.tsx` | `/api/fish-settings` | 2026-10-06 |
 
-The whole **Tính năng mod** block is in React (`pages/mods/ModsPage.tsx`, no `LegacyPage` left).
+Which pages a block has in React: `pages/<tab>/index.ts`, all listed in `app/blocks.ts`. The frame
+of every block (heading, sub-tabs, a `LegacyPage` link for a page not moved) is `app/Block.tsx`, so
+moving a page = its feature folder + one line in `pages/<tab>/index.ts` (+ `app/blocks.ts` for a
+new block). The whole **Tính năng mod** block is in React.
 Its old pages in `bridge/public/index.html` stay: the panel at `/` is still the one admins use,
 until every block is moved and `/` switches to the React build.
 
 ## Next steps (in this order)
 
-1. **Thế giới → Thực vật, Cá** (`world/flora`, `world/fish`): settings pages. The GET carries a
-   status part (flora `{ settings, control, t }`, fish `{ settings, species, census, disallowed }`):
-   use `useSettingsForm`'s `select` for `settings` and show the rest from `form.raw`. Fish's PUT
-   answers `{ rcon }` too: its toast text depends on it (see `fs-save` in the old panel).
-   Thế giới → Tổng quan is a live page: needs the list-page refresh (step 4) first.
+1. ~~Thế giới → Thực vật, Cá~~ done. Thế giới → Tổng quan is a live page: step 4.
 2. **Gara → Cài đặt gara** (`garage/settings`): `select` drops `memberCounts` (the old panel's
    FORM_PAGES does the same); the tier table shows the counts from `form.raw`.
 3. **Quản trị → Truy cập panel, Discord**, **Thành viên → SVip / Phân quyền**, **Server → Cấu hình
@@ -39,14 +40,17 @@ until every block is moved and `/` switches to the React build.
 - `@isle/ui`: Button, Card, Dialog, Field, Hint / Mono, Icon, NumberInput, PageHead, SectionTitle,
   **Select** (the system select, keys: arrows / Enter / Esc), SubTabs, Switch, **TextArea** (grows
   with its text), TextInput, Toast.
-- `useSettingsForm<T, R>(url, { label, href, select? })`: `select` picks the editable part when
-  the GET carries more (status, catalog); `raw` is the whole GET; `update(fn)` edits nested parts
-  (a list item, one text). Comparison ignores key order.
-- Tests of a mods page: `features/mods/fakeBridge.tsx` fakes `/api/me` and one route.
+- `@isle/ui` **Checkbox / CheckGrid**: tick boxes of a set (fish species), tiles like `.check-grid`.
+- `useSettingsForm<T, R>(url, { label, href, select?, fromSave?, onSaved? })`: `select` picks the
+  editable part when the GET carries more (status, catalog); `raw` is the whole GET; `fromSave`
+  reads the PUT's answer when it has another shape (default `select`); `onSaved(answer)` for a
+  toast; `update(fn)` edits nested parts (a list item, one text). Comparison ignores key order.
+  After a save the GET is fetched again (no "Có thay đổi mới" for 15 s: it is the admin's own).
+- Tests of a page: `apps/panel/src/test/fakeBridge.tsx` fakes `/api/me` and one route.
 
 ## How each move is checked
 
-`cd web && npm test && npm run build`, then screenshots at 380 and 1366 px, light and dark.
-Without the live bridge: serve `bridge/public` and fake `/api/*` with Playwright's `page.route`
-(Chromium at `/opt/pw-browsers/chromium` in the cloud sessions), and check there is no
-horizontal scroll.
+`cd web && npm test && npm run build`, then screenshots at 380 and 1366 px, light and dark,
+without the live bridge: `node web/scripts/shots.mjs <out dir> world/fish mods/messages ...`
+(serves `bridge/public`, answers `/api/*` from `web/scripts/shots-fixtures.mjs`: add the GET
+routes of each page you move there; prints `SIDEWAYS SCROLL` when a page scrolls sideways).

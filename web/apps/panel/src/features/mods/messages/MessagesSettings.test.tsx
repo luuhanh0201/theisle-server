@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { MessagesWithCatalog } from '@isle/api';
 import { clearDrafts } from '../../settings-form/drafts';
-import { fakeBridge } from '../fakeBridge';
+import { fakeBridge } from '../../../test/fakeBridge';
 import { MessagesSettings } from './MessagesSettings';
 
 const CATALOG = [

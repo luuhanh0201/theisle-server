@@ -10,6 +10,22 @@ export const TABS = [
 ] as const;
 export type TabId = (typeof TABS)[number][0];
 
+/** Each block's heading and the line under it (the same as the panel before React). */
+export const HEADS: Record<TabId, readonly [string, string]> = {
+  overview: ['Tổng quan', 'Tình trạng server, hiệu năng và mọi diễn biến, cập nhật mỗi 2 giây.'],
+  players: ['Người chơi', 'Ai đang chơi, ai giết ai, bảng xếp hạng và chat trong game.'],
+  map: ['Bản đồ trực tiếp', 'Gateway: người chơi đang online, vệt di chuyển gần nhất, vùng di cư, tuần tra, sanctuary, nước, hang và nguồn thức ăn.'],
+  world: ['Thế giới', 'AI, di cư, ngày đêm, thực vật và cá trên đảo, tóm tắt, và nơi chỉnh từng thứ.'],
+  garage: ['Gara', 'Quản lý dino người chơi đang cất, tạo dino vào gara theo yêu cầu và cấu hình quy tắc hệ thống Gara.'],
+  items: ['Vật phẩm', 'Vật phẩm của server: admin tạo, đặt tên, tặng vào kho của người chơi (skin, mutation, phiếu và hộp), người chơi dùng từ Túi đồ.'],
+  quests: ['Nhiệm vụ', 'Hổ phách, tiền của server, kiếm bằng cách chơi (không bán bằng tiền thật), và điểm danh hằng ngày (giờ Việt Nam).'],
+  mods: ['Tính năng mod', 'Những gì các mod của server thêm cho người chơi: lệnh chat, Ptera gắp, tele con non, voice gần, và nội dung mọi thông báo.'],
+  server: ['Server', 'Bật, tắt, khởi động lại, thiết lập và cấu hình game server.'],
+  members: ['Thành viên', 'Ai là admin, quyền của từng admin, whitelist, VIP và SVip.'],
+  traffic: ['Truy cập', 'Lượt mở web, tải và dùng launcher, đăng nhập (giờ server). Không lưu IP: người xem là mã băm theo ngày.'],
+  admin: ['Quản trị', 'Ai được vào panel, nhật ký mọi thao tác của admin, và log gửi lên Discord.'],
+};
+
 export const SUBS: Partial<Record<TabId, ReadonlyArray<readonly [string, string]>>> = {
   players: [['list', 'Danh sách'], ['killfeed', 'Killfeed'], ['leaderboard', 'Xếp hạng'], ['chat', 'Chat'], ['bans', 'Ban'], ['prison', 'Nhà tù']],
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],

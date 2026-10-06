@@ -2,7 +2,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { VoiceSettingsStatus } from '@isle/api';
 import { clearDrafts } from '../../settings-form/drafts';
-import { fakeBridge } from '../fakeBridge';
+import { fakeBridge } from '../../../test/fakeBridge';
 import { VoiceSettings } from './VoiceSettings';
 
 let server: VoiceSettingsStatus;

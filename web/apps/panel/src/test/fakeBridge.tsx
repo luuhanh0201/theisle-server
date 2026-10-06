@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@isle/ui';
-import { SessionProvider } from '../../app/session';
+import { SessionProvider } from '../app/session';
 
 /**
- * For the mods pages' tests: the bridge faked on fetch (/api/me as a Steam login with its token,
+ * For a page's tests: the bridge faked on fetch (/api/me as a Steam login with its token,
  * then `url` answering GET with `get()` and PUT through `put(body)`), and the page rendered in the
  * panel's providers. Returns the PUTs seen and the query client (to refetch by hand).
  */

@@ -18,14 +18,20 @@ const same = (a: unknown, b: unknown): boolean => JSON.stringify(canon(a)) === J
  *   f.draft.maxGrowthPct, f.set('maxGrowthPct', 50), f.save(), f.dirty, f.serverChanged, f.reload()
  *
  * When the GET carries more than the PUT takes (a status line, a catalog), `select` picks the
- * editable part out of both the GET and the PUT's answer; `raw` is the latest GET, whole.
+ * editable part out of it; `raw` is the latest GET, whole. The PUT's answer goes through
+ * `fromSave` (default: `select`), and to `onSaved` (a toast that depends on it).
  */
-export function useSettingsForm<T extends object, R = T>(url: string, page: { label: string; href: string; select?: (raw: R) => T }) {
+export function useSettingsForm<T extends object, R = T>(url: string, page: {
+  label: string; href: string; select?: (raw: R) => T; fromSave?: (answer: any) => T; onSaved?: (answer: any) => void;
+}) {
   const { withToken } = useSession();
   const qc = useQueryClient();
   const pick = page.select ?? ((r: R) => r as unknown as T);
   const pickRef = useRef(pick);
   pickRef.current = pick;
+  const fromSave: (answer: any) => T = page.fromSave ?? pick;
+  const savedRef = useRef({ fromSave, onSaved: page.onSaved });
+  savedRef.current = { fromSave, onSaved: page.onSaved };
   const q = useQuery({ queryKey: [url], queryFn: () => getJson<R>(url), refetchInterval: 2000 });
   const server = q.data === undefined ? undefined : pickRef.current(q.data);
   // What the form was loaded from, and what the admin made of it.
@@ -50,12 +56,14 @@ export function useSettingsForm<T extends object, R = T>(url: string, page: { la
     setSaving(true);
     try {
       return await withToken(`lưu ${page.label}`, async (token) => {
-        const saved = pickRef.current(await adminFetch<R>(url, 'PUT', token, draft));
+        const answer = await adminFetch<unknown>(url, 'PUT', token, draft);
+        const saved = savedRef.current.fromSave(answer);
         mineUntil.current = Date.now() + 15_000;
-        // The GET's other parts (status, catalog) stay as they were until its next answer.
-        qc.setQueryData<R>([url], (old) => (old === undefined ? old : ({ ...(old as object), ...saved } as unknown as R)));
         setBase(saved);
         setDraftState(saved);
+        savedRef.current.onSaved?.(answer);
+        // The GET again (its status parts may follow the save); until then it is not "a change".
+        void qc.invalidateQueries({ queryKey: [url] });
       });
     } finally {
       setSaving(false);
