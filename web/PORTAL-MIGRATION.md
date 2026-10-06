@@ -20,7 +20,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 4. Bản đồ + Kết bạn | **done** (below; the whole-site regression run was stopped by the owner, see "Paused") |
 | 5. Xếp hạng | **done** (below) |
 | 6. Skin Studio | **done** (below) |
-| 7-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 7. Voice 3D | **done** (below) |
+| 8-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -47,7 +48,7 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   game, gara, ranking, map) was stopped before it ran: run it first when picking up (the commands under "How to work on
   it"; LIVE_COOKIE for game / gara / ranking / map, PANEL_COOKIE for frame / home, both REX_COOKIE=<PANEL_COOKIE> and
   LIVE_COOKIE set in the env for the map flow). The live AI added for the map could change a count another flow checks.
-- Next: 7 Voice 3D, 8 Túi đồ,
+- Next: 8 Túi đồ,
   9 Cửa hàng, 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
   `lib/mapService.ts`), 2 across pages (Ctrl+K, the tour, its first-visit opening), 3 other pages, 4 the switch.
 - Still open with the owner: html.in-launcher (below).
@@ -121,6 +122,19 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**7. Voice 3D: done 2026-10-06.** voice.js ported to `lib/voice.ts`, an engine for the whole visit (`startVoice()` in
+main.tsx: the keys, the launcher's push-to-talk and range key, `window.isleVoice`, /api/me for the login card): the room
+stays joined on every page, the menu dot (`lib/voiceDot.ts`) and the launcher's overlay (`overlayState`) follow it. The
+same LiveKit client (/vendor, loaded on the first join), RNNoise (/vendor/noise-suppressor), settings key `isle-voice`,
+texts and rules (who may hear us, volume and side per speaker, out of game = muted). `features/voice/Voice.tsx` draws
+`useVoice()` with the old ids (`v-*`); the meter bar is written from `onLevel` (20 a second) without redrawing the page.
+`pages/voice/VoicePage.tsx`. Checks: `test/voice.test.tsx` (6, LiveKit and Web Audio faked), e2e `portal-voice.mjs`
+(7 flows: `voice-stub.mjs` stands in for LiveKit and /api/voice* on both sites: join, chips, notes, range by button and
+by the ` key, micro modes, the talk key, noise filter, threshold, volume, speakers near, muted, name mode, out of game,
+signed in elsewhere, leave, a refused join, `isleVoice.status()`; still joined on Gara; in the launcher: its talk key,
+range key, a refused key capture, the overlay's state; a guest), screenshots old / new (logged in, before joining): 380 px
+the same, 1366 px 262 pixels (the animated logo and dots).
 
 **6. Skin Studio: done 2026-10-06.** `pages/skin/SkinPage.tsx`, `features/skin/{SkinStudio.tsx, useSkinViewer.ts, skin.ts}`.
 The editor as before React (same ids and classes: `.se-*` from skin-editor.js, whose `injectCss` is now exported for it):

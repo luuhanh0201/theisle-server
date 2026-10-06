@@ -5,6 +5,7 @@ import './styles/tokens.css';
 import { App } from './app/App';
 import { isLab } from './lib/lab';
 import { inLauncher } from './lib/launcher';
+import { startVoice } from './lib/voice';
 
 const html = document.documentElement;
 /**
@@ -29,6 +30,10 @@ html.classList.toggle('lab', isLab());
 
 // One page load, for the panel's "Truy cập" (web or the launcher: told by the portal from the user agent).
 try { navigator.sendBeacon?.('/api/track/view', '{}'); } catch { /* not counted */ }
+
+// Proximity voice for the whole visit (voice.js before React loaded with the page): the keys, the launcher's
+// push-to-talk, window.isleVoice; the room is joined from Voice 3D and stays on every page.
+startVoice();
 
 const root = document.getElementById('root');
 if (root === null) throw new Error('index.html has no #root');
