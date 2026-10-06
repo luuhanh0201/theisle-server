@@ -7,10 +7,11 @@ import { MembersPage } from '../pages/members/MembersPage';
 import { AdminPage } from '../pages/admin/AdminPage';
 import { ServerPage } from '../pages/server/ServerPage';
 import { PlayersPage } from '../pages/players/PlayersPage';
+import { PlayerPage } from '../features/players/player/PlayerPage';
 import { prefillCreator } from '../features/garage/creator/DinoCreator';
 import { LegacyPage } from './LegacyPage';
 import { SUBS, TABS, subAllowed, tabAllowed, type TabId } from './nav';
-import { hrefOf, pickSub, useHashRoute } from './router';
+import { hrefOf, pickSub, useHashRoute, usePlayerId } from './router';
 import { useSession } from './session';
 
 /**
@@ -20,6 +21,8 @@ import { useSession } from './session';
 export function Routes() {
   const { access } = useSession();
   const route = useHashRoute();
+  // #player/<SteamID>: one player's page, outside the blocks (its address is kept as it is).
+  const player = usePlayerId();
   // #garage/<SteamID> (a player's page, "tạo dino cho người này"): the creator filled in for them.
   if (route.tab === 'garage' && route.sub !== null && /^\d{17}$/.test(route.sub)) prefillCreator(route.sub);
   const tab: TabId = tabAllowed(access, route.tab) ? route.tab : TABS.find(([id]) => tabAllowed(access, id))?.[0] ?? 'overview';
@@ -29,8 +32,9 @@ export function Routes() {
   const known = access.perms !== null;
   useEffect(() => {
     const want = hrefOf(tab, sub);
-    if (known && location.hash !== want) history.replaceState(null, '', want);
-  }, [tab, sub, known]);
+    if (known && player === null && location.hash !== want) history.replaceState(null, '', want);
+  }, [tab, sub, known, player]);
+  if (player !== null) return <PlayerPage key={player} id={player} />;
   if (tab === 'mods' && sub !== null) return <ModsPage sub={sub} />;
   if (tab === 'world' && sub !== null) return <WorldPage sub={sub} />;
   if (tab === 'garage' && sub !== null) return <GaragePage sub={sub} />;

@@ -20,7 +20,7 @@ this file, and push after each block.
 | Thành viên | Admin, Phân quyền, Whitelist, VIP, SVip (all) | `pages/members/MembersPage.tsx` | `e2e/flows/members.mjs` (17) |
 | Quản trị | Truy cập panel, Nhật ký admin, Discord (all) | `pages/admin/AdminPage.tsx` | `e2e/flows/admin.mjs` (13) |
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
-| Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù (all sub-pages; the player page `#player/<id>` not yet) | `pages/players/PlayersPage.tsx` | `e2e/flows/players.mjs` (42) |
+| Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (57) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
 (`#server/cfg:spawn`): `pickSub` keeps it, `BlockPage` shows the sub-page before the colon and the
@@ -39,12 +39,13 @@ admins use, until every block is moved and `/` switches to the React build.
    restart, restore or wipe (local bridge: `SYSTEMCTL=true`, `BACKUP_DIR` in its folder). Once, the
    first run after a build had one step fail and three runs after it passed: if a server step
    fails, run it again before hunting.
-2. **Người chơi** (in progress): ~~Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù~~ done
-   (`features/players/`; Ban: no RCON on the local bridge, so the e2e flow checks the refusal, then
-   edit / unban on the fake `PlayerBans.json`; the bridge drops commas from ban reasons, as always).
-   Next: the player page (`#player/<id>`, old `index.html` "player" view): every player name in React already
-   links there (`components/dino/Identity.tsx` PlayerLink), and until that page exists the address
-   falls back to Tổng quan.
+2. ~~**Người chơi**~~ done (`features/players/`). Ban: no RCON on the local bridge, so the e2e flow
+   checks the refusal, then edit / unban on the fake `PlayerBans.json` (the bridge drops commas from
+   ban reasons, as always). The player page `#player/<id>` (`features/players/player/`: hero + kill,
+   vitals, Thao tác admin, Thành tích, Nhật ký, garage cards with delete, Các đời dino with filters,
+   restore to the garage) is routed in `app/Routes.tsx` by `usePlayerId()` (router.ts), outside the
+   blocks, its address kept; the sidebar lights Người chơi there. Its "Đường đi" link still opens the
+   old panel (`/#map/path/<id>/<spawnedAt>`): point it at `#map/path/...` when Bản đồ moves.
 3. **Vật phẩm**: Skin dino (3D viewer `/skin3d.js`, `portal/public/skin-editor.js`), Mutation,
    Phiếu & hộp.
 4. **Nhiệm vụ** (Hổ phách, điểm danh, nhiệm vụ, cửa hàng), **Truy cập** (traffic), **Tổng quan**

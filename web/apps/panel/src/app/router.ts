@@ -32,4 +32,11 @@ export function useHashRoute(): { tab: TabId; sub: string | null } {
   return parseHash(hash);
 }
 
+/** #player/<SteamID>: a player's page (not a block of the nav), or null. */
+export function usePlayerId(): string | null {
+  const hash = useSyncExternalStore(subscribe, () => location.hash, () => '');
+  const m = /^#player\/(.+)$/.exec(hash);
+  return m ? decodeURIComponent(m[1] as string) : null;
+}
+
 export const hrefOf = (tab: TabId, sub?: string | null): string => `#${tab}${sub ? `/${sub}` : ''}`;

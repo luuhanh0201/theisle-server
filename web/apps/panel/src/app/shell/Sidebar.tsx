@@ -1,6 +1,6 @@
 import { Icon } from '@isle/ui';
 import { TABS, tabAllowed } from '../nav';
-import { hrefOf, useHashRoute } from '../router';
+import { hrefOf, useHashRoute, usePlayerId } from '../router';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
 import { MeCard } from './MeCard';
@@ -9,7 +9,9 @@ import styles from './Sidebar.module.css';
 
 export function Sidebar() {
   const { access } = useSession();
-  const { tab } = useHashRoute();
+  const route = useHashRoute();
+  // A player's page lights Người chơi (as the panel before React).
+  const tab = usePlayerId() === null ? route.tab : 'players';
   const [theme, toggleTheme] = useTheme();
   return (
     <aside className={styles.aside}>

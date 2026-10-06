@@ -1,6 +1,7 @@
 // Người chơi: the list (search, filter, sort, a row opens the player), Killfeed (a kill, its scene),
 // Xếp hạng, Chat (search; the super admin's delete is only looked at), Ban (no RCON: refused; edit,
-// unban, reasons), Nhà tù (off: refused; on, jail, extend, release, off again).
+// unban, reasons), Nhà tù (off: refused; on, jail, extend, release, off again), a player's page
+// (#player/<id>: offline locks, a garage slot deleted, lives; an unknown id).
 // LOCAL copy only (e2e/local-bridge.sh: two players, a bite, a kill, two chat lines, two bans, a prison zone).
 export default [
   {
@@ -138,6 +139,42 @@ export default [
       h.$('#prs-enabled').click(); await h.sleep(200);
       h.click(h.byText('Lưu cài đặt nhà tù', 'button')); await h.sleep(1500);
       check('tắt lại như cũ', (await h.api('/api/prison')).settings.enabled === before.settings.enabled);
+    `,
+  },
+  {
+    name: 'Trang người chơi: hồ sơ, thành tích, nhật ký, gara (xoá một slot), các đời dino; offline thì khoá thao tác',
+    path: '/next/#player/76561198000000011',
+    wait: 3000,
+    run: `
+      const d = await h.api('/api/player/76561198000000011');
+      check('địa chỉ giữ nguyên', location.hash === '#player/76561198000000011');
+      check('tên và SteamID', h.$('h1')?.textContent.includes('Rex Tester') && document.body.textContent.includes('76561198000000011'));
+      check('Người chơi sáng trên thanh bên', h.$('nav a[aria-current=page]')?.textContent.includes('Người chơi'));
+      check('thành tích', ['Kill', 'Gây damage', 'Mồi lớn nhất', 'Tin chat'].every((t) => document.body.textContent.includes(t)));
+      check('nhật ký có sự kiện', h.$$('ul li').some((li) => li.textContent.includes('Tăng trưởng')));
+      check('offline: nút xoá dino bị khoá', h.byText('Xoá dino hiện tại', 'button')?.disabled === true);
+      check('thao tác admin báo offline', document.body.textContent.includes('Người chơi không online hoặc chưa có dino.'));
+      check('gara: đủ slot', document.body.textContent.includes(d.garage.length + ' dino') && h.$$('button[title="Xoá khỏi gara"]').length === d.garage.length);
+      check('các đời dino', document.body.textContent.includes(d.lives.length + ' đời dino') && document.body.textContent.includes('Đường đi'));
+      h.$$('button[title="Xoá khỏi gara"]').pop().click(); await h.sleep(300);
+      h.click(h.$('[role=dialog] button[type=submit]')); await h.sleep(2500);
+      const after = await h.api('/api/player/76561198000000011');
+      check('đã xoá một slot', after.garage.length === d.garage.length - 1, after.garage.length);
+      check('trang vẽ lại', document.body.textContent.includes(after.garage.length + ' dino'));
+      h.click(h.$$('[role=tab]').find((b) => b.textContent.includes('Xem tất cả'))); await h.sleep(300);
+      check('xem tất cả: ba mục', ['Mức tăng trưởng mục tiêu', 'Tới người chơi online', 'Tới toạ độ bản đồ'].every((t) => document.body.textContent.includes(t)));
+      location.hash = '#player/76561198999999999'; await h.sleep(2500);
+      check('người chưa thấy', document.body.textContent.includes('Chưa thấy người chơi này'));
+    `,
+  },
+  {
+    name: 'Danh sách: bấm tên mở trang người chơi',
+    path: '/next/#players/list',
+    run: `
+      const a = h.$$('a[href^="#player/"]').find((x) => x.textContent.includes('Carno Tester'));
+      check('có link', !!a);
+      a.click(); await h.sleep(2500);
+      check('mở trang', location.hash === '#player/76561198000000012' && h.$('h1')?.textContent.includes('Carno Tester'));
     `,
   },
 ];

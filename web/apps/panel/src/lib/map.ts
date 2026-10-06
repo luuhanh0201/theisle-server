@@ -62,3 +62,21 @@ export function drawText(ctx: CanvasRenderingContext2D, text: string, x: number,
     ctx.fillStyle = color; ctx.fillText(line, x, ly);
   });
 }
+
+/** Map units [game Y, game X] / 1000 → game [x, y] (cm), as the old panel's toGame. */
+export const toGame = (p: [number, number]): [number, number] => [Math.round(p[1] * 1000), Math.round(p[0] * 1000)];
+
+/**
+ * Coordinates typed as the game shows them, "349,211, 148,696" (Y, X in metres, a comma for
+ * thousands) or "349211 148696", into map units; null when it is not two numbers.
+ */
+export function parseCoords(q: string): [number, number] | null {
+  let parts = q.trim().split(/\s*[;|]\s*|,\s+|\s+/).filter(Boolean);
+  if (parts.length === 1 && /^-?[\d.]+,-?[\d.]+$/.test(parts[0]!)) parts = parts[0]!.split(',');
+  if (parts.length !== 2) return null;
+  const nums = parts.map((p) => Number(p.replace(/,/g, '')));
+  if (!nums.every(Number.isFinite)) return null;
+  const small = nums.every((n) => Math.abs(n) <= 1000);
+  const [a, b] = (small ? nums : nums.map((n) => n / 1000)) as [number, number];
+  return [a, b];
+}
