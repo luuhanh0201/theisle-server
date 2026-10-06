@@ -36,8 +36,8 @@ export const PERMS: readonly PermDef[] = [
   { key: 'garage.view', group: 'Gara', label: 'Xem gara, prime, chỉ số loài' },
   { key: 'garage.edit', group: 'Gara', label: 'Tạo / xoá / khôi phục dino trong gara, sửa prime, mô tả mutation' },
   { key: 'garage.settings', group: 'Gara', label: 'Cài đặt gara' },
-  { key: 'mods.view', group: 'Tính năng mod', label: 'Xem lệnh chat, Ptera, voice, thông báo' },
-  { key: 'mods.edit', group: 'Tính năng mod', label: 'Sửa lệnh chat, Ptera, voice, thông báo' },
+  { key: 'mods.view', group: 'Tính năng mod', label: 'Xem lệnh chat, Ptera, tele con non, voice, thông báo' },
+  { key: 'mods.edit', group: 'Tính năng mod', label: 'Sửa lệnh chat, Ptera, tele con non, voice, thông báo' },
   { key: 'server.view', group: 'Server', label: 'Xem tình trạng, hiệu năng, lịch, DDoS' },
   { key: 'traffic.view', group: 'Server', label: 'Xem thống kê truy cập: lượt mở web, tải / dùng launcher, đăng nhập' },
   { key: 'economy.view', group: 'Nhiệm vụ', label: 'Xem Hổ phách, điểm danh, sổ giao dịch' },
@@ -214,7 +214,7 @@ export function permissionFor(method: string, path: string): string | null {
     if (['/api/ai-reset', '/api/fish-settings', '/api/flora-settings', '/api/ai-ambient', '/api/ai-drop'].includes(path)) return 'world.view';
     if (['/api/garage', '/api/garage-settings', '/api/prime-fixes', '/api/prime-last', '/api/species-stats'].includes(path)
       || /^\/api\/garage\/[^/]+(\/[^/]+)?$/.test(path)) return 'garage.view';
-    if (['/api/commands-settings', '/api/ptera-carry', '/api/voice-settings', '/api/messages'].includes(path)) return 'mods.view';
+    if (['/api/commands-settings', '/api/ptera-carry', '/api/tele-settings', '/api/voice-settings', '/api/messages'].includes(path)) return 'mods.view';
     if (['/api/server/status', '/api/server/readiness', '/api/metrics', '/api/ddos', '/api/rcon/commands', '/api/server/growth-events'].includes(path)) return 'server.view';
     if (path === '/api/game-config' || path === '/api/members') return 'config.view';
     if (path === '/api/backups' || /^\/api\/backups\/file\/[^/]+$/.test(path)) return 'backups.view';
@@ -239,7 +239,7 @@ export function permissionFor(method: string, path: string): string | null {
   if (/^\/api\/garage\/[^/]+\/[^/]+$/.test(path) || /^\/api\/mutations\/[^/]+$/.test(path)
     || ['/api/restore-life', '/api/prime-fixes', '/api/light-test'].includes(path)) return 'garage.edit';
   if (path === '/api/garage-settings') return 'garage.settings';
-  if (['/api/commands-settings', '/api/ptera-carry', '/api/voice-settings', '/api/messages'].includes(path)) return 'mods.edit';
+  if (['/api/commands-settings', '/api/ptera-carry', '/api/tele-settings', '/api/voice-settings', '/api/messages'].includes(path)) return 'mods.edit';
   if (/^\/api\/server\/(start|stop|restart|cancel)$/.test(path)) return 'server.power';
   if (path === '/api/server/schedule' || path === '/api/server/growth-events' || /^\/api\/server\/growth-events\/[\w-]+$/.test(path)) return 'server.schedule';
   if (path === '/api/game-config') return 'config.edit';

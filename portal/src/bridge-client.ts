@@ -64,4 +64,9 @@ export class BridgeClient {
   voice(steamId: string) { return this.get(`/player-api/voice/${steamId}`); }
   voiceToken(steamId: string) { return this.post(`/player-api/voice/${steamId}/token`, {}); }
   voiceRange(steamId: string, range: unknown) { return this.post(`/player-api/voice/${steamId}/range`, { range }); }
+  /** Tele con non (bridge tele.ts): { action: code | use | drop, code? }. */
+  tele(steamId: string, body: { action: unknown; code: unknown }) { return this.post(`/player-api/tele/${steamId}`, body); }
+  /** Kết bạn (bridge friends.ts): the list with where each friend is; a search or a change. */
+  friends(steamId: string) { return this.get(`/player-api/friends/${steamId}`); }
+  friendsAction(steamId: string, body: { action: unknown; q?: unknown; ref?: unknown }) { return this.post(`/player-api/friends/${steamId}`, body); }
 }

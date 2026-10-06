@@ -289,7 +289,7 @@ export interface PortalCommandEvent extends BaseEvent {
   id: number;
   steamId: string;
   name?: string;
-  action: 'store' | 'redeem' | 'skin' | 'light' | 'admin' | 'mutation';
+  action: 'store' | 'redeem' | 'skin' | 'light' | 'admin' | 'mutation' | 'tele';
   slot?: string;
   /** true = started (countdown running / restore scheduled); the final result is garage_store / garage_redeem. */
   ok: boolean;
@@ -308,6 +308,20 @@ export interface GarageStoreResultEvent extends BaseEvent {
   slot?: string;
   ok: boolean;
   /** moved | damage_dealt | damage_taken | left | not_same_dino | full | capture_failed | save_failed | kill_failed */
+  reason?: string;
+}
+
+/** The end of a tele's countdown (DinoGarage garage/tele.lua): moved, or not and why. */
+export interface TeleResultEvent extends BaseEvent {
+  type: 'tele_result';
+  /** The inbox command id of the tele. */
+  id: number;
+  /** Who moved. */
+  steamId: string;
+  /** Next to whom. */
+  target?: string;
+  ok: boolean;
+  /** moved | damage_dealt | damage_taken | left | not_same_dino | target_gone | target_air | target_growth | growth | prison | failed */
   reason?: string;
 }
 
@@ -348,6 +362,7 @@ export type GameEvent =
   | AdminKillEvent
   | PortalCommandEvent
   | GarageStoreResultEvent
+  | TeleResultEvent
   | GarageStoreEvent
   | GarageRedeemEvent
   | GarageRedeemStartEvent;
@@ -380,8 +395,9 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   mutation: (e) => isString(e['steamId']) && isString(e['slot']),
   admin_kill: (e) => isString(e['steamId']) && typeof e['ok'] === 'boolean',
   portal_command: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean'
-    && ['store', 'redeem', 'skin', 'light', 'admin', 'mutation'].includes(e['action'] as string),
+    && ['store', 'redeem', 'skin', 'light', 'admin', 'mutation', 'tele'].includes(e['action'] as string),
   garage_store_result: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean',
+  tele_result: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean',
   garage_store: (e) => isString(e['steamId']) && isString(e['slot']),
   garage_redeem: (e) => isString(e['steamId']) && isString(e['slot']),
   garage_redeem_start: (e) => isString(e['steamId']) && isString(e['slot']) && isString(e['file'])

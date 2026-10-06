@@ -47,6 +47,10 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   POST /api/voice/token       join the proximity voice room (voice.html) (login, same-origin)
  *   GET  /api/voice             who you can hear now: volume + pan per voice user (login)
  *   POST /api/voice/range       { range: 15|30|60|90 } how far your voice carries (login, same-origin)
+ *   POST /api/tele              { action: code|use|drop, code? } tele con non (Dino Live) (login, same-origin, JSON)
+ *   GET  /api/friends           your friends (where each is now), requests in and out (login)
+ *   GET  /api/friends/search?q= players by name or SteamID, by name only (login)
+ *   POST /api/friends           { action: request|accept|decline|cancel|remove, ref } (login, same-origin, JSON)
  *   POST /auth/launcher/start   the desktop launcher's Steam login, in the browser (launcher-login.ts)
  *   POST /auth/launcher/claim   { state } → the session, once that browser login is done
  *   GET  /tai/<file>            the launcher's installers and update feed (PORTAL_DOWNLOADS_DIR)
@@ -215,6 +219,7 @@ export function createPortal(opts: PortalOptions): Server {
   const apiLimit = new RateLimit(600, 60_000);
   const authLimit = new RateLimit(20, 60_000);
   const writeLimit = new RateLimit(12, 60_000);   // per player per minute
+  const searchLimit = new RateLimit(30, 60_000);  // friend searches, per player per minute
   const siteOrigin = new URL(opts.baseUrl).origin;
 
   /** A write must come from our own page: cookies alone would let another site post. */
@@ -476,7 +481,36 @@ export function createPortal(opts: PortalOptions): Server {
         send(res, r.status, r.body);
         return;
       }
+      if (path === '/api/tele' || (path === '/api/friends' && req.method === 'POST')) {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
+        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) { send(res, 415, { error: 'JSON only' }); return; }
+        if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
+        const body = await readSmallJson(req);
+        if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
+        // Only these fields, and never a SteamID from the browser (a friend is named by its ref).
+        const r = path === '/api/tele'
+          ? await opts.bridge.tele(me, { action: body['action'], code: body['code'] })
+          : body['action'] === 'search' ? { status: 400, body: { error: 'search is GET /api/friends/search' } }
+            : await opts.bridge.friendsAction(me, { action: body['action'], ref: body['ref'] });
+        send(res, r.status, r.body);
+        return;
+      }
       if (req.method !== 'GET') { send(res, 405, { error: 'method not allowed' }); return; }
+      if (path === '/api/friends') {
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        const r = await opts.bridge.friends(me);
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/friends/search') {
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!searchLimit.allow(me)) { send(res, 429, { error: 'Tìm quá nhanh, thử lại sau ít giây.' }); return; }
+        const r = await opts.bridge.friendsAction(me, { action: 'search', q: (url.searchParams.get('q') ?? '').slice(0, 64) });
+        send(res, r.status, r.body);
+        return;
+      }
       if (path === '/api/voice') {
         if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
         const r = await opts.bridge.voice(me);

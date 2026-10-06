@@ -1164,6 +1164,124 @@ H.calls = {}
 healLoop.fn()
 check("a dino whose slots are all unlocked: not written", H.countCalls("SetMutationRequirementsData") == 0)
 
+say("\n-- tele con non: B moves next to A, both small, no fight for 60 s, 5 s still, then the cooldown --")
+do
+  local teleLoop
+  for _, l in ipairs(H.gameLoops) do if l.ms == 1500 then teleLoop = l end end
+  check("a tele guard loop (1.5 s, game thread)", teleLoop ~= nil)
+  local MOM, BABY = "76561198000000071", "76561198000000072"
+  local mom = H.makePawn({ growth = 0.35, loc = { X = 50000, Y = -20000, Z = 800 } })
+  local baby = H.makePawn({ growth = 0.2, loc = { X = 1000, Y = 1000, Z = 100 } })
+  local momCtrl, babyCtrl = H.makeCtrl(MOM, mom), H.makeCtrl(BABY, baby)
+  _G.FindAllOf = function() H.touch("FindAllOf"); return { momCtrl, babyCtrl } end
+  local function sendTele(over)
+    nextId = nextId + 1
+    local c = { id = nextId, type = "tele", steamId = BABY, target = MOM, maxGrowth = 0.4, targetMaxGrowth = 0.4,
+                combatS = 60, countdownS = 5, cooldownS = 60, createdAt = clock, expiresAt = clock + 60 }
+    for k, v in pairs(over or {}) do c[k] = v end
+    local f = assert(io.open("Mods/DinoGarage/Saved/inbox.json", "w"))
+    f:write(json.encode({ commands = { c } }))
+    f:close()
+    poll.fn()
+    return nextId
+  end
+  local function teleEnd(id) return byId("tele_result", id) end
+  clock = clock + 1000
+  teleLoop.fn()   -- first health samples
+
+  baby.__props.Growth = 0.5
+  local t1 = sendTele()
+  check("B at 50 %, 40 % allowed: refused, told why", started(t1) and started(t1).ok == false
+        and (started(t1).messages[1] or ""):find("40%", 1, true) ~= nil and (started(t1).messages[1] or ""):find("50%", 1, true) ~= nil,
+        started(t1) and json.encode(started(t1)))
+  baby.__props.Growth = 0.4
+  mom.__props.Growth = 0.6
+  local t2 = sendTele()
+  check("A at 60 %: refused (the one moved to is too big)", started(t2) and started(t2).ok == false
+        and (started(t2).messages[1] or ""):find("người đưa mã", 1, true) ~= nil, started(t2) and json.encode(started(t2)))
+  mom.__props.Growth = 0.35
+
+  -- A player bite on B: no tele for 60 s.
+  H.fire(DAMAGE, H.param(H.makePawn({})), H.param(baby), H.param(25))
+  local t3 = sendTele()
+  check("bitten by a player just now: refused, seconds left told", started(t3) and started(t3).ok == false
+        and (started(t3).messages[1] or ""):find("giao tranh", 1, true) ~= nil, started(t3) and json.encode(started(t3)))
+  clock = clock + 61
+  -- An AI bite fires no hook: the health sample sees it.
+  baby.__props.Health = 60
+  teleLoop.fn()
+  local t4 = sendTele()
+  check("lost health (an AI bite) just now: refused too", started(t4) and started(t4).ok == false
+        and (started(t4).messages[1] or ""):find("giao tranh", 1, true) ~= nil, started(t4) and json.encode(started(t4)))
+  clock = clock + 61
+  teleLoop.fn()
+
+  -- The move.
+  H.calls = {}
+  local t5 = sendTele()
+  check("60 s after the fight: the countdown starts, the rules told", started(t5) and started(t5).ok == true
+        and (started(t5).messages[1] or ""):find("5 m", 1, true) ~= nil, started(t5) and json.encode(started(t5)))
+  teleLoop.fn(); teleLoop.fn()
+  check("standing still: nothing yet", teleEnd(t5) == nil and H.countCalls("K2_SetActorLocation") == 0)
+  H.advance(5100)
+  local moved = nil
+  for _, c in ipairs(H.calls) do if c.what == "K2_SetActorLocation" then moved = c.args[1] end end
+  check("after 5 s: B put where A stands (a little above)", moved and moved.X == 50000 and moved.Y == -20000 and moved.Z == 830,
+        moved and json.encode(moved))
+  check("tele_result ok for the web, A as the target", teleEnd(t5) and teleEnd(t5).ok == true and teleEnd(t5).target == MOM)
+  check("both told", lastMsg(babyCtrl):find("Đã dịch chuyển", 1, true) ~= nil and lastMsg(momCtrl):find("tới chỗ bạn", 1, true) ~= nil,
+        lastMsg(babyCtrl) .. " / " .. lastMsg(momCtrl))
+  check("growth and vitals untouched (only the location)", H.countCalls("SetGrowth") == 0 and H.countCalls("SetHealth") == 0
+        and H.countCalls("SetHunger") == 0)
+  local t6 = sendTele()
+  check("again at once: the cooldown", started(t6) and started(t6).ok == false
+        and (started(t6).messages[1] or ""):find("hồi", 1, true) ~= nil, started(t6) and json.encode(started(t6)))
+  clock = clock + 61
+
+  -- Walking off during the countdown: no move.
+  H.calls = {}
+  local t7 = sendTele()
+  baby.__props.Loc = { X = baby.__props.Loc.X + 800, Y = baby.__props.Loc.Y, Z = baby.__props.Loc.Z }
+  teleLoop.fn()
+  H.advance(5100)
+  check("moved 8 m during the countdown: failed (moved), not moved", teleEnd(t7) and teleEnd(t7).ok == false
+        and teleEnd(t7).reason == "moved" and H.countCalls("K2_SetActorLocation") == 0, teleEnd(t7) and json.encode(teleEnd(t7)))
+
+  -- Hit by a player during the countdown.
+  local t8 = sendTele()
+  H.fire(DAMAGE, H.param(baby), H.param(H.makePawn({})), H.param(25))
+  check("hits a player during the countdown: failed at once (damage_dealt)", teleEnd(t8) and teleEnd(t8).reason == "damage_dealt")
+  clock = clock + 61
+  teleLoop.fn()
+
+  -- A in the air when the countdown ends.
+  local t9 = sendTele()
+  mom.__props.Falling = true
+  H.advance(5100)
+  check("A falling / flying at the end: failed (target_air), not moved", teleEnd(t9) and teleEnd(t9).reason == "target_air"
+        and H.countCalls("K2_SetActorLocation") == 0, teleEnd(t9) and json.encode(teleEnd(t9)))
+  mom.__props.Falling = false
+
+  -- A left the game.
+  _G.FindAllOf = function() H.touch("FindAllOf"); return { babyCtrl } end
+  local t10 = sendTele()
+  check("A not in game: refused", started(t10) and started(t10).ok == false)
+  _G.FindAllOf = function() H.touch("FindAllOf"); return { momCtrl, babyCtrl } end
+
+  -- In prison.
+  local pf = assert(io.open("Mods/shared/isle-prison.json", "w"))
+  pf:write(json.encode({ inmates = { BABY } })); pf:close()
+  clock = clock + 10
+  local t11 = sendTele()
+  check("B in prison: refused", started(t11) and started(t11).ok == false
+        and (started(t11).messages[1] or ""):find("tù", 1, true) ~= nil)
+  os.remove("Mods/shared/isle-prison.json")
+  clock = clock + 10
+  -- Bad arguments from a broken inbox: refused, nothing moved.
+  local t12 = sendTele({ target = BABY })
+  check("a tele to yourself: refused", started(t12) and started(t12).ok == false)
+end
+
 say("")
 say("-- threads: nothing the mod ran from an async callback touched the engine --")
 check("no engine access off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ", "))

@@ -41,6 +41,7 @@ import { readAiZones, readAiZonesStatus, saveAiZones, zonePoints, type AiZonesSe
 import { dropResult, queueDrop, validateDrop } from './ai-drop.js';
 import { validateReset, type AiReset } from './ai-reset.js';
 import { readPteraSettings, savePteraSettings } from './ptera-settings.js';
+import { readTeleSettings, saveTeleSettings } from './tele.js';
 import { readSanctuaries, readZoneGuard, saveZoneGuard, syncZoneGuard } from './zone-guard.js';
 import { DISCORD_KINDS, banChangeLine, publicView, type DiscordLog } from './discord.js';
 import { registerCommands } from './relay.js';
@@ -651,6 +652,7 @@ async function handlePanel(
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
+      (path === '/api/tele-settings' && req.method === 'PUT') ||
       (path === '/api/zone-guard' && req.method === 'PUT') ||
       (path === '/api/discord' && req.method === 'PUT') ||
       (path === '/api/bans' && req.method === 'POST') ||
@@ -830,6 +832,14 @@ async function handlePanel(
       const before = await readPteraSettings();
       const saved = await savePteraSettings(await readJsonBody(req));
       await audit({ action: 'Ptera carry settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/tele-settings') {
+      const before = await readTeleSettings();
+      const saved = await saveTeleSettings(await readJsonBody(req));
+      await audit({ action: 'Tele settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
     }
@@ -1521,6 +1531,10 @@ async function handlePanel(
     }
     case '/api/ptera-carry': {
       sendJson(res, 200, await readPteraSettings());
+      return;
+    }
+    case '/api/tele-settings': {
+      sendJson(res, 200, await readTeleSettings());
       return;
     }
     case '/api/zone-guard': {

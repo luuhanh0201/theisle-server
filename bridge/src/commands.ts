@@ -29,7 +29,8 @@ export type InboxCommand =
   | CommandBase & { type: 'skin'; skin: SkinRequest }
   | CommandBase & { type: 'light'; on: boolean }
   | CommandBase & { type: 'admin' } & AdminAction
-  | CommandBase & { type: 'mutation' } & MutationUse;
+  | CommandBase & { type: 'mutation' } & MutationUse
+  | CommandBase & { type: 'tele' } & TeleMove;
 type NewCommand =
   | { type: 'kill'; steamId: string; reason: string }
   | { type: 'store'; steamId: string; slot: string }
@@ -37,7 +38,22 @@ type NewCommand =
   | { type: 'skin'; steamId: string; skin: SkinRequest }
   | { type: 'light'; steamId: string; on: boolean }
   | ({ type: 'admin'; steamId: string } & AdminAction)
-  | ({ type: 'mutation'; steamId: string } & MutationUse);
+  | ({ type: 'mutation'; steamId: string } & MutationUse)
+  | ({ type: 'tele'; steamId: string } & TeleMove);
+
+/**
+ * Tele con non (tele.ts; mods/DinoGarage garage/tele.lua): the player (steamId) moved next to
+ * `target`'s dino, both at most their growth (0–1), no fight for `combatS` seconds, standing still
+ * `countdownS` seconds; `cooldownS` before they may again.
+ */
+export interface TeleMove {
+  target: string;
+  maxGrowth: number;
+  targetMaxGrowth: number;
+  combatS: number;
+  countdownS: number;
+  cooldownS: number;
+}
 
 /**
  * A mutation item used on the dino a player plays now (items.ts; mods/DinoGarage
@@ -370,4 +386,23 @@ export async function queueLightTest(steamId: string, on: unknown): Promise<Inbo
   assertSteamId(steamId);
   if (typeof on !== 'boolean') throw new ValidationError('on must be true or false');
   return enqueue({ type: 'light', steamId, on });
+}
+
+/**
+ * A player's tele (tele.ts checked the code and what live.json shows): one command every few
+ * seconds, like the garage.
+ */
+export async function queueTele(steamId: string, move: TeleMove, now = Date.now()): Promise<InboxCommand> {
+  assertSteamId(steamId);
+  assertSteamId(move.target);
+  if (move.target === steamId) throw new ValidationError('target must be another player');
+  const share = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 1;
+  const whole = (v: unknown, hi: number): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= hi;
+  if (!share(move.maxGrowth) || !share(move.targetMaxGrowth)) throw new ValidationError('growth limits must be 0–1');
+  if (!whole(move.combatS, 600) || !whole(move.countdownS, 60) || !whole(move.cooldownS, 3600)) throw new ValidationError('bad timings');
+  const last = lastPlayerCommand.get(steamId);
+  if (last !== undefined && now - last < PLAYER_COMMAND_GAP_MS) throw new TooSoonError('one command every few seconds');
+  lastPlayerCommand.set(steamId, now);
+  return enqueue({ type: 'tele', steamId, target: move.target, maxGrowth: move.maxGrowth, targetMaxGrowth: move.targetMaxGrowth,
+    combatS: move.combatS, countdownS: move.countdownS, cooldownS: move.cooldownS });
 }

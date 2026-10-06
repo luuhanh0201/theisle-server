@@ -46,6 +46,7 @@ local Stomach = require("garage.stomach")
 local Light   = require("garage.light")
 local Admin   = require("garage.admin")
 local MutationItem = require("garage.mutation")
+local Tele    = require("garage.tele")
 
 local MOD = "DinoGarage"
 
@@ -363,15 +364,17 @@ local function guardStores()
 end
 
 -- Player-on-player damage (the same hook StatsLogger reads): a storing dino
--- that hits or is hit fails at once. Reads only; no engine writes in a hook.
+-- that hits or is hit fails at once, and who fought is noted for tele
+-- (garage/tele.lua: no tele within its combat window). Reads only; no engine
+-- writes in a hook.
 pcall(function()
     RegisterHook("/Script/TheIsle.TICharacterBase:ApplyDamage", H.timed(MOD .. ": damage hook", function(selfParam, targetParam)
-        if next(pendingStore) == nil then return end
         H.try(MOD .. ": store damage guard", function()
             local attacker = selfParam and selfParam:get()
             local target = targetParam and targetParam:get()
             local a = H.isValid(attacker) and addressOf(attacker) or nil
             local t = H.isValid(target) and addressOf(target) or nil
+            Tele.noteHit(a, t)
             for steamId, pending in pairs(pendingStore) do
                 if a ~= nil and a == pending.address then
                     failStore(steamId, "damage_dealt")
@@ -583,6 +586,11 @@ Inbox.on("admin", function(c, cmd, say)
     return ok == true
 end)
 
+-- Tele con non from the web (garage/tele.lua): moved next to the code's owner after the checks and a countdown.
+Inbox.on("tele", function(c, cmd, say)
+    return Tele.start(c, cmd, say)
+end)
+
 -- A mutation item from the player's bag on the web (garage/mutation.lua): into the slot they chose.
 Inbox.on("mutation", function(c, cmd, say)
     local pawn = H.livePawnFromCtrl(c)
@@ -701,6 +709,8 @@ end)
 -- - the hand-off that lost callbacks on the server (2026-09-24).
 H.every(INBOX_POLL_MS, MOD .. ": inbox poll", Inbox.poll)
 H.every(GUARD_EVERY_MS, MOD .. ": store guard", guardStores)
+-- Tele: every player's health sampled (a fight), and the tele countdowns guarded (garage/tele.lua).
+H.every(Tele.GUARD_MS, MOD .. ": tele guard", Tele.guard)
 -- Prime progress an admin gives back (garage/primefix.lua).
 H.every(5000, MOD .. ": prime fixes", PrimeFix.poll)
 -- Colours a player keeps from the web, on every new dino of that species (garage/keepskin.lua).

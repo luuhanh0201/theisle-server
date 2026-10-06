@@ -1,4 +1,4 @@
-import type { GameEvent, DeathEvent, GarageStoreResultEvent, GrowthSetEvent, MutationEvent, Loc, MutationSlots, PortalCommandEvent, PrisonEvent, SnapshotEvent, Skin, VitalName } from './events.js';
+import type { GameEvent, DeathEvent, GarageStoreResultEvent, TeleResultEvent, GrowthSetEvent, MutationEvent, Loc, MutationSlots, PortalCommandEvent, PrisonEvent, SnapshotEvent, Skin, VitalName } from './events.js';
 import { config } from './config.js';
 import { Catalog } from './catalog.js';
 import { SpeciesStats } from './species-stats.js';
@@ -234,6 +234,8 @@ export class Store {
   readonly #commandResults = new Map<number, PortalCommandEvent>();
   /** How a web store's countdown ended, by the same command id. */
   readonly #storeResults = new Map<number, GarageStoreResultEvent>();
+  /** How each tele ended (tele.ts settles its codes by these), by inbox command id. */
+  readonly #teleResults = new Map<number, TeleResultEvent>();
   /** Species and mutations reported by the game; see catalog.ts. */
   readonly catalog = new Catalog();
   /** Each species' maxima by growth, as read on this server (the admin create form shows them). */
@@ -553,6 +555,15 @@ export class Store {
         break;
       }
 
+      case 'tele_result': {
+        this.#teleResults.set(event.id, event);
+        if (this.#teleResults.size > 500) {
+          const oldest = this.#teleResults.keys().next().value;
+          if (oldest !== undefined) this.#teleResults.delete(oldest);
+        }
+        break;
+      }
+
       case 'admin_kill': {
         const p = this.#player(event.steamId, event.t);
         if (event.ok) this.#recentRemoval.set(event.steamId, { t: event.t, cause: 'admin' });
@@ -842,6 +853,12 @@ export class Store {
   /** How a web store ended (null = still counting down), only for that player. */
   storeResult(steamId: string, id: number): GarageStoreResultEvent | null {
     const r = this.#storeResults.get(id);
+    return r !== undefined && r.steamId === steamId ? { ...r } : null;
+  }
+
+  /** How a tele ended (null = still counting down), only for the player who moved. */
+  teleResult(steamId: string, id: number): TeleResultEvent | null {
+    const r = this.#teleResults.get(id);
     return r !== undefined && r.steamId === steamId ? { ...r } : null;
   }
 

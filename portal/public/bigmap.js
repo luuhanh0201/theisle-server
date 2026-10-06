@@ -38,6 +38,7 @@ function feed(g) {
   map.setAi(g.ai ?? []);
   map.setFish(g.fish ?? []);
   map.setEscapees(g.escapees ?? []);
+  map.setFriends(Array.isArray(g.friends) ? g.friends : null);
   if (Array.isArray(g.aiZones)) map.setAiZones(g.aiZones);
   if (g.heat !== undefined) map.setHeat(g.heat);
 }

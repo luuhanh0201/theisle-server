@@ -1,8 +1,9 @@
 // Your dino on the Gateway map: position and heading from /api/me (the bridge
 // reads the game every second), your own recent trail, and the places players
 // plan around (migration / patrol zones, sanctuaries, water, landmarks).
-// Only YOUR dino: the portal never gets anyone else's position. The AI alive on
-// the server and the game's fish are shown (the owner's choice), from /api/ai every 2 s.
+// Only YOUR dino and your accepted friends' (Kết bạn, /api/friends: each of you agreed): the portal
+// never gets anyone else's position. The AI alive on the server and the game's fish are shown (the
+// owner's choice), from /api/ai every 2 s.
 //
 // Base image and places: VulnonaMAP (Coco.N), fetched by the bridge
 // (bridge/src/cli-fetch-map.ts) and shipped to public/map/. Map units = game
@@ -10,6 +11,7 @@
 // map X (down the image) is world Y, map Y (right) is world X.
 
 const LAYERS = [
+  ['friends', 'Bạn bè', '#a78bfa', true],
   ['escape', 'Kẻ vượt ngục', '#f43f5e', true],
   ['heat', 'Mật độ người chơi', '#fb7185', true],
   ['ai', 'AI (live)', '#ef4444', true],
@@ -131,6 +133,20 @@ export const loadLayersForTest = () => loadLayers();
 export const saveLayersForTest = (on) => saveLayers(on);
 export const fmtDistance = (m) => (m >= 1000 ? `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km` : `${Math.round(m)} m`);
 const TARGET = '#facc15';
+/**
+ * The mini map's arrow for something `dx, dy` px from its centre (before the map is turned by `turn`
+ * radians): where on the rim it sits (from the centre) and which way it points, or null when it is on
+ * the map itself. `shape`: 'circle' (the rim is a circle) or 'square' (the widget's edges), `pad` px in.
+ */
+export function edgeArrow(dx, dy, width, height, shape, turn = 0, pad = 13) {
+  const rx = dx * Math.cos(turn) - dy * Math.sin(turn), ry = dx * Math.sin(turn) + dy * Math.cos(turn);
+  const len = Math.hypot(rx, ry);
+  if (len < 1) return null;
+  const k = shape === 'circle' ? (Math.min(width, height) / 2 - pad) / len
+    : Math.min((width / 2 - pad) / Math.abs(rx || 1e-9), (height / 2 - pad) / Math.abs(ry || 1e-9));
+  if (k >= 1) return null;
+  return { x: rx * k, y: ry * k, angle: Math.atan2(ry, rx) };
+}
 // Which layers are on: kept in this browser, shared by every map of the site (the launcher's map tab,
 // its big map in game, the mini map drawn from them).
 const LAYERS_KEY = 'portalMapLayers.v2';
@@ -204,6 +220,7 @@ export function createMap(root, opts = {}) {
     fish: [],            // the game's fish, [{ s, x, y }] from /api/ai .fish
     zones: [],           // AI zones the admins drew, from /api/ai-zones (the prison flagged)
     escapees: [],        // escaped inmates, [{ name, s, x, y, since }] from /api/ai .escapees
+    friends: null,       // your friends in game, [{ name, x, y, yaw }] from /api/friends; null: Kết bạn not open to you
     heat: null,          // players per 500 m square, every 5 minutes: { t, cell, players, cells: [{ x, y, n }] }
     wp: loadWaypoints(), // { target, saved }
     trail: loadTrail(),  // { on, clearedAt }: shown or not; points up to clearedAt (unix s) hidden
@@ -470,6 +487,16 @@ export function createMap(root, opts = {}) {
       }
     }
 
+    // Your friends in game (each of you accepted): a violet dot with their heading and name, always labelled.
+    if (st.on.has('friends') && st.friends) {
+      for (const f of st.friends) {
+        const [x, y] = scr(unitsOf(f));
+        if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
+        friendMark(ctx, x, y, f.yaw);
+        text(ctx, f.name ?? 'Bạn', x, y - 17, '800 11.5px Inter, system-ui, sans-serif', '#ddd6fe');
+      }
+    }
+
     // Where you are heading: a line from the dino straight to it, and a pin.
     const tg = st.wp.target;
     if (tg) {
@@ -543,7 +570,7 @@ export function createMap(root, opts = {}) {
    * radiusM metres to the edge, north up or turned with the dino, onto `c` (width × height CSS px at
    * dpr). False when there is nothing to draw yet (no map, no position).
    */
-  function paintMini(c, { width, height, dpr = 1, radiusM = 500, rotate = 'north' }) {
+  function paintMini(c, { width, height, dpr = 1, radiusM = 500, rotate = 'north', shape = 'square' }) {
     const pos = shown();
     if (!st.data || !pos || !(width > 0) || !(height > 0)) return false;
     const w = Math.round(width * dpr), h = Math.round(height * dpr);
@@ -562,10 +589,53 @@ export function createMap(root, opts = {}) {
     st.view = { s, ox: width / 2 - ix * s, oy: height / 2 - iy * s };
     try {
       paintScene(ctx, width, height, pos, Math.min(width / st.img.naturalWidth, height / st.img.naturalHeight));
+      // A friend beyond the edge: an arrow on the rim pointing their way, their name and distance (upright).
+      if (st.on.has('friends') && st.friends?.length) {
+        const turn = rotate === 'heading' && typeof yaw === 'number' ? -Math.PI / 2 - yaw * Math.PI / 180 : 0;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const cx = width / 2, cy = height / 2, pad = 13;
+        for (const f of st.friends) {
+          const [fx, fy] = scr(unitsOf(f));
+          const edge = edgeArrow(fx - cx, fy - cy, width, height, shape, turn, pad);
+          if (edge === null) continue;   // on the map: drawn with the scene
+          const ax = cx + edge.x, ay = cy + edge.y, a = edge.angle;
+          ctx.save(); ctx.translate(ax, ay); ctx.rotate(a);
+          ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, -7); ctx.lineTo(-3, 0); ctx.lineTo(-6, 7); ctx.closePath();
+          ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
+          ctx.fillStyle = LAYER.friends.color; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+          ctx.restore();
+          const me = st.me?.position;
+          const label = `${f.name ?? 'Bạn'}${me ? ` · ${fmtDistance(distanceM(me, f))}` : ''}`;
+          // The name inward of the arrow, never over it, whole on the widget.
+          const font = '800 10.5px Inter, system-ui, sans-serif';
+          ctx.font = font;
+          const half = Math.min(width / 2 - 2, ctx.measureText(label).width / 2 + 3);
+          const tx = Math.min(width - half - 2, Math.max(half + 2, ax - Math.cos(a) * (half + 14)));
+          const ty = Math.min(height - 9, Math.max(9, ay - Math.sin(a) * 16));
+          text(ctx, label, tx, ty, font, '#ede9fe');
+        }
+      }
     } finally {
       st.view = kept;
     }
     return true;
+  }
+
+  /** A friend's mark: a violet dot, a white ring, a notch toward where they face. */
+  function friendMark(ctx, x, y, yaw) {
+    if (typeof yaw === 'number') {
+      const a = yaw * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * 13, y + Math.sin(a) * 13);
+      ctx.lineTo(x + Math.cos(a + 2.4) * 7, y + Math.sin(a + 2.4) * 7);
+      ctx.lineTo(x + Math.cos(a - 2.4) * 7, y + Math.sin(a - 2.4) * 7);
+      ctx.closePath();
+      ctx.fillStyle = '#ede9fe'; ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = LAYER.friends.color; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(2,6,23,.9)'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, Math.PI * 2); ctx.stroke();
   }
 
   // --- input ---
@@ -650,8 +720,8 @@ export function createMap(root, opts = {}) {
 
   // --- layers ---
   function chips() {
-    root.querySelector('.map-chips').innerHTML = LAYERS.map(([id, label, color]) =>
-      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'escape' ? ` <b class="esc-n">${st.escapees.length}</b>` : id === 'fish' ? ` <b class="fish-n">${st.fish.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : id === 'heat' ? ` <b class="heat-n">${st.heat?.players ?? 0}</b>` : ''}</button>`).join('');
+    root.querySelector('.map-chips').innerHTML = LAYERS.filter(([id]) => id !== 'friends' || st.friends !== null).map(([id, label, color]) =>
+      `<button type="button" class="chip${st.on.has(id) ? ' on' : ''}" data-layer="${id}"><i style="background:${color}"></i>${esc(label)}${id === 'ai' ? ` <b class="ai-n">${st.ai.length}</b>` : id === 'escape' ? ` <b class="esc-n">${st.escapees.length}</b>` : id === 'fish' ? ` <b class="fish-n">${st.fish.length}</b>` : id === 'aizone' ? ` <b class="az-n">${st.zones.length}</b>` : id === 'heat' ? ` <b class="heat-n">${st.heat?.players ?? 0}</b>` : id === 'friends' ? ` <b class="fr-n">${st.friends?.length ?? 0}</b>` : ''}</button>`).join('');
   }
   root.querySelector('.map-chips').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-layer]');
@@ -784,6 +854,22 @@ export function createMap(root, opts = {}) {
       st.escapees = Array.isArray(list) ? list.filter((a) => typeof a?.x === 'number' && typeof a?.y === 'number') : [];
       const n = root.querySelector('.map-chips .esc-n');
       if (n) n.textContent = String(st.escapees.length);
+      draw();
+    },
+    /** /api/friends .friends in game: [{ name, x, y, yaw }]; null when Kết bạn is not open to you (no chip). */
+    setFriends(list) {
+      const was = st.friends;
+      st.friends = Array.isArray(list) ? list.filter((f) => Number.isFinite(f?.x) && Number.isFinite(f?.y)) : null;
+      if ((was === null) !== (st.friends === null)) { if (st.data) chips(); }
+      const n = root.querySelector('.map-chips .fr-n');
+      if (n) n.textContent = String(st.friends?.length ?? 0);
+      draw();
+    },
+    /** Centre the map on a world spot ({ x, y } cm), no longer following your dino (a friend's "Xem"). */
+    focus(p) {
+      if (!st.view || !st.data || !Number.isFinite(p?.x) || !Number.isFinite(p?.y)) return;
+      setFollow(false);
+      center(unitsOf(p), 4);
       draw();
     },
     /** /api/heatmap: { t, next, cell, players, cells: [{ x, y, n }] } (null: none yet). */

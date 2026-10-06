@@ -13,7 +13,7 @@ import { boxOptions, dinoItemOptions, openDinoBox, speciesOptions, useDinoItem }
 import { audit } from './audit.js';
 import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
 import { claimQuest, questsOf, type QuestProgress } from './quests.js';
-import { SLOT_MIN_GROWTH, queueMutationUse, queuePlayerCommand, type MutationUse, queueSkin, SKIN_CHANNEL_MAX, TooSoonError } from './commands.js';
+import { SLOT_MIN_GROWTH, queueMutationUse, queuePlayerCommand, type MutationUse, queueSkin, queueTele, SKIN_CHANNEL_MAX, TooSoonError } from './commands.js';
 import { type Item, type Rarity, dietRefusal, getItem, inventoryOf, isPendingUse, listItems, markPendingUse, resolveSkin, speciesKey } from './items.js';
 import { keptSkinsOf, setKeptSkin } from './kept-skins.js';
 import type { LifeRecord, PlayerStats, Store, TrailPoint } from './store.js';
@@ -30,6 +30,8 @@ import { adminIds } from './panel-auth.js';
 import { EARLY_FEATURES, LOCKED_NOTE, type FeatureAccess, type FeatureKey, type ReleaseBadge, closedError, earlyAccess, featureAccess, isSvip, readSvip, releaseBadge } from './svip.js';
 import { parseTrafficEvent, type Traffic } from './traffic.js';
 import { MUTATION_REFERENCE, findReference } from './mutation-reference.js';
+import { codeRefusal, normaliseCode, readTeleSettings, teleCodes, teleRefusal } from './tele.js';
+import { friendRef, friends, friendSpot, idOfRef, searchPlayers } from './friends.js';
 import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from './mutation-tiers.js';
 
 /**
@@ -97,6 +99,11 @@ export async function bagUnlimited(steamId: string): Promise<boolean> {
  *   POST /player-api/voice/<steamId>/range     { range: 15|30|60|90 } how far their voice carries
  *   GET /player-api/voice/<steamId>            who that player can hear now: volume + pan,
  *        never a position or a SteamID (voice.ts)
+ *   POST /player-api/tele/<steamId>            { action: code } | { action: use, code } | { action: drop }
+ *        tele con non (tele.ts): a code for others to come to them; moved next to a code's owner
+ *   GET /player-api/friends/<steamId>          their friends (name, online, where now), requests in / out (friends.ts)
+ *   POST /player-api/friends/<steamId>         { action: search, q } | { action: request|accept|decline|cancel|remove, ref }
+ *        a player is named by `ref` (a keyed hash), never by SteamID; positions only of accepted friends
  *
  * The only writes a player can make, and only for the SteamID the portal
  * logged in, the portal never takes a SteamID from the browser.
@@ -490,6 +497,24 @@ export async function startMutationUse(ctx: UseCtx, who: string, uid: string, sl
   }
 }
 
+/** The codes being used, settled by what the mod said (tele.ts). */
+function settleTele(store: Store, nowS: number): void {
+  teleCodes.settle((by, cmdId) => {
+    const started = store.commandResult(by, cmdId);
+    const fin = store.teleResult(by, cmdId);
+    return { started: started === null ? null : started.ok, final: fin === null ? null : { ok: fin.ok } };
+  }, nowS);
+}
+
+/** What the Dino Live page shows of tele (/me). */
+async function teleView(store: Store, steamId: string): Promise<Record<string, unknown>> {
+  const s = await readTeleSettings();
+  const nowS = Math.floor(Date.now() / 1000);
+  settleTele(store, nowS);
+  return { maxGrowthPct: s.maxGrowthPct, targetMaxGrowthPct: s.targetMaxGrowthPct, codeMinutes: s.codeMinutes, countdownS: s.countdownS,
+    combatS: s.combatS, cooldownS: s.cooldownS, code: teleCodes.mine(steamId, nowS), cooldownLeft: teleCodes.cooldownLeft(steamId, s, nowS) };
+}
+
 /** Returns false when the path is not a /player-api route (the caller carries on). */
 /** The players' heat map: one picture every 5 minutes, for everyone (made at the first ask). */
 let heat: HeatMapper | null = null;
@@ -572,6 +597,113 @@ export async function handlePlayerApi(
     } catch (err) {
       if (err instanceof TooSoonError) send(res, 429, { error: 'too many requests' });
       else if (err instanceof ValidationError) send(res, 400, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
+  // Tele con non (tele.ts): { action: code } a code for others to come to them; { action: use, code } moved
+  // next to the code's owner (DinoGarage, after its own checks); { action: drop } their code dropped.
+  const teleCmd = /^\/player-api\/tele\/(\d{17})$/.exec(path);
+  if (teleCmd !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const who = teleCmd[1] as string;
+    if (await refused(res, 'tele', who, 'Tele con non')) return true;
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    const s = await readTeleSettings();
+    const nowS = Math.floor(Date.now() / 1000);
+    const live = ctx.live ? await ctx.live() : null;
+    try {
+      if (body['action'] === 'drop') { teleCodes.drop(who); send(res, 200, { ok: true }); return true; }
+      if (ctx.prison?.isInmate(who)) { send(res, 409, { error: 'Bạn đang ở tù: không tele được.' }); return true; }
+      if (body['action'] === 'code') {
+        const why = codeRefusal(livePlayer(live, who), s);
+        if (why !== null) { send(res, 409, { error: why }); return true; }
+        send(res, 200, teleCodes.issue(who, s, nowS));
+        return true;
+      }
+      if (body['action'] !== 'use') { send(res, 400, { error: 'action must be code, use or drop' }); return true; }
+      const code = normaliseCode(body['code']);
+      if (code === null) { send(res, 400, { error: 'Mã gồm 6 ký tự (chữ và số).' }); return true; }
+      settleTele(ctx.store, nowS);
+      const { owner } = teleCodes.lookup(code, who, nowS);
+      if (ctx.prison?.isInmate(owner)) { send(res, 409, { error: 'Người đưa mã đang ở tù: không tele tới được.' }); return true; }
+      const wait = teleCodes.cooldownLeft(who, s, nowS);
+      if (wait > 0) { send(res, 409, { error: `Tele đang hồi: chờ ${wait} giây.` }); return true; }
+      const why = teleRefusal(livePlayer(live, who), livePlayer(live, owner), s);
+      if (why !== null) { send(res, 409, { error: why }); return true; }
+      const cmd = await queueTele(who, { target: owner, maxGrowth: s.maxGrowthPct / 100, targetMaxGrowth: s.targetMaxGrowthPct / 100,
+        combatS: s.combatS, countdownS: s.countdownS, cooldownS: s.cooldownS });
+      // Held for them while the mod runs it: the countdown, a poll, and some slack.
+      teleCodes.reserve(code, who, cmd.id, nowS + s.countdownS + 90);
+      const name = ctx.store.player(who)?.player.name ?? null;
+      const ownerName = ctx.store.player(owner)?.player.name ?? null;
+      await audit({ action: 'tele', ok: true, detail: `${name ?? who} nhập mã tele của ${ownerName ?? owner}` }, { steamId: who, name });
+      send(res, 202, { id: cmd.id, action: cmd.type, expiresAt: cmd.expiresAt, to: ownerName, countdownS: s.countdownS });
+    } catch (err) {
+      if (err instanceof TooSoonError) send(res, 429, { error: 'Thao tác quá nhanh, thử lại sau vài giây.' });
+      else if (err instanceof ValidationError) send(res, 409, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
+  // Kết bạn (friends.ts): GET their friends (where each is now), requests in and out; POST { action:
+  // search, q } | { action: request|accept|decline|cancel|remove, ref }. Nobody's SteamID goes out.
+  const friendsCmd = /^\/player-api\/friends\/(\d{17})$/.exec(path);
+  if (friendsCmd !== null) {
+    const who = friendsCmd[1] as string;
+    const access = await featureAccess('friends', who);
+    if (access !== 'open') { send(res, 403, { error: closedError('Kết bạn', access) }); return true; }
+    const known = ctx.store.players();
+    const nameOf = (id: string): string | null => ctx.store.player(id)?.player.name ?? null;
+    if (req.method === 'GET') {
+      const v = await friends.view(who);
+      const live = ctx.live ? await ctx.live() : null;
+      const online = new Set(known.filter((p) => p.online).map((p) => p.steamId));
+      send(res, 200, {
+        friends: v.friends.map((f) => {
+          const p = ctx.store.player(f.id)?.player ?? null;
+          const spot = friendSpot(live, f.id);
+          return { ref: friendRef(f.id), name: p?.name ?? null, online: online.has(f.id), species: spot ? shortSpecies(p?.species) : null, since: f.since, pos: spot };
+        }).sort((a, b) => Number(b.online) - Number(a.online) || (a.name ?? '').localeCompare(b.name ?? '')),
+        incoming: v.incoming.map((r) => ({ ref: friendRef(r.from), name: nameOf(r.from), at: r.at })),
+        outgoing: v.outgoing.map((r) => ({ ref: friendRef(r.to), name: nameOf(r.to), at: r.at })),
+        t: live?.t ?? null,
+      });
+      return true;
+    }
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const body = await readSmallJson(req);
+    if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return true; }
+    try {
+      const v = await friends.view(who);
+      const action = typeof body['action'] === 'string' ? body['action'] : '';
+      if (action === 'search') {
+        const rel = (id: string): 'friend' | 'outgoing' | 'incoming' | null =>
+          v.friends.some((f) => f.id === id) ? 'friend' : v.outgoing.some((r) => r.to === id) ? 'outgoing' : v.incoming.some((r) => r.from === id) ? 'incoming' : null;
+        const found = searchPlayers(known.map((p) => ({ steamId: p.steamId, name: p.name, online: p.online })), body['q'], who);
+        send(res, 200, { results: found.map((p) => ({ ref: friendRef(p.steamId), name: p.name ?? 'Người chơi', online: p.online, relation: rel(p.steamId) })) });
+        return true;
+      }
+      const ids = action === 'request' ? known.map((p) => p.steamId)
+        : action === 'accept' || action === 'decline' ? v.incoming.map((r) => r.from)
+          : action === 'cancel' ? v.outgoing.map((r) => r.to)
+            : action === 'remove' ? v.friends.map((f) => f.id) : null;
+      if (ids === null) { send(res, 400, { error: 'action must be search, request, accept, decline, cancel or remove' }); return true; }
+      const other = idOfRef(body['ref'], ids);
+      if (other === null) { send(res, 404, { error: 'Không tìm thấy người chơi này (có thể lời mời đã hết hạn).' }); return true; }
+      const name = nameOf(who);
+      let out: string = action;
+      if (action === 'request') out = await friends.request(who, other);
+      else if (action === 'accept') await friends.accept(who, other);
+      else if (action === 'decline') await friends.decline(who, other);
+      else if (action === 'cancel') await friends.cancel(who, other);
+      else await friends.remove(who, other);
+      await audit({ action: 'friends', ok: true, detail: `${name ?? who} ${({ sent: 'mời kết bạn', accepted: 'kết bạn với', accept: 'chấp nhận kết bạn', decline: 'từ chối kết bạn', cancel: 'huỷ lời mời kết bạn', remove: 'huỷ kết bạn' } as Record<string, string>)[out] ?? out} ${nameOf(other) ?? other}` },
+        { steamId: who, name });
+      send(res, 200, { ok: true, result: out });
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 409, { error: err.message });
       else throw err;
     }
     return true;
@@ -797,8 +929,8 @@ export async function handlePlayerApi(
     const steamId = cmdResult[1] as string;
     const id = Number(cmdResult[2]);
     const r = ctx.store.commandResult(steamId, id);
-    // A store has a second outcome, when its countdown ends.
-    const fin = r?.action === 'store' ? ctx.store.storeResult(steamId, id) : null;
+    // A store and a tele have a second outcome, when their countdown ends.
+    const fin = r?.action === 'store' ? ctx.store.storeResult(steamId, id) : r?.action === 'tele' ? ctx.store.teleResult(steamId, id) : null;
     send(res, 200, r === null ? { status: 'pending' } : {
       status: 'done', action: r.action, ok: r.ok,
       messages: Array.isArray(r.messages) ? r.messages.filter((m) => typeof m === 'string').slice(0, 10) : [],
@@ -850,6 +982,10 @@ export async function handlePlayerApi(
       bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
       prison: ctx.prison?.playerView(steamId) ?? null,
+      // Tele con non (tele.ts): the limits, their code while it works, the cooldown left.
+      tele: shown(await featureAccess('tele', steamId), await teleView(ctx.store, steamId)),
+      // Kết bạn (friends.ts): how many ask them (the Map's badge); the list is GET /friends.
+      friends: shown(await featureAccess('friends', steamId), { incoming: (await friends.view(steamId)).incoming.length }),
     });
     return true;
   }

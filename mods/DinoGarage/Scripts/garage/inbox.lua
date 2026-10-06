@@ -42,6 +42,11 @@
                   a mutation item into a slot of their dino (garage/mutation.lua).
                   Outcome: a `portal_command` event (action "mutation"); the
                   bridge uses the item up when it is ok.
+      "tele", (the player, from Dino Live on the web) { target, maxGrowth,
+                  targetMaxGrowth, combatS, countdownS, cooldownS } moved next
+                  to the code's owner after a countdown (garage/tele.lua).
+                  Outcome: a `portal_command` event (action "tele"), then a
+                  `tele_result` when the countdown ends.
     Anything else is refused.
 
     Threads: poll() runs ON THE GAME THREAD (H.every in main.lua): it reads

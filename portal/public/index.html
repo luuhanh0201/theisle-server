@@ -2606,6 +2606,35 @@
   .garage-status { font-size: 13px; line-height: 1.5; padding: 10px 14px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border); }
   .garage-status.ok { border-color: rgba(52, 211, 153, .5); }
   .garage-status.bad { border-color: rgba(248, 113, 113, .55); }
+  /* Tele con non (Dino Live, app.js renderTele; bridge tele.ts). */
+  .tele-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 720px) { .tele-grid { grid-template-columns: minmax(0, 1fr); } }
+  .tele-box { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border); min-width: 0; }
+  .tele-h { font-size: 13.5px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tele-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tele-code { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tele-code b { font: 800 26px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .18em; color: var(--emerald-light); }
+  .tele-meta { font-size: 12.5px; line-height: 1.5; min-height: 1em; }
+  .tele-input, .fr-input { flex: 1 1 150px; min-width: 0; font: inherit; font-size: 14px; color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; }
+  .tele-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .tele-input::placeholder { text-transform: none; letter-spacing: normal; font-family: inherit; font-weight: 500; }
+  .tele-input:focus, .fr-input:focus { outline: none; border-color: var(--border-hover); }
+  .tele-note { font-size: 12.5px; color: #fbbf24; font-weight: 600; margin-top: 10px; }
+  #tele-status { margin-top: 12px; }
+  /* Kết bạn (Bản đồ, app.js renderFriends; bridge friends.ts). */
+  .fr-search { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .fr-sec { margin-top: 14px; }
+  .fr-sec-h { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; white-space: nowrap; }
+  .fr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .fr-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border); min-width: 0; }
+  .fr-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: #475569; }
+  .fr-dot.on { background: #a78bfa; box-shadow: 0 0 0 3px rgba(167, 139, 250, .25); }
+  .fr-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .fr-who b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; font-size: 13.5px; }
+  .fr-who span { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fr-acts { display: flex; gap: 6px; flex: none; }
+  .fr-acts .btn { padding: 6px 11px; font-size: 12px; }
+  .fr-empty { font-size: 12.5px; color: var(--text-muted); }
 
   /* Gara Filter Toolbar */
   .gara-filter-bar {
@@ -4296,6 +4325,7 @@
           <span class="nav-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg></span>
           <span class="nav-label">Bản đồ Gateway</span>
           <span class="nav-live on" title="Vị trí trực tiếp từ game">LIVE</span>
+          <span class="nav-badge" id="nav-map-badge" hidden title="Lời mời kết bạn">0</span>
         </button>
       </div>
 
@@ -4850,6 +4880,37 @@
           </div>
         </div>
 
+        <!-- Tele con non (app.js renderTele; bridge tele.ts): hidden unless the bridge sends me.tele -->
+        <div class="card" id="game-tele-card" hidden>
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">🌀 Tele con non <span id="tele-rel"></span></h3>
+              <span class="card-subtitle" id="tele-sub">Đưa con non tới chỗ người đồng hành</span>
+            </div>
+          </div>
+          <div class="tele-grid">
+            <div class="tele-box">
+              <div class="tele-h">Gọi người khác tới chỗ bạn</div>
+              <div class="tele-code" id="tele-code" hidden><b id="tele-code-text"></b><button type="button" class="btn-copy" id="tele-copy">Sao chép</button></div>
+              <div class="tele-meta muted" id="tele-code-meta"></div>
+              <div class="tele-row">
+                <button type="button" class="btn btn-emerald" id="tele-get">Lấy mã</button>
+                <button type="button" class="btn btn-ghost" id="tele-drop" hidden>Huỷ mã</button>
+              </div>
+            </div>
+            <div class="tele-box">
+              <div class="tele-h">Tới chỗ người đưa mã</div>
+              <form class="tele-row" id="tele-form" autocomplete="off">
+                <input class="tele-input" id="tele-input" type="text" maxlength="8" placeholder="Mã 6 ký tự" spellcheck="false" aria-label="Mã tele">
+                <button type="submit" class="btn btn-emerald" id="tele-go">Dịch chuyển</button>
+              </form>
+              <div class="tele-meta muted" id="tele-go-meta"></div>
+            </div>
+          </div>
+          <div class="garage-status" id="tele-status" hidden></div>
+          <div class="tele-note" id="tele-locked" hidden></div>
+        </div>
+
         <!-- Prime Quests Section -->
         <div class="card" id="game-prime-card">
           <div class="card-header">
@@ -5000,6 +5061,23 @@
             </div>
           </div>
           <div id="map"></div>
+        </div>
+        <!-- Kết bạn (app.js renderFriends; bridge friends.ts): hidden unless the bridge sends me.friends -->
+        <div class="card" id="map-friends" hidden>
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">🤝 Bạn bè <span id="fr-rel"></span></h3>
+              <span class="card-subtitle">Bạn bè thấy nhau trên bản đồ, bản đồ lớn (M) và mini map</span>
+            </div>
+            <span class="tag" id="fr-count">0 bạn</span>
+          </div>
+          <form class="fr-search" id="fr-search" autocomplete="off">
+            <input class="fr-input" id="fr-q" type="text" maxlength="40" placeholder="Tên trong game hoặc SteamID (17 số)" spellcheck="false" aria-label="Tìm người chơi">
+            <button type="submit" class="btn btn-emerald" id="fr-find">Tìm</button>
+          </form>
+          <div id="fr-results"></div>
+          <div id="fr-lists"></div>
+          <div class="tele-note" id="fr-locked" hidden></div>
         </div>
       </section>
 

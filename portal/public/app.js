@@ -1702,6 +1702,7 @@ function renderGame3d(dino) {
 function ensureMap() {
   if (map) return;
   map = createMap($('map'));
+  if (lastFriendSpots !== null) map.setFriends(lastFriendSpots);
   loadAiZones();
   loadHeat();
   // A new target shows on the launcher's mini map at once, not a second later.
@@ -2674,6 +2675,8 @@ async function refresh() {
       renderAuth(null);
       renderBag(null);
       renderHomeRewards(null);
+      renderTele(null);
+      renderFriendsMeta(null);
       // Disable guest restrictions gracefully
     } else if (me.status === 200) {
       lastMeData = me.body;
@@ -2693,6 +2696,8 @@ async function refresh() {
         renderMap(me.body);
         renderBag(me.body);
         renderHomeRewards(me.body);
+        renderTele(me.body);
+        renderFriendsMeta(me.body);
       }
     }
 
@@ -2717,6 +2722,8 @@ let lastAiZones = null;
 let lastHeat = null;
 // Escaped inmates (the prison): on the map page and the overlay's mini map for everyone to hunt.
 let lastEscapees = [];
+// Your friends in game (Kết bạn, /api/friends), [{ name, x, y, yaw }] for the maps; null: not open to you.
+let lastFriendSpots = null;
 function pushOverlayGame(dino, me = lastMeData) {
   if (!window.isleLauncher?.overlayGame) return;
   window.isleLauncher.overlayGame({
@@ -2731,6 +2738,8 @@ function pushOverlayGame(dino, me = lastMeData) {
     aiZones: lastAiZones,
     heat: lastHeat,
     escapees: lastEscapees,
+    // Your friends in game (Kết bạn): null when the feature is not open to you.
+    friends: lastFriendSpots,
     // The point set on the map (map.js): the mini map draws a line to it.
     target: map ? map.getTarget() : loadWaypoints().target,
   });
@@ -2822,12 +2831,12 @@ function sendMiniFrame() {
   try { layers = localStorage.getItem('portalMapLayers.v2') ?? ''; } catch { /* defaults */ }
   const key = JSON.stringify([width, height, m.radius, m.rotate, layers, map.getTarget(),
     p ? [Math.round(p.x / 50), Math.round(p.y / 50), Math.round((p.yaw ?? 0) / 2)] : null,
-    round(lastAi), round(lastFish), round(lastEscapees), lastAiZones?.length ?? 0, lastHeat?.t ?? 0, lastMeData?.dino?.trail?.length ?? 0]);
+    round(lastAi), round(lastFish), round(lastEscapees), round(lastFriendSpots), lastAiZones?.length ?? 0, lastHeat?.t ?? 0, lastMeData?.dino?.trail?.length ?? 0]);
   if (key === miniKey && Date.now() - miniSentAt < MINI_SAME_MS) return;
   miniKey = key;
   miniSentAt = Date.now();
   miniCanvas ??= document.createElement('canvas');
-  const drawn = map.paintMini(miniCanvas, { width, height, dpr: window.devicePixelRatio || 1, radiusM: m.radius ?? 500, rotate: m.rotate ?? 'north' });
+  const drawn = map.paintMini(miniCanvas, { width, height, dpr: window.devicePixelRatio || 1, radiusM: m.radius ?? 500, rotate: m.rotate ?? 'north', shape: m.shape ?? 'circle' });
   if (!drawn) return;
   miniBusy = true;
   miniCanvas.toBlob((blob) => {
@@ -3262,5 +3271,262 @@ $('home-rewards').addEventListener('click', async (e) => {
     const me = await getJson('/api/me').catch(() => null);
     if (me?.status === 200) lastMeData = me.body;
     renderHomeRewards(lastMeData);
+  }
+});
+
+// ============================================================================
+// Tele con non (Dino Live; bridge tele.ts, DinoGarage garage/tele.lua)
+// ============================================================================
+// A takes a code, B types it: B's dino is moved next to A's after a short stand-still. Both small
+// (me.tele: the limits), B not in a fight just before; the game checks it all again.
+let teleBusy = false;
+// How a tele countdown ended (garage/tele.lua tele_result reasons).
+const TELE_FINAL_VI = {
+  moved: 'bạn đã rời khỏi bán kính 5 m', damage_dealt: 'bạn đã gây sát thương', damage_taken: 'bạn đã chịu sát thương',
+  left: 'bạn đã thoát game hoặc dino đã chết', not_same_dino: 'không còn là con dino lúc bắt đầu',
+  target_gone: 'người đưa mã đã thoát game hoặc dino đã chết', target_air: 'người đưa mã đang bay, bơi hoặc rơi',
+  target_growth: 'dino của người đưa mã đã lớn quá mức cho phép', growth: 'dino của bạn đã lớn quá mức cho phép',
+  prison: 'một trong hai đang ở tù', failed: 'không dịch chuyển được',
+};
+const growthPct = (g) => (typeof g === 'number' ? Math.floor(g * 100 + 1e-6) : null);
+const mmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.max(0, sec % 60)).padStart(2, '0')}`;
+function teleStatus(kind, html) {
+  const el = $('tele-status');
+  el.hidden = !html;
+  el.className = `garage-status${kind ? ` ${kind}` : ''}`;
+  el.innerHTML = html ?? '';
+}
+
+function renderTele(me) {
+  const t = me?.tele ?? null;
+  $('game-tele-card').hidden = !t;
+  if (!t) return;
+  $('tele-rel').innerHTML = relBadge(me.releases?.tele);
+  const same = t.maxGrowthPct === t.targetMaxGrowthPct;
+  $('tele-sub').textContent = `${same ? `Cả hai dino từ ${t.maxGrowthPct}%` : `Người tới từ ${t.maxGrowthPct}%, người đưa mã từ ${t.targetMaxGrowthPct}%`} trở xuống · đứng yên ${t.countdownS} giây, không giao tranh trong ${t.combatS} giây trước đó`;
+  const locked = t.locked ?? '';
+  $('tele-locked').hidden = !locked;
+  $('tele-locked').textContent = locked ? `🧪 ${locked}` : '';
+  const g = me.dino ? growthPct(me.dino.growth) : null;
+  const inGame = Boolean(me.dino);
+
+  // Giving a code: where the other one lands.
+  const code = t.code;
+  const left = code ? Math.max(0, code.expiresAt - Math.floor(Date.now() / 1000)) : 0;
+  const giveWhy = locked ? 'Đang thử nghiệm, chưa dùng được.' : !inGame ? 'Vào game và điều khiển dino để lấy mã.'
+    : g !== null && g > t.targetMaxGrowthPct ? `Dino của bạn ${g}%: chỉ dino từ ${t.targetMaxGrowthPct}% trở xuống mới lấy mã được.` : '';
+  $('tele-code').hidden = !code || left <= 0;
+  if (code) $('tele-code-text').textContent = code.code;
+  $('tele-code-meta').textContent = giveWhy && !code ? giveWhy
+    : code?.inUse ? 'Có người đang dùng mã này, chờ vài giây…'
+      : code && left > 0 ? `Hết hạn sau ${mmss(left)} · dùng được 1 lần. Đưa mã cho người cần tới chỗ bạn.`
+        : `Mã dùng được ${t.codeMinutes} phút, 1 lần. Lấy mã rồi đưa cho người cần tới chỗ bạn.`;
+  $('tele-get').disabled = Boolean(giveWhy) || teleBusy || code?.inUse === true;
+  $('tele-get').textContent = code && left > 0 ? 'Đổi mã' : 'Lấy mã';
+  $('tele-drop').hidden = !code || left <= 0 || code.inUse;
+
+  // Using a code: going there.
+  const tooBig = g !== null && g > t.maxGrowthPct;
+  const goWhy = locked ? '' : !inGame ? 'Vào game và điều khiển dino để dịch chuyển.'
+    : tooBig ? `Dino của bạn ${g}%: chỉ dino từ ${t.maxGrowthPct}% trở xuống mới tele được.`
+      : t.cooldownLeft > 0 ? `Tele đang hồi: chờ ${t.cooldownLeft} giây.` : '';
+  $('tele-input').disabled = Boolean(locked) || tooBig || !inGame;
+  $('tele-go').disabled = Boolean(locked) || Boolean(goWhy) || teleBusy;
+  $('tele-go-meta').textContent = goWhy || `Nhập mã người kia đưa, đứng yên ${t.countdownS} giây. Hồi ${t.cooldownS} giây sau mỗi lần.`;
+}
+
+async function teleCall(body) {
+  const r = await fetch('/api/tele', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  return { status: r.status, body: await r.json().catch(() => null) };
+}
+async function refreshTele() {
+  const me = await getJson('/api/me').catch(() => null);
+  if (me?.status === 200) { lastMeData = me.body; renderTele(lastMeData); }
+}
+
+$('tele-get').addEventListener('click', async () => {
+  if (teleBusy) return;
+  teleBusy = true; renderTele(lastMeData);
+  try {
+    const r = await teleCall({ action: 'code' });
+    if (r.status === 200) showToast(`✅ Mã tele: ${r.body.code}`);
+    else showToast(`❌ ${r.body?.error ?? 'Không lấy được mã.'}`);
+  } catch { showToast('❌ Mất kết nối. Thử lại.'); } finally { teleBusy = false; await refreshTele(); }
+});
+$('tele-drop').addEventListener('click', async () => {
+  if (teleBusy) return;
+  teleBusy = true;
+  try { await teleCall({ action: 'drop' }); } catch { /* the next refresh shows it */ } finally { teleBusy = false; await refreshTele(); }
+});
+$('tele-copy').addEventListener('click', async () => {
+  const code = $('tele-code-text').textContent;
+  try { await navigator.clipboard.writeText(code); showToast(`📋 Đã sao chép mã ${code}`); } catch { showToast(`Mã: ${code}`); }
+});
+$('tele-input').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9 -]/g, ''); });
+$('tele-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const code = $('tele-input').value.trim();
+  if (teleBusy || $('tele-go').disabled || !code) return;
+  teleBusy = true; renderTele(lastMeData);
+  teleStatus('', 'Đang gửi…');
+  try {
+    const r = await teleCall({ action: 'use', code });
+    if (r.status === 429) { teleStatus('bad', 'Chậm lại chút: mỗi vài giây chỉ một lệnh.'); return; }
+    if (r.status !== 202 || typeof r.body?.id !== 'number') { teleStatus('bad', `❌ ${esc(r.body?.error ?? 'Không tele được.')}`); return; }
+    const to = r.body.to ? ` tới <b>${esc(r.body.to)}</b>` : '';
+    teleStatus('', `Đã gửi${to}, chờ game xử lý…`);
+    const start = await waitCommand(r.body.id, 20, (b) => b?.status === 'done');
+    if (start === null) { teleStatus('bad', 'Chưa thấy game trả lời. Thử lại sau ít phút.'); return; }
+    const msgs = (start.messages ?? []).map((m) => `<li>${esc(m)}</li>`).join('');
+    if (!start.ok) {
+      const err = start.error ? esc(ERROR_VI[start.error] ?? start.error) : '';
+      teleStatus('bad', `❌ ${err || 'Game từ chối.'}${msgs ? `<ul>${msgs}</ul>` : ''}`);
+      return;
+    }
+    teleStatus('', `⏳ Đứng yên${to}…${msgs ? `<ul>${msgs}</ul>` : ''}`);
+    const end = await waitCommand(r.body.id, (r.body.countdownS ?? 5) + 20, (b) => b?.final != null);
+    if (end === null) { teleStatus('bad', 'Chưa thấy kết quả. Xem lại vị trí trong game.'); return; }
+    if (end.final.ok) { teleStatus('ok', `✅ Đã dịch chuyển${to}.`); $('tele-input').value = ''; }
+    else teleStatus('bad', `❌ Tele thất bại: ${esc(TELE_FINAL_VI[end.final.reason] ?? end.final.reason ?? 'không rõ lý do')}. Mã vẫn dùng được nếu chưa hết hạn.`);
+  } catch {
+    teleStatus('bad', '❌ Mất kết nối. Thử lại.');
+  } finally {
+    teleBusy = false;
+    await refreshTele();
+  }
+});
+
+// ============================================================================
+// Kết bạn (Bản đồ; bridge friends.ts)
+// ============================================================================
+// Find a player by name or SteamID, ask; once accepted, each sees the other on the map, the big map
+// and the mini map. A player is named by `ref` (never their SteamID).
+let friendsData = null;          // /api/friends
+let friendsSig = '';
+let friendsBusy = false;
+let friendsLoading = false;
+let friendsFound = null;         // the last search's results
+let removeAsk = null;            // a ref whose "Huỷ kết bạn" waits for a second click
+
+/** From /me: the card, the badge on the Map button, whether to ask /api/friends. */
+function renderFriendsMeta(me) {
+  const f = me?.friends ?? null;
+  $('map-friends').hidden = !f;
+  const n = f && !f.locked ? f.incoming ?? 0 : 0;
+  $('nav-map-badge').hidden = n === 0;
+  $('nav-map-badge').textContent = String(n);
+  if (!f) {
+    friendsData = null; friendsFound = null; friendsSig = '';
+    if (lastFriendSpots !== null) { lastFriendSpots = null; map?.setFriends(null); }
+    return;
+  }
+  $('fr-rel').innerHTML = relBadge(me.releases?.friends);
+  $('fr-locked').hidden = !f.locked;
+  $('fr-locked').textContent = f.locked ? `🧪 ${f.locked}` : '';
+  $('fr-q').disabled = Boolean(f.locked);
+  $('fr-find').disabled = Boolean(f.locked) || friendsBusy;
+  // A new request: the lists at once, not at the next poll.
+  if (!f.locked && friendsData && n !== friendsData.incoming.length) loadFriends();
+}
+
+async function loadFriends() {
+  if (friendsLoading || !lastMeData?.friends || lastMeData.friends.locked) return;
+  friendsLoading = true;
+  try {
+    const r = await getJson('/api/friends');
+    if (r.status !== 200) return;
+    friendsData = r.body;
+    lastFriendSpots = friendsData.friends.filter((x) => x.pos).map((x) => ({ name: x.name, x: x.pos.x, y: x.pos.y, yaw: x.pos.yaw }));
+    if (map) map.setFriends(lastFriendSpots);
+    renderFriends();
+  } catch { /* the next tick */ } finally {
+    friendsLoading = false;
+  }
+}
+// Every 2 s while a map shows them (the map page, the mini map, the big map), like the AI.
+setInterval(() => {
+  const wanted = (currentTab === 'map' && !document.hidden) || miniMapOn || bigMapOpen;
+  if (wanted) loadFriends();
+}, 2000);
+
+function frItem(p, acts, sub = '') {
+  return `<li class="fr-item"><span class="fr-dot${p.online ? ' on' : ''}" title="${p.online ? 'Đang online' : 'Offline'}"></span>
+    <span class="fr-who"><b>${esc(p.name ?? 'Người chơi')}</b>${sub ? `<span>${sub}</span>` : ''}</span><span class="fr-acts">${acts}</span></li>`;
+}
+const frBtn = (act, ref, label, cls = 'btn-ghost', title = '') =>
+  `<button type="button" class="btn ${cls}" data-fr="${act}" data-ref="${esc(ref)}"${title ? ` title="${esc(title)}"` : ''}${friendsBusy ? ' disabled' : ''}>${label}</button>`;
+
+function renderFriends() {
+  const d = friendsData;
+  if (!d) return;
+  const me = lastMeData?.dino?.position ?? null;
+  const sig = JSON.stringify([d.friends.map((f) => [f.ref, f.name, f.online, f.species, f.pos ? Math.round(f.pos.x / 2000) : null, f.pos ? Math.round(f.pos.y / 2000) : null]),
+    d.incoming, d.outgoing, friendsFound, friendsBusy, removeAsk, me ? [Math.round(me.x / 2000), Math.round(me.y / 2000)] : null]);
+  if (sig === friendsSig) return;
+  friendsSig = sig;
+  $('fr-count').textContent = `${d.friends.length} bạn`;
+  const results = friendsFound === null ? '' : friendsFound.length === 0
+    ? '<p class="fr-empty">Không tìm thấy ai. Người chơi phải từng vào server; thử tên khác hoặc SteamID.</p>'
+    : `<ul class="fr-list">${friendsFound.map((p) => frItem(p,
+      p.relation === 'friend' ? '<span class="fr-empty">Đã là bạn</span>'
+        : p.relation === 'outgoing' ? '<span class="fr-empty">Đã mời</span>'
+          : p.relation === 'incoming' ? frBtn('accept', p.ref, 'Chấp nhận', 'btn-emerald')
+            : frBtn('request', p.ref, 'Kết bạn', 'btn-emerald'), p.online ? 'Đang online' : '')).join('')}</ul>`;
+  $('fr-results').innerHTML = results;
+  const where = (f) => {
+    if (!f.online) return 'Offline';
+    if (!f.pos) return 'Online · chưa điều khiển dino';
+    const dist = me ? ` · cách ${fmtDist(Math.hypot(f.pos.x - me.x, f.pos.y - me.y) / 100)}` : '';
+    return `${esc(f.species ?? 'Đang chơi')}${dist}`;
+  };
+  const sec = (title, body) => `<div class="fr-sec"><div class="fr-sec-h">${title}</div>${body}</div>`;
+  $('fr-lists').innerHTML = [
+    d.incoming.length ? sec(`Lời mời kết bạn (${d.incoming.length})`, `<ul class="fr-list">${d.incoming.map((r) => frItem(r,
+      frBtn('accept', r.ref, 'Chấp nhận', 'btn-emerald') + frBtn('decline', r.ref, 'Từ chối'))).join('')}</ul>`) : '',
+    sec('Bạn bè', d.friends.length ? `<ul class="fr-list">${d.friends.map((f) => frItem(f,
+      (f.pos ? frBtn('focus', f.ref, 'Xem', 'btn-ghost', 'Xem trên bản đồ') : '')
+      + (removeAsk === f.ref ? frBtn('remove', f.ref, 'Bấm lần nữa để huỷ', 'btn-danger') : frBtn('ask-remove', f.ref, '✕', 'btn-ghost', 'Huỷ kết bạn')),
+      where(f))).join('')}</ul>` : '<p class="fr-empty">Chưa có bạn nào. Tìm theo tên hoặc SteamID ở trên rồi bấm Kết bạn; người kia chấp nhận là hai bạn thấy nhau trên bản đồ.</p>'),
+    d.outgoing.length ? sec(`Đã mời, chờ chấp nhận (${d.outgoing.length})`, `<ul class="fr-list">${d.outgoing.map((r) => frItem(r, frBtn('cancel', r.ref, 'Huỷ lời mời'))).join('')}</ul>`) : '',
+  ].join('');
+}
+const fmtDist = (m) => (m >= 1000 ? `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km` : `${Math.round(m)} m`);
+
+$('fr-search').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const q = $('fr-q').value.trim();
+  if (!q || friendsBusy) return;
+  try {
+    const r = await getJson(`/api/friends/search?q=${encodeURIComponent(q)}`);
+    if (r.status === 200) friendsFound = r.body.results ?? [];
+    else { friendsFound = null; showToast(`❌ ${r.body?.error ?? 'Không tìm được.'}`); }
+  } catch { showToast('❌ Mất kết nối. Thử lại.'); }
+  if (!friendsData) await loadFriends();
+  friendsSig = ''; renderFriends();
+});
+
+const FR_DONE = { request: '✅ Đã gửi lời mời kết bạn', accept: '✅ Đã kết bạn', decline: 'Đã từ chối lời mời', cancel: 'Đã huỷ lời mời', remove: 'Đã huỷ kết bạn' };
+$('map-friends').addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-fr]');
+  if (!b || b.disabled || friendsBusy) return;
+  const act = b.dataset.fr, ref = b.dataset.ref;
+  if (act === 'focus') {
+    const f = friendsData?.friends.find((x) => x.ref === ref);
+    if (f?.pos) { ensureMap(); map.focus(f.pos); $('map').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    return;
+  }
+  if (act === 'ask-remove') { removeAsk = ref; renderFriends(); setTimeout(() => { if (removeAsk === ref) { removeAsk = null; renderFriends(); } }, 4000); return; }
+  friendsBusy = true; removeAsk = null; renderFriends();
+  try {
+    const r = await fetch('/api/friends', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: act, ref }) });
+    const body = await r.json().catch(() => null);
+    if (r.status === 200) {
+      showToast(act === 'request' && body?.result === 'accepted' ? FR_DONE.accept : FR_DONE[act] ?? '✅ Xong');
+      if (friendsFound) friendsFound = friendsFound.map((p) => (p.ref === ref ? { ...p, relation: act === 'request' ? (body?.result === 'accepted' ? 'friend' : 'outgoing') : act === 'accept' ? 'friend' : p.relation } : p));
+    } else showToast(`❌ ${body?.error ?? 'Không thực hiện được.'}`);
+  } catch { showToast('❌ Mất kết nối. Thử lại.'); } finally {
+    friendsBusy = false;
+    await loadFriends();
+    friendsSig = ''; renderFriends();
   }
 });

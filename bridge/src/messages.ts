@@ -21,7 +21,7 @@ import { ValidationError } from './garage.js';
  * reads the Lua and checks).
  */
 
-export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello' | 'prime' | 'skin' | 'prison';
+export type MessageGroup = 'server' | 'corpses' | 'ai' | 'ban' | 'ptera' | 'guard' | 'garage' | 'redeem' | 'commands' | 'admin' | 'hello' | 'prime' | 'skin' | 'prison' | 'tele';
 
 export interface MessageDef {
   key: string;
@@ -162,6 +162,20 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'skin.noDino', group: 'skin', label: 'Đổi màu: chưa điều khiển dino', default: 'Bạn cần đang điều khiển một con dino còn sống để đổi màu.', vars: [] },
   { key: 'skin.failed', group: 'skin', label: 'Đổi màu thất bại', default: 'Không đổi được màu dino. Thử lại sau.', vars: [] },
   { key: 'skin.kept', group: 'skin', label: 'Tô lại màu đã giữ (dino mới cùng loài)', default: 'Đã tô lại màu bạn giữ cho loài này.', vars: [] },
+  // --- tele con non from the web (mods/DinoGarage garage/tele.lua) ---
+  { key: 'tele.countdown', group: 'tele', label: 'Bắt đầu đếm ngược tele', default: 'Dịch chuyển sau {seconds} giây: đứng yên trong bán kính 5 m, không đánh và không bị đánh.', vars: ['seconds'] },
+  { key: 'tele.done', group: 'tele', label: 'Tele xong (cho người dịch chuyển)', default: 'Đã dịch chuyển tới chỗ người đưa mã.', vars: [] },
+  { key: 'tele.arrived', group: 'tele', label: 'Có người tele tới (cho người đưa mã)', default: 'Một người vừa dịch chuyển tới chỗ bạn bằng mã tele.', vars: [] },
+  { key: 'tele.failed', group: 'tele', label: 'Tele thất bại khi đang đếm ngược ({reason} = lý do)', default: 'Tele thất bại: {reason}. Mã vẫn dùng được nếu chưa hết hạn.', vars: ['reason'] },
+  { key: 'tele.combat', group: 'tele', label: 'Vừa giao tranh', default: 'Bạn vừa giao tranh: chờ {seconds} giây nữa mới tele được.', vars: ['seconds'] },
+  { key: 'tele.cooldown', group: 'tele', label: 'Tele đang hồi', default: 'Tele đang hồi: chờ {seconds} giây.', vars: ['seconds'] },
+  { key: 'tele.tooBig', group: 'tele', label: 'Dino người dịch chuyển quá lớn', default: 'Chỉ dino từ {max}% tăng trưởng trở xuống mới tele được (dino của bạn {growth}%).', vars: ['max', 'growth'] },
+  { key: 'tele.targetBig', group: 'tele', label: 'Dino người đưa mã quá lớn', default: 'Dino của người đưa mã đã lớn hơn {max}%: không tele tới được.', vars: ['max'] },
+  { key: 'tele.targetGone', group: 'tele', label: 'Người đưa mã không còn trong game', default: 'Người đưa mã không còn trong game hoặc dino đã chết.', vars: [] },
+  { key: 'tele.noDino', group: 'tele', label: 'Tele: chưa điều khiển dino', default: 'Bạn cần đang điều khiển một con dino còn sống để tele.', vars: [] },
+  { key: 'tele.busy', group: 'tele', label: 'Đang có lần tele khác', default: 'Đang có một lần tele đếm ngược.', vars: [] },
+  { key: 'tele.prison', group: 'tele', label: 'Đang ở tù', default: 'Bạn đang ở tù: không tele được.', vars: [] },
+  { key: 'tele.targetPrison', group: 'tele', label: 'Người đưa mã đang ở tù', default: 'Người đưa mã đang ở tù: không tele tới được.', vars: [] },
   // --- prime tasks (prime-notify.ts): sent by the bridge when a task turns on ---
   { key: 'prime.conditionDone', group: 'prime', label: 'Hoàn thành một nhiệm vụ prime ({task} = tên nhiệm vụ)', default: '✅ Đã hoàn thành nhiệm vụ prime: {task} ({done}/10, cần {needed} để đủ điều kiện prime).', vars: ['task', 'n', 'done', 'needed'] },
   { key: 'prime.eligible', group: 'prime', label: 'Dino vừa đủ điều kiện prime', default: '🌟 Dino của bạn đã đủ điều kiện prime ({done}/10)! Game xét prime khi dino đạt 75% growth.', vars: ['done', 'needed'] },

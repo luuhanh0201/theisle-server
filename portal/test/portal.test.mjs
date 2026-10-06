@@ -122,6 +122,9 @@ const bridge = {
   voice: async (id) => { bridgeCalls.push(`voice:${id}`); return { status: 200, body: { inGame: true, peers: [] } }; },
   voiceRange: async (id, range) => { bridgeCalls.push({ voiceRange: id, range }); return { status: 200, body: { range } }; },
   voiceToken: async (id) => { bridgeCalls.push(`voiceToken:${id}`); return { status: 200, body: { url: 'wss://voice.example.com', token: 't' } }; },
+  tele: async (id, body) => { bridgeCalls.push({ tele: id, body }); return { status: 202, body: { id: 8, action: 'tele' } }; },
+  friends: async (id) => { bridgeCalls.push(`friends:${id}`); return { status: 200, body: { friends: [], incoming: [], outgoing: [] } }; },
+  friendsAction: async (id, body) => { bridgeCalls.push({ friendsAction: id, body }); return { status: 200, body: body.action === 'search' ? { results: [] } : { ok: true } }; },
 };
 before(async () => {
   server = createPortal({ baseUrl: BASE, secureCookies: true, sessionSecret: SECRET, sessionDays: 7, trustProxy: true,
@@ -341,6 +344,30 @@ test('voice range: login, same-origin, JSON; the session\'s player', async () =>
   const r = await post({ ...json, cookie, origin }, '{"range":60,"steamId":"76561198000000002"}');
   assert.equal(r.status, 200);
   assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { voiceRange: ME, range: 60 });
+});
+
+test('tele and friends: login, same-origin, JSON; the session\'s player, only the allowed fields', async () => {
+  // A player of its own: the write limit (12 a minute) is per player and the tests above used ME's.
+  const TF = '76561198000000077';
+  const cookie = `${COOKIE}=${sign(SECRET, TF, Math.floor(Date.now() / 1000) + 600)}`;
+  const origin = new URL(BASE).origin;
+  const post = (path, headers, body) => fetch(`http://127.0.0.1:${port}${path}`, { method: 'POST', headers, body });
+  const json = { 'content-type': 'application/json' };
+  assert.equal((await post('/api/tele', { ...json, origin }, '{"action":"code"}')).status, 401);
+  assert.equal((await post('/api/tele', { ...json, cookie, origin: 'https://evil.example' }, '{"action":"code"}')).status, 403);
+  assert.equal((await post('/api/tele', { cookie, origin, 'content-type': 'text/plain' }, '{"action":"code"}')).status, 415);
+  const r = await post('/api/tele', { ...json, cookie, origin }, '{"action":"use","code":"ABC234","steamId":"76561198000000002","target":"x"}');
+  assert.equal(r.status, 202);
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { tele: TF, body: { action: 'use', code: 'ABC234' } });
+  assert.equal((await get('/api/friends')).status, 401);
+  assert.equal((await get('/api/friends', { cookie })).status, 200);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], `friends:${TF}`);
+  assert.equal((await get('/api/friends/search?q=rex', { cookie })).status, 200);
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { friendsAction: TF, body: { action: 'search', q: 'rex' } });
+  assert.equal((await post('/api/friends', { ...json, cookie, origin: 'https://evil.example' }, '{"action":"request","ref":"abcdefghijklmnop"}')).status, 403);
+  const f = await post('/api/friends', { ...json, cookie, origin }, '{"action":"request","ref":"abcdefghijklmnop","steamId":"76561198000000002"}');
+  assert.equal(f.status, 200);
+  assert.deepEqual(bridgeCalls[bridgeCalls.length - 1], { friendsAction: TF, body: { action: 'request', ref: 'abcdefghijklmnop' } });
 });
 
 test('launcher login: browser login hands the session to the launcher that started it, once, same address', async () => {
