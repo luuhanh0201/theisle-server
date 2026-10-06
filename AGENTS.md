@@ -100,6 +100,14 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   on a local bridge: `web/e2e/local-bridge.sh`); screenshots of the old and new page at 380 and
   1366 px, light and dark, look the same (`node web/scripts/shots.mjs`).
 
+## Player site in React (web/apps/portal), being moved page by page
+- Plan, progress and how to test: `web/PORTAL-MIGRATION.md` (read it first, update it with each block;
+  one session at a time, `git pull` first, push after each block). Built into `portal/public/next/`
+  (gitignored), served by the portal at `/next/` beside the site before React (`/`); same `#page` addresses.
+- Same look: the old stylesheet as it was (`src/styles/portal.css`, global class names) and the old
+  markup's classes in JSX; `@isle/ui` controls in the portal's colours (`src/styles/tokens.css`).
+- No inline script (the portal's CSP). Launcher rules unchanged: no download element inside it.
+
 ## Launcher
 - Inside Xóm Gáy Launcher (`window.isleLauncher`, `html.in-launcher`) nothing about
   downloading the launcher shows: no download page, link, button, badge or promo.

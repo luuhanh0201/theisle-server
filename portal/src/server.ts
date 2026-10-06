@@ -16,6 +16,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  * session cookie, there is no way to ask for someone else's data.
  *
  *   GET  /                      the page (public/)
+ *   GET  /next/                 the page in React (public/next/, built from web/apps/portal; web/PORTAL-MIGRATION.md)
  *   GET  /auth/steam            → Steam login
  *   GET  /auth/steam/return     ← Steam; sets the session cookie
  *   POST /auth/logout
@@ -147,7 +148,8 @@ function clientIp(req: IncomingMessage, trustProxy: boolean): string {
 }
 
 async function sendStatic(res: ServerResponse, urlPath: string): Promise<void> {
-  const rel = urlPath === '/' ? 'index.html' : urlPath.slice(1);
+  // /next/: the site in React (web/apps/portal, built into public/next/), beside the site before React.
+  const rel = urlPath === '/' ? 'index.html' : urlPath === '/next/' ? 'next/index.html' : urlPath.slice(1);
   const file = normalize(join(publicDir, rel));
   if (!file.startsWith(publicDir + '/') || !TYPES[extname(file)]) { send(res, 404, { error: 'not found' }); return; }
   try {
@@ -156,8 +158,9 @@ async function sendStatic(res: ServerResponse, urlPath: string): Promise<void> {
     // vendor/ files carry their version in the name (livekit-client-2.22.3…),
     // so a new version is a new URL: cache them for good.
     // dino3d/ (the skin preview's models, ~2 MB each) is asked for with ?v=<sha256 prefix> too.
+    // next/assets/ (the React build) carry their hash in the name: cached for good too.
     const cache = rel.startsWith('map/') || rel.startsWith('dino3d/') ? 'public, max-age=604800'
-      : rel.startsWith('vendor/') ? 'public, max-age=31536000, immutable' : 'no-cache';
+      : rel.startsWith('vendor/') || rel.startsWith('next/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache';
     res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': TYPES[extname(file)] as string, 'cache-control': cache });
     res.end(body);
   } catch {
@@ -569,6 +572,7 @@ export function createPortal(opts: PortalOptions): Server {
         ? () => track({ kind: 'download_file', os, update: isLauncherUa(req.headers['user-agent']) }) : undefined);
       return;
     }
+    if (path === '/next' && req.method === 'GET') { redirect(res, '/next/'); return; }
     if (req.method === 'GET') { await sendStatic(res, path); return; }
     send(res, 405, { error: 'method not allowed' });
   }

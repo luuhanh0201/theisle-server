@@ -1,7 +1,7 @@
 // Player portal: Steam login verification, sessions, scoping, headers, limits.
 import { test, after, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -234,6 +234,28 @@ test('static caching: versioned vendor files for good, the app\'s own scripts re
   const own = await get('/app.js');
   assert.equal(own.status, 200);
   assert.equal(own.headers.get('cache-control'), 'no-cache');
+});
+
+test('the site in React at /next/ (built from web/apps/portal), /next goes there; its hashed files cached for good', async () => {
+  const r = await get('/next');
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('location'), '/next/');
+  const page = await get('/next/');
+  const built = existsSync(new URL('../public/next/index.html', import.meta.url));
+  assert.equal(page.status, built ? 200 : 404, 'the React page when built, a plain 404 otherwise');
+  if (built) {
+    assert.match(page.headers.get('content-type'), /text\/html/);
+    assert.match(page.headers.get('content-security-policy'), /script-src 'self'/);
+    const html = await page.text();
+    assert.doesNotMatch(html, /<script>(?!<\/script>)/, 'no inline script (the CSP refuses it)');
+    const js = /src="(\/next\/assets\/[^"]+\.js)"/.exec(html)?.[1];
+    assert.ok(js, 'the app script');
+    const a = await get(js);
+    assert.equal(a.status, 200);
+    assert.match(a.headers.get('cache-control'), /immutable/);
+  }
+  // The site before React is still at /.
+  assert.match(await (await get('/')).text(), /app\.js/);
 });
 
 test('writes to the API are not allowed', async () => {

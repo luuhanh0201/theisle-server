@@ -37,4 +37,6 @@ portal/public/dino3d/
 .claude
 # the panel in React, built from web/ (npm run build) at deploy
 bridge/public/next/
+# the player site in React, built from web/ (npm run build) at deploy
+portal/public/next/
 web/node_modules/

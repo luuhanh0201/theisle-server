@@ -1,0 +1,25 @@
+/*
+ * The @isle/ui controls in the player site's colours: the panel's token names (packages/ui/src/tokens.css)
+ * set from the portal's own (portal.css :root), as ui-select.js / ui-inputs.js fall back to them on the
+ * site before React. Dark only, like the site. Nothing in portal.css reads these names.
+ */
+:root {
+  --accent: var(--emerald);
+  --accent-2: var(--emerald);
+  --accent-soft: var(--emerald-soft);
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-surface);
+  --surface-3: var(--bg-surface-elevated);
+  --border-strong: var(--border-light);
+  --text-2: var(--text-muted);
+  --muted: var(--text-muted);
+  --kill: #f87171;     --kill-soft: rgba(248, 113, 113, 0.12);
+  --dmg: #fbbf24;      --dmg-soft: rgba(251, 191, 36, 0.12);
+  --chat: #60a5fa;     --chat-soft: rgba(96, 165, 250, 0.12);
+  --grow: #34d399;     --grow-soft: rgba(52, 211, 153, 0.12);
+  --gar: #22d3ee;      --gar-soft: rgba(34, 211, 238, 0.12);
+  --neutral-soft: rgba(148, 163, 184, 0.12);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --font: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}

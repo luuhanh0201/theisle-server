@@ -1,7 +1,9 @@
-// Functional checks of the React panel, in headless Chrome: each flow runs in the page (helpers h.*).
+// Functional checks of the React panel (and the player site), in headless Chrome: each flow runs in the page (helpers h.*).
 // Run against a LOCAL bridge (a copy of the data, no RCON): never the live one, the flows save.
 //   PANEL_URL=http://127.0.0.1:8091 PANEL_COOKIE=<panel_session> node e2e/run.mjs e2e/flows/mods.mjs
 // No local copy of the data at hand: sh e2e/local-bridge.sh <empty dir> starts one on fake data.
+// The player site: sh e2e/local-portal.sh <empty dir>, then PANEL_URL=http://127.0.0.1:8092 COOKIE_NAME=isle_session.
+// A flow may set: init (a script run before the page's own, e.g. a stub window.isleLauncher), width (a phone).
 // Prints every check; exit code 1 when one fails.
 import { spawn } from 'node:child_process';
 import { rmSync } from 'node:fs';
@@ -9,6 +11,7 @@ const BASE = process.env.PANEL_URL ?? 'http://127.0.0.1:8091';
 const TMP = process.env.TMPDIR ?? '/tmp';
 const flows = (await import(new URL(process.argv[2], `file://${process.cwd()}/`).href)).default;
 const cookie = process.env.PANEL_COOKIE ?? '';
+const cookieName = process.env.COOKIE_NAME ?? 'panel_session';
 rmSync(`${TMP}/isle-e2e-chrome`, { recursive: true, force: true });
 // CHROME: another Chromium (e.g. /opt/pw-browsers/chromium in a cloud session, which needs --no-sandbox).
 const chrome = spawn(process.env.CHROME ?? 'google-chrome', [...(process.env.CHROME ? ['--no-sandbox'] : []), '--headless=new', '--remote-debugging-port=9336', `--user-data-dir=${TMP}/isle-e2e-chrome`, 'about:blank'], { stdio: 'ignore' });
@@ -20,8 +23,8 @@ await new Promise((r) => ws.addEventListener('open', r));
 let id = 0; const wait = new Map(); const errs = [];
 ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); if (m.method === 'Runtime.exceptionThrown') errs.push(m.params.exceptionDetails.exception?.description?.slice(0, 300)); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } });
 const cdp = (method, params = {}) => new Promise((r) => { const i = ++id; wait.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
-await cdp('Network.enable'); await cdp('Runtime.enable');
-await cdp('Network.setCookie', { name: 'panel_session', value: cookie, url: `${BASE}/` });
+await cdp('Network.enable'); await cdp('Runtime.enable'); await cdp('Page.enable');
+if (cookie) await cdp('Network.setCookie', { name: cookieName, value: cookie, url: `${BASE}/` });
 await cdp('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
 const HELPERS = `window.h = {
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
@@ -40,6 +43,11 @@ const HELPERS = `window.h = {
 };`;
 let fails = 0;
 for (const f of flows) {
+  const init = f.init ? (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: f.init })).result?.identifier : null;
+  if (f.width) await cdp('Emulation.setDeviceMetricsOverride', { width: f.width, height: 800, deviceScaleFactor: 1, mobile: f.width < 700 });
+  // A fresh page each flow (the same address with another #hash would not reload it).
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await sleep(100);
   await cdp('Page.navigate', { url: `${BASE}${f.path}` });
   await sleep(f.wait ?? 2500);
   await cdp('Runtime.evaluate', { expression: HELPERS });
@@ -47,6 +55,8 @@ for (const f of flows) {
   const out = JSON.parse(r.result?.result?.value ?? '[["(no result)",false,""]]');
   console.log(`\n== ${f.name}`);
   for (const [name, ok, got] of out) { if (!ok) fails++; console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${name}${got && !ok ? `  -> ${got}` : ''}`); }
+  if (init) await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: init });
+  if (f.width) await cdp('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
 }
 if (errs.length) { fails++; console.log(`\npage errors:\n${errs.join('\n')}`); }
 console.log(`\n${fails === 0 ? 'ALL OK' : `${fails} FAILED`}`);

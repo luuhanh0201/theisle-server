@@ -114,11 +114,13 @@ if (( DO_CONFIG || DO_BRIDGE )); then
     ( cd bridge && npm ci --silent && npm test )
 fi
 
-if (( DO_BRIDGE )); then
+if (( DO_BRIDGE || DO_PORTAL )); then
     # The panel in React (web/apps/panel): built into bridge/public/next/, served at /, shipped
-    # with the bridge's public/ below (the panel before React stays at /old). Its tests and
-    # typecheck stop the deploy too.
-    say "building panel (React)"
+    # with the bridge's public/ below (the panel before React stays at /old). The player site in
+    # React (web/apps/portal): built into portal/public/next/, served at /next/ beside the site
+    # before React (web/PORTAL-MIGRATION.md), shipped with the portal's public/. One build makes
+    # both; its tests and typecheck stop the deploy too.
+    say "building panel + player site (React)"
     ( cd web && npm ci --silent && npm test && npm run build )
 fi
 

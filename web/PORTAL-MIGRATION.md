@@ -7,9 +7,59 @@ same texts, same calls to the portal server (`portal/src/server.ts`), same launc
 (`window.isleLauncher`, `html.in-launcher`). The portal server (TypeScript) does not move; only its
 pages do. One session at a time; `git pull` and read this file first; push after each block.
 
-Nothing is done yet. Mark each step done here, with its files and its e2e flow, in the commit that does it.
+Mark each step done here, with its files and its e2e flow, in the commit that does it.
 
-## 0. Foundations (before any page)
+## Status (2026-10-06)
+
+| Step | State |
+|---|---|
+| 0. Foundations | **done** (below) |
+| 1-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
+| 3. Other pages | not started |
+| 4. Switch | not started: the site before React is still `/` |
+
+### How to work on it
+
+- Build: `cd web && npm test && npm run build` (builds the panel and the site; `npm run build:portal` the site only).
+- A local site on fake data: `sh web/e2e/local-portal.sh /tmp/<new empty dir> > /tmp/isle-portal.out` (the local bridge
+  on 8091 + the portal on 8092, logged in as Rex Tester; needs `npm run build` in bridge/ and portal/). React at
+  `http://127.0.0.1:8092/next/`, the site before React at `/`. Stop: `for p in $(pgrep -f "^node dist/index.js"); do kill $p; done`.
+- E2e (from web/): `CHROME=/opt/pw-browsers/chromium PANEL_URL=http://127.0.0.1:8092 COOKIE_NAME=isle_session
+  PANEL_COOKIE=<printed> node e2e/run.mjs e2e/flows/portal-<x>.mjs`. A flow may set `init` (a script before the page's
+  own: a stub `window.isleLauncher`, see `portal-frame.mjs`) and `width` (a phone). Each flow gets a fresh page.
+- Screenshots: `SITE=portal PANEL_URL=http://127.0.0.1:8092 PANEL_COOKIE=<printed> node scripts/shots.mjs <out> <tab>`;
+  `OLD=1` the site before React, `LAUNCHER=1` as inside the launcher (dark only, 380 and 1366 px; the tour marked seen).
+- Moving a page: build it under `apps/portal/src/pages/<tab>/` (+ `features/` as the panel), add it to `MOVED` in
+  `pages/index.tsx`, an e2e flow `e2e/flows/portal-<tab>.mjs` comparing with the old page, screenshots old / new.
+
+### Notes for the next blocks
+
+- Same look: `styles/portal.css` is the old `<style>` as it was (global class names); write the old markup's classes in JSX.
+  `styles/tokens.css` gives `@isle/ui` (Select, NumberInput, Slider…) the portal's colours: use those, never native controls.
+- Pages once opened stay mounted (hidden), as the old site kept every section: state survives a page change.
+- `useMe()` (lib/queries.ts) is /api/me every second, drawn every 5 s in the launcher's background and not at all in game
+  mode (app.js part 5); `useMeQuery()` is the raw query for what must run every second anyway.
+- Things app.js does for every page, whatever is shown, that must become app-level services (not inside a page):
+  `pushOverlayGame` (launcher overlay, each second), the mini map frames (`sendMiniFrame`), the big map's AI / zones / heat,
+  `voice.js` (the room stays joined across pages; `lib/voiceDot.ts` already carries the menu dot), `overlay-settings.js`.
+- The tour opens by itself on a first visit (`isle_portal_tour_done` in localStorage): keep that (block 2).
+- The fake data's player is not in game (`online: false`): the Dino Live / tele / skin blocks need a live snapshot seeded
+  in `local-bridge.sh` (or a stubbed /api/me in the flow) to test the "in game" side.
+- No inline script anywhere (the portal's CSP): `index.html` has none, the build none (checked by portal/test).
+
+## 0. Foundations (before any page): done 2026-10-06
+
+Files: `web/apps/portal/{index.html, vite.config.ts}`, `src/main.tsx` (html.in-launcher, app-idle, lab, the view beacon),
+`src/app/{App, Shell, router, toast, actions, old}`, `src/app/shell/{Sidebar, Header, ThumbBar, drawer, icons}`,
+`src/lib/{http, launcher, lab, queries, releases, voiceDot}`, `src/styles/{portal.css, tokens.css}`, `src/pages/{index,
+LegacyPage}`, `packages/api/src/portal.ts` (PlayerMe, PortalServer…); `portal/src/server.ts` serves `/next/` (+ `/next` →
+`/next/`, hashed assets cached for good); `scripts/deploy.sh` builds web for a portal deploy too. Checks:
+`apps/portal/src/test/foundations.test.tsx` (11), `portal/test/portal.test.mjs` (/next/), e2e `portal-frame.mjs` (56 checks:
+the menu = the old one's entries, badges, server name, collapse remembered, lab, ?login_error, launcher stub: no download,
+overlay page, version + update phases, game mode; phone drawer and bottom bar; a guest), screenshots old / new at 380 and
+1366, web and launcher: the frame looks the same.
+
 
 1. **The app**: `web/apps/portal` (React 19 + Vite + TS, TanStack Query, CSS Modules), sharing
    `@isle/ui` and `@isle/api` with the panel. Built into `portal/public/next/` (gitignored), served by

@@ -2,10 +2,13 @@
   "name": "isle-web",
   "private": true,
   "type": "module",
-  "description": "The admin panel (and later the player portal) in React: web/apps/*, shared code in web/packages/*.",
+  "description": "The admin panel (apps/panel) and the player site (apps/portal) in React, shared code in web/packages/*.",
   "scripts": {
     "dev:panel": "vite --config apps/panel/vite.config.ts",
-    "build": "npm run typecheck && vite build --config apps/panel/vite.config.ts",
+    "dev:portal": "vite --config apps/portal/vite.config.ts",
+    "build": "npm run typecheck && vite build --config apps/panel/vite.config.ts && vite build --config apps/portal/vite.config.ts",
+    "build:panel": "npm run typecheck && vite build --config apps/panel/vite.config.ts",
+    "build:portal": "npm run typecheck && vite build --config apps/portal/vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "e2e": "node e2e/run.mjs"
