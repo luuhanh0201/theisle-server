@@ -39,4 +39,15 @@ for (const [k, id] of Object.entries(ids)) {
   await give(LIVE, id, k.startsWith('skin') ? 1 : 5);
   await give(REX, id, 1);
 }
-console.log(`bag seeded: ${Object.keys(ids).length} items`);
+// Cửa hàng: what is on sale (a daily limit, none, a skin owned once, one too dear), and Hổ phách to buy with.
+const put = async (path, body) => {
+  const r = await fetch(`${BRIDGE}${path}`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-admin-token': TOKEN }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`${path}: ${r.status} ${await r.text()}`);
+};
+await put('/api/shop', { listings: [
+  { itemId: ids.food, price: 50, dailyLimit: 5 }, { itemId: ids.growth, price: 300, dailyLimit: 2 }, { itemId: ids.loot, price: 300, dailyLimit: 0 },
+  { itemId: ids.mutAll, price: 400, dailyLimit: 1 }, { itemId: ids.skinStego, price: 500, dailyLimit: 0 }, { itemId: ids.skinRex, price: 500, dailyLimit: 0 },
+  { itemId: ids.boxChoose, price: 3000, dailyLimit: 1 }, { itemId: ids.salt, price: 100, dailyLimit: 3, enabled: false },
+] });
+await post('/api/economy/adjust', { steamId: LIVE, delta: 2000, reason: 'e2e' });
+console.log(`bag seeded: ${Object.keys(ids).length} items, the shop, 2000 Hổ phách for Live Tester`);

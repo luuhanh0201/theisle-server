@@ -6,6 +6,7 @@ import { GaraPage } from './gara/GaraPage';
 import { HomePage } from './home/HomePage';
 import { MapPage } from './map/MapPage';
 import { RankingPage } from './ranking/RankingPage';
+import { ShopPage } from './shop/ShopPage';
 import { SkinPage } from './skin/SkinPage';
 import { VoicePage } from './voice/VoicePage';
 import { LegacyPage } from './LegacyPage';
@@ -26,6 +27,7 @@ const MOVED: Partial<Record<Tab, () => ReactNode>> = {
   skin: () => <SkinPage />,
   voice: () => <VoicePage />,
   bag: () => <BagPage />,
+  shop: () => <ShopPage />,
 };
 
 export function Page({ tab }: { tab: Tab }) {

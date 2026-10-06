@@ -11,11 +11,11 @@ set -e
 R=${1:?usage: local-portal.sh <empty dir>}
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 export PORTAL_TOKEN=e2e-local-portal-token-0123456789
-# Trang chủ's parts open to everyone (Hổ phách NEW, the shop SVip-first: shown locked to Rex), the
+# Trang chủ's parts open to everyone (Hổ phách NEW, the shop SVip-first: shown locked to Rex, open to Live Tester, an SVip), the
 # check-in ready after 1 minute played, one quest done (1 minute played) and one not, the starter gift.
 T=$(date +%s)
 mkdir -p "$R/data"
-printf '{"players":[],"features":{"bag":"all","starter":"all","amber":"all","quests":"all","shop":"testing","tele":"all","friends":"all"},"released":{"amber":%s}}\n' "$T" > "$R/data/svip.json"
+printf '{"players":[{"steamId":"76561198000000013","note":"e2e","addedAt":%s,"by":null}],"features":{"bag":"all","starter":"all","amber":"all","quests":"all","shop":"testing","tele":"all","friends":"all"},"released":{"amber":%s}}\n' "$T" "$T" > "$R/data/svip.json"
 printf '{"checkinMinutes":1,"checkinRewards":[10,20,30,40,50,60,0],"checkinBonusItem":null}\n' > "$R/data/economy-settings.json"
 printf '{"perDay":2,"defs":[{"id":"play1","kind":"play","label":"Chơi 1 phút","target":1,"reward":25,"diet":"all","period":"day","enabled":true},{"id":"walk99","kind":"distance","label":"Đi 99 km","target":99,"reward":500,"diet":"all","period":"day","enabled":true},{"id":"week-play","kind":"play","label":"Chơi 10 giờ trong tuần","target":600,"reward":400,"diet":"all","period":"week","enabled":true}]}\n' > "$R/data/quests-settings.json"
 printf '{"offered":{"76561198000000011":%s},"claimed":{}}\n' "$T" > "$R/data/starter.json"

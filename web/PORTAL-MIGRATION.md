@@ -22,7 +22,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 6. Skin Studio | **done** (below) |
 | 7. Voice 3D | **done** (below) |
 | 8. Túi đồ | **done** (below) |
-| 9-10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
+| 9. Cửa hàng | **done** (below) |
+| 10. Pages | not started: each shows a link to the same page on the site before React (`pages/LegacyPage.tsx`) |
 | 2. Across pages | not started (the header's Hướng dẫn shows a toast until the tour moves) |
 | 3. Other pages | not started |
 | 4. Switch | not started: the site before React is still `/` |
@@ -49,7 +50,7 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
   game, gara, ranking, map) was stopped before it ran: run it first when picking up (the commands under "How to work on
   it"; LIVE_COOKIE for game / gara / ranking / map, PANEL_COOKIE for frame / home, both REX_COOKIE=<PANEL_COOKIE> and
   LIVE_COOKIE set in the env for the map flow). The live AI added for the map could change a count another flow checks.
-- Next: 9 Cửa hàng, 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
+- Next: 10 Overlay HUD (move the AI / heat / friends polling and the mini map into app-level services built on
   `lib/mapService.ts`), 2 across pages (Ctrl+K, the tour, its first-visit opening), 3 other pages, 4 the switch.
 - Still open with the owner: html.in-launcher (below).
 - Stop the local servers: `for p in $(pgrep -f "^node dist/index.js") $(pgrep -f "^isle-e2e-feed"); do kill $p; done`
@@ -122,6 +123,15 @@ overlay page, version + update phases, game mode; phone drawer and bottom bar; a
    and new page at 380 and 1366 px, in the browser and as the launcher (`html.in-launcher`).
 
 ## 1. The pages (one block each, in this order)
+
+**9. Cửa hàng: done 2026-10-06.** `pages/shop/ShopPage.tsx`, `features/shop/{Shop.tsx, Shop.module.css}`: read when the page is
+shown, then every 30 s while it is (not while buying or the box is open), the balance, tabs by kind (the bag's), a card per
+listing (why it cannot be bought now, how many left today, the number box 1-10 at 120 px as before), the confirm box (total,
+what is left after, today's limit), the buy, the toast, the bag and balance read again. One difference, a fix: after a buy
+the line "✅ Đã mua …" stays (before React the shop's reload hid it at once). `seed-bag.mjs` also puts eight listings on sale
+(one off) and gives Live Tester 2000 Hổ phách; `local-portal.sh` makes Live Tester an SVip (the shop is SVip-first: Rex sees
+it locked). Checks: `test/shop.test.tsx` (5), e2e `portal-shop.mjs` (6 flows: amounts as N, a buy of 2 lowering the balance
+and today's limit by the same on both sites; Rex locked; a guest), screenshots old / new: the same to under a pixel.
 
 **8. Túi đồ: done 2026-10-06.** `pages/bag/BagPage.tsx`, `features/bag/{Bag, BagDialog, parts}.tsx`, `bag.ts` (groups, what can be
 used now, what does not fit, the tabs, the dino item's slot choices, the hòm's strip). The cards, tabs, search, the use box
