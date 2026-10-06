@@ -1,0 +1,79 @@
+/* Server → Vận hành, as the panel before React (.phase, .facts .tile, .op-box, .rd-*, .time-chip, .ge-*, .dd-*, .rcon-grid, pre.out). */
+.stack { display: flex; flex-direction: column; gap: 18px; }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row > input { flex: 1; min-width: 160px; width: auto; }
+.warnbox { font-size: 12.5px; color: var(--dmg); background: var(--dmg-soft); border-radius: 10px; padding: 8px 12px; }
+.banner { font-size: 12.5px; border-radius: 10px; padding: 10px 12px; color: var(--dmg); background: var(--dmg-soft); }
+.chip { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.chip.on { background: var(--accent-soft); color: var(--accent); }
+.chip.off { background: var(--kill-soft); color: var(--kill); }
+.chip.grow { background: var(--grow-soft); color: var(--grow); }
+
+@keyframes ping { 0% { transform: scale(.6); opacity: .7 } 100% { transform: scale(1.6); opacity: 0 } }
+@keyframes blink { 50% { opacity: .35; } }
+.phase { display: inline-flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+.phase .led { width: 14px; height: 14px; border-radius: 50%; background: var(--muted); position: relative; }
+.phase.running .led { background: var(--accent-2); }
+.phase.running .led::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--accent-2); opacity: 0; animation: ping 1.8s ease-out infinite; }
+.phase.starting .led, .phase.stopping .led { background: var(--dmg); animation: blink 1s steps(2) infinite; }
+.phase.failed .led, .phase.unknown .led { background: var(--kill); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+.tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; min-width: 0; overflow: hidden; }
+.k { font-size: 11.5px; color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v { font-size: 15px; font-weight: 750; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.powerButtons { display: flex; gap: 10px; flex-wrap: wrap; }
+.opBox { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
+.opTop { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.big { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.steps { display: flex; gap: 6px; flex-wrap: wrap; }
+.steps span { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--surface-3); color: var(--muted); white-space: nowrap; }
+.steps span.stepOn { background: var(--accent-soft); color: var(--accent); }
+.steps span.stepDone { color: var(--text-2); }
+
+.verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
+.verdict .led { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.verdict.ready .led { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.verdict.starting .led { background: var(--dmg); box-shadow: 0 0 0 4px var(--dmg-soft); }
+.verdict.down .led, .verdict.problem .led { background: var(--kill); box-shadow: 0 0 0 4px var(--kill-soft); }
+.rdList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.rdList li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); min-width: 0; }
+.ic { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 800; flex: none; }
+.rdList .ok .ic { background: var(--accent-soft); color: var(--accent); }
+.rdList .wait .ic { background: var(--dmg-soft); color: var(--dmg); }
+.rdList .fail .ic { background: var(--kill-soft); color: var(--kill); }
+.rdList b { display: block; font-size: 13px; }
+.rdList small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+
+.timeChips { display: flex; gap: 6px; flex-wrap: wrap; }
+.timeChip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px; }
+.timeChip button { border: 0; background: none; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
+.timeBox { width: 150px; }
+.warnBox { width: 150px; }
+.inlineLabel { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+
+.geList { display: flex; flex-direction: column; gap: 8px; }
+.geRow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; }
+.geRow.live { border-color: var(--grow); box-shadow: 0 0 0 1px var(--grow) inset; }
+.x { font-size: 18px; font-weight: 800; color: var(--grow); min-width: 46px; }
+.when { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 2px; }
+.when small { color: var(--muted); }
+.geForm { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.geForm > label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; flex: 1; min-width: 150px; margin: 0; }
+.geForm > label.wide { flex: 2; }
+.geForm > label:has(button[aria-haspopup="dialog"]) { min-width: 190px; }
+
+.ddLive { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ddState { font-size: 14px; font-weight: 600; min-width: 260px; flex: 1 1 260px; }
+.ddState.hit { color: var(--kill); }
+.ddSpark { flex: 1 1 200px; min-width: 200px; height: 48px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border); }
+.ddGrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.ddGrid > label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; margin: 0; }
+
+.rconGrid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.rconGrid h3, .subhead { color: var(--text); font-size: 13px; margin: 0 0 8px; white-space: nowrap; }
+.subhead { margin: 20px 0 8px; }
+.out { margin: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; font-family: var(--font-mono); color: var(--text-2); }
+@media (max-width: 640px) { .ddState { min-width: 0; } .timeBox, .warnBox { width: 130px; } }

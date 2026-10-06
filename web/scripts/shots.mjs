@@ -3,6 +3,7 @@
 // and says when a page scrolls sideways.
 //   node web/scripts/shots.mjs <out dir> mods/messages world/fish ...
 // Playwright: the one installed globally (cloud sessions: Chromium at /opt/pw-browsers/chromium).
+// With PANEL_URL + PANEL_COOKIE (e2e/local-bridge.sh) it shoots a running bridge instead of the fixtures.
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +21,9 @@ for (const theme of ['dark', 'light']) for (const w of [380, 1366]) for (const p
   const ctx = await browser.newContext({ viewport: { width: w, height: 900 } });
   await ctx.addInitScript((t) => localStorage.setItem('theme', t), theme);
   const page = await ctx.newPage();
-  await page.route('**/*', async (r) => {
+  if (process.env.PANEL_URL) {
+    await ctx.addCookies([{ name: 'panel_session', value: process.env.PANEL_COOKIE ?? '', url: process.env.PANEL_URL }]);
+  } else await page.route('**/*', async (r) => {
     const u = new URL(r.request().url());
     if (u.hostname !== 'panel.test') return r.abort();
     if (u.pathname.startsWith('/api/')) {
@@ -31,7 +34,7 @@ for (const theme of ['dark', 'light']) for (const w of [380, 1366]) for (const p
     try { return r.fulfill({ body: await readFile(root + f), contentType: TYPES[f.split('.').pop()] ?? 'application/octet-stream' }); }
     catch { return r.fulfill({ status: 404, body: '' }); }
   });
-  await page.goto(`http://panel.test/next/#${p}`);
+  await page.goto(`${process.env.PANEL_URL ?? 'http://panel.test'}/next/#${p}`);
   await page.waitForTimeout(1200);
   const name = `${p.replace('/', '-')}-${w}-${theme}.png`;
   await page.screenshot({ path: join(out, name), fullPage: true });

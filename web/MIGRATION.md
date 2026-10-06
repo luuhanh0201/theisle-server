@@ -19,6 +19,7 @@ this file, and push after each block.
 | Gara | Dino & tạo dino, Cài đặt gara (all) | `pages/garage/GaragePage.tsx` | `e2e/flows/garage.mjs` (20) |
 | Thành viên | Admin, Phân quyền, Whitelist, VIP, SVip (all) | `pages/members/MembersPage.tsx` | `e2e/flows/members.mjs` (17) |
 | Quản trị | Truy cập panel, Nhật ký admin, Discord (all) | `pages/admin/AdminPage.tsx` | `e2e/flows/admin.mjs` (13) |
+| Server | Vận hành (Cấu hình game, Dữ liệu: not yet) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (14) |
 
 Routing: `app/Routes.tsx` sends a tab to its block page; each block page is a `app/BlockPage.tsx`
 with `pages={{ <sub>: Component }}`. A sub-page not listed there shows a link to the old panel
@@ -27,10 +28,11 @@ admins use, until every block is moved and `/` switches to the React build.
 
 ## Not moved yet (next steps, in this order)
 
-1. **Server**: Vận hành (`server/ops`: start / stop / restart, schedule, DDoS warning), Cấu hình game
-   (`server/cfg`, `/api/game-config`, groups of Game.ini keys, "Lưu & khởi động lại"), Dữ liệu
-   (`server/data`, backups). Mind the power actions: the e2e flow must never restart anything
-   (local bridge: `SYSTEMCTL=true`).
+1. **Server**: ~~Vận hành~~ done (`features/server/ops/`: power with countdown + reason, readiness,
+   schedule, growth events, DDoS, RCON). Next: Cấu hình game (`server/cfg`, `/api/game-config`,
+   groups of Game.ini keys shown one at a time at `#server/cfg:<group>`, one form for all groups,
+   "Lưu & khởi động lại"), then Dữ liệu (`server/data`, backups, export / restore, wipe). The e2e
+   flow never presses start / stop / restart (local bridge: `SYSTEMCTL=true`).
 2. **Người chơi**: Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page
    (`#player/<id>`, opened from many places).
 3. **Vật phẩm**: Skin dino (3D viewer `/skin3d.js`, `portal/public/skin-editor.js`), Mutation,
@@ -53,6 +55,11 @@ text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký a
   whole (live numbers, status lines), `toBody` turns the draft into the PUT's body, `saved` is the
   toast after a save (a text, or a function of the PUT's answer). After a save the GET is read
   again. Comparison ignores key order. Edits survive leaving the page (unsaved bar).
+- `@isle/ui` **DateTimeInput** (`kind` time / date / datetime, the native input's value text): the
+  React twin of `ui-inputs.js`'s date / time picker.
+- `test/fakeBridge.tsx`: `fakeBridge(url, get, put)` for a settings page, `fakeApi({ 'GET /api/x': …,
+  'POST /api/y': (body) => … })` for a page of many routes (with the confirm dialog).
+- `node web/scripts/shots.mjs` also shoots a running local bridge (`PANEL_URL` + `PANEL_COOKIE`).
 - `app/confirm.tsx`: the confirm dialog (never the browser's confirm()).
 - Mutations: `features/mutations/` (reference, notes, catalog), the picker and tooltip in
   `features/garage/creator/`.

@@ -16,6 +16,3 @@ export function dur(sec: number | null | undefined): string {
   if (m > 0) return `${m}p ${s}s`;
   return `${s}s`;
 }
-
-/** A moment as the panel shows it: "6/10/2026, 14:05:09" (unix seconds, Vietnamese, 24 h). */
-export const dateTime = (t: number): string => new Date(t * 1000).toLocaleString('vi-VN', { hour12: false });

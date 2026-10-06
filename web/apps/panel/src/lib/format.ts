@@ -16,6 +16,8 @@ export const shortId = (id: string): string => (id === 'ai' ? 'AI' : id.length >
 export const mutName = (m: string): string => String(m).replace(/^MUT_/, '').replace(/_/g, ' ');
 /** A date and time, vi-VN, 24 h. */
 export const dateTime = (t: number): string => new Date(t * 1000).toLocaleString('vi-VN', { hour12: false });
+/** The time of a moment: "21:30:05" (unix seconds, 24 h). */
+export const clock = (t: number): string => new Date(t * 1000).toLocaleTimeString('vi-VN', { hour12: false });
 
 /** A stable colour per SteamID or name (FNV-1a: neighbouring SteamIDs get far apart colours). */
 export function hue(id: string): number {

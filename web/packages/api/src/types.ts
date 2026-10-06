@@ -27,6 +27,56 @@ export interface Health {
 /** GET /api/server/status (bridge/src/power.ts): the game service's phase. */
 export interface ServerStatus { phase: 'running' | 'starting' | 'stopping' | 'stopped' | 'failed' | 'unknown' | string }
 
+/** A start / stop / restart in progress or the last one (bridge/src/power.ts Operation). */
+export interface PowerOperation {
+  id: number; kind: 'start' | 'stop' | 'restart'; source: 'admin' | 'schedule' | 'config'; reason: string;
+  startedAt: number;
+  /** Unix ms when the stop / restart itself happens (after the countdown). */
+  runAt: number;
+  step: 'countdown' | 'saving' | 'stopping' | 'restarting' | 'backup' | 'starting' | 'waiting' | 'done' | 'failed' | 'cancelled';
+  finishedAt: number | null;
+  message: string | null;
+}
+/** GET /api/server/status, whole (server.ts serverStatus). */
+export interface ServerStatusFull extends ServerStatus {
+  unit: { activeState: string; subState: string; since: number | null; pid: number | null } | null;
+  modsLoadedAt: number | null;
+  error?: string;
+  operation: PowerOperation | null;
+  lastOperation: PowerOperation | null;
+  schedule: { daily: string[]; countdownMinutes: number; next: number | null };
+  timeZone: string;
+  rconEnabled: boolean;
+  writesEnabled: boolean;
+  unitName: string;
+  /** The bridge's clock (ms), for the countdown. */
+  now?: number;
+}
+/** GET /api/server/readiness (bridge/src/readiness.ts Readiness). */
+export interface Readiness {
+  verdict: 'ready' | 'starting' | 'down' | 'problem';
+  summary: string;
+  checks: Array<{ id: string; label: string; state: 'ok' | 'fail' | 'wait'; detail: string; at?: number }>;
+  lastJoin: { t: number; name?: string } | null;
+  checkedAt: number;
+}
+/** GET /api/server/growth-events (server.ts; bridge/src/growth-events.ts). POST { start, end, multiplier, note }, DELETE /<id>. */
+export interface GrowthEvents {
+  events: Array<{ id: string; start: number; end: number; multiplier: number; note: string | null; createdBy: string | null; appliesAt: number | null; endsAt: number | null }>;
+  applied: { at: number; multiplier: number; event: { id: string; end: number; note: string | null } | null } | null;
+  daily: string[];
+  limits: { min: number; max: number };
+}
+/** GET /api/ddos (server.ts; bridge/src/ddos.ts). PUT takes { enabled, pps, mbps, sustainSec }. */
+export interface DdosView {
+  enabled: boolean; pps: number; mbps: number; sustainSec: number;
+  iface: string | null;
+  attack: { since: number; peakPps: number; peakMbps: number; onlineBefore: number | null } | null;
+  history: Array<{ t: number; pps: number; mbps: number; outMbps: number }>;
+}
+/** GET /api/rcon/commands (server.ts; bridge/src/rcon.ts RCON_COMMANDS). */
+export interface RconCommands { enabled: boolean; commands: Record<string, { label: string; args: string; read: boolean; toggle: boolean }> }
+
 /** GET / PUT /api/tele-settings (bridge/src/tele.ts TeleSettings). */
 export interface TeleSettings {
   maxGrowthPct: number;
