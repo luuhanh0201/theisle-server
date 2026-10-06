@@ -181,3 +181,12 @@ export interface DiscordView {
   kinds: Array<{ key: string; group: string; label: string }>;
   status: { queued: number; dropped: number; relay: { lastOkAt: number | null; lastError: string | null }; channels: Record<string, DiscordChannelState> };
 }
+
+/** A feature's release level (bridge/src/svip.ts FEATURE_MODES): admin only, SVip first, everyone. */
+export type FeatureMode = 'admin' | 'testing' | 'all';
+/** GET /api/svip and the PUT's answer (server.ts svipView). PUT body: { players: [{ steamId, note }], features: { key: mode } }. */
+export interface SvipView {
+  players: Array<{ steamId: string; note: string; addedAt: number; by: string | null; name: string | null }>;
+  features: Array<{ key: string; label: string; mode: FeatureMode }>;
+  modes: Array<{ key: FeatureMode; label: string; note: string }>;
+}

@@ -2,6 +2,6 @@
 export { ApiError, LOGIN_URL, adminFetch, getJson, onLoginEnded } from './http';
 export type {
   CommandName, CommandsSettings, DiscordChannelState, DiscordChannelView, DiscordView, FishCensus, FishSaved, FishSettings, FishSettingsStatus, FloraControl, FloraSettings,
-  FloraSettingsStatus, GarageSettings, PanelAccess, GarageSettingsStatus, Health, Me, MessageDef, MessagesSettings, MessagesWithCatalog, PeriodicMessage,
+  FeatureMode, FloraSettingsStatus, GarageSettings, PanelAccess, SvipView, GarageSettingsStatus, Health, Me, MessageDef, MessagesSettings, MessagesWithCatalog, PeriodicMessage,
   PteraSettings, RedeemAt, ServerStatus, TeleSettings, TierRule, VoiceNameMode, VoiceSettings, VoiceSettingsStatus,
 } from './types';

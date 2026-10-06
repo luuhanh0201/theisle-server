@@ -52,4 +52,9 @@ export const API = {
       c: { queued: 0, lastOkAt: now() - 300, lastError: null, waitUntil: 0, webhook: { name: 'Admin', channelId: '99990003', error: null, at: 0 } },
     } },
   }),
+  '/api/svip': {
+    players: [{ steamId: '76561198000000002', note: 'tester túi đồ', addedAt: now() - 86400, by: 'Dev', name: 'Dã Tượng' }, { steamId: '76561198000000003', note: '', addedAt: now() - 3600, by: 'Dev', name: null }],
+    features: [{ key: 'shop', label: 'Cửa hàng Hổ phách', mode: 'testing' }, { key: 'quests', label: 'Nhiệm vụ hằng ngày / tuần', mode: 'all' }, { key: 'tele', label: 'Tele con non', mode: 'admin' }],
+    modes: [{ key: 'admin', label: 'Chỉ admin', note: 'Đang phát triển' }, { key: 'testing', label: 'SVip', note: 'Ưu tiên dùng trước' }, { key: 'all', label: 'Công khai', note: 'Đã phát hành' }],
+  },
 };

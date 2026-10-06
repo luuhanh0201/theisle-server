@@ -16,6 +16,7 @@ picks the next step below, and updates this file in the same commit as the pages
 | Thế giới | Cá | `features/world/fish/FishSettings.tsx` | `/api/fish-settings` | 2026-10-06 |
 | Quản trị | Truy cập panel | `features/admin/access/PanelAccessSettings.tsx` | `/api/panel-access` | 2026-10-06 |
 | Quản trị | Discord | `features/admin/discord/DiscordSettings.tsx` | `/api/discord` (+ `/url`, `/test`, `/register-commands`) | 2026-10-06 |
+| Thành viên | SVip | `features/members/svip/SvipPage.tsx` | `/api/svip` (each change saves at once) | 2026-10-06 |
 | Gara | Cài đặt gara | `features/garage/settings/GarageSettings.tsx` | `/api/garage-settings` | 2026-10-06 |
 
 Which pages a block has in React: `pages/<tab>/index.ts`, all listed in `app/blocks.ts`. The frame
@@ -50,6 +51,12 @@ until every block is moved and `/` switches to the React build.
   After a save the GET is fetched again (no "Có thay đổi mới" for 15 s: it is the admin's own).
 - `toBody(draft)` in `useSettingsForm` when the form edits another shape than the PUT takes
   (panel access: a text of lines, PUT `{ ips }`).
+- `@isle/ui` **Table** (`cards`: rows become cards on a phone, cells named by `data-label`) and
+  **Segmented** (a few choices side by side, the old `.lvl-seg`).
+- `components/PlayerLink.tsx`: a player's name, linking to the old panel's player page (`/#player/<id>`)
+  until that page is in React: then change its href to `#player/<id>`.
+- A page that saves each action at once (SVip): `useQuery` + `adminFetch` in `withToken`, then
+  `qc.setQueryData` with the answer; no draft, no unsaved bar.
 - Tests of a page: `apps/panel/src/test/fakeBridge.tsx` fakes `/api/me` and one route.
 
 ## How each move is checked
