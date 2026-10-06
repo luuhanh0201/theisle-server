@@ -11,6 +11,7 @@ import { ItemsPage } from '../pages/items/ItemsPage';
 import { QuestsPage } from '../pages/quests/QuestsPage';
 import { TrafficPage } from '../pages/traffic/TrafficPage';
 import { OverviewPage } from '../pages/overview/OverviewPage';
+import { MapPage } from '../features/map/MapPage';
 import { PlayerPage } from '../features/players/player/PlayerPage';
 import { prefillCreator } from '../features/garage/creator/DinoCreator';
 import { LegacyPage } from './LegacyPage';
@@ -36,7 +37,8 @@ export function Routes() {
   const known = access.perms !== null;
   useEffect(() => {
     const want = hrefOf(tab, sub);
-    if (known && player === null && location.hash !== want) history.replaceState(null, '', want);
+    // #map/path/<id>/<spawnedAt> (a life's path, from a player's page) is kept as it is.
+    if (known && player === null && !location.hash.startsWith('#map/path/') && location.hash !== want) history.replaceState(null, '', want);
   }, [tab, sub, known, player]);
   if (player !== null) return <PlayerPage key={player} id={player} />;
   if (tab === 'mods' && sub !== null) return <ModsPage sub={sub} />;
@@ -50,6 +52,7 @@ export function Routes() {
   if (tab === 'quests') return <QuestsPage />;
   if (tab === 'traffic') return <TrafficPage />;
   if (tab === 'overview') return <OverviewPage />;
+  if (tab === 'map') return <MapPage />;
   return <NotMoved tab={tab} sub={sub} />;
 }
 

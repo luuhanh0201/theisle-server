@@ -22,6 +22,7 @@ this file, and push after each block.
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
 | Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (57) |
 | Vật phẩm | Skin dino, Mutation, Phiếu & hộp (all) | `pages/items/ItemsPage.tsx` | `e2e/flows/items.mjs` (26) |
+| Bản đồ | the one page: the live map (layers, search, hover, path of a life) and its tabs Vùng AI, Thả AI, Làm mới, Dino nhỏ, Người chơi | `features/map/MapPage.tsx` | `e2e/flows/map.mjs` (28) |
 | Tổng quan | the one page: KPIs, alerts, Hiệu năng server (tiles, 4 charts, table), Sức chứa, Diễn biến with filters, Thao tác nhanh | `pages/overview/OverviewPage.tsx` | `e2e/flows/overview.mjs` (11) |
 | Truy cập | the one page: tiles, six line charts, ranges, hover box | `pages/traffic/TrafficPage.tsx` | `e2e/flows/traffic.mjs` (8) |
 | Nhiệm vụ | the one page: Điểm danh, Hổ phách, Cửa hàng, Sổ giao dịch, Nhiệm vụ ngày / tuần | `pages/quests/QuestsPage.tsx` | `e2e/flows/quests.mjs` (13) |
@@ -62,8 +63,19 @@ admins use, until every block is moved and `/` switches to the React build.
 4. ~~**Nhiệm vụ**~~ done (`features/quests/Quests.tsx`: three settings forms with `useSettingsForm`
    (`putUrl` for the check-in), the amber +/- and the ledger as live lists). ~~**Truy cập**~~ done
    (`features/traffic/`, charts from `components/chart/LineChart.tsx`, shared with Tổng quan). ~~**Tổng quan**~~
-   done (`features/overview/`: Overview.tsx, Perf.tsx). **Bản đồ** (live map): the last block, next.
-5. When every block is in React: `/` serves the React build, the old `index.html` goes.
+   done (`features/overview/`: Overview.tsx, Perf.tsx). ~~**Bản đồ**~~ done (`features/map/`): the old engine
+   moved as it was: `store.ts` (the old `lm` / `az` / `gd` objects, mutated in place; `changed()` redraws the
+   canvas and re-renders the panels through `useMapState()`), `draw.ts` (drawMap, same order and look),
+   `hit.tsx` (hitTest + the hover box), `zones.ts` (zone geometry, as bridge/src/zone-shape.ts), `load.ts`
+   (map image / water once; /api/map 2 s, /api/map/live 1 s, flora 60 s, ai-zones and zone-guard 2 s),
+   `MapView.tsx` (canvas, tools, search, hint bar, pointer / wheel / keys), `ZonesPane.tsx`, `Panes.tsx`.
+   `#map/path/<id>/<spawnedAt>` is kept by Routes (not rewritten to `#map`). Dino nhỏ's per-species
+   maximum is a select (5..100 %, "mặc định") instead of a blank-able number box: same values saved.
+5. **Next (the only step left): `/` serves the React build.** Every block is in React (12 e2e flows, 268
+   checks). Not done yet on purpose: it changes what admins open on the live panel, so it waits for the
+   owner's go-ahead after a look at `/next/` on the live server. Then: the bridge serves `bridge/public/next/`
+   at `/`, keep the old `index.html` reachable (e.g. `/old/`) for a while, switch the sidebar links ("Về
+   panel cũ" / "Panel mới"), and the player page's "Đường đi" link to `#map/path/...` inside React.
 
 A list page redraws every 2 s but never while the admin is busy (popup open, typing, dialog,
 text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký admin do it.
