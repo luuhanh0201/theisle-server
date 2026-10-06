@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode, type PointerEvent } from 'react';
+import { useLayoutEffect, useState, type ReactNode, type PointerEvent } from 'react';
 import s from './Chart.module.css';
 
 /** The smallest round step (1, 1.5, 2, 2.5, 3, 4, 5, 6, 8 × 10ⁿ) at or above v. */
@@ -7,20 +7,19 @@ export function niceCeil(v: number): number {
   return [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map((m) => m * e).find((c) => c >= v) ?? 10 * e;
 }
 
-/** The width of an element, followed (the charts are drawn at their real width, as before React). */
-export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
-  const ref = useRef<T>(null);
+/** The width of an element, followed (the charts are drawn at their real width, as before React). A callback ref: measured whenever the element appears. */
+export function useWidth<T extends HTMLElement>(): [(el: T | null) => void, number] {
+  const [el, setEl] = useState<T | null>(null);
   const [w, setW] = useState(0);
   useLayoutEffect(() => {
-    const el = ref.current;
     if (!el) return undefined;
     setW(el.clientWidth);
     if (typeof ResizeObserver === 'undefined') return undefined;
     const ro = new ResizeObserver(() => setW(el.clientWidth));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  return [ref, w];
+  }, [el]);
+  return [setEl, w];
 }
 
 export interface Series { key: string; label: string; color: string }

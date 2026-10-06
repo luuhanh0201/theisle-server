@@ -22,6 +22,7 @@ this file, and push after each block.
 | Server | Vận hành, Cấu hình game, Dữ liệu (all) | `pages/server/ServerPage.tsx` | `e2e/flows/server.mjs` (27) |
 | Người chơi | Danh sách, Killfeed, Xếp hạng, Chat, Ban, Nhà tù, and the player page `#player/<id>` (all) | `pages/players/PlayersPage.tsx`, `features/players/player/PlayerPage.tsx` | `e2e/flows/players.mjs` (57) |
 | Vật phẩm | Skin dino, Mutation, Phiếu & hộp (all) | `pages/items/ItemsPage.tsx` | `e2e/flows/items.mjs` (26) |
+| Tổng quan | the one page: KPIs, alerts, Hiệu năng server (tiles, 4 charts, table), Sức chứa, Diễn biến with filters, Thao tác nhanh | `pages/overview/OverviewPage.tsx` | `e2e/flows/overview.mjs` (11) |
 | Truy cập | the one page: tiles, six line charts, ranges, hover box | `pages/traffic/TrafficPage.tsx` | `e2e/flows/traffic.mjs` (8) |
 | Nhiệm vụ | the one page: Điểm danh, Hổ phách, Cửa hàng, Sổ giao dịch, Nhiệm vụ ngày / tuần | `pages/quests/QuestsPage.tsx` | `e2e/flows/quests.mjs` (13) |
 
@@ -60,8 +61,8 @@ admins use, until every block is moved and `/` switches to the React build.
    of every item (items.ts fillBags): the e2e flow looks at the test player's rows only.
 4. ~~**Nhiệm vụ**~~ done (`features/quests/Quests.tsx`: three settings forms with `useSettingsForm`
    (`putUrl` for the check-in), the amber +/- and the ledger as live lists). ~~**Truy cập**~~ done
-   (`features/traffic/`, charts from `components/chart/LineChart.tsx`, shared with Tổng quan). **Tổng quan**
-   (overview, live), **Bản đồ** (live map).
+   (`features/traffic/`, charts from `components/chart/LineChart.tsx`, shared with Tổng quan). ~~**Tổng quan**~~
+   done (`features/overview/`: Overview.tsx, Perf.tsx). **Bản đồ** (live map): the last block, next.
 5. When every block is in React: `/` serves the React build, the old `index.html` goes.
 
 A list page redraws every 2 s but never while the admin is busy (popup open, typing, dialog,
