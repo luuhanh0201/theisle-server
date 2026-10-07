@@ -156,3 +156,7 @@ prints its PROBE SUMMARY (docs/first-run.md).
   Binaries/Win64, no ue4ss/ subfolder. Stable v3.0.1 fails its scan
   ("PS scan timed out") and loads no mods.
 - Wine: WineHQ stable 11.0 on the VPS (no `wine64` command; start.sh uses `wine`).
+- ntsync (2026-10-07): the VPS runs the HWE kernel 7.0 (`/dev/ntsync`, group isle) and the game runs a Wine 11.0
+  built with ntsync, `/home/isle/wine-ntsync` (scripts/build-wine-ntsync.sh; WineHQ's 24.04 package has none).
+  start.sh picks it unless `/home/isle/wine-ntsync.off` exists (touch it and restart the game to go back). Same
+  load: game CPU 101 % -> 87 %, lowest FPS 22 -> 30. Wine prefix backup before the switch: /home/isle/prefix.bak-ntsync.

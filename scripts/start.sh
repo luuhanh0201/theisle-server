@@ -42,6 +42,11 @@ done
 # packaging we know of. `wine64` is NOT on PATH with Ubuntu 24.04's own wine
 # (it lives in /usr/lib/wine/), and calling it made every start exit 127.
 WINE_BIN="${WINE_BIN:-}"
+# Wine 11.0 built with ntsync (2026-10-07: WineHQ's Ubuntu 24.04 package has none; the kernel needs 6.14+,
+# /dev/ntsync). Used when it is installed, unless /home/isle/wine-ntsync.off exists (touch it, restart the
+# game: back to the packaged Wine, no root needed). On a kernel without ntsync it falls back by itself.
+NTSYNC_WINE=/home/isle/wine-ntsync/bin/wine
+if [[ -z "$WINE_BIN" && -x "$NTSYNC_WINE" && ! -e /home/isle/wine-ntsync.off ]]; then WINE_BIN="$NTSYNC_WINE"; fi
 if [[ -z "$WINE_BIN" ]]; then
     for candidate in wine wine64 /usr/lib/wine/wine64; do
         if command -v "$candidate" >/dev/null 2>&1; then WINE_BIN="$candidate"; break; fi
