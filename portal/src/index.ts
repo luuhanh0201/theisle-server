@@ -13,6 +13,7 @@ const server = createPortal({
   bridge: new BridgeClient(config.bridgeUrl, config.portalToken),
   voiceUrl: config.voiceUrl,
   downloadsDir: config.downloadsDir,
+  ...(config.oldSiteDir !== undefined ? { oldSiteDir: config.oldSiteDir } : {}),
 });
 
 server.listen(config.http.port, config.http.host, () => {

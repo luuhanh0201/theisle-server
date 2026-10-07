@@ -67,11 +67,10 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   CSS variable `--pct`. A text input with `list="<datalist id>"` gets the
   system's suggestion list (`.sg-pop`, read from the datalist each time, so a
   page may refill the datalist while it is open).
-- Panel refresh (bridge/public/index.html `FORM_PAGES`): a list page redraws
-  every 2 s but never while the admin is at it (`busyUI`: a popup open, typing,
-  a dialog, text selected); a settings page loads once per visit and only shows
-  the "Có thay đổi mới" bar when its data changes on the server. A new
-  settings page goes into `FORM_PAGES` with the GET it is loaded from.
+- Panel refresh: a list page redraws every 2 s but never while the admin is at
+  it (a popup open, typing, a dialog, text selected); a settings page loads once
+  per visit and only shows the "Có thay đổi mới" bar when its data changes on
+  the server (`useSettingsForm`, below).
 - The skin colour editor is shared too (`portal/public/skin-editor.js`).
 - Mutation icons: `<img data-mut-icon="Name">` (filled by `portal/public/mut-icons.js`
   from one bundle); never one `<img src=".../<slug>.svg">` each, many at once
@@ -80,8 +79,8 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 ## Panel in React (web/): the admin panel (every page moved, 2026-10-06)
 - `web/` (React 19 + Vite + TypeScript, TanStack Query, CSS Modules), one `npm install` there.
   Built into `bridge/public/next/` (gitignored; `deploy.sh` builds it with the bridge), served at
-  `/` (and `/next/`). The panel before React (`bridge/public/index.html`) is kept for a while at
-  `/old`, with the same `#tab/sub` addresses; `/` falls back to it when there is no React build.
+  `/` (and `/next/`). The panel before React was removed on 2026-10-07 (git tag `old-sites-20261007`);
+  `/old` goes to `/` on the same `#tab/sub`.
 - Progress and the next steps: `web/MIGRATION.md` (read it first, update it with each page moved).
   One session at a time moves pages: two sessions pushing the same blocks to main mix their code
   (2026-10-06). Before starting, `git pull` and read MIGRATION.md; push after each block.
@@ -94,16 +93,20 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   `<SettingsPage>` (loads once, "Có thay đổi mới" bar, unsaved drafts kept across pages, Lưu with
   the login's token, toast `saved`). A GET with more than the form edits (status, catalog):
   `select` the editable part, read the rest from `latest`.
-- Moving a page: build it in React, add it to its `pages/<tab>`, keep the old one until the whole
-  block is done; a page not moved yet shows a link to the old panel (`LegacyPage`).
+- A new page: in its `pages/<tab>` and `nav.ts`; an address with no page shows `MissingPage`.
 - Check: `cd web && npm test && npm run build`; the block's e2e flow (`web/e2e/flows/<tab>.mjs`,
-  on a local bridge: `web/e2e/local-bridge.sh`); screenshots of the old and new page at 380 and
-  1366 px, light and dark, look the same (`node web/scripts/shots.mjs`).
+  on a local bridge: `web/e2e/local-bridge.sh`); screenshots at 380 and 1366 px, light and dark
+  (`node web/scripts/shots.mjs`).
 
-## Player site in React (web/apps/portal), being moved page by page
+## Player site in React (web/apps/portal)
 - Plan, progress and how to test: `web/PORTAL-MIGRATION.md` (read it first, update it with each block;
   one session at a time, `git pull` first, push after each block). Built into `portal/public/next/`
-  (gitignored), served by the portal at `/next/` beside the site before React (`/`); same `#page` addresses.
+  (gitignored), served by the portal at `/` (and `/next/`); same `#page` addresses. The site before React
+  (`portal/public/index.html`, `app.js`, `voice.js`, `overlay-settings.js`) was removed on 2026-10-07
+  (git tag `old-sites-20261007`); the e2e flows still compare with it: `web/e2e/local-portal.sh` takes it
+  out of the tag and serves it at `/` on the local portal only (`PORTAL_OLD_SITE_DIR`, never on the server).
+  Not moved yet, still plain pages in `portal/public/`: `tai.html`, `mutations.html`, `bigmap.html`,
+  `launcher-done.html`, `voice.html`.
 - Same look: the old stylesheet as it was (`src/styles/portal.css`, global class names) and the old
   markup's classes in JSX; `@isle/ui` controls in the portal's colours (`src/styles/tokens.css`).
 - No inline script (the portal's CSP). Launcher rules unchanged: no download element inside it.

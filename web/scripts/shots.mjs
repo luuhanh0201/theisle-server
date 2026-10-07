@@ -42,9 +42,9 @@ for (const theme of PORTAL ? ['dark'] : ['dark', 'light']) for (const w of [380,
     try { return r.fulfill({ body: await readFile(root + f), contentType: TYPES[f.split('.').pop()] ?? 'application/octet-stream' }); }
     catch { return r.fulfill({ status: 404, body: '' }); }
   });
-  // OLD=1 (with PANEL_URL): the panel before React (/old), for the side-by-side check.
-  const oldPath = PORTAL ? '/' : '/old';
-  await page.goto(`${process.env.PANEL_URL ?? 'http://panel.test'}${process.env.OLD ? oldPath : '/next/'}#${p}`);
+  // OLD=1 (SITE=portal, on e2e/local-portal.sh): the site before React, served at / from git tag
+  // old-sites-20261007 there, for the side-by-side check. The panel before React is gone (2026-10-07).
+  await page.goto(`${process.env.PANEL_URL ?? 'http://panel.test'}${process.env.OLD && PORTAL ? '/' : '/next/'}#${p}`);
   await page.waitForTimeout(1200);
   const name = `${process.env.OLD ? 'old-' : ''}${process.env.LAUNCHER ? 'launcher-' : ''}${p.replace('/', '-')}-${w}-${theme}.png`;
   await page.screenshot({ path: join(out, name), fullPage: true });

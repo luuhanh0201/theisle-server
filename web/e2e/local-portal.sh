@@ -5,7 +5,7 @@
 # and LIVE_COOKIE for "Live Tester" (76561198000000013), in game (live-feed.mjs):
 #   sh web/e2e/local-portal.sh /tmp/isle-portal-e2e        (then, from web/:)
 #   PANEL_URL=http://127.0.0.1:8092 COOKIE_NAME=isle_session PANEL_COOKIE=<printed> CHROME=<chromium> node e2e/run.mjs e2e/flows/portal-frame.mjs
-# The React pages are at /next/ (npm run build in web/), the site before React at /.
+# The React pages are at /next/ (npm run build in web/), the site before React at / (from a git tag, below).
 # Needs `npm run build` in bridge/, portal/ and web/ first. Stop: kill the two pids it prints.
 set -e
 R=${1:?usage: local-portal.sh <empty dir>}
@@ -37,8 +37,13 @@ mkdir -p "$R/downloads"
 [ -f "$REPO/portal/public/dino3d/registry.json" ] || { mkdir -p "$REPO/portal/public/dino3d"; printf '{"species":{},"files":{}}\n' > "$REPO/portal/public/dino3d/registry.json"; }
 # The launcher's version file (Trang chủ's download button reads it).
 printf '{"version":"2.8.1","windows":{"file":"XomGay-Launcher-Setup-2.8.1.exe","size":104857600}}\n' > "$R/downloads/version.json"
+# The site before React (removed 2026-10-07) for the flows' old / new comparisons: taken out of git tag
+# old-sites-20261007 and served at / by this local portal only (PORTAL_OLD_SITE_DIR; never on the server).
+mkdir -p "$R/old-site"
+git -C "$REPO" archive old-sites-20261007 portal/public/index.html portal/public/app.js portal/public/voice.js portal/public/overlay-settings.js \
+  | tar -x -C "$R/old-site" --strip-components=2 || echo "no git tag old-sites-20261007 (git fetch --tags): the old / new comparisons will fail"
 cd "$REPO/portal"
-PORTAL_PORT=8092 PORTAL_BASE_URL=http://127.0.0.1:8092 BRIDGE_URL=http://127.0.0.1:8091 PORTAL_SESSION_SECRET=$SECRET \
+PORTAL_OLD_SITE_DIR="$R/old-site" PORTAL_PORT=8092 PORTAL_BASE_URL=http://127.0.0.1:8092 BRIDGE_URL=http://127.0.0.1:8091 PORTAL_SESSION_SECRET=$SECRET \
   PORTAL_TRUST_PROXY=0 PORTAL_DOWNLOADS_DIR="$R/downloads" nohup node dist/index.js > "$R/portal.log" 2>&1 &
 echo "portal pid $! (log $R/portal.log)"
 node -e "import('./dist/session.js').then((m) => { const exp = Math.floor(Date.now() / 1000) + 86400;

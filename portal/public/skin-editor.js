@@ -1,5 +1,5 @@
-// The skin colour editor, shared: the players' Skin Studio (app.js) and the
-// admin panel's Vật phẩm → Skin (bridge public/index.html, served from here).
+// The skin colour editor, shared: the players' Skin Studio and the admin panel's
+// Vật phẩm → Skin (both in React, web/: imported as @portal/skin-editor).
 // One region list, a colour picker and a hex code per region, and the themed
 // palettes; the panel adds a light per region (darker / brighter than a player
 // can pick), the only difference (owner's call, 2026-10-02: the panel's own

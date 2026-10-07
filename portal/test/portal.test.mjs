@@ -219,7 +219,7 @@ test('security headers on every response; no path traversal', async () => {
   assert.match(r.headers.get('content-security-policy'), /script-src 'self'/);
   assert.match(r.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
-  const page = await get('/');
+  const page = await get('/tai.html');
   assert.equal(page.status, 200);
   assert.match(page.headers.get('content-type'), /text\/html/);
   assert.equal((await get('/../package.json')).status, 404);
@@ -231,12 +231,12 @@ test('static caching: versioned vendor files for good, the app\'s own scripts re
   assert.equal(lib.status, 200);
   assert.match(lib.headers.get('content-type'), /javascript/);
   assert.match(lib.headers.get('cache-control'), /immutable/);
-  const own = await get('/app.js');
+  const own = await get('/map.js');
   assert.equal(own.status, 200);
   assert.equal(own.headers.get('cache-control'), 'no-cache');
 });
 
-test('the site in React at /next/ (built from web/apps/portal), /next goes there; its hashed files cached for good', async () => {
+test('the site in React at / and /next/ (built from web/apps/portal), /next goes there; its hashed files cached for good', async () => {
   const r = await get('/next');
   assert.equal(r.status, 302);
   assert.equal(r.headers.get('location'), '/next/');
@@ -254,8 +254,34 @@ test('the site in React at /next/ (built from web/apps/portal), /next goes there
     assert.equal(a.status, 200);
     assert.match(a.headers.get('cache-control'), /immutable/);
   }
-  // The site before React is still at /.
-  assert.match(await (await get('/')).text(), /app\.js/);
+  // / is the same page; the site before React is gone (git tag old-sites-20261007), its files too.
+  const root = await get('/');
+  assert.equal(root.status, built ? 200 : 404);
+  if (built) assert.equal(await root.text(), await (await get('/next/')).text());
+  for (const gone of ['/app.js', '/voice.js', '/overlay-settings.js', '/index.html']) assert.equal((await get(gone)).status, 404, gone);
+  // An old address (/old, its bookmarks): the site, the browser keeps the #page.
+  for (const old of ['/old', '/old/']) {
+    const r2 = await get(old);
+    assert.deepEqual([r2.status, r2.headers.get('location')], [302, '/'], old);
+  }
+});
+
+test('e2e only: with oldSiteDir the site before React is served at / (its own files from there, the shared ones from public/)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'isle-old-site-'));
+  writeFileSync(join(dir, 'index.html'), '<!doctype html><title>old</title><script src="/app.js"></script>');
+  writeFileSync(join(dir, 'app.js'), '// old app');
+  const srv = createPortal({ baseUrl: BASE, secureCookies: true, sessionSecret: SECRET, sessionDays: 7, trustProxy: true, bridge, oldSiteDir: dir,
+    // The same voice server: the security headers are the module's, the last portal made sets them.
+    voiceUrl: 'wss://voice.example.com' });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const at = (path) => fetch(`http://127.0.0.1:${srv.address().port}${path}`, { redirect: 'manual' });
+  try {
+    assert.match(await (await at('/')).text(), /<title>old<\/title>/);
+    assert.equal(await (await at('/app.js')).text(), '// old app');
+    assert.equal((await at('/map.js')).status, 200, 'shared files still from public/');
+    assert.equal((await at('/voice.js')).status, 404, 'an old file not in the folder');
+    assert.equal((await at('/../package.json')).status, 404);
+  } finally { srv.close(); }
 });
 
 test('writes to the API are not allowed', async () => {

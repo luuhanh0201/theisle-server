@@ -15,8 +15,8 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  * Public routes. Every data route is scoped to the SteamID in the signed
  * session cookie, there is no way to ask for someone else's data.
  *
- *   GET  /                      the page (public/)
- *   GET  /next/                 the page in React (public/next/, built from web/apps/portal; web/PORTAL-MIGRATION.md)
+ *   GET  /                      the page in React (public/next/, built from web/apps/portal); /next/ the same
+ *   GET  /old                   → / (the site before React was there until 2026-10-07, git tag old-sites-20261007)
  *   GET  /auth/steam            → Steam login
  *   GET  /auth/steam/return     ← Steam; sets the session cookie
  *   POST /auth/logout
@@ -69,6 +69,11 @@ export interface PortalOptions {
   voiceUrl?: string;
   /** Launcher installers + electron-updater feed, served as /tai/<file>. */
   downloadsDir?: string;
+  /**
+   * The e2e flows only (web/e2e/local-portal.sh, never on the server): the site before React, taken
+   * out of git tag old-sites-20261007, served at / so a flow compares it with React at /next/.
+   */
+  oldSiteDir?: string;
 }
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -80,7 +85,7 @@ const TYPES: Record<string, string> = {
 };
 
 /**
- * No inline scripts anywhere (app.js is a file); styles may be inline. The
+ * No inline scripts anywhere (every script is a file); styles may be inline. The
  * voice page also talks to the LiveKit server (its own origin, wss:// + https://).
  */
 function securityHeaders(voiceUrl: string): Record<string, string> {
@@ -147,11 +152,16 @@ function clientIp(req: IncomingMessage, trustProxy: boolean): string {
   return req.socket.remoteAddress ?? 'unknown';
 }
 
-async function sendStatic(res: ServerResponse, urlPath: string): Promise<void> {
-  // /next/: the site in React (web/apps/portal, built into public/next/), beside the site before React.
-  const rel = urlPath === '/' ? 'index.html' : urlPath === '/next/' ? 'next/index.html' : urlPath.slice(1);
-  const file = normalize(join(publicDir, rel));
-  if (!file.startsWith(publicDir + '/') || !TYPES[extname(file)]) { send(res, 404, { error: 'not found' }); return; }
+/** The site before React's own files (the rest of public/ it shared with the pages still served). */
+const OLD_SITE_FILES = new Set(['/', '/app.js', '/voice.js', '/overlay-settings.js']);
+
+async function sendStatic(res: ServerResponse, urlPath: string, oldSiteDir?: string): Promise<void> {
+  // The site is the React one (web/apps/portal, built into public/next/): / and /next/ open it.
+  const old = oldSiteDir !== undefined && OLD_SITE_FILES.has(urlPath);
+  const dir = old ? oldSiteDir : publicDir;
+  const rel = urlPath === '/' ? (old ? 'index.html' : 'next/index.html') : urlPath === '/next/' ? 'next/index.html' : urlPath.slice(1);
+  const file = normalize(join(dir, rel));
+  if (!file.startsWith(dir + '/') || !TYPES[extname(file)]) { send(res, 404, { error: 'not found' }); return; }
   try {
     const body = await readFile(file);
     // The map (2.5 MB image) is asked for with ?v=<map version>: cache it.
@@ -573,7 +583,9 @@ export function createPortal(opts: PortalOptions): Server {
       return;
     }
     if (path === '/next' && req.method === 'GET') { redirect(res, '/next/'); return; }
-    if (req.method === 'GET') { await sendStatic(res, path); return; }
+    // An old address of the site before React: the site (a redirect keeps the browser's #page).
+    if ((path === '/old' || path === '/old/') && req.method === 'GET') { redirect(res, '/'); return; }
+    if (req.method === 'GET') { await sendStatic(res, path, opts.oldSiteDir); return; }
     send(res, 405, { error: 'method not allowed' });
   }
 

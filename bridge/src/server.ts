@@ -1645,24 +1645,21 @@ async function handlePanel(
     case '/api/health':
       sendJson(res, 200, { ...store.health(), writesEnabled: config.adminToken !== null });
       return;
-    // The panel is the React one (web/apps/panel, built into public/next/); its pages are
-    // #addresses, so this is its only page. /next/ (where it was tried first) still opens it.
+    // The panel is the React one (web/apps/panel, built into public/next/ by deploy.sh); its pages
+    // are #addresses, so this is its only page. /next/ (where it was tried first) still opens it.
     case '/':
     case '/next/':
-      // No React build on this machine (web/ not built): the panel before React, never a dead end.
-      await sendFile(res, await access(join(publicDir, 'next', 'index.html')).then(() => 'next/index.html', () => 'index.html'));
+      await sendFile(res, 'next/index.html');
       return;
     case '/next':
       res.writeHead(302, { location: '/next/' });
       res.end();
       return;
-    // The panel before React, kept for a while at /old: no slash after it, so its own relative
-    // addresses (img/…, map/…) still resolve from the site's root.
+    // The panel before React was here until 2026-10-07 (removed; git tag old-sites-20261007): an old
+    // bookmark goes to the panel, on the same page (a redirect without a #fragment keeps the browser's).
     case '/old':
-      await sendFile(res, 'index.html');
-      return;
     case '/old/':
-      res.writeHead(302, { location: '/old' });
+      res.writeHead(302, { location: '/' });
       res.end();
       return;
     default:

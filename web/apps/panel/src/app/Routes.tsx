@@ -14,14 +14,14 @@ import { OverviewPage } from '../pages/overview/OverviewPage';
 import { MapPage } from '../features/map/MapPage';
 import { PlayerPage } from '../features/players/player/PlayerPage';
 import { prefillCreator } from '../features/garage/creator/DinoCreator';
-import { LegacyPage } from './LegacyPage';
+import { MissingPage } from './MissingPage';
 import { SUBS, TABS, subAllowed, tabAllowed, type TabId } from './nav';
 import { hrefOf, pickSub, useHashRoute, usePlayerId } from './router';
 import { useSession } from './session';
 
 /**
- * The page for the address. A page moved to React is shown; the others are a link to the panel
- * before React, inside the same block frame, so every address of the old panel works here too.
+ * The page for the address. An address with no page (an old bookmark) says so, inside the block
+ * frame. Every page is in React since 2026-10-07: the panel before React is gone (git tag old-sites-20261007).
  */
 export function Routes() {
   const { access } = useSession();
@@ -53,10 +53,10 @@ export function Routes() {
   if (tab === 'traffic') return <TrafficPage />;
   if (tab === 'overview') return <OverviewPage />;
   if (tab === 'map') return <MapPage />;
-  return <NotMoved tab={tab} sub={sub} />;
+  return <NoPage tab={tab} sub={sub} />;
 }
 
-function NotMoved({ tab, sub }: { tab: TabId; sub: string | null }) {
+function NoPage({ tab, sub }: { tab: TabId; sub: string | null }) {
   const { access } = useSession();
   const label = TABS.find(([id]) => id === tab)?.[1] ?? tab;
   const subs = (SUBS[tab] ?? []).filter(([id]) => subAllowed(access, tab, id));
@@ -67,7 +67,7 @@ function NotMoved({ tab, sub }: { tab: TabId; sub: string | null }) {
       {subs.length > 0 && sub !== null && (
         <SubTabs label={`Mục của ${label}`} active={sub} tabs={subs.map(([id, l]) => ({ id, label: l, href: hrefOf(tab, id) }))} />
       )}
-      <LegacyPage title={subLabel ? `${label} · ${subLabel}` : label} hash={hrefOf(tab, sub)} />
+      <MissingPage title={subLabel ? `${label} · ${subLabel}` : label} />
     </div>
   );
 }

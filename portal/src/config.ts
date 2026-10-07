@@ -35,6 +35,8 @@ export const config = {
 
   /** Xóm Gáy Launcher installers and its update feed, served at /tai/ (scripts/release-launcher.sh fills it). */
   downloadsDir: env('PORTAL_DOWNLOADS_DIR', '/opt/isle-portal/downloads'),
+  /** The e2e flows only (web/e2e/local-portal.sh): the site before React, for the old / new comparisons. Never set on the server. */
+  oldSiteDir: env('PORTAL_OLD_SITE_DIR', '') || undefined,
 
   /** Signs the login cookie. At least 32 characters; changing it logs everyone out. */
   sessionSecret: env('PORTAL_SESSION_SECRET', ''),

@@ -9,7 +9,7 @@ pages do. One session at a time; `git pull` and read this file first; push after
 
 Mark each step done here, with its files and its e2e flow, in the commit that does it.
 
-## Status (2026-10-06)
+## Status (2026-10-07)
 
 | Step | State |
 |---|---|
@@ -25,8 +25,8 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 9. Cửa hàng | **done** (below) |
 | 10. Overlay HUD | **done** (below; every page of section 1 is now in React) |
 | 2. Across pages | **done** (below: Ctrl+K, the tour) |
-| 3. Other pages | not started |
-| 4. Switch | not started: the site before React is still `/` |
+| 3. Other pages | not started (still plain pages: tai, mutations, bigmap, launcher-done, voice.html) |
+| 4. Switch | **done** 2026-10-07 (below): React at `/`, the site before React removed (git tag `old-sites-20261007`) |
 
 ### How to work on it
 
@@ -282,6 +282,18 @@ old page; a page opened during a step stays; seen already: not opened).
 - The launcher keeps working unchanged: it loads `${BASE}/`, `bigmap.html`, intercepts `/voice.html`;
   check each against the new pages before the switch.
 - Later, with the owner: remove the old files.
+
+**Done 2026-10-07 (the owner: "nén các file cũ vào và xóa đi").** The portal server serves the React
+build at `/` and `/next/`; `/old` goes to `/` (the browser keeps the #page). Removed: `portal/public/index.html`,
+`app.js`, `voice.js`, `overlay-settings.js` (the owner keeps a copy; everything is in git tag
+`old-sites-20261007`), `pages/LegacyPage.tsx` and `app/old.ts` (every page is in React). Kept, still used:
+`map.js` (the Bản đồ page, the launcher's big map), `skin-editor.js` and `skin3d.js` (Skin Studio, the
+panel), `mut-icons.js`, `ui-select.js` / `ui-inputs.js` (the plain pages of step 3), `amber.svg`, `img/`,
+`vendor/`, `dino3d/`, `map/`. The launcher loads `${BASE}/`: the React site, checked inside it by
+`portal-frame.mjs` and `portal-overlay.mjs`. The flows still compare with the old site: `local-portal.sh`
+takes the four files out of the tag into `<dir>/old-site` and the local portal serves them at `/`
+(`PORTAL_OLD_SITE_DIR`, the e2e only; `portal/test/portal.test.mjs` checks both ways).
+The html.in-launcher decision (above) is unchanged: `main.tsx MARK_IN_LAUNCHER = false`.
 
 ## Not in this plan
 

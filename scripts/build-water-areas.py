@@ -306,7 +306,7 @@ def main():
     print(f"{len(areas)} waters: {sum(1 for x in areas if x['kind'] == 'poly')} outlined, {sum(1 for x in areas if x['kind'] == 'circle')} circles")
     for x in areas:
         print(f"  {x['name']:24s} {x['kind']:6s} {x.get('px', '')}")
-    print("then bump WATER_V in portal/public/map.js and bridge/public/index.html (the proxy caches /map/* a week)")
+    print("then bump WATER_V in portal/public/map.js and web/apps/panel/src/features/map/data.ts (the proxy caches /map/* a week)")
     if "--preview" in sys.argv:
         out = sys.argv[sys.argv.index("--preview") + 1]
         im = Image.open(IMG).convert("RGB").resize((W, H))

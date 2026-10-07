@@ -1,7 +1,7 @@
 import type { JSX, ReactNode } from 'react';
 import { PageHead, SubTabs } from '@isle/ui';
 import { useDrafts } from '../features/settings-form/drafts';
-import { LegacyPage } from './LegacyPage';
+import { MissingPage } from './MissingPage';
 import { SUBS, subAllowed, type TabId } from './nav';
 import { hrefOf } from './router';
 import { useSession } from './session';
@@ -24,7 +24,7 @@ export function BlockPage({ tab, sub, title, intro, pages }:
       <PageHead title={title} sub={intro} />
       <SubTabs label={`Mục của ${title}`} active={id}
         tabs={subs.map(([id, l]) => ({ id, label: l, href: hrefOf(tab, id), dot: drafts.some(([, d]) => d.href === hrefOf(tab, id)) }))} />
-      {Page ? <Page /> : <LegacyPage title={`${title} · ${label}`} hash={hrefOf(tab, sub)} />}
+      {Page ? <Page /> : <MissingPage title={`${title} · ${label}`} />}
     </div>
   );
 }

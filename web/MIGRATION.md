@@ -5,8 +5,10 @@ only: every page does what it did in the panel before React (`bridge/public/inde
 texts, same saves, same rules. A new session reads this first, picks the next step below, and
 updates this file in the same commit as the pages it moves.
 
-**Status (2026-10-06): done.** Every block is in React and `/` serves it; the panel before React
-stays at `/old` for a while (step 5 below). New work on the panel goes into `web/` only.
+**Status (2026-10-07): done.** Every block is in React and `/` serves it. The panel before React
+(`bridge/public/index.html`) was removed on 2026-10-07, the owner's request: it is in git tag
+`old-sites-20261007`; `/old` goes to `/` on the same page (e2e `panels.mjs`). New work on the panel goes
+into `web/` only.
 
 **One session at a time.** On 2026-10-06 two sessions moved the same blocks and both pushed to
 main: the code got mixed and main stopped building (113 type errors). It was repaired by keeping
@@ -78,11 +80,11 @@ admins use, until every block is moved and `/` switches to the React build.
    panel (and fall back to the old one when `public/next/` is missing); the panel before React is at
    `/old` (no slash, so its relative `img/`, `map/` still resolve; `/old/` redirects there), behind the same
    login. Each panel links to the other on the same `#page` ("Về panel cũ" / "Về panel mới"; e2e
-   `panels.mjs`). The e2e flows now open `/#…`. Still to decide with the owner, later: when to delete
-   `/old` and `bridge/public/index.html` (nothing in React depends on them).
+   `panels.mjs`). The e2e flows now open `/#…`. 2026-10-07: `/old` and `bridge/public/index.html`
+   removed (the owner); the links between the two panels with them.
 
 A list page redraws every 2 s but never while the admin is busy (popup open, typing, dialog,
-text selected: the old panel's `busyUI`); see how Gara → Dino and Nhật ký admin do it.
+text selected); see how Gara → Dino and Nhật ký admin do it.
 
 ## Shared pieces
 
