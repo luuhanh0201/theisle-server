@@ -21,3 +21,19 @@ test('off until turned on; saved where the mod reads; limits', async () => {
   await assert.rejects(saveFloraSettings({ migrationMaxPerArea: 0 }), /migrationMaxPerArea/);
   assert.equal((await saveFloraSettings({ outsideMaxPerArea: 0 })).outsideMaxPerArea, 0, 'no plants at all outside is allowed');
 });
+
+test('the map\'s "Tải lại thực vật": a request file for the mod, not twice in 30 s, plantsT passed on', async () => {
+  const { requestFloraRefresh, readFlora, REFRESH_GAP_S } = await import('../dist/flora.js');
+  const { permissionFor } = await import('../dist/permissions.js');
+  const { mkdirSync, writeFileSync, existsSync } = await import('node:fs');
+  mkdirSync(process.env.FLORA_ROOT, { recursive: true });
+  writeFileSync(join(process.env.FLORA_ROOT, 'flora.json'), JSON.stringify({ t: 1000, plantsT: 900, spawners: [], plants: [], fruits: [] }));
+  assert.equal((await readFlora(1000)).plantsT, 900);
+  const req = join(process.env.FLORA_ROOT, 'refresh.request');
+  assert.deepEqual(await requestFloraRefresh(910), { ok: false, retryIn: REFRESH_GAP_S - 10 }, 'the plants were read 10 s ago');
+  assert.equal(existsSync(req), false);
+  assert.deepEqual(await requestFloraRefresh(1000), { ok: true, plantsT: 900 });
+  assert.equal(readFileSync(req, 'utf8'), '1000');
+  assert.equal((await requestFloraRefresh(1005)).ok, false, 'asked 5 s ago');
+  assert.equal(permissionFor('POST', '/api/map/flora/refresh'), 'map.view');
+});

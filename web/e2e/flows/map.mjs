@@ -133,4 +133,17 @@ export default [
       check('chưa lưu lên server', JSON.stringify((await h.api('/api/ai-zones')).zones[0]) === JSON.stringify(z0));
     `,
   },
+  {
+    name: 'Tải lại: mọi thứ lấy lại, mod được nhờ đọc lại cây, không cho bấm dồn',
+    path: '/#map',
+    wait: 4000,
+    run: `
+      const btn = () => h.$$('button').find((b) => /^(Tải lại|Đang tải lại…)$/.test(b.textContent));
+      check('nút Tải lại cạnh các lớp', !!btn() && btn().textContent === 'Tải lại');
+      h.click(btn()); await h.sleep(1200);
+      check('đang chờ mod đọc lại', btn().disabled && btn().textContent === 'Đang tải lại…' && document.body.textContent.includes('Đang đọc lại cây trên đảo'));
+      const again = await fetch('/api/map/flora/refresh', { method: 'POST', headers: { 'x-admin-token': 'e2e-local-token' } });
+      check('bấm lại ngay: bridge từ chối, nói vì sao', again.status === 429 && (await again.json()).error.includes('vừa đọc lại'));
+    `,
+  },
 ];

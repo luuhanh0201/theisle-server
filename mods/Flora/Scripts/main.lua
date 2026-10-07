@@ -61,6 +61,11 @@ local FLAG = DIR .. "export.running"
 local EXPORT_MS = 120000     -- the spawners every two minutes…
 local PLANTS_EVERY_MS = 600000   -- …the plants and fruits every ten…
 local CHUNK = 150            -- …this many a tick
+-- The panel's map "Tải lại" (bridge: POST /api/map/flora/refresh) leaves this
+-- file: the plants are read again now, not at the next ten minutes; at most
+-- once in REFRESH_GAP_S (a full read is ~10 ticks).
+local REFRESH = DIR .. "refresh.request"
+local REFRESH_GAP_S = 30
 local STEP_MS = 3000         -- ticks three seconds apart
 local WRITE_MS = 5000
 local SPLINE_POINTS = 64     -- at most, per spline area
@@ -257,6 +262,15 @@ local function step()
         return
     end
     if reading == nil then
+        local asked = io.open(REFRESH, "r")
+        if asked then
+            asked:close()
+            os.remove(REFRESH)
+            if last.t == nil or os.time() - last.t >= REFRESH_GAP_S then
+                plantsAt = 0
+                H.log(MOD .. ": plants read again, asked from the panel")
+            end
+        end
         if now < plantsAt then return end
         reading = { family = "plants", list = {}, seen = {}, from = 1 }
     end

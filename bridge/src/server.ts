@@ -57,7 +57,7 @@ import {
   type BanWatcher,
 } from './bans.js';
 import { readAmbient, setAmbient } from './ai-ambient.js';
-import { readFlora } from './flora.js';
+import { readFlora, requestFloraRefresh } from './flora.js';
 import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
 import { FISH_SPECIES, currentDisallowed, readFishCensus, readFishSettings, saveFish } from './fish-settings.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
@@ -669,6 +669,7 @@ async function handlePanel(
       ((path === '/api/backups/export-settings' || path === '/api/backups/wipe' || path === '/api/backups/restore') && req.method === 'POST') ||
       (/^\/api\/backups\/file\/[^/]+$/.test(path) && req.method === 'DELETE') ||
       (path === '/api/flora-settings' && req.method === 'PUT') ||
+      (path === '/api/map/flora/refresh' && req.method === 'POST') ||
       (path === '/api/fish-settings' && req.method === 'PUT') ||
       (path === '/api/ai-ambient' && req.method === 'PUT') ||
       ((path === '/api/ai-reset' || path === '/api/ai-reset/cancel') && req.method === 'POST');
@@ -812,6 +813,13 @@ async function handlePanel(
         ok: true,
       });
       sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/map/flora/refresh') {
+      // The map's "Tải lại thực vật": the mod reads the plants again now (flora.ts), not at the next ten minutes.
+      const r = await requestFloraRefresh();
+      sendJson(res, r.ok ? 202 : 429, r.ok ? r : { error: `vừa đọc lại, thử lại sau ${r.retryIn} giây`, retryIn: r.retryIn });
       return;
     }
 

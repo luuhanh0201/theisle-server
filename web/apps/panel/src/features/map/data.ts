@@ -42,7 +42,7 @@ export const NUTRI: ReadonlyArray<readonly [string, string, string]> = [['cp', '
 export interface Plant { x: number; y: number; c: string; s?: string; n?: boolean; cp?: number; pp?: number; lp?: number; eaten?: boolean }
 export interface Spawner { id: string; x: number; y: number; mass?: boolean; active?: boolean; migration?: boolean; patrol?: boolean; nesting?: boolean; juvenile?: boolean;
   amount?: number | null; multiplier?: number | null; shape?: { spline?: Array<[number, number]> } }
-export interface Flora { t: number; stale?: boolean; plants: Plant[]; fruits: Plant[]; spawners: Spawner[] }
+export interface Flora { t: number; stale?: boolean; plantsT?: number | null; plants: Plant[]; fruits: Plant[]; spawners: Spawner[] }
 /** "(α)", "(βγ)", or "" when it gives no nutrients. */
 export function nutriMark(p: Plant): string {
   if (p.n === false) return '';

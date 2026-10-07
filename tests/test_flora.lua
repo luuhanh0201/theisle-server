@@ -97,6 +97,26 @@ d = f and json.decode(f:read("*a"))
 if f then f:close() end
 check("400 plants read in 3 ticks of at most 150, each counted once", reads == 3 and d and #d.plants == 400,
   "reads " .. reads .. ", plants " .. tostring(d and #d.plants))
+-- The panel's "Tải lại": a request file, the plants read again now, not at 10 min; not twice in 30 s.
+local REQ = "Mods/Flora/Saved/refresh.request"
+local function ask() local rf = io.open(REQ, "w"); rf:write("1"); rf:close() end
+clock = clock + 10
+ask()
+step.fn()
+check("a request within 30 s of the last read: dropped, nothing read", reads == 3 and io.open(REQ, "r") == nil)
+clock = clock + 50
+step.fn()
+check("…and no read without one before 10 min", reads == 3)
+ask()
+step.fn()
+check("a request: the plants read at once, the file gone", reads == 4 and io.open(REQ, "r") == nil)
+for _ = 1, 6 do step.fn() end
+writer.fn()
+f = io.open(OUT, "r")
+d = f and json.decode(f:read("*a"))
+if f then f:close() end
+check("…then exported with the new read's time", reads == 6 and d and d.plantsT == clock and #d.plants == 400,
+  "reads " .. reads .. ", plantsT " .. tostring(d and d.plantsT) .. " clock " .. clock)
 _G.FindAllOf = prevFind
 -- A start after a crash in the middle of an export: exports stay off.
 local ff = io.open(FLAG, "w"); ff:write("1"); ff:close()

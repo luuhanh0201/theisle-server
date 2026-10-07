@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
 
@@ -18,7 +18,11 @@ export interface FloraSpawner {
 }
 export interface FloraPlant { c: string; x: number; y: number; n?: boolean; ft?: number; cp?: number; pp?: number; lp?: number; eaten?: boolean; s?: number }
 export interface FloraControl { on: boolean; t: number; active: number; plants: number; plantsNutri: number; fruits: number; fruitsNutri: number; trimmed?: number }
-export interface Flora { t: number; stale: boolean; spawners: FloraSpawner[]; plants: FloraPlant[]; fruits: FloraPlant[]; control: FloraControl | null }
+export interface Flora {
+  t: number; stale: boolean;
+  /** When the plants and fruits were last read (the mod reads them every 10 minutes, or when the panel asks). */
+  plantsT: number | null;
+  spawners: FloraSpawner[]; plants: FloraPlant[]; fruits: FloraPlant[]; control: FloraControl | null }
 
 const STALE_AFTER_S = 600;
 const path = (): string => join(config.floraRoot, 'flora.json');
@@ -33,7 +37,7 @@ export async function readFlora(nowS = Math.floor(Date.now() / 1000)): Promise<F
       cache = {
         mtime: st.mtimeMs,
         data: {
-          t: typeof raw.t === 'number' ? raw.t : 0, spawners: list(raw.spawners), plants: list(raw.plants), fruits: list(raw.fruits),
+          t: typeof raw.t === 'number' ? raw.t : 0, plantsT: typeof raw.plantsT === 'number' ? raw.plantsT : null, spawners: list(raw.spawners), plants: list(raw.plants), fruits: list(raw.fruits),
           control: typeof raw.control === 'object' && raw.control !== null ? raw.control as FloraControl : null,
         },
       };
@@ -42,4 +46,22 @@ export async function readFlora(nowS = Math.floor(Date.now() / 1000)): Promise<F
   } catch {
     return null;
   }
+}
+
+/** The mod drops a request newer than this after its last read; the bridge refuses one sooner, so a click says why. */
+export const REFRESH_GAP_S = 30;
+let askedAt = 0;
+
+/**
+ * The panel map's "Tải lại thực vật": leaves refresh.request for the mod, which reads the plants and fruits
+ * again on its next tick (about 40 s for the whole island) instead of at the next ten minutes.
+ */
+export async function requestFloraRefresh(nowS = Math.floor(Date.now() / 1000)): Promise<{ ok: true; plantsT: number | null } | { ok: false; retryIn: number }> {
+  const flora = await readFlora(nowS);
+  const since = Math.max(askedAt, flora?.plantsT ?? 0);
+  if (nowS - since < REFRESH_GAP_S) return { ok: false, retryIn: REFRESH_GAP_S - (nowS - since) };
+  await mkdir(config.floraRoot, { recursive: true });
+  await writeFile(join(config.floraRoot, 'refresh.request'), String(nowS), 'utf8');
+  askedAt = nowS;
+  return { ok: true, plantsT: flora?.plantsT ?? null };
 }

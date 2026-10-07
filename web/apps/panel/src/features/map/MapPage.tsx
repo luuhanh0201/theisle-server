@@ -12,6 +12,7 @@ import { MapView, pathText } from './MapView';
 import { DropPane, GuardPane, PlayersPane, ResetPane } from './Panes';
 import { changed, fitToPoints, gd, lm, setLayer, useMapState, type AiZonesView, type GuardView, type LifePath } from './store';
 import { ZonesPane } from './ZonesPane';
+import { FloraReload } from './FloraReload';
 import s from './Map.module.css';
 
 const SIDES: ReadonlyArray<readonly [string, string]> = [['zones', 'Vùng AI'], ['drop', 'Thả AI'], ['reset', 'Làm mới'], ['guard', 'Dino nhỏ'], ['players', 'Người chơi']];
@@ -91,13 +92,14 @@ export function MapPage() {
                   <li key={id} className={s.chip}>
                     <Checkbox checked={lm.on.has(id)} onChange={(v) => setLayer(id, v)} label={<><span className={s.sw} style={{ background: color }} />{label}<span className={s.n}>{count[id]}</span></>} /></li>
                 ))}
+                <li><FloraReload /></li>
                 <li className={s.aiStatus}>{ai === null ? 'AI live: chưa có dữ liệu, StatsLogger mới ghi sau lần khởi động tới.'
                   : ai.stale ? `AI live: không có dữ liệu mới từ ${dateTime(ai.t)} (server tắt hoặc mod không chạy).`
                     : `AI live: ${ai.count} con${ai.aiAlive !== null ? ` (game đếm ${ai.aiAlive})` : ''}${ai.fish ? ` · ${ai.fish} cá` : ''}${ai.dead ? ` · ${ai.dead} xác` : ''} · đọc lúc ${new Date(ai.t * 1000).toLocaleTimeString('vi-VN', { hour12: false })}. Các lớp "(tham khảo)" và vùng/địa danh lấy từ VulnonaMAP, không phải dữ liệu live.`}</li>
               </ul>
             )}
             {lm.data && (
-              <div className={s.legend}>Thực vật: <b style={{ color: '#fbbf24' }}>(α)</b> carb · <b style={{ color: '#f472b6' }}>(β)</b> protein · <b style={{ color: '#38bdf8' }}>(γ)</b> lipid · không ghi = không có chất (chữ hiện khi phóng to). Cây & vùng di cư là dữ liệu thật của server (cập nhật ~2 phút).{' '}
+              <div className={s.legend}>Thực vật: <b style={{ color: '#fbbf24' }}>(α)</b> carb · <b style={{ color: '#f472b6' }}>(β)</b> protein · <b style={{ color: '#38bdf8' }}>(γ)</b> lipid · không ghi = không có chất (chữ hiện khi phóng to). Cây & vùng di cư là dữ liệu thật của server (vùng cập nhật ~2 phút, cây ~10 phút hoặc khi bấm Tải lại).{' '}
                 Bản đồ &amp; dữ liệu địa điểm: <a href={lm.data.source.url} target="_blank" rel="noopener noreferrer">{lm.data.source.name}</a> ({lm.data.source.author}) · {lm.data.name}, cập nhật {lm.data.updated} · ảnh nền chụp trong game, bản quyền thuộc nhà phát triển game · kéo để di chuyển, cuộn để phóng to</div>
             )}
           </CardBody>

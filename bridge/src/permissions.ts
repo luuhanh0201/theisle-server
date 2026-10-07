@@ -234,6 +234,8 @@ export function permissionFor(method: string, path: string): string | null {
   if (['/api/bans', '/api/bans/unban', '/api/bans/edit', '/api/ban-reasons'].includes(path)) return 'bans.edit';
   if (path === '/api/prison/jail' || /^\/api\/prison\/sentence\/[^/]+\/(release|extend)$/.test(path)) return 'prison.jail';
   if (path === '/api/prison/settings') return 'prison.settings';
+  // Reading the plants again is a read for whoever sees the map (the mod limits it to once in 30 s).
+  if (path === '/api/map/flora/refresh') return 'map.view';
   if (['/api/ai-zones', '/api/ai-drop', '/api/flora-settings', '/api/fish-settings', '/api/ai-ambient', '/api/zone-guard',
     '/api/ai-reset', '/api/ai-reset/cancel'].includes(path)) return 'world.edit';
   if (/^\/api\/garage\/[^/]+\/[^/]+$/.test(path) || /^\/api\/mutations\/[^/]+$/.test(path)
