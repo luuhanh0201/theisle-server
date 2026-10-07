@@ -16,6 +16,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  * session cookie, there is no way to ask for someone else's data.
  *
  *   GET  /                      the page in React (public/next/, built from web/apps/portal); /next/ the same
+ *   GET  /tai.html, /mutations.html, /launcher-done.html, /bigmap.html   their React pages (public/next/), the same addresses
  *   GET  /old                   → / (the site before React was there until 2026-10-07, git tag old-sites-20261007)
  *   GET  /auth/steam            → Steam login
  *   GET  /auth/steam/return     ← Steam; sets the session cookie
@@ -153,13 +154,20 @@ function clientIp(req: IncomingMessage, trustProxy: boolean): string {
 }
 
 /** The site before React's own files (the rest of public/ it shared with the pages still served). */
-const OLD_SITE_FILES = new Set(['/', '/app.js', '/voice.js', '/overlay-settings.js']);
+const OLD_SITE_FILES = new Set(['/', '/app.js', '/voice.js', '/overlay-settings.js',
+  '/tai.html', '/tai.js', '/mutations.html', '/mutations.js', '/launcher-done.html', '/launcher-done.js', '/bigmap.html', '/bigmap.js']);
+/**
+ * The site's pages of their own, in React too (web/apps/portal/<page>.html, built into public/next/), at the same
+ * addresses: the launcher loads /bigmap.html, Steam's login ends on /launcher-done.html, the web links /tai.html.
+ */
+const PAGES = new Set(['/tai.html', '/mutations.html', '/launcher-done.html', '/bigmap.html']);
 
 async function sendStatic(res: ServerResponse, urlPath: string, oldSiteDir?: string): Promise<void> {
   // The site is the React one (web/apps/portal, built into public/next/): / and /next/ open it.
   const old = oldSiteDir !== undefined && OLD_SITE_FILES.has(urlPath);
   const dir = old ? oldSiteDir : publicDir;
-  const rel = urlPath === '/' ? (old ? 'index.html' : 'next/index.html') : urlPath === '/next/' ? 'next/index.html' : urlPath.slice(1);
+  const rel = urlPath === '/' ? (old ? 'index.html' : 'next/index.html') : urlPath === '/next/' ? 'next/index.html'
+    : !old && PAGES.has(urlPath) ? `next${urlPath}` : urlPath.slice(1);
   const file = normalize(join(dir, rel));
   if (!file.startsWith(dir + '/') || !TYPES[extname(file)]) { send(res, 404, { error: 'not found' }); return; }
   try {

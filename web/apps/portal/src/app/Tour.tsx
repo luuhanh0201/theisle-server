@@ -18,7 +18,7 @@ export const TOUR_STEPS: Array<{ badge: string; title: string; target: () => Ele
   {
     badge: 'Bước 2 / 5 · Gara Khủng Long',
     title: '🦕 Gara Khủng Long An Toàn',
-    target: () => document.querySelector('.nav-btn[data-nav="gara"]') || document.querySelector('.thumb-btn[data-nav="gara"]'),
+    target: () => document.querySelector('.nav-btn[data-nav="gara"]') || document.querySelector('.thumb-btn[data-nav="gara"]') || document.querySelector('[data-lx-nav="gara"]'),
     tab: 'gara',
     body: <>
       <p><b>Bảo lưu 100% chỉ số:</b> Cất dino trước khi rời game để bảo vệ chú khủng long của bạn an toàn khỏi nguy cơ đói khát hay bị tấn công khi offline.</p>
@@ -29,7 +29,7 @@ export const TOUR_STEPS: Array<{ badge: string; title: string; target: () => Ele
   {
     badge: 'Bước 3 / 5 · Bản Đồ Gateway Live',
     title: '🗺️ Bản Đồ Live, Radar AI Trực Tiếp',
-    target: () => document.querySelector('.nav-btn[data-nav="map"]') || document.querySelector('.thumb-btn[data-nav="map"]'),
+    target: () => document.querySelector('.nav-btn[data-nav="map"]') || document.querySelector('.thumb-btn[data-nav="map"]') || document.querySelector('[data-lx-nav="map"]'),
     tab: 'map',
     body: <>
       <div className="tour-ai-callout">
@@ -43,7 +43,7 @@ export const TOUR_STEPS: Array<{ badge: string; title: string; target: () => Ele
   {
     badge: 'Bước 4 / 5 · Voice 3D Không Gian',
     title: '🎙️ Hệ Thống Voice 3D Không Gian',
-    target: () => document.querySelector('.nav-btn[data-nav="voice"]'),
+    target: () => document.querySelector('.nav-btn[data-nav="voice"]') || document.getElementById('lx-voice-chip'),
     tab: 'voice',
     body: <>
       <p><b>Âm thanh định hướng 3D:</b> Nghe giọng nói của đồng đội và các loài khủng long khác theo đúng góc phương vị (trái/phải) và khoảng cách thực tế trong game.</p>

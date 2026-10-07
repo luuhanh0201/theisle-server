@@ -41,6 +41,8 @@ printf '{"version":"2.8.1","windows":{"file":"XomGay-Launcher-Setup-2.8.1.exe","
 # old-sites-20261007 and served at / by this local portal only (PORTAL_OLD_SITE_DIR; never on the server).
 mkdir -p "$R/old-site"
 git -C "$REPO" archive old-sites-20261007 portal/public/index.html portal/public/app.js portal/public/voice.js portal/public/overlay-settings.js \
+  portal/public/tai.html portal/public/tai.js portal/public/mutations.html portal/public/mutations.js portal/public/launcher-done.html \
+  portal/public/launcher-done.js portal/public/bigmap.html portal/public/bigmap.js \
   | tar -x -C "$R/old-site" --strip-components=2 || echo "no git tag old-sites-20261007 (git fetch --tags): the old / new comparisons will fail"
 cd "$REPO/portal"
 PORTAL_OLD_SITE_DIR="$R/old-site" PORTAL_PORT=8092 PORTAL_BASE_URL=http://127.0.0.1:8092 BRIDGE_URL=http://127.0.0.1:8091 PORTAL_SESSION_SECRET=$SECRET \

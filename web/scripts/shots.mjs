@@ -26,6 +26,8 @@ for (const theme of PORTAL ? ['dark'] : ['dark', 'light']) for (const w of [380,
   const ctx = await browser.newContext({ viewport: { width: w, height: 900 } });
   await ctx.addInitScript((t) => localStorage.setItem('theme', t), theme);
   if (process.env.LAUNCHER) await ctx.addInitScript(LAUNCHER);
+  // Inside the launcher the player site has its own look (app/launcher/); LOOK=web: the web's.
+  if (process.env.LOOK === 'web') await ctx.addInitScript(() => localStorage.setItem('isle_ui', 'web'));
   // The player site's tour opens by itself on a first visit: seen already, for the shots (TOUR=1 shows it).
   if (PORTAL && !process.env.TOUR) await ctx.addInitScript(() => localStorage.setItem('isle_portal_tour_done', '1'));
   const page = await ctx.newPage();

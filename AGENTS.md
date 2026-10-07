@@ -105,8 +105,13 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   (`portal/public/index.html`, `app.js`, `voice.js`, `overlay-settings.js`) was removed on 2026-10-07
   (git tag `old-sites-20261007`); the e2e flows still compare with it: `web/e2e/local-portal.sh` takes it
   out of the tag and serves it at `/` on the local portal only (`PORTAL_OLD_SITE_DIR`, never on the server).
-  Not moved yet, still plain pages in `portal/public/`: `tai.html`, `mutations.html`, `bigmap.html`,
-  `launcher-done.html`, `voice.html`.
+  The pages of their own (`tai.html`, `mutations.html`, `bigmap.html`, `launcher-done.html`) are React too
+  (`web/apps/portal/<page>.html`, served at the same addresses); their old files are in the same tag.
+  `voice.html` stays a plain page (it sends to `/#voice`).
+- Inside the launcher the site has its own look (`web/apps/portal/src/app/launcher/`, owner's design
+  2026-10-07): the same pages, ids and calls, only the frame and Trang chủ drawn differently; the player can go
+  back to the web look (`isle_ui`). A change to a page must work in both looks: `portal-launcher.mjs` and
+  `portal-launcher-parity.mjs` run it in the launcher's look.
 - Same look: the old stylesheet as it was (`src/styles/portal.css`, global class names) and the old
   markup's classes in JSX; `@isle/ui` controls in the portal's colours (`src/styles/tokens.css`).
 - No inline script (the portal's CSP). Launcher rules unchanged: no download element inside it.

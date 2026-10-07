@@ -1,8 +1,13 @@
+import { launcherUi } from '../lib/launcher';
 import { goTo } from './router';
 
-/** "Luật & Dinh Dưỡng": Trang chủ, scrolled to the rules, which light up for 2 s (data-action="open-rules"). */
+/**
+ * "Luật & Dinh Dưỡng": Trang chủ, scrolled to the rules, which light up for 2 s (data-action="open-rules"). In the
+ * launcher's look the rules are a page of their own (#rules, Trò chơi), lit the same way.
+ */
 export function openRules(): void {
-  goTo('home');
+  if (launcherUi()) location.hash = 'rules';
+  else goTo('home');
   // Trang chủ may not be drawn yet (a page is drawn the first time it is opened): wait a few frames for it.
   let tries = 30;
   const go = (): void => {

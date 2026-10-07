@@ -259,6 +259,22 @@ test('the site in React at / and /next/ (built from web/apps/portal), /next goes
   assert.equal(root.status, built ? 200 : 404);
   if (built) assert.equal(await root.text(), await (await get('/next/')).text());
   for (const gone of ['/app.js', '/voice.js', '/overlay-settings.js', '/index.html']) assert.equal((await get(gone)).status, 404, gone);
+  // The pages of their own: their React pages at the same addresses (the launcher loads /bigmap.html, Steam's login
+  // ends on /launcher-done.html); their old scripts are gone.
+  for (const pg of ['tai', 'mutations', 'launcher-done', 'bigmap']) {
+    const r3 = await get(`/${pg}.html`);
+    const builtPg = existsSync(new URL(`../public/next/${pg}.html`, import.meta.url));
+    assert.equal(r3.status, builtPg ? 200 : 404, pg);
+    if (builtPg) {
+      const html = await r3.text();
+      assert.match(html, /src="\/next\/assets\/[^"]+\.js"/, pg);
+      assert.doesNotMatch(html, /<script>(?!<\/script>)/, `${pg}: no inline script`);
+      assert.equal(html, await (await get(`/next/${pg}.html`)).text(), pg);
+    }
+    assert.equal((await get(`/${pg}.js`)).status, 404, `${pg}.js`);
+  }
+  // The old voice address still goes to the voice page.
+  assert.match(await (await get('/voice.html')).text(), /url=\/#voice/);
   // An old address (/old, its bookmarks): the site, the browser keeps the #page.
   for (const old of ['/old', '/old/']) {
     const r2 = await get(old);
@@ -280,6 +296,8 @@ test('e2e only: with oldSiteDir the site before React is served at / (its own fi
     assert.equal(await (await at('/app.js')).text(), '// old app');
     assert.equal((await at('/map.js')).status, 200, 'shared files still from public/');
     assert.equal((await at('/voice.js')).status, 404, 'an old file not in the folder');
+    writeFileSync(join(dir, 'tai.html'), '<!doctype html><title>old tai</title>');
+    assert.match(await (await at('/tai.html')).text(), /old tai/, 'an old page of its own from there too');
     assert.equal((await at('/../package.json')).status, 404);
   } finally { srv.close(); }
 });

@@ -1,0 +1,176 @@
+/* mutations.html before React, as it was (its own page: these rules reach no other page). */
+:root {
+  color-scheme: dark;
+  --bg: #070a11;
+  --bg-card: #0c1220;
+  --bg-card-hover: #121a2d;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(16, 185, 129, 0.35);
+  --text: #f1f5f9;
+  --text-muted: #8b9bb4;
+  --text-sub: #54647e;
+  --emerald: #10b981;
+  --emerald-soft: rgba(16, 185, 129, 0.12);
+  --cyan: #06b6d4;
+  --cyan-soft: rgba(6, 182, 212, 0.12);
+  --amber: #f59e0b;
+  --amber-soft: rgba(245, 158, 11, 0.12);
+  --rose: #f43f5e;
+  --rose-soft: rgba(244, 63, 94, 0.12);
+  --purple: #a855f7;
+  --purple-soft: rgba(168, 85, 247, 0.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  line-height: 1.5;
+  padding: 24px 16px 64px;
+  min-height: 100vh;
+}
+.container { max-width: 1300px; margin: 0 auto; }
+header { margin-bottom: 28px; }
+.top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--text-muted); text-decoration: none; font-size: 14px;
+  padding: 8px 14px; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border); border-radius: 8px;
+  transition: all 0.2s;
+}
+.back-btn:hover { color: #fff; border-color: var(--emerald); background: var(--emerald-soft); }
+h1 {
+  font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(24px, 4vw, 32px);
+  font-weight: 800; letter-spacing: -0.02em; color: #fff;
+  display: flex; align-items: center; gap: 12px;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  h1 {
+    white-space: normal;
+    text-wrap: balance;
+  }
+}
+.badge-total {
+  font-size: 14px; font-weight: 700; padding: 4px 10px;
+  background: var(--emerald-soft); color: var(--emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 999px;
+}
+.subtitle { color: var(--text-muted); font-size: 14px; margin-top: 6px; }
+
+/* Controls */
+.controls {
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  padding: 18px; border-radius: 14px; margin-bottom: 28px;
+}
+.search-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.search-input {
+  flex: 1; min-width: 260px; background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 16px; color: #fff; font-size: 14px; outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--emerald); }
+.filter-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter-btn {
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 13px; font-weight: 500;
+  padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.filter-btn:hover { color: #fff; border-color: rgba(255, 255, 255, 0.2); }
+.filter-btn.active {
+  background: var(--emerald); color: #041f14; font-weight: 700;
+  border-color: var(--emerald);
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 18px;
+}
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* Card */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px; display: flex; flex-direction: column;
+  gap: 14px; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  position: relative; overflow: hidden;
+}
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.5);
+}
+.card-top { display: flex; gap: 16px; align-items: flex-start; }
+.icon-wrap {
+  width: 88px; height: 88px; flex-shrink: 0; position: relative;
+  border-radius: 12px; background: rgba(0, 0, 0, 0.3);
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-img { width: 80px; height: 80px; object-fit: contain; }
+.card-main { flex: 1; min-width: 0; }
+.card-title {
+  font-size: 16px; font-weight: 700; color: #fff;
+  margin-bottom: 2px; line-height: 1.3;
+}
+.card-en {
+  font-size: 12px; color: var(--text-muted); font-style: italic;
+  margin-bottom: 6px;
+}
+.card-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.badge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+  letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 4px;
+}
+.badge-carnivore { background: var(--rose-soft); color: var(--rose); border: 1px solid rgba(244, 63, 94, 0.25); }
+.badge-herbivore { background: var(--emerald-soft); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.25); }
+.badge-omnivore { background: rgba(132, 204, 22, 0.15); color: #a3e635; border: 1px solid rgba(132, 204, 22, 0.3); }
+.badge-all { background: var(--cyan-soft); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.25); }
+.badge-quest { background: var(--amber-soft); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-test { background: var(--purple-soft); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.3); }
+.badge-removed { background: rgba(120, 113, 108, 0.2); color: #a8a29e; border: 1px solid rgba(120, 113, 108, 0.3); }
+
+.card-desc {
+  font-size: 13.5px; color: #cbd5e1; line-height: 1.45;
+}
+.meta-box {
+  background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px; padding: 10px 12px; font-size: 12px; display: flex;
+  flex-direction: column; gap: 4px;
+}
+.meta-row { display: flex; gap: 6px; }
+.meta-lbl { color: var(--text-muted); font-weight: 500; min-width: 85px; }
+.meta-val { color: var(--text); font-weight: 600; }
+.meta-val-quest { color: var(--amber); }
+
+.card-actions {
+  display: flex; gap: 8px; margin-top: auto; padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.btn-dl {
+  flex: 1; text-align: center; text-decoration: none;
+  font-size: 12px; font-weight: 600; padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+  color: var(--text-muted); border-radius: 6px; transition: all 0.15s;
+}
+.btn-dl:hover {
+  color: #fff; border-color: var(--emerald); background: var(--emerald-soft);
+}
+.empty-state {
+  grid-column: 1 / -1; text-align: center; padding: 48px 16px;
+  color: var(--text-muted); font-size: 15px;
+}
+/* React draws the page into #root: as if its children were the body's, as before. */
+#root { display: contents; }
+/* Owner's UI rules (AGENTS.md): a long mutation name smaller rather than broken; a very narrow screen balances it. */
+.badge { white-space: nowrap; }
+.card-title { text-wrap: balance; }
+@media (max-width: 1280px) { .card-title { font-size: 15.5px; } }
+@media (max-width: 420px) { .card-title { font-size: 14.5px; } }

@@ -1,0 +1,18 @@
+/* launcher-done.html before React, as it was (its own page: these rules reach no other page). */
+:root { color-scheme: dark; --bg: #07090e; --card: #0d121c; --border: rgba(255,255,255,.08); --text: #f1f5f9; --muted: #8b9bb4; --ok: #34d399; --ok-soft: rgba(16,185,129,.12); --bad: #fca5a5; --bad-soft: rgba(239,68,68,.15); }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; color: var(--text);
+  background: radial-gradient(circle at 50% 0%, #111a2e 0%, #07090e 70%) #07090e; font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.card { max-width: 440px; width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; text-align: center; }
+img { width: 72px; height: 72px; border-radius: 50%; background: #000; }
+h1 { font-size: 19px; margin: 14px 0 6px; }
+p { color: var(--muted); margin: 0; }
+.badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+.ok { background: var(--ok-soft); color: var(--ok); }
+.bad { background: var(--bad-soft); color: var(--bad); }
+[hidden] { display: none !important; }
+/* React draws the page into #root: as if its children were the body's, as before. */
+#root { display: contents; }
+/* Owner's UI rules (AGENTS.md): the title on one line; a very narrow screen balances it. */
+h1 { font-size: 17px; white-space: nowrap; }
+@media (max-width: 420px) { h1 { white-space: normal; text-wrap: balance; } }

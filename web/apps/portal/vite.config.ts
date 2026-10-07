@@ -20,13 +20,17 @@ export default defineConfig({
     emptyOutDir: true,
     chunkSizeWarningLimit: 900,
     modulePreload: { polyfill: false },
-    rollupOptions: { output: { entryFileNames: 'assets/portal-[hash].js', assetFileNames: 'assets/portal-[hash][extname]' } },
+    rollupOptions: {
+      // The site, and its pages of their own (PORTAL-MIGRATION.md "3. The other pages"): the same addresses as before React.
+      input: { index: at('index.html'), tai: at('tai.html'), mutations: at('mutations.html'), 'launcher-done': at('launcher-done.html'), bigmap: at('bigmap.html') },
+      output: { entryFileNames: 'assets/portal-[hash].js', assetFileNames: 'assets/portal-[hash][extname]' },
+    },
   },
   // npm run dev:portal: the portal on this machine (8090) answers /api, /auth and its files.
   server: {
     port: 5181,
     fs: { allow: [at('../..'), at('../../../portal/public')] },
-    proxy: Object.fromEntries(['/api', '/auth', '/img', '/tai', '/tai.html', '/amber.svg', '/mut-icons.js', '/ui-select.js', '/ui-inputs.js', '/map', '/dino3d', '/vendor']
+    proxy: Object.fromEntries(['/api', '/auth', '/img', '/tai/', '/amber.svg', '/mut-icons.js', '/ui-select.js', '/ui-inputs.js', '/map', '/dino3d', '/vendor']
       .map((p) => [p, 'http://127.0.0.1:8090'])),
   },
 });

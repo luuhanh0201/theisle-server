@@ -1,0 +1,76 @@
+/* bigmap.html before React, as it was (its own page: these rules reach no other page). */
+:root {
+  color-scheme: dark;
+  --text: #e2e8f0; --text-muted: #94a3b8; --text-sub: #64748b; --border: rgba(255,255,255,.12);
+  --bg-surface: rgba(15,23,42,.92); --emerald: #34d399; --emerald-light: #6ee7b7; --emerald-soft: rgba(52,211,153,.16);
+  --red: #f87171;
+}
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+#map { position: fixed; inset: 0; }
+.map-wrap { position: absolute; inset: 0; }
+.map-wrap canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.map-wrap canvas:active { cursor: grabbing; }
+.map-tools { position: absolute; top: 76px; right: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+.map-tool-btn {
+  width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.15);
+  background: rgba(12,18,32,.85); color: #fff; font: 700 17px/1 'Inter', sans-serif; cursor: pointer;
+  display: grid; place-items: center;
+}
+.map-tool-btn:hover { background: rgba(255,255,255,.18); }
+.map-tool-btn.on { background: var(--emerald); color: #041f14; border-color: transparent; }
+.map-msg {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 18px; border-radius: 12px;
+  color: var(--text); font-size: 14px; pointer-events: none; background: rgba(9,19,34,.8); z-index: 5;
+}
+.map-target {
+  position: absolute; left: 50%; top: 70px; transform: translateX(-50%); max-width: min(760px, 90vw);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-radius: 12px;
+  background: rgba(7,10,17,.9); border: 1px solid rgba(250,204,21,.45); box-shadow: 0 6px 20px rgba(0,0,0,.45); z-index: 3;
+}
+.map-target .mt-info { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.map-target .mt-name { color: #fde68a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.map-target .mt-dist { color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.map-target .mt-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.map-target .mt-input { width: 180px; font: inherit; font-size: 12.5px; color: var(--text); background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; }
+.map-target button { font: inherit; font-size: 12.5px; font-weight: 800; border: 0; border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+.map-target .mt-save { background: #facc15; color: #1a1400; }
+.map-target .mt-save:disabled { background: var(--bg-surface); color: var(--emerald-light); cursor: default; }
+.map-target .mt-clear { background: var(--bg-surface); color: var(--text-muted); }
+.map-hint { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--text-muted); background: rgba(7,10,17,.8); padding: 4px 12px; border-radius: 999px; pointer-events: none; }
+/* The layers and the saved points: a bar along the bottom, over the map. */
+.map-saved, .map-chips {
+  position: fixed; left: 50%; transform: translateX(-50%); max-width: 94vw; z-index: 6;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px;
+  padding: 7px 10px; border-radius: 14px; background: rgba(7,10,17,.82); border: 1px solid var(--border);
+}
+.map-chips { bottom: 14px; }
+.map-saved { bottom: 112px; }
+.map-saved .ms-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-right: 4px; }
+.map-saved .ms-item { display: inline-flex; align-items: center; border: 1px solid var(--border); background: var(--bg-surface); border-radius: 999px; overflow: hidden; }
+.map-saved .ms-item.on { border-color: rgba(250,204,21,.6); background: rgba(250,204,21,.12); }
+.map-saved .ms-item button { font: inherit; font-size: 12px; font-weight: 700; background: none; border: 0; color: var(--text); padding: 5px 10px; cursor: pointer; }
+.map-saved .ms-item .ms-del { color: var(--text-sub); padding: 5px 9px 5px 4px; }
+.map-saved .ms-item .ms-del:hover { color: var(--red); }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg-surface);
+  color: var(--text-muted); border-radius: 99px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.chip:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+.chip.on { color: var(--text); border-color: var(--emerald-light); background: var(--emerald-soft); }
+.chip i { width: 9px; height: 9px; border-radius: 50%; }
+.map-note { display: none; }
+/* The top bar: what this is, how see-through, close. */
+.bm-bar {
+  position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 12;
+  display: flex; align-items: center; gap: 16px; padding: 8px 10px 8px 16px; border-radius: 14px;
+  background: rgba(7,10,17,.86); border: 1px solid var(--border); font-size: 13px; white-space: nowrap;
+}
+.bm-bar b { font-weight: 800; }
+.bm-bar .muted { color: var(--text-muted); font-weight: 600; }
+.bm-bar label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-weight: 600; }
+.bm-bar input[type=range] { width: 120px; accent-color: var(--emerald); }
+.bm-bar button { font: inherit; font-weight: 800; border: 0; border-radius: 9px; padding: 7px 12px; cursor: pointer; background: rgba(248,113,113,.18); color: #fecaca; }
+.bm-bar button:hover { background: rgba(248,113,113,.32); }
+/* React draws the page into #root: as if its children were the body's, as before. */
+#root { display: contents; }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Checkbox, Select, Slider } from '@isle/ui';
-import { launcher } from '../../lib/launcher';
+import { launcher, launcherUi } from '../../lib/launcher';
 
 /*
  * "Overlay trong game" (#overlay; overlay-settings.js before React). The overlay is Xóm Gáy Launcher's
@@ -193,9 +193,8 @@ function Editor({ L }: { L: OverlayApi }) {
       </p>
     </>
   );
-
-  return (
-    <Card app top={top}>
+  const gmBlock = (
+    <>
       <div className="ov-gm" hidden={!gm}>
         <div><b>🎮 Chế độ chơi game</b>: thu launcher xuống khay, trang không vẽ gì; overlay chỉ giữ:</div>
         <div className="ov-checks" id="ov-gm-keep">
@@ -206,9 +205,17 @@ function Editor({ L }: { L: OverlayApi }) {
         </div>
         <p className="v-note" style={{ marginTop: 4 }}>Bật bằng nút 🎮 trên đầu trang, trong khay hệ thống, hoặc tự bật khi bấm ▶ Chơi The Isle. Voice vẫn chạy.</p>
       </div>
+    </>
+  );
+  const stage = (
+    <>
       <div className="v-subhead">Bố cục trên màn hình</div>
       <Stage L={L} all={all} current={current} onPick={setCurrent} onPlaced={() => { const g = L.overlayGet?.(); if (g?.settings) setAll(g.settings); }} />
       <p className="v-note" id="ov-stage-note">Kéo một khung để di chuyển · rê chuột vào mép hoặc góc khung rồi kéo để phóng to / thu nhỏ · thả ở đâu cũng được, kể cả màn hình khác. Overlay thật di chuyển theo ngay.</p>
+    </>
+  );
+  const settings = (
+    <>
       <div className="ov-tabs" role="tablist" id="ov-tabs">
         {WIDGETS.map(([id, label]) => (
           <button key={id} type="button" role="tab" data-tab={id} aria-selected={id === current} onClick={() => setCurrent(id)}>
@@ -250,6 +257,21 @@ function Editor({ L }: { L: OverlayApi }) {
             <Checkbox key={k} checked={Boolean(w.show[k])} label={label} onChange={(v) => change({ show: { [k]: v } })} />
           ))}</div>}
       </div>
+    </>
+  );
+  // The launcher's look (app/launcher/): the settings on the left, the layout on the right; the web's: one column.
+  return launcherUi() ? (
+    <Card app top={top}>
+      <div className="ov-lx">
+        <div className="ov-lx-l">{gmBlock}{settings}</div>
+        <div className="ov-lx-r">{stage}</div>
+      </div>
+    </Card>
+  ) : (
+    <Card app top={top}>
+      {gmBlock}
+      {stage}
+      {settings}
     </Card>
   );
 }

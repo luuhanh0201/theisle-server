@@ -71,6 +71,8 @@ export interface VoiceView {
   mics: Device[]; outs: Device[]; outField: boolean; micNow: string;
   test: { on: boolean; busy: boolean; note: string };
   toast: string | null;
+  /** In the launcher, last time in the room: waiting to join again (each 5 s until in game, or Rời kênh). */
+  autoWaiting: boolean;
 }
 
 let LKC: LK = null;
@@ -137,6 +139,7 @@ function getView(): VoiceView {
     loggedIn, connected: joined, joining, conn, joinNote, rangeNote, noiseNote: noiseNote(),
     inGame, nameMode, peers: list, settings, noiseActive, capturing, captureError, sending,
     mics, outs, outField, micNow: settings.mic || (room?.getActiveDevice?.('audioinput') ?? ''), test, toast: toastText,
+    autoWaiting: autoTimer !== null || autoBusy,
   };
   return view;
 }
@@ -166,8 +169,56 @@ export function startVoice(): void {
       return;
     }
     changed();
+    if (loggedIn && launcher() && autoWanted()) startAuto();
   })();
   changed();
+}
+
+// --- the launcher remembers the room (owner, 2026-10-07) ---------------------------------------------
+// In the room when the launcher closed: in it again next time, once the player is in game. Out of game: a
+// look every 5 s until they are (or they press Rời kênh, which also forgets it). Only in the launcher.
+export const AUTO_KEY = 'isle-voice-auto';
+export const AUTO_EVERY_MS = 5000;
+let autoTimer: ReturnType<typeof setTimeout> | null = null;
+let autoBusy = false;
+function autoWanted(): boolean { try { return localStorage.getItem(AUTO_KEY) === '1'; } catch { return false; } }
+function setAutoWanted(on: boolean): void {
+  try { if (on) localStorage.setItem(AUTO_KEY, '1'); else localStorage.removeItem(AUTO_KEY); } catch { /* this visit only */ }
+}
+function stopAuto(): void {
+  if (autoTimer) clearTimeout(autoTimer);
+  autoTimer = null;
+}
+function startAuto(): void {
+  stopAuto();
+  autoTimer = setTimeout(() => { void autoTick(); }, 0);
+  changed();
+}
+async function autoTick(): Promise<void> {
+  autoTimer = null;
+  if (room || joining || !autoWanted()) { changed(); return; }
+  autoBusy = true;
+  let inGameNow = false;
+  try {
+    const r = await fetch('/api/me', { credentials: 'same-origin', cache: 'no-store' });
+    const me = r.ok ? await r.json() as { online?: boolean } | null : null;
+    inGameNow = Boolean(me?.online);
+  } catch { /* the network: next look */ }
+  if (inGameNow && autoWanted() && !room && !joining) await join();
+  autoBusy = false;
+  if (!room && autoWanted()) {
+    if (!inGameNow) joinNote = 'Lần trước bạn ở trong voice: tự vào lại khi bạn vào game (kiểm tra mỗi 5 giây). Bấm Rời kênh để thôi.';
+    autoTimer = setTimeout(() => { void autoTick(); }, AUTO_EVERY_MS);
+  }
+  changed();
+}
+
+/** Rời kênh pressed by the player: out of the room, and not again by itself next time. */
+export async function leaveByUser(): Promise<void> {
+  setAutoWanted(false);
+  stopAuto();
+  autoBusy = false;
+  await leave();
 }
 
 /** The LiveKit client (600 KB), fetched only when someone joins. */
@@ -217,6 +268,7 @@ export async function join(): Promise<void> {
     startMeter();
     setConn('good', '● Đã vào kênh');
     joined = true;
+    if (launcher()) { setAutoWanted(true); stopAuto(); }
     changed();
     await sendRange();
     joinNote = launcher()
@@ -335,6 +387,8 @@ function noiseNote(): string {
 
 // --- the launcher's in-game overlay ------------------------------------------------------------------
 let overlaySent = '';
+/** How loud you are while you talk, in steps of 20 (0 when not sending): the overlay's mic follows it. */
+let overlayLevel = 0;
 let overlayTimer: ReturnType<typeof setTimeout> | null = null;
 /** What the overlay shows, sent when it changes (at most ~8 times a second). */
 function pushOverlay(): void {
@@ -349,7 +403,7 @@ function pushOverlay(): void {
       .sort((a, b) => Number(b.speaking) - Number(a.speaking) || b.gain - a.gain);
     const state = {
       connected: room !== null, lost, phase: reconnecting ? 'reconnecting' : 'ok', inGame,
-      talking: sending, mode: settings.mode, pttLabel: l.pttLabel?.(),
+      talking: sending, level: overlayLevel, mode: settings.mode, pttLabel: l.pttLabel?.(),
       range: settings.range, rangeName: RANGE_NAMES[settings.range], nameMode, speakers, toast: lastToast,
     };
     const json = JSON.stringify(state);
@@ -530,12 +584,16 @@ function startMeter(): void {
     setSending(want);
     level = { pct: Math.max(0, Math.min(100, ((db + 80) / 60) * 100)), open: want };
     for (const s of levelSubs) s(level);
+    // The overlay's mic (the dino card): only a change of step is sent (pushOverlay groups them, ~8 a second at most).
+    const step = want ? Math.round(level.pct / 20) * 20 : 0;
+    if (step !== overlayLevel) { overlayLevel = step; pushOverlay(); }
   }, 50);
 }
 
 function stopMeter(): void {
   if (meterTimer) clearInterval(meterTimer);
   meterTimer = null;
+  overlayLevel = 0;
   if (analyserSrc) analyserSrc.disconnect();
   if (micClone) micClone.stop();
   analyserSrc = null; micClone = null;
@@ -718,4 +776,5 @@ export function resetVoiceForTests(): void {
   rangeNote = 'Càng gần bạn càng nghe to; ra tới mép tầm thì nhỏ dần rồi tắt.';
   test = { on: false, busy: false, note: 'Bật rồi nói: nghe lại giọng mình ngay qua loa / tai nghe. Nên dùng tai nghe.' };
   mics = []; outs = []; outField = true; toastText = null; view = null;
+  stopAuto(); autoBusy = false;
 }

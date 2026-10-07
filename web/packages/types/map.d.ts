@@ -16,7 +16,7 @@ export interface MapApi {
   setLook(look: { map?: number; dim?: number }): void;
   onTargetChange(cb: (() => void) | null): void;
 }
-export function createMap(root: HTMLElement, opts?: { overlay?: boolean }): MapApi;
+export function createMap(root: HTMLElement, opts?: { overlay?: boolean; onOutsideTap?: () => void }): MapApi;
 export function loadWaypoints(): { target: unknown; saved: unknown[] };
 export const LOOK_DEFAULT: { map: number; dim: number };
 export function fmtDistance(m: number): string;

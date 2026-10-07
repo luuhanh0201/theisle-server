@@ -18,12 +18,12 @@ function Dock({ tab, cls, title, label, sub, subId, children }: { tab: Tab; cls:
   );
 }
 
-const HUB_VITALS: ReadonlyArray<readonly ['health' | 'stamina' | 'hunger' | 'thirst', string, string]> = [
+export const HUB_VITALS: ReadonlyArray<readonly ['health' | 'stamina' | 'hunger' | 'thirst', string, string]> = [
   ['health', 'Máu', '#ef4444'], ['stamina', 'Thể lực', '#f59e0b'], ['hunger', 'Dạ dày', '#84cc16'], ['thirst', 'Nước uống', '#3b82f6'],
 ];
 
 /** The dino card: what it says, as app.js renderGame writes it (a guest: the page's first text). */
-function dinoCard(me: PlayerMe | null | undefined) {
+export function dinoCard(me: PlayerMe | null | undefined) {
   const d = me?.online ? me.dino : null;
   if (d) {
     const st = growthStage(d.growth);

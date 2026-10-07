@@ -1,6 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { Voice } from '../features/voice/Voice';
-import { keyName, resetVoiceForTests, startVoice } from '../lib/voice';
+import { AUTO_KEY, keyName, resetVoiceForTests, startVoice } from '../lib/voice';
 
 // jsdom has no Web Audio: just enough of it for the engine (the meter, the panners, the beeps).
 class FakeCtx {
@@ -39,14 +39,14 @@ const LK = { Room: FakeRoom, Track: { Source: { Microphone: 'mic' } },
   RoomEvent: { TrackPublished: 'tp', ParticipantConnected: 'pc', TrackSubscribed: 'ts', TrackUnsubscribed: 'tu', ActiveSpeakersChanged: 'as',
     Reconnecting: 'rc', Reconnected: 'rd', Disconnected: 'dc', AudioPlaybackStatusChanged: 'ap' }, DisconnectReason: { DUPLICATE_IDENTITY: 2, PARTICIPANT_REMOVED: 4 } };
 
-let api: { me: number; token: number; voice: Record<string, unknown>; ranges: number[] };
+let api: { me: number; token: number; voice: Record<string, unknown>; ranges: number[]; online?: boolean };
 beforeEach(() => {
   api = { me: 200, token: 200, voice: { inGame: true, nameMode: 'name', peers: [], audience: [] }, ranges: [] };
   vi.stubGlobal('AudioContext', FakeCtx);
   vi.stubGlobal('MediaStream', FakeStream);
   (window as unknown as { LivekitClient: unknown }).LivekitClient = LK;
   vi.stubGlobal('fetch', vi.fn(async (u: string, init?: RequestInit) => {
-    if (u === '/api/me') return new Response('{}', { status: api.me });
+    if (u === '/api/me') return new Response(JSON.stringify({ online: api.online ?? false }), { status: api.me });
     if (u === '/api/voice/token') return new Response(api.token === 200 ? '{"token":"t","url":"wss://x","identity":"me"}' : '{}', { status: api.token });
     if (u === '/api/voice/range') { api.ranges.push(JSON.parse(String(init?.body)).range); return new Response('{"ok":true}'); }
     if (u === '/api/voice') return new Response(JSON.stringify(api.voice));
@@ -150,5 +150,46 @@ describe('Voice 3D', () => {
 
   it('key names', () => {
     expect([keyName('KeyV'), keyName('Digit4'), keyName('Backquote'), keyName('ShiftLeft'), keyName('F5')]).toEqual(['V', '4', '` ~', 'Shift trái', 'F5']);
+  });
+
+  it('the launcher remembers the room: next time in again once in game (a look each 5 s); Rời kênh forgets it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      (window as unknown as { isleLauncher: unknown }).isleLauncher = {};
+      localStorage.setItem(AUTO_KEY, '1');
+      api.online = false;
+      resetVoiceForTests();
+      startVoice();
+      const { container } = render(<Voice />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(container.querySelector('#v-auto-cancel')).not.toBeNull();
+      expect(q(container, '#v-join-note').textContent).toContain('tự vào lại khi bạn vào game');
+      expect(room).toBeNull();
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      expect(room).toBeNull();
+      api.online = true;
+      await act(async () => { await vi.advanceTimersByTimeAsync(5100); });
+      // The join itself (its own awaits).
+      for (let i = 0; i < 200 && q(container, '#v-conn-chip').textContent !== '● Đã vào kênh'; i++) {
+        await act(async () => { await vi.advanceTimersByTimeAsync(20); await new Promise((r) => setImmediate(r)); });
+      }
+      expect(room).not.toBeNull();
+      expect(q(container, '#v-conn-chip').textContent).toBe('● Đã vào kênh');
+      expect(localStorage.getItem(AUTO_KEY)).toBe('1');
+      await act(async () => { fireEvent.click(q(container, '#v-leave')); await vi.advanceTimersByTimeAsync(50); });
+      expect(localStorage.getItem(AUTO_KEY)).toBeNull();
+      expect(container.querySelector('#v-auto-cancel')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+      delete (window as unknown as { isleLauncher?: unknown }).isleLauncher;
+      localStorage.removeItem(AUTO_KEY);
+    }
+  });
+  it('in a browser the room is not remembered', async () => {
+    const { container } = render(<Voice />);
+    await waitFor(() => expect(shown(container, '#v-join-card')).toBe(true));
+    await act(async () => { fireEvent.click(q(container, '#v-join')); });
+    await waitFor(() => expect(q(container, '#v-conn-chip').textContent).toBe('● Đã vào kênh'));
+    expect(localStorage.getItem(AUTO_KEY)).toBeNull();
   });
 });

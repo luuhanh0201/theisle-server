@@ -4263,3 +4263,13 @@
   /* Accessibility & System overrides */
   [hidden] { display: none !important; }
   html.app-idle *, html.app-idle *::before, html.app-idle *::after { animation-play-state: paused !important; }
+
+  /* --- Owner's UI rules (AGENTS.md "Writing" / "UI", 2026-10-07): a title, badge or label stays on one line; the
+     parts of a title (its "ngày 1/7", a badge) move down as a whole; only a very narrow screen balances a title. --- */
+  .tag, .rel-badge, .v-chip, .hub-chip-live, .nav-badge, .nav-live, .nav-pill-new, .lx-pill { white-space: nowrap; }
+  .hr-card h3 { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; white-space: nowrap; }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); }
+  .feature-card h3, h3.lp-title, .status-texts h3 { white-space: nowrap; }
+  @media (max-width: 520px) {
+    .card-title, .feature-card h3, h3.lp-title, .status-texts h3, .hr-card h3 { white-space: normal; text-wrap: balance; }
+  }

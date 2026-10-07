@@ -66,16 +66,15 @@ function CheckinCard({ c, locked, rel, busy, onCheckin }: { c: Checkin; locked: 
  * The rewards first, where they are seen (owner, 2026-10-05): the starter gift (bridge starter.ts), the
  * Hổ phách balance, the daily check-in (economy.ts), the daily / weekly quests (quests.ts).
  */
-export function Rewards({ me }: { me: PlayerMe | null | undefined }) {
+/**
+ * The rewards' claims (the web's Trang chủ and the launcher's): one at a time, the toast, then /me read again at once.
+ * starter: the starter gift (bridge starter.ts); quest: a daily / weekly quest (quests.ts); checkin: today's (economy.ts).
+ */
+export function useRewardActions(): { busy: boolean; starter: () => void; quest: (id: string) => void; checkin: () => void } {
   const toast = useToast();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const eco = me?.economy ?? null;
-  const gift = me?.starter ?? null;
-  const quests = me?.quests ?? null;
-  const rel = me?.releases ?? {};
 
-  /** A claim: one at a time, the toast, then /me read again at once. */
   const claim = async (url: string, body: unknown, ok: (b: Record<string, unknown>) => string, fail: string): Promise<void> => {
     if (busy) return;
     setBusy(true);
@@ -95,6 +94,15 @@ export function Rewards({ me }: { me: PlayerMe | null | undefined }) {
     const got = [(b['reward'] as number) > 0 ? `+${fmtAmber(b['reward'] as number)} Hổ phách` : '', b['item'] ? `🎁 ${String(b['item'])}` : ''].filter(Boolean).join(' và ');
     return `✅ Điểm danh ngày ${String(b['day'])}${got ? `: ${got}` : ''}`;
   }, 'Không điểm danh được.');
+  return { busy, starter, quest, checkin };
+}
+
+export function Rewards({ me }: { me: PlayerMe | null | undefined }) {
+  const { busy, starter, quest, checkin } = useRewardActions();
+  const eco = me?.economy ?? null;
+  const gift = me?.starter ?? null;
+  const quests = me?.quests ?? null;
+  const rel = me?.releases ?? {};
 
   return (
     <div className="home-rewards" id="home-rewards">

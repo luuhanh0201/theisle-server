@@ -25,8 +25,9 @@ Mark each step done here, with its files and its e2e flow, in the commit that do
 | 9. Cửa hàng | **done** (below) |
 | 10. Overlay HUD | **done** (below; every page of section 1 is now in React) |
 | 2. Across pages | **done** (below: Ctrl+K, the tour) |
-| 3. Other pages | not started (still plain pages: tai, mutations, bigmap, launcher-done, voice.html) |
+| 3. Other pages | **done** 2026-10-07 (below; voice.html stays a plain page) |
 | 4. Switch | **done** 2026-10-07 (below): React at `/`, the site before React removed (git tag `old-sites-20261007`) |
+| 5. The launcher's own look | **done** 2026-10-07 (below: app/launcher/) |
 
 ### How to work on it
 
@@ -275,6 +276,18 @@ old page; a page opened during a step stays; seen already: not opened).
 - `launcher-done.html`: the end of the launcher's Steam login (`/launcher-done.html?error=…`).
 - `voice.html`: old address, the launcher turns it into `#voice` (launcher/src/main.js).
 
+**Done 2026-10-07.** A page of its own each, built beside the site (`apps/portal/{tai,mutations,launcher-done,bigmap}.html`,
+`src/standalone/`, their stylesheets as they were in `src/styles/<page>.css`), served at the same addresses
+(`portal/src/server.ts` PAGES → `public/next/<page>.html`): `Tai.tsx` (the downloads from /tai/version.json, "Máy
+của bạn", the download beacon; in the launcher back home), `Mutations.tsx` (the cards, filters, search; icons by
+mut-icons.js), `LauncherDone.tsx` (done and each error), `BigMap.tsx` (map.js in the see-through window: the game
+data from the launcher, the sliders kept, Esc / ✕ / a tap off the island close it, typing in a box told to the
+launcher). One difference, a fix: tai.html's "Sao chép" copies and says so (its inline script was refused by the
+CSP). Their old files (`tai.*`, `mutations.*`, `launcher-done.*`, `bigmap.*`) are removed, kept in git tag
+`old-sites-20261007`; `local-portal.sh` serves them at their addresses for the flows. `voice.html` stays as it was.
+Checks: e2e `portal-pages.mjs` (20 flows: each page old vs new; tai in the launcher; bigmap in a browser and in the
+launcher with a stub of its calls), `portal/test/portal.test.mjs`.
+
 ## 4. The switch
 
 - The portal server serves the React build at `/`, the current site kept at `/old` for a while (as the
@@ -294,6 +307,47 @@ panel), `mut-icons.js`, `ui-select.js` / `ui-inputs.js` (the plain pages of step
 takes the four files out of the tag into `<dir>/old-site` and the local portal serves them at `/`
 (`PORTAL_OLD_SITE_DIR`, the e2e only; `portal/test/portal.test.mjs` checks both ways).
 The html.in-launcher decision (above) is unchanged: `main.tsx MARK_IN_LAUNCHER = false`.
+
+## 5. The launcher's own look (owner's design, 2026-10-07)
+
+Inside the launcher the site has its own look (`app/launcher/`): a bar on top (the server, Trang Chủ / Trò Chơi /
+Overlay HUD, the voice chip, slots, the launcher's version and update, game mode, the account with its menu), Trò
+chơi's own bar (Túi đồ, Gara, Bản đồ & Live Monitor, Cửa hàng, Skin Studio, Xếp hạng, Luật & Dinh Dưỡng at `#rules`),
+a footer. Only the look changes: the pages are the site's (pages/, features/: the same ids, calls and rules), Trang chủ
+its own (`LxHome.tsx`: the voice bar on the voice engine, the 7-day check-in and the quests on `useRewardActions`, the
+dino played now, the server), the overlay settings in two columns. Nothing about downloading the launcher inside it.
+The player can go back to the web look (account menu, "Giao diện web": `isle_ui` = web in localStorage; `launcherUi()`).
+The launcher stub of the flows keeps the web look (they compare it with the site before React); `LAUNCHER_UI` the
+launcher's. The owner's UI rules checked at 380, 480, 640, 768, 900, 1024, 1100, 1180, 1280, 1366, 1440 and 1920 px,
+every tab, both looks and the pages of their own: no sideways scroll; titles, tabs and badges on one line (a title's
+parts move down as a whole; only under ~520 px a title may wrap, balanced). Checks: `test/launcher-look.test.tsx`
+(3), e2e `portal-launcher.mjs` (7 flows, 51 checks: the frame, every part and page, the launcher's hash calls, Ctrl+K
+and the tour, the claims, the voice bar, the web look kept, a guest), `portal-launcher-parity.mjs` (the skin, overlay,
+gara, ranking, shop and bag flows again with their React half in the launcher's look: the same results as the site
+before React; the overlay drag checked for its widget and size, the layout being narrower; run on a fresh stack).
+Screenshots: `LAUNCHER=1 SITE=portal … node scripts/shots.mjs` (LOOK=web the web's).
+
+**Voice remembered in the launcher (2026-10-07).** In the room when the launcher closed: in it again next time
+(`lib/voice.ts` AUTO_KEY `isle-voice-auto`, set by a join inside the launcher only). Not in game yet: a look at /api/me
+every 5 s (AUTO_EVERY_MS) until the player is in game, then the join; the voice bar and Voice 3D say it is waiting
+("Chờ vào game để tự vào lại") with Rời phòng / "Rời kênh (thôi tự vào)", which forget it (`leaveByUser`). In a browser
+never. Checks: `test/voice.test.tsx` (the wait, the join once in game, forgotten on leave; not in a browser), e2e
+`portal-voice-auto.mjs` (Rex out of game: waits, looks again, never joins, Rời phòng forgets; not remembered: nothing;
+a browser: nothing; Live Tester in game: joins by itself, Rời kênh forgets). The flows' launcher stub clears it
+between flows (`__keepVoiceAuto` keeps it).
+
+**The overlay's dino card: the voice mic (launcher 1.0.36).** `lib/voice.ts` adds `level` (how loud you talk, in
+steps of 20, 0 when not sending) to the state it hands the overlay; the launcher (`launcher/src/overlay.js`) sends
+the voice state to the dino card too; `overlay-page.js` draws a mic on the card while in the room: lit and pulsing with
+the level while you talk, crossed out when the micro is off or out of game, the range beside it ("30 m"). Checks:
+`launcher/test/overlay.test.js` (the state reaches the dino card), `portal-voice.mjs` (the level sent).
+
+**The big map (launcher 1.0.36).** Still on the game's screen (the owner's choice of 2026-10-04: 'auto', the
+mouse's screen, else a screen chosen in Overlay). New: a desktop that will not make it full screen gets a window
+covering that whole screen (never a small window beside the game); a click outside it (it loses the focus after it
+had it, past its first 600 ms) closes it, as Esc, M, ✕ and a tap off the island do. Checks:
+`launcher/test/bigmap.test.js` (bigMapBlurCloses). Not checked here: a real Windows / Linux desktop (the cloud
+session has no display); try both before telling players.
 
 ## Not in this plan
 

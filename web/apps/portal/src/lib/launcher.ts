@@ -91,3 +91,19 @@ export function updateLabel(st: UpdateState): { text: string; disabled: boolean;
 
 /** In the launcher, its window behind the game (not focused) or in the tray. */
 export const inBackground = (): boolean => inLauncher() && (document.hidden || !document.hasFocus());
+
+/**
+ * Which look inside the launcher (owner, 2026-10-07): its own (app/launcher/, the launcher's design: a bar on top,
+ * Trang chủ / Trò chơi / Overlay HUD) or the web site's. The same pages and calls either way; the choice is kept in
+ * this browser (`isle_ui`: 'web' for the web look), the launcher's own by default. Always the web look in a browser.
+ */
+export const UI_KEY = 'isle_ui';
+export function launcherUi(): boolean {
+  if (!inLauncher()) return false;
+  try { return localStorage.getItem(UI_KEY) !== 'web'; } catch { return true; }
+}
+/** Switch the look (the page is drawn again from the start). */
+export function setLauncherUi(on: boolean): void {
+  try { localStorage.setItem(UI_KEY, on ? 'launcher' : 'web'); } catch { /* this visit only: nothing to keep */ }
+  location.reload();
+}

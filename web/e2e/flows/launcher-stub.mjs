@@ -3,6 +3,11 @@
 // callbacks the launcher would call in window.__cb (update, gameMode). No overlay (overlayGet absent):
 // the overlay settings page then says to use the launcher, as in a browser.
 export const LAUNCHER = `if (location.protocol === 'http:') {
+  // The web site's look inside the launcher (lib/launcher.ts launcherUi): these flows compare it with the site before
+  // React. LAUNCHER_UI: the launcher's own look.
+  localStorage.setItem('isle_ui', window.__lxUi ? 'launcher' : 'web');
+  // The voice room the launcher remembers (lib/voice.ts): not from one flow to the next, unless a flow asks.
+  if (!window.__keepVoiceAuto) localStorage.removeItem('isle-voice-auto');
   window.__calls = {}; window.__cb = {};
   const count = (k) => { window.__calls[k] = (window.__calls[k] || 0) + 1; };
   window.isleLauncher = {
@@ -19,5 +24,8 @@ export const LAUNCHER = `if (location.protocol === 'http:') {
     onPushToTalk() {}, onRangeKey() {}, overlayState() {},
   };
 }`;
+/** The launcher stub with the launcher's own look (app/launcher/). */
+export const LAUNCHER_UI = `if (location.protocol === 'http:') window.__lxUi = true; ${LAUNCHER}`;
+
 /** The tour seen already (it opens by itself on a first visit, over the page). */
 export const SEEN = `if (location.protocol === 'http:') localStorage.setItem('isle_portal_tour_done', '1');`;

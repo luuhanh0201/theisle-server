@@ -131,8 +131,10 @@ const LAUNCHER_STEPS = `
   h.click('#v-ptt-key');
   await h.sleep(300);
   out.captureRefused = txt('#v-ptt-key-name');
-  const ov = { ...window.__ov, toast: window.__ov?.toast ? window.__ov.toast.text : null };
-  out.overlay = JSON.stringify(ov);`;
+  // level: how loud you talk, for the mic on the overlay's dino card (2026-10-07, after the site before React).
+  const { level, ...ov } = { ...window.__ov, toast: window.__ov?.toast ? window.__ov.toast.text : null };
+  out.overlay = JSON.stringify(ov);
+  out.overlayLevel = level;`;
 const LAUNCHER_KEYS = ['joined', 'talking', 'rangeKey', 'captureRefused', 'overlay'];
 
 const GUEST = `
@@ -172,7 +174,8 @@ export default [
   { name: 'Voice 3D in React, in the launcher = before React', path: '/next/#voice', init: IN_LAUNCHER,
     run: `${LAUNCHER_STEPS} const old = JSON.parse(localStorage.getItem('e2e.old.voice.launcher') ?? '{}');
       for (const k of ${JSON.stringify(LAUNCHER_KEYS)}) check('same as before React: ' + k, JSON.stringify(out[k]) === JSON.stringify(old[k]), { new: out[k], old: old[k] });
-      check('the overlay got the state', out.overlay.includes('"connected":true'), out.overlay);` },
+      check('the overlay got the state', out.overlay.includes('"connected":true'), out.overlay);
+      check('and how loud, for the mic on the dino card: 0 when not talking', out.overlayLevel === 0, out.overlayLevel);` },
   { name: 'before React: Voice 3D, a guest', old: true, path: '/#voice', init: AS_GUEST, wait: 3500,
     run: `${GUEST} localStorage.setItem('e2e.old.voice.guest', JSON.stringify(out)); check('done', true, out);` },
   { name: 'Voice 3D in React, a guest = before React', path: '/next/#voice', init: AS_GUEST,

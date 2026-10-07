@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Select, Slider } from '@isle/ui';
 import { inLauncher } from '../../lib/launcher';
 import {
-  RANGES, captureKey, join, keyLabels, leave, onLevel, setMaster, setMic, setMode, setNoise, setOut, setPeerVol, setRange, setThreshold,
+  RANGES, captureKey, join, keyLabels, leaveByUser, onLevel, setMaster, setMic, setMode, setNoise, setOut, setPeerVol, setRange, setThreshold,
   toggleTest, togglePeerMute, useVoice, type Mode, type Noise, type PeerView,
 } from '../../lib/voice';
 
@@ -74,7 +74,9 @@ export function Voice() {
         <div className="card-header"><h2 className="card-title">🎙️ Kênh voice gần</h2></div>
         <div className="v-join-row">
           <button type="button" className="btn btn-emerald btn-big" id="v-join" hidden={v.connected} disabled={v.joining} onClick={() => { void join(); }}>Vào kênh voice</button>
-          <button type="button" className="btn btn-danger btn-big" id="v-leave" hidden={!v.connected} onClick={() => { void leave(); }}>Rời kênh</button>
+          <button type="button" className="btn btn-danger btn-big" id="v-leave" hidden={!v.connected} onClick={() => { void leaveByUser(); }}>Rời kênh</button>
+          {/* The launcher remembers the room: waiting for the game to join again by itself (lib/voice.ts). */}
+          {v.autoWaiting && !v.connected && <button type="button" className="btn btn-ghost" id="v-auto-cancel" onClick={() => { void leaveByUser(); }}>Rời kênh (thôi tự vào)</button>}
           <div className="v-chips">
             <span className={`v-chip ${v.conn.kind}`} id="v-conn-chip">{v.conn.text}</span>
             <span className={`v-chip ${v.inGame ? 'good' : 'warn'}`} id="v-game-chip" hidden={v.inGame === null}>

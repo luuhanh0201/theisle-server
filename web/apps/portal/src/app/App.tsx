@@ -1,4 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { launcherUi } from '../lib/launcher';
+import { LauncherShell } from './launcher/LauncherShell';
 import { Shell } from './Shell';
 import { ToastProvider } from './toast';
 
@@ -8,7 +10,8 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <Shell />
+        {/* Inside the launcher its own look (app/launcher/), unless the player chose the web's. */}
+        {launcherUi() ? <LauncherShell /> : <Shell />}
       </ToastProvider>
     </QueryClientProvider>
   );
