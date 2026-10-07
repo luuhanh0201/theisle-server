@@ -4,6 +4,7 @@ import { TierBadge, TierFx } from '../../components/TierFx';
 import { growthStage, growthWidth, heroTier, pct, tierClasses } from '../../lib/dino';
 import { useDino3D } from '../../lib/dino3d';
 import { isLab } from '../../lib/lab';
+import { launcherUi } from '../../lib/launcher';
 
 /** "1 giờ 5 phút" / "45 phút", as the server says it. */
 export function prisonDur(sec: number): string {
@@ -56,9 +57,12 @@ function Vitals({ dino }: { dino: PlayerDino }) {
   );
 }
 
-/** The dino played now in 3D, in its colours (lab only; skin3d.js); hidden while there is none or it does not load. */
+/**
+ * The dino played now in 3D, in its colours (skin3d.js): in the launcher's look (Live Monitor, owner 2026-10-07) and
+ * in lab; hidden while there is none or it does not load. Still: shown, not turning, drawn only when it changes.
+ */
 function Game3D({ dino }: { dino: PlayerDino | null }) {
-  const on = isLab() && Boolean(dino?.species);
+  const on = (launcherUi() || isLab()) && Boolean(dino?.species);
   const api = useDino3D(on);
   const box = useRef<HTMLDivElement>(null);
   const viewer = useRef<ReturnType<NonNullable<typeof api>['create']> | null>(null);
@@ -67,7 +71,7 @@ function Game3D({ dino }: { dino: PlayerDino | null }) {
   const key = dino ? JSON.stringify([dino.species, dino.skin]) : null;
   useEffect(() => {
     if (!on || !api || !box.current || !dino?.species || key === shownKey.current) return;
-    viewer.current ??= api.create(box.current, { autoRotate: true, fit: 1.15 });
+    viewer.current ??= api.create(box.current, { still: true, fit: 0.8 });
     shownKey.current = key;
     void viewer.current.show(dino.species, api.fromGame(dino.skin) ?? { colors: {} }).catch(() => false).then((ok) => {
       failed.current = !ok;

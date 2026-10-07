@@ -18,7 +18,7 @@ const { app, BrowserWindow, Tray, Menu, shell, ipcMain, session, nativeImage, ne
 const { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync, renameSync, existsSync } = require('node:fs');
 const { randomBytes } = require('node:crypto');
 const { join } = require('node:path');
-const { clashOf, distinctBindings, label, PushToTalk, DEFAULT_PTT, DEFAULT_RANGE } = require('./ptt.js');
+const { clashOf, distinctBindings, label, PushToTalk, DEFAULT_MUTE, DEFAULT_PTT, DEFAULT_RANGE } = require('./ptt.js');
 const { Overlay, normaliseKeep } = require('./overlay.js');
 const { LoginFlow } = require('./login.js');
 const { pickBigMapDisplay, DEFAULT_BIGMAP_KEY, ChatGuard, bigMapKeyAction, bigMapBlurCloses, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE } = require('./bigmap.js');
@@ -194,10 +194,10 @@ let loggedIn = null;
 let splashWin = null;
 let tray = null;
 let quitting = false;
-/** Global keys: hold to talk, cycle the voice range, overlay on / off, overlay edit mode, the big map. */
-const keys = { ptt: null, range: null, overlay: null, edit: null, bigmap: null };
-const KEY_SETTING = { ptt: 'ptt', range: 'rangeKey', overlay: 'overlayKey', edit: 'overlayEditKey', bigmap: 'bigmapKey' };
-const KEY_TITLE = { ptt: 'Bấm để nói', range: 'Đổi tầm nói', overlay: 'Bật / tắt overlay', edit: 'Chỉnh vị trí overlay', bigmap: 'Bật / tắt bản đồ lớn' };
+/** Global keys: hold to talk, cycle the voice range, the micro off / on, overlay on / off, overlay edit mode, the big map. */
+const keys = { ptt: null, range: null, mute: null, overlay: null, edit: null, bigmap: null };
+const KEY_SETTING = { ptt: 'ptt', range: 'rangeKey', mute: 'muteKey', overlay: 'overlayKey', edit: 'overlayEditKey', bigmap: 'bigmapKey' };
+const KEY_TITLE = { ptt: 'Bấm để nói', range: 'Đổi tầm nói', mute: 'Tắt / bật mic', overlay: 'Bật / tắt overlay', edit: 'Chỉnh vị trí overlay', bigmap: 'Bật / tắt bản đồ lớn' };
 const DEFAULT_OVERLAY_KEY = { kind: 'key', code: 66 };   // UiohookKey.F8
 const DEFAULT_EDIT_KEY = { kind: 'key', code: 67 };      // UiohookKey.F9
 let overlay = null;
@@ -576,12 +576,15 @@ function startPtt() {
   const b = distinctBindings([
     { name: 'ptt', binding: saved.ptt, fallback: DEFAULT_PTT },
     { name: 'range', binding: saved.rangeKey, fallback: DEFAULT_RANGE },
+    { name: 'mute', binding: saved.muteKey, fallback: DEFAULT_MUTE },
     { name: 'overlay', binding: saved.overlayKey, fallback: DEFAULT_OVERLAY_KEY },
     { name: 'edit', binding: saved.overlayEditKey, fallback: DEFAULT_EDIT_KEY },
     { name: 'bigmap', binding: saved.bigmapKey, fallback: DEFAULT_BIGMAP_KEY },
   ]);
   keys.ptt = new PushToTalk(hook, b.ptt, (held) => { toPage('ptt', held); updateTray(); });
   keys.range = new PushToTalk(hook, b.range, (down) => { if (down) toPage('range-key', true); }, DEFAULT_RANGE);
+  // The micro off / on, in game too (owner, 2026-10-07: "tắt cho phần tự nhận giọng"): the page flips its mode.
+  keys.mute = new PushToTalk(hook, b.mute, (down) => { if (down) toPage('mute-key', true); }, DEFAULT_MUTE);
   // Each press in the log: "F8 does nothing in game" can then be told apart
   // from "the key never reached us" (a game run as administrator hides its keys).
   keys.overlay = new PushToTalk(hook, b.overlay, (down) => {
@@ -833,6 +836,7 @@ function updateTray() {
     { type: 'separator' },
     { label: `Phím nói: ${keyLabel(keys.ptt)}`, enabled: false },
     { label: `Phím đổi tầm giọng: ${keyLabel(keys.range)}`, enabled: false },
+    { label: `Phím tắt / bật mic: ${keyLabel(keys.mute)}`, enabled: false },
     { label: `Phím bật/tắt overlay: ${keyLabel(keys.overlay)}`, enabled: false },
     { label: `Phím chỉnh overlay trên màn hình: ${keyLabel(keys.edit)}`, enabled: false },
     { label: `Phiên bản ${app.getVersion()}`, enabled: false },

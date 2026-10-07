@@ -1201,6 +1201,15 @@ do
         and (started(t2).messages[1] or ""):find("người đưa mã", 1, true) ~= nil, started(t2) and json.encode(started(t2)))
   mom.__props.Growth = 0.35
 
+  -- Only to a dino of the same species (owner, 2026-10-07): a Rex giving the code to a Dilo is refused.
+  local REX = "76561198000000073"
+  local rexCtrl = H.makeCtrl(REX, H.makePawn({ growth = 0.3, class = "BlueprintGeneratedClass /Game/BP_Rex.BP_Rex_C", loc = { X = 9000, Y = 9000, Z = 100 } }))
+  _G.FindAllOf = function() H.touch("FindAllOf"); return { momCtrl, babyCtrl, rexCtrl } end
+  local tS = sendTele({ target = REX })
+  check("another species: refused, told why", started(tS) and started(tS).ok == false
+        and (started(tS).messages[1] or ""):find("cùng loài", 1, true) ~= nil, started(tS) and json.encode(started(tS)))
+  _G.FindAllOf = function() H.touch("FindAllOf"); return { momCtrl, babyCtrl } end
+
   -- A player bite on B: no tele for 60 s.
   H.fire(DAMAGE, H.param(H.makePawn({})), H.param(baby), H.param(25))
   local t3 = sendTele()

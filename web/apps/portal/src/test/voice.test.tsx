@@ -1,6 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { Voice } from '../features/voice/Voice';
-import { AUTO_KEY, keyName, resetVoiceForTests, startVoice } from '../lib/voice';
+import { AUTO_KEY, keyLabels, keyName, resetVoiceForTests, setMode, startVoice, toggleMic } from '../lib/voice';
 
 // jsdom has no Web Audio: just enough of it for the engine (the meter, the panners, the beeps).
 class FakeCtx {
@@ -83,9 +83,48 @@ describe('Voice', () => {
     expect(shown(container, '#v-join')).toBe(false);
     expect(shown(container, '#v-leave')).toBe(true);
     expect(api.ranges).toEqual([30]);
-    expect(q(container, '#v-noise-note').textContent).toBe('Máy này không chạy được bộ lọc AI: đang dùng bộ lọc của trình duyệt.');
+    // The noise filter's default is Cơ bản (owner, 2026-10-07).
+    expect(q(container, '#v-noise-note').textContent).toBe('Bộ lọc có sẵn của trình duyệt: nhẹ, lọc được tiếng ồn đều (quạt, điều hoà).');
+    expect(q(container, '[data-noise="browser"]').getAttribute('aria-pressed')).toBe('true');
     await waitFor(() => expect(q(container, '#v-game-chip').textContent).toBe('▲ Đang trong game'));
     expect(q(container, '#v-range-note').textContent).toBe('Người trong 30 m nghe thấy bạn. Càng gần càng to; ra tới mép tầm thì nhỏ dần rồi tắt.');
+  });
+
+  it('the AI filter picked (after the default moved) and not runnable here: the browser\'s, said so', async () => {
+    localStorage.setItem('isle-voice', JSON.stringify({ noise: 'ai', v: 2 }));
+    resetVoiceForTests();
+    startVoice();
+    const { container } = render(<Voice />);
+    await waitFor(() => expect(shown(container, '#v-join-card')).toBe(true));
+    await act(async () => { fireEvent.click(q(container, '#v-join')); });
+    await waitFor(() => expect(q(container, '#v-conn-chip').textContent).toBe('● Đã vào kênh'));
+    expect(q(container, '#v-noise-note').textContent).toBe('Máy này không chạy được bộ lọc AI: đang dùng bộ lọc của trình duyệt.');
+  });
+
+  it('the micro off and back on (the voice bar, the launcher\'s key): back to the mode it was in', () => {
+    setMode('vad');
+    toggleMic();
+    expect(JSON.parse(localStorage.getItem('isle-voice') ?? '{}').mode).toBe('off');
+    toggleMic();
+    expect(JSON.parse(localStorage.getItem('isle-voice') ?? '{}').mode).toBe('vad');
+    setMode('ptt');
+    toggleMic(true);
+    toggleMic(true);
+    expect(JSON.parse(localStorage.getItem('isle-voice') ?? '{}').mode).toBe('ptt');
+    // The micro key is the launcher's (1.0.38+): none in a browser.
+    expect(keyLabels().mute).toBeNull();
+  });
+
+  it('a setting saved before the default moved (AI, no version): moved to Cơ bản once, kept after', async () => {
+    localStorage.setItem('isle-voice', JSON.stringify({ noise: 'ai', range: 60 }));
+    resetVoiceForTests();
+    startVoice();
+    const { container } = render(<Voice />);
+    await waitFor(() => expect(shown(container, '#v-join-card')).toBe(true));
+    await act(async () => { fireEvent.click(q(container, '#v-join')); });
+    await waitFor(() => expect(q(container, '[data-noise="browser"]')?.getAttribute('aria-pressed')).toBe('true'));
+    fireEvent.click(q(container, '[data-range="90"]'));
+    expect(JSON.parse(localStorage.getItem('isle-voice') ?? '{}')).toMatchObject({ noise: 'browser', range: 90, v: 2 });
   });
 
   it('range, modes, the talk key captured in the page, settings kept', async () => {

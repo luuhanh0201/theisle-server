@@ -55,8 +55,8 @@ export function Voice() {
   const keys = keyLabels();
   const launcher = inLauncher();
   const waiting = 'bấm một phím hoặc nút chuột…';
-  const keyText = (which: 'ptt' | 'range'): string => (v.capturing === which ? waiting
-    : v.captureError?.which === which ? v.captureError.text : keys[which]);
+  const keyText = (which: 'ptt' | 'range' | 'mute'): string => (v.capturing === which ? waiting
+    : v.captureError?.which === which ? v.captureError.text : keys[which] ?? '');
   const rangeHint = launcher
     ? `Bấm ${keys.range} (cả khi đang trong game) để đổi tầm: 15 → 30 → 60 → 90 m. Nghe tiếng bíp: 1 bíp = 15 m … 4 bíp = 90 m.`
     : `Bấm ${keys.range} để đổi tầm: 15 → 30 → 60 → 90 m (1–4 tiếng bíp). Trên web chỉ khi trang này đang được chọn.`;
@@ -114,6 +114,13 @@ export function Voice() {
             <button key={m} type="button" data-mode={m} aria-pressed={s.mode === m} onClick={() => setMode(m)}>{text}</button>
           ))}
         </div>
+        {keys.mute !== null && (
+          // The launcher's micro key (1.0.38+): off / on in game too, back to the mode it was in.
+          <div className="v-keys" id="v-mute-keys">
+            <button type="button" className="btn btn-ghost" id="v-mute-key" onClick={() => { void captureKey('mute'); }}>Phím tắt / bật mic: <kbd id="v-mute-key-name">{keyText('mute')}</kbd></button>
+            <span id="v-mute-hint">Bấm {keys.mute} (cả khi đang trong game) để tắt mic, bấm lần nữa để bật lại như cũ.</span>
+          </div>
+        )}
         <div className="v-subhead">Khử tiếng ồn</div>
         <div className="v-seg v-seg-noise" role="group" aria-label="Khử tiếng ồn">
           {([['off', 'Tắt'], ['browser', 'Cơ bản'], ['ai', 'Mạnh (AI)']] as Array<[Noise, string]>).map(([n, text]) => (

@@ -414,7 +414,8 @@ function frameGate(renderer) {
 /**
  * A 3D view in `host`. opts: { note (element for a status line), interactive
  * (orbit, default true), autoRotate, fit (camera distance / model size, 1.5),
- * alwaysRender (test pages: draw in a background tab too) }. Returns { show(species, skin), setSkin,
+ * alwaysRender (test pages: draw in a background tab too), still (drawn only when something changes: a model, a size,
+ * a drag; no turning, the animation held on its first frame: Live Monitor, owner 2026-10-07) }. Returns { show(species, skin), setSkin,
  * setFemale, name() }. skin: { colors: { Body: "#rrggbb"… }, female?, glow?, effects? }.
  */
 function create(host, opts = {}) {
@@ -445,15 +446,25 @@ function create(host, opts = {}) {
     controls.enablePan = false;
     controls.enabled = opts.interactive !== false;
     controls.enableZoom = opts.interactive !== false;
-    controls.autoRotate = opts.autoRotate === true;
+    controls.autoRotate = opts.autoRotate === true && opts.still !== true;
     controls.autoRotateSpeed = 1.2;
+    if (opts.still === true) {
+      // Nothing moves by itself: a frame only for a drag (no damping: it would need every frame to settle) or a size.
+      controls.enableDamping = false;
+      controls.addEventListener('change', () => { owed = Math.max(owed, 1); });
+      if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { owed = Math.max(owed, 1); }).observe(host);
+    }
     clock = new THREE.Clock();
     const due = frameGate(renderer);
     const loop = (now = 0) => {
       requestAnimationFrame(loop);
       if (!host.isConnected || host.hidden || !host.offsetParent) return;   // not shown: nothing to draw
-      const idle = offScreen() && !opts.alwaysRender;
-      if (idle ? owed <= 0 : !due(now)) return;
+      if (opts.still === true) {
+        if (owed <= 0) return;
+      } else {
+        const idle = offScreen() && !opts.alwaysRender;
+        if (idle ? owed <= 0 : !due(now)) return;
+      }
       if (owed > 0) owed--;
       // Follow the box's size here: the tab can be hidden when the model loads (0 × 0).
       const w = host.clientWidth, h = host.clientHeight;
@@ -463,7 +474,8 @@ function create(host, opts = {}) {
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       }
-      mixer?.update(clock.getDelta());
+      // Still: the animation stays on its first frame (a pose, not a T); else it plays.
+      mixer?.update(opts.still === true ? 0 : clock.getDelta());
       controls.update();
       renderer.render(scene, camera);
     };

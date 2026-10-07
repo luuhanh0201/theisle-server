@@ -224,17 +224,18 @@ export function LauncherShell() {
   const [seen, setSeen] = useState<LxView[]>([view]);
   useEffect(() => { setSeen((s) => (s.includes(view) ? s : [...s, view])); }, [view]);
   const pages = seen.includes(view) ? seen : [...seen, view];
+  // Trò chơi scrolls its page only (the side bar stays): another page starts at its top.
+  const pagesBox = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (pagesBox.current) pagesBox.current.scrollTop = 0; }, [view]);
 
   return (
     <DrawerProvider>
-      <div className="lx" id="app-layout">
+      <div className={`lx${group === 'play' ? ' lx-fixed' : ''}`} id="app-layout">
         <header className="lx-top top-header">
-          <a href="#home" className="lx-brand brand" onClick={(e) => { e.preventDefault(); goView('home'); }}>
-            <span className="lx-logo">{initials(name)}</span>
-            <span className="lx-brand-txt">
-              <b id="srv-name">{name}</b>
-              <small>Cổng Người Chơi · Gateway</small>
-            </span>
+          {/* The server's logo where its name was (owner, 2026-10-07); the name stays for screen readers and the tooltip. */}
+          <a href="#home" className="lx-brand brand" title={name} onClick={(e) => { e.preventDefault(); goView('home'); }}>
+            <img className="lx-logo-img" src="/img/logo-96.webp" width="40" height="40" alt="" />
+            <b id="srv-name" className="lx-sr">{name}</b>
           </a>
           <TopNav group={group} me={me} />
           <div className="lx-right header-actions">
@@ -249,7 +250,7 @@ export function LauncherShell() {
           <div id="error" className="err" hidden={error === null}>{error}</div>
           <div className={group === 'play' ? 'lx-play' : undefined}>
             {group === 'play' && <PlaySide view={view} me={me} />}
-            <div className="lx-pages">
+            <div className="lx-pages" ref={pagesBox}>
               {pages.map((t) => (
                 <section key={t} id={`page-${t}`} className="page-content" hidden={t !== view}>
                   {t === 'home' ? <LxHome me={me} /> : <Page tab={t} />}

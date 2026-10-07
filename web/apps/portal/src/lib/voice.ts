@@ -21,7 +21,11 @@ const NS_DIR = '/vendor/noise-suppressor-0.4.1';
 export const RANGES = [15, 30, 60, 90] as const;
 export const RANGE_NAMES: Record<number, string> = { 15: 'Thì thầm', 30: 'Nói thường', 60: 'Nói to', 90: 'Hét' };
 const POLL_MS = 500;
-const HANGOVER_MS = 450;            // keep sending this long after the voice drops under the line
+// Keep sending this long after the voice drops under the line: 450 ms cut the ends of words and the soft parts
+// of a sentence (owner, 2026-10-07: "mic hơi bị cụt tiếng").
+const HANGOVER_MS = 750;
+const PTT_TAIL_MS = 250;            // push-to-talk: the last syllable after the key is let go
+const METER_MS = 50;                // how often the level is read (the first syllable waits at most this long)
 const RECENT_MS = 15_000;           // a speaker stays in the list this long after they stop
 
 export type Mode = 'vad' | 'ptt' | 'off';
@@ -36,8 +40,9 @@ export interface Device { id: string; label: string }
 
 /** The voice launcher calls (launcher/src/preload.js); each may be missing on an older launcher. */
 interface VoiceLauncher {
-  pttLabel?: () => string; rangeLabel?: () => string;
+  pttLabel?: () => string; rangeLabel?: () => string; muteLabel?: () => string;
   capturePttKey?: () => Promise<{ error?: string } | null>; captureRangeKey?: () => Promise<{ error?: string } | null>;
+  captureMuteKey?: () => Promise<{ error?: string } | null>; onMuteKey?: (cb: () => void) => void;
   onPushToTalk?: (cb: (held: boolean) => void) => void; onRangeKey?: (cb: () => void) => void;
   overlayState?: (s: unknown) => void;
 }
@@ -47,12 +52,16 @@ const launcher = (): VoiceLauncher | null => (window.isleLauncher as VoiceLaunch
 function loadSettings(): Settings {
   const defaults: Settings = {
     mode: launcher() ? 'ptt' : 'vad', threshold: -50, pttCode: 'KeyV', rangeCode: 'Backquote',
-    master: 100, mic: '', out: '', people: {}, range: 30, noise: 'ai',
+    master: 100, mic: '', out: '', people: {}, range: 30, noise: 'browser',
   };
   let s = { ...defaults };
-  try { s = { ...defaults, ...JSON.parse(localStorage.getItem('isle-voice') || '{}') as Partial<Settings> }; } catch { /* private window */ }
+  let raw: Partial<Settings> & { v?: number } = {};
+  try { raw = JSON.parse(localStorage.getItem('isle-voice') || '{}') as Partial<Settings> & { v?: number }; s = { ...defaults, ...raw }; } catch { /* private window */ }
   if (!(RANGES as readonly number[]).includes(s.range)) s.range = 30;
-  if (!['off', 'browser', 'ai'].includes(s.noise)) s.noise = 'ai';
+  if (!['off', 'browser', 'ai'].includes(s.noise)) s.noise = 'browser';
+  // The noise filter's default became Cơ bản (owner, 2026-10-07): every saved setting held the old default ('ai',
+  // saved with any other change), so it moves once; picked again after this, it stays.
+  if ((raw.v ?? 1) < 2 && s.noise === 'ai') s.noise = 'browser';
   return s;
 }
 
@@ -66,7 +75,7 @@ export interface VoiceView {
   inGame: boolean | null; nameMode: 'name' | 'id' | 'none';
   peers: PeerView[];
   settings: Settings; noiseActive: Noise | null;
-  capturing: 'ptt' | 'range' | null; captureError: { which: 'ptt' | 'range'; text: string } | null;
+  capturing: 'ptt' | 'range' | 'mute' | null; captureError: { which: 'ptt' | 'range' | 'mute'; text: string } | null;
   sending: boolean;
   mics: Device[]; outs: Device[]; outField: boolean; micNow: string;
   test: { on: boolean; busy: boolean; note: string };
@@ -95,12 +104,13 @@ let pttHeld = false;
 let externalPtt = false;
 let sending = false;
 let lastLoud = 0;
-let capturing: 'ptt' | 'range' | null = null;
+let lastPtt = 0;                    // when the push-to-talk key was last held (its tail)
+let capturing: 'ptt' | 'range' | 'mute' | null = null;
 let captureError: VoiceView['captureError'] = null;
 let reconnecting = false;
 let lastToast: { text: string; at: number } | null = null;
 let noiseActive: Noise | null = null;
-let settings: Settings = { mode: 'vad', threshold: -50, pttCode: 'KeyV', rangeCode: 'Backquote', master: 100, mic: '', out: '', people: {}, range: 30, noise: 'ai' };
+let settings: Settings = { mode: 'vad', threshold: -50, pttCode: 'KeyV', rangeCode: 'Backquote', master: 100, mic: '', out: '', people: {}, range: 30, noise: 'browser' };
 let loggedIn: boolean | null = null;
 let joining = false;
 /** In the channel: the settings, range and speakers cards show (set once a join fully worked). */
@@ -115,7 +125,8 @@ let toastText: string | null = null;
 let hearing: { stream: MediaStream; ctx: AudioContext } | null = null;
 let test = { on: false, busy: false, note: 'Bật rồi nói: nghe lại giọng mình ngay qua loa / tai nghe. Nên dùng tai nghe.' };
 
-const save = (): void => { try { localStorage.setItem('isle-voice', JSON.stringify(settings)); } catch { /* ignore */ } };
+// v: 2 since the noise default moved (loadSettings).
+const save = (): void => { try { localStorage.setItem('isle-voice', JSON.stringify({ ...settings, v: 2 })); } catch { /* ignore */ } };
 const person = (id: string): { vol: number; muted: boolean } => settings.people[id] || { vol: 100, muted: false };
 
 // --- the store the page reads ---------------------------------------------------------------
@@ -579,7 +590,10 @@ function startMeter(): void {
     if (db >= settings.threshold) lastLoud = now;
     let want = false;
     if (settings.mode === 'vad') want = now - lastLoud < HANGOVER_MS;
-    else if (settings.mode === 'ptt') want = pttHeld || externalPtt;
+    else if (settings.mode === 'ptt') {
+      if (pttHeld || externalPtt) lastPtt = now;
+      want = now - lastPtt < PTT_TAIL_MS;
+    }
     if (inGame === false || hearing) want = false;
     setSending(want);
     level = { pct: Math.max(0, Math.min(100, ((db + 80) / 60) * 100)), open: want };
@@ -587,7 +601,7 @@ function startMeter(): void {
     // The overlay's mic (the dino card): only a change of step is sent (pushOverlay groups them, ~8 a second at most).
     const step = want ? Math.round(level.pct / 20) * 20 : 0;
     if (step !== overlayLevel) { overlayLevel = step; pushOverlay(); }
-  }, 50);
+  }, METER_MS);
 }
 
 function stopMeter(): void {
@@ -617,13 +631,27 @@ export function keyName(code: string): string {
   if (code.startsWith('Digit')) return code.slice(5);
   return ({ Space: 'Space', CapsLock: 'Caps Lock', Backquote: '` ~', ShiftLeft: 'Shift trái', ControlLeft: 'Ctrl trái', AltLeft: 'Alt trái' } as Record<string, string>)[code] || code;
 }
-/** The two keys as shown: the launcher's (global) or this page's. */
-export function keyLabels(): { ptt: string; range: string } {
+/** The keys as shown: the launcher's (global) or this page's. The micro key: the launcher's only (1.0.38+), else null. */
+export function keyLabels(): { ptt: string; range: string; mute: string | null } {
   const l = launcher();
   return {
     ptt: l?.pttLabel ? l.pttLabel() : keyName(settings.pttCode),
     range: l?.rangeLabel ? l.rangeLabel() : keyName(settings.rangeCode),
+    mute: l?.muteLabel ? l.muteLabel() : null,
   };
+}
+
+/** The mode the micro goes back to when switched on again (the last one that was not off). */
+let lastOnMode: Mode = 'vad';
+/**
+ * The micro off, or back on in its last mode (the voice bar's button; the launcher's micro key, in game too: owner,
+ * 2026-10-07). `announce`: a short note on the page and the overlay's voice box shows the state.
+ */
+export function toggleMic(announce = false): void {
+  if (settings.mode !== 'off') lastOnMode = settings.mode;
+  setMode(settings.mode === 'off' ? lastOnMode : 'off');
+  if (announce) toast(settings.mode === 'off' ? '🔇 Đã tắt mic' : `🎙️ Đã bật mic (${settings.mode === 'vad' ? 'tự nhận giọng' : 'giữ phím để nói'})`);
+  pushOverlay();
 }
 const typing = (e: KeyboardEvent): boolean => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
 
@@ -632,7 +660,8 @@ function wireKeys(): void {
     if (launcher()) return;             // the launcher's global keys do it, in game too
     if (capturing !== null) {
       e.preventDefault();
-      if (e.code !== 'Escape') settings = { ...settings, [capturing === 'ptt' ? 'pttCode' : 'rangeCode']: e.code };
+      // The micro key is the launcher's only (keyLabels): the page captures the talk and range keys.
+      if (e.code !== 'Escape' && capturing !== 'mute') settings = { ...settings, [capturing === 'ptt' ? 'pttCode' : 'rangeCode']: e.code };
       save();
       capturing = null;
       changed();
@@ -648,6 +677,7 @@ function wireKeys(): void {
   if (l) {
     l.onPushToTalk?.((held) => { externalPtt = held === true; });
     l.onRangeKey?.(() => { if (room) cycleRange(); });
+    l.onMuteKey?.(() => toggleMic(true));
   }
   document.addEventListener('click', () => { if (room && !room.canPlaybackAudio) room.startAudio().catch(() => {}); });
   if (navigator.mediaDevices) navigator.mediaDevices.addEventListener?.('devicechange', () => { if (room) void listDevices(); });
@@ -671,13 +701,13 @@ function wireKeys(): void {
   };
 }
 
-export async function captureKey(which: 'ptt' | 'range'): Promise<void> {
+export async function captureKey(which: 'ptt' | 'range' | 'mute'): Promise<void> {
   capturing = which;
   captureError = null;
   changed();
   const l = launcher();
   if (l) {
-    const r = await (which === 'ptt' ? l.capturePttKey?.() : l.captureRangeKey?.());
+    const r = await (which === 'ptt' ? l.capturePttKey?.() : which === 'range' ? l.captureRangeKey?.() : l.captureMuteKey?.());
     capturing = null;
     if (r?.error) captureError = { which, text: r.error };   // already used by another key
     changed();
@@ -685,7 +715,10 @@ export async function captureKey(which: 'ptt' | 'range'): Promise<void> {
 }
 
 // --- settings from the page ------------------------------------------------------------------------
-export function setMode(mode: Mode): void { settings = { ...settings, mode }; captureError = null; save(); changed(); }
+export function setMode(mode: Mode): void {
+  if (settings.mode !== 'off') lastOnMode = settings.mode;
+  settings = { ...settings, mode }; captureError = null; save(); changed();
+}
 export async function setNoise(noise: Noise): Promise<void> {
   settings = { ...settings, noise }; save(); changed();
   if (room) await applyNoise(true);

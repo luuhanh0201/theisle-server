@@ -15,7 +15,9 @@ const HELP = `
   const txt = (s) => (typeof s === 'string' ? h.$(s) : s)?.innerText?.replace(/\\s+/g, ' ').trim() ?? '';`;
 const compare = (key, keys) => `{
   const old = JSON.parse(localStorage.getItem('${key}') ?? '{}');
-  for (const k of ${JSON.stringify(keys)}) check('same as before React: ' + k, JSON.stringify(out[k]) === JSON.stringify(old[k]), { new: out[k], old: old[k] }); }`;
+  // On purpose (owner, 2026-10-07): "Voice 3D" is "Voice".
+  const renamed = (v) => JSON.parse(JSON.stringify(v ?? null).replaceAll('Voice 3D', 'Voice'));
+  for (const k of ${JSON.stringify(keys)}) check('same as before React: ' + k, JSON.stringify(out[k]) === JSON.stringify(renamed(old[k])), { new: out[k], old: old[k] }); }`;
 const pair = (name, page, steps, keys, extra = '', opts = {}) => [
   { name: `before React: ${name}`, old: true, path: `/${page}`, wait: 3000, ...opts,
     run: `${HELP} ${steps} localStorage.setItem('e2e.old.${name}', JSON.stringify(out)); check('done', true, out);` },

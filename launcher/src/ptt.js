@@ -10,6 +10,7 @@
 /** A key or mouse button: { kind: 'key' | 'mouse', code }. */
 const DEFAULT_PTT = { kind: 'key', code: 47 };     // UiohookKey.V, hold to talk
 const DEFAULT_RANGE = { kind: 'key', code: 41 };   // UiohookKey.Backquote (` ~), cycle the voice range
+const DEFAULT_MUTE = { kind: 'key', code: 65 };    // UiohookKey.F7, the micro off / on (owner, 2026-10-07)
 
 const MOUSE_NAMES = { 3: 'Chuột giữa', 4: 'Chuột bên 1 (Mouse 4)', 5: 'Chuột bên 2 (Mouse 5)' };
 
@@ -173,4 +174,4 @@ function distinctBindings(wanted) {
   return out;
 }
 
-module.exports = { DEFAULT_PTT, DEFAULT_RANGE, REPRESS_AFTER_MS, RELEASE_SETTLE_MS, clashOf, distinctBindings, label, parseBinding, PushToTalk, sameBinding };
+module.exports = { DEFAULT_MUTE, DEFAULT_PTT, DEFAULT_RANGE, REPRESS_AFTER_MS, RELEASE_SETTLE_MS, clashOf, distinctBindings, label, parseBinding, PushToTalk, sameBinding };

@@ -50,11 +50,24 @@ local WHY = {
     target_gone   = "người đưa mã đã thoát game hoặc dino đã chết",
     target_air    = "người đưa mã đang bay, bơi hoặc rơi",
     target_growth = "dino của người đưa mã đã lớn quá mức cho phép",
+    other_species = "dino của người đưa mã khác loài với bạn",
     growth        = "dino của bạn đã lớn quá mức cho phép",
     prison        = "một trong hai đang ở tù",
     failed        = "không dịch chuyển được",
 }
 T.WHY = WHY
+
+--- The pawn's class (BP_Tyrannosaurus_C), or nil: tele goes to a dino of the same species only (owner, 2026-10-07).
+local function classOf(pawn)
+    local ok, n = pcall(function() return pawn:GetClass():GetFName():ToString() end)
+    return ok and n ~= nil and tostring(n) or nil
+end
+--- Same species, or one of the two classes unreadable (refused: the move is the risk).
+local function sameSpecies(a, b)
+    local ca, cb = classOf(a), classOf(b)
+    return ca ~= nil and cb ~= nil and ca == cb
+end
+T.sameSpecies = sameSpecies
 
 local function addressOf(pawn)
     local ok, a = pcall(function() return pawn:GetAddress() end)
@@ -155,6 +168,7 @@ local function finish(c, pawn, steamId, p)
     local tp = tc and H.livePawnFromCtrl(tc)
     if not tp or not alive(tp) then return fail(steamId, "target_gone", c) end
     if not growthOk(tp, p.targetMaxGrowth) then return fail(steamId, "target_growth", c) end
+    if not sameSpecies(pawn, tp) then return fail(steamId, "other_species", c) end
     if not grounded(tp) then return fail(steamId, "target_air", c) end
     local at = locOf(tp)
     if at == nil then return fail(steamId, "failed", c) end
@@ -205,6 +219,7 @@ function T.start(ctrl, cmd, say)
         Msg.say(say, "tele.targetBig", "Dino của người đưa mã đã lớn hơn {max}%: không tele tới được.", { max = pct(targetMax) })
         return false
     end
+    if not sameSpecies(pawn, tp) then Msg.say(say, "tele.otherSpecies", "Chỉ tele tới dino cùng loài."); return false end
     local wait = T.combatLeft(steamId, pawn, combatS)
     if wait then Msg.say(say, "tele.combat", "Bạn vừa giao tranh: chờ {seconds} giây nữa mới tele được.", { seconds = wait }); return false end
     local origin = locOf(pawn)

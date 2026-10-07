@@ -631,7 +631,8 @@ export async function handlePlayerApi(
       if (ctx.prison?.isInmate(owner)) { send(res, 409, { error: 'Người đưa mã đang ở tù: không tele tới được.' }); return true; }
       const wait = teleCodes.cooldownLeft(who, s, nowS);
       if (wait > 0) { send(res, 409, { error: `Tele đang hồi: chờ ${wait} giây.` }); return true; }
-      const why = teleRefusal(livePlayer(live, who), livePlayer(live, owner), s);
+      const why = teleRefusal(livePlayer(live, who), livePlayer(live, owner), s,
+        { me: ctx.store.player(who)?.player.species ?? null, target: ctx.store.player(owner)?.player.species ?? null });
       if (why !== null) { send(res, 409, { error: why }); return true; }
       const cmd = await queueTele(who, { target: owner, maxGrowth: s.maxGrowthPct / 100, targetMaxGrowth: s.targetMaxGrowthPct / 100,
         combatS: s.combatS, countdownS: s.countdownS, cooldownS: s.cooldownS });

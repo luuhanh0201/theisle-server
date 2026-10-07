@@ -1,13 +1,13 @@
 'use strict';
 /**
- * The launcher API for OUR pages only (portal/public/app.js, voice.js,
- * overlay-settings.js): window.isleLauncher. No Node, no files, no arbitrary IPC.
+ * The launcher API for OUR pages only (the player site, web/apps/portal): window.isleLauncher. No Node, no files,
+ * no arbitrary IPC.
  */
 const { contextBridge, ipcRenderer } = require('electron');
 
 const arg = (name) => (process.argv.find((a) => a.startsWith(`--${name}=`)) || '').slice(name.length + 3);
 const ORIGIN = arg('xomgay-origin');
-const KEYS = ['ptt', 'range', 'overlay', 'edit', 'bigmap'];
+const KEYS = ['ptt', 'range', 'mute', 'overlay', 'edit', 'bigmap'];
 
 if (ORIGIN !== '' && location.origin === ORIGIN) {
   const keyLabel = (name) => (KEYS.includes(name) ? ipcRenderer.sendSync('key:label', name) : '');
@@ -30,10 +30,14 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
     capturePttKey: () => captureKey('ptt'),
     rangeLabel: () => keyLabel('range'),
     captureRangeKey: () => captureKey('range'),
+    muteLabel: () => keyLabel('mute'),
+    captureMuteKey: () => captureKey('mute'),
     /** Called with true / false as the push-to-talk key is held / released, in game too. */
     onPushToTalk: (cb) => { if (typeof cb === 'function') ipcRenderer.on('ptt', (_e, held) => cb(held === true)); },
     /** Called each time the range key is pressed, in game too. */
     onRangeKey: (cb) => { if (typeof cb === 'function') ipcRenderer.on('range-key', () => cb()); },
+    /** Called each time the micro key is pressed (off / on), in game too. */
+    onMuteKey: (cb) => { if (typeof cb === 'function') ipcRenderer.on('mute-key', () => cb()); },
 
     /** Game mode: { on, keep: { voice, map, dino, quests } }, the launcher out of the way while playing. */
     gameModeGet: () => ipcRenderer.sendSync('gamemode:get'),

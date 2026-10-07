@@ -39,7 +39,8 @@ function Slot3D({ api, g }: { api: Dino3DApi | null; g: PlayerSlot }) {
   const key = JSON.stringify([g.species, g.skin]);
   useEffect(() => {
     if (!api || !box.current || !g.species || shown.current === key) return undefined;
-    viewer.current ??= api.create(box.current, { interactive: false, autoRotate: true, fit: 0.95 });
+    // Still (owner, 2026-10-07: shown, not turning): drawn once a model or a size changes, nothing every frame.
+    viewer.current ??= api.create(box.current, { interactive: false, still: true, fit: 0.95 });
     shown.current = key;
     let retry: number | undefined;
     void viewer.current.show(g.species, api.fromGame(g.skin) ?? { colors: {} }).catch(() => false)

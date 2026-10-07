@@ -18,7 +18,9 @@ const SNAP = `const t = (sel) => [...document.querySelectorAll(sel)].map((e) => 
 const COMPARE = (key) => `${SNAP}
   const old = JSON.parse(localStorage.getItem('${key}') ?? 'null');
   check('the old page was read', old !== null);
-  for (const k of Object.keys(snap)) check('same as before React: ' + k, JSON.stringify(snap[k]) === JSON.stringify(old?.[k]), { new: snap[k], old: old?.[k] });`;
+  // On purpose (owner, 2026-10-07): "Voice 3D" is "Voice".
+  const renamed = (v) => JSON.parse(JSON.stringify(v ?? null).replaceAll('Voice 3D', 'Voice'));
+  for (const k of Object.keys(snap)) check('same as before React: ' + k, JSON.stringify(snap[k]) === JSON.stringify(renamed(old?.[k])), { new: snap[k], old: old?.[k] });`;
 
 export default [
   {

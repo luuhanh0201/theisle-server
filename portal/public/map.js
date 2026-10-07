@@ -40,6 +40,23 @@ const fishName = (s) => FISH_VN[s] ?? s ?? 'Cá';
 const TWEEN_MS = 900;
 const COLOR = '#34d399';
 
+// --- how often the page's map is drawn (owner, 2026-10-07: "tối ưu hơn chứ không phải tệ hơn") -------------------
+// Gliding after your dino (TWEEN_MS for each second's position) drew every screen frame almost all the time, 33 to 53
+// a second: a frame at most every GLIDE_FRAME_MS while it glides (a drag or a zoom stays at full speed). In the
+// launcher, its window not focused (you are playing) and the mouse not over it lately: the page's map is not drawn at
+// all, it catches up when looked at again. The big map over the game (opts.overlay) and the overlay's mini map
+// (paintMini) are drawn as before.
+const GLIDE_FRAME_MS = 50;
+const POINTER_MS = 10000;
+let lastPointer = 0;
+if (typeof window !== 'undefined') {
+  for (const ev of ['pointermove', 'pointerdown', 'wheel', 'keydown']) {
+    window.addEventListener(ev, () => { lastPointer = Date.now(); }, { passive: true, capture: true });
+  }
+}
+const notLookedAt = () => document.hidden
+  || (Boolean(window.isleLauncher) && !document.hasFocus() && Date.now() - lastPointer > POINTER_MS);
+
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const unitsOf = (p) => [p.y / 1000, p.x / 1000];
 const hexA = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, '0');
@@ -239,6 +256,14 @@ export function createMap(root, opts = {}) {
   const rX = (r) => r / (st.data.bounds.maxX - st.data.bounds.minX) * st.img.naturalHeight * st.view.s;
   const rY = (r) => r / (st.data.bounds.maxY - st.data.bounds.minY) * st.img.naturalWidth * st.view.s;
   const draw = () => { if (!st.raf) st.raf = requestAnimationFrame(render); };
+  let lastFrame = 0;
+  let missed = false;   // a frame skipped while nobody looked: drawn when they do
+  if (!opts.overlay) {
+    const back = () => { if (missed) { missed = false; draw(); } };
+    window.addEventListener('focus', back);
+    window.addEventListener('pointermove', back, { passive: true });
+    document.addEventListener('visibilitychange', back);
+  }
   /** Screen point → world position (cm), the inverse of scr(unitsOf(p)). */
   const toWorld = (sx, sy) => {
     const b = st.data.bounds;
@@ -300,8 +325,12 @@ export function createMap(root, opts = {}) {
     return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
   }
 
-  function render() {
+  function render(now = performance.now()) {
     st.raf = 0;
+    if (!opts.overlay && notLookedAt()) { missed = true; return; }
+    // Gliding after the dino: at most one frame each GLIDE_FRAME_MS (the glide itself keeps asking).
+    if (!st.drag && !st.pinch && st.to && performance.now() - st.t0 < TWEEN_MS && now - lastFrame < GLIDE_FRAME_MS) { draw(); return; }
+    lastFrame = now;
     const cw = canvas.clientWidth, ch = canvas.clientHeight;
     if (!cw || !ch || !st.data) return;
     const dpr = window.devicePixelRatio || 1;

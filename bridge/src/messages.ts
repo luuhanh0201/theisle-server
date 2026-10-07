@@ -171,6 +171,7 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'tele.cooldown', group: 'tele', label: 'Tele đang hồi', default: 'Tele đang hồi: chờ {seconds} giây.', vars: ['seconds'] },
   { key: 'tele.tooBig', group: 'tele', label: 'Dino người dịch chuyển quá lớn', default: 'Chỉ dino từ {max}% tăng trưởng trở xuống mới tele được (dino của bạn {growth}%).', vars: ['max', 'growth'] },
   { key: 'tele.targetBig', group: 'tele', label: 'Dino người đưa mã quá lớn', default: 'Dino của người đưa mã đã lớn hơn {max}%: không tele tới được.', vars: ['max'] },
+  { key: 'tele.otherSpecies', group: 'tele', label: 'Khác loài với người đưa mã', default: 'Chỉ tele tới dino cùng loài.', vars: [] },
   { key: 'tele.targetGone', group: 'tele', label: 'Người đưa mã không còn trong game', default: 'Người đưa mã không còn trong game hoặc dino đã chết.', vars: [] },
   { key: 'tele.noDino', group: 'tele', label: 'Tele: chưa điều khiển dino', default: 'Bạn cần đang điều khiển một con dino còn sống để tele.', vars: [] },
   { key: 'tele.busy', group: 'tele', label: 'Đang có lần tele khác', default: 'Đang có một lần tele đếm ngược.', vars: [] },

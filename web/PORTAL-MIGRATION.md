@@ -368,3 +368,18 @@ inside the launcher, not from the portal: a separate decision.
   commands (portal-launcher-parity.mjs leaves those out in the launcher look; portal-gara.mjs still checks them on the web).
 - Overlay: game mode and the widgets on the left; the layout and the picked widget's settings on the right.
 - Checks: test/launcher-look.test.tsx (8), e2e portal-launcher.mjs (56), portal-launcher-parity.mjs (193), portal-frame.mjs.
+
+### More of the owner's changes, 2026-10-07 (launcher 1.0.38)
+
+- Tele con non only to a dino of the same species: the bridge refuses the code (player-api, the species from the
+  store), the mod checks the game's classes again (garage/tele.lua `other_species`, message `tele.otherSpecies`).
+- The launcher's look: the server's logo for its name; Trò chơi's side bar stays put and only the page scrolls
+  (`.lx-fixed`, `.lx-pages` scrolls); scroll bars in its colours (`::-webkit-scrollbar`, scrollbar-color left auto).
+- 3D: Live Monitor's card shows the dino played now (launcher's look), still: skin3d.js `still` draws only when
+  something changes (no turning, the animation on its first frame); the garage slots too.
+- Voice: the launcher's micro key (default F7, `muteKey`, lib/voice.ts toggleMic: off and back to the last mode);
+  the noise filter's default is Cơ bản (saved settings carry `v: 2`; an old saved AI moves once); keeping the voice
+  750 ms after it drops (was 450, the ends of words were cut) and push-to-talk 250 ms after the key.
+- The map (map.js): gliding after the dino draws at most 20 frames a second (it drew 33 to 53); not drawn at all
+  while the launcher is not looked at (unfocused, no mouse for 10 s); the big map and the overlay's mini map as before.
+  Measured (headless, 1 player in game): the map page 48 % → 17 % CPU focused, 10.9 % → 0.9 % unfocused.

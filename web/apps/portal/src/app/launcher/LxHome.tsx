@@ -4,7 +4,7 @@ import { RelBadge } from '../../components/RelBadge';
 import { useRewardActions } from '../../features/home/Rewards';
 import { Amber } from '../../lib/amber';
 import { useNews, useServer } from '../../lib/queries';
-import { RANGES, RANGE_NAMES, join, leaveByUser, setMaster, setMode, setRange, useVoice, type Mode } from '../../lib/voice';
+import { RANGES, RANGE_NAMES, join, leaveByUser, setMaster, setRange, toggleMic, useVoice } from '../../lib/voice';
 import { Svg } from '../shell/icons';
 import { goView } from './view';
 
@@ -29,9 +29,7 @@ function CardHead({ icon, title, sub, children }: { icon: React.ReactNode; title
 function VoiceBar({ me }: { me: PlayerMe | null | undefined }) {
   const v = useVoice();
   const s = v.settings;
-  const lastMode = useRef<Mode>(s.mode === 'off' ? 'ptt' : s.mode);
   const lastMaster = useRef(s.master > 0 ? s.master : 100);
-  if (s.mode !== 'off') lastMode.current = s.mode;
   if (s.master > 0) lastMaster.current = s.master;
   const nextRange = (): void => {
     const i = (RANGES as readonly number[]).indexOf(s.range);
@@ -65,7 +63,7 @@ function VoiceBar({ me }: { me: PlayerMe | null | undefined }) {
             ? <button type="button" className="lx-btn danger" id="lx-v-leave" onClick={() => { void leaveByUser(); }}>Rời phòng</button>
             : <button type="button" className="lx-btn primary" id="lx-v-join" disabled={v.joining} onClick={() => { void join(); }}>Vào phòng</button>)}
         <button type="button" className={`lx-icon-btn${s.mode === 'off' ? ' off' : ' on'}`} id="lx-v-mic" aria-pressed={s.mode !== 'off'}
-          title={s.mode === 'off' ? 'Micro đang tắt: bấm để bật' : 'Tắt micro'} onClick={() => setMode(s.mode === 'off' ? lastMode.current : 'off')}>
+          title={s.mode === 'off' ? 'Micro đang tắt: bấm để bật' : 'Tắt micro'} onClick={() => toggleMic()}>
           <svg {...ico} width="16" height="16"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" />{s.mode === 'off' && <line x1="3" y1="3" x2="21" y2="21" />}</svg>
         </button>
         <button type="button" className={`lx-icon-btn${s.master === 0 ? ' off' : ''}`} id="lx-v-sound" aria-pressed={s.master > 0}

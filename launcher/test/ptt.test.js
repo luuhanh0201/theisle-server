@@ -145,3 +145,24 @@ test('a lost release does not eat the next press (the overlay key worked every o
   timers.flush();
   assert.deepEqual(seen, [true, false, true, false]);
 });
+
+test('the micro key (F7 by default): a press, never one of the other keys', () => {
+  const { DEFAULT_MUTE, DEFAULT_PTT, DEFAULT_RANGE, distinctBindings } = require('../src/ptt.js');
+  assert.equal(DEFAULT_MUTE.code, UiohookKey.F7);
+  assert.equal(label(DEFAULT_MUTE, UiohookKey), 'F7');
+  const hook = new EventEmitter();
+  const timers = fakeTimers();
+  const presses = [];
+  new PushToTalk(hook, undefined, (d) => presses.push(d), DEFAULT_MUTE, Date.now, timers);
+  hook.emit('keydown', { keycode: UiohookKey.F7 });
+  hook.emit('keyup', { keycode: UiohookKey.F7 });
+  timers.flush();
+  assert.deepEqual(presses, [true, false]);
+  // Saved on the range key's key: it falls back to F7 (each key its own).
+  const b = distinctBindings([
+    { name: 'ptt', binding: undefined, fallback: DEFAULT_PTT },
+    { name: 'range', binding: undefined, fallback: DEFAULT_RANGE },
+    { name: 'mute', binding: DEFAULT_RANGE, fallback: DEFAULT_MUTE },
+  ]);
+  assert.notDeepEqual(b.mute, b.range);
+});

@@ -57,6 +57,10 @@ test('growth: at most the limit (40 % yes, 41 % no), for the one moving and the 
   assert.match(tele.teleRefusal(null, p(0.3), S), /trong game/);
   assert.match(tele.teleRefusal(p(0.3), null, S), /không ở trong game/);
   assert.equal(tele.teleRefusal(p(null), p(null), S), null, 'a growth live.json lacks: the mod decides');
+  // Only to a dino of the same species (owner, 2026-10-07); a species not known yet: the mod decides.
+  assert.match(tele.teleRefusal(p(0.3), p(0.3), S, { me: 'BP_Carnotaurus_C', target: 'BP_Tyrannosaurus_C' }), /cùng loài \(bạn: Carnotaurus, người đưa mã: Tyrannosaurus\)/);
+  assert.equal(tele.teleRefusal(p(0.3), p(0.3), S, { me: 'BP_Carnotaurus_C', target: 'BP_Carnotaurus_C' }), null);
+  assert.equal(tele.teleRefusal(p(0.3), p(0.3), S, { me: null, target: 'BP_Carnotaurus_C' }), null);
   assert.match(tele.codeRefusal(p(0.5), S), /lấy mã/);
   assert.equal(tele.codeRefusal(p(0.2), S), null);
 });

@@ -153,7 +153,9 @@ export default [
     path: '/next/#voice', init: INIT,
     run: `${STEPS}
       const old = JSON.parse(localStorage.getItem('e2e.old.voice') ?? '{}');
-      for (const k of ${JSON.stringify(KEYS)}) check('same as before React: ' + k, JSON.stringify(out[k]) === JSON.stringify(old[k]), { new: out[k], old: old[k] });`,
+      // On purpose (owner, 2026-10-07): the noise filter's default is Cơ bản, it was AI (here not runnable: its note).
+      const moved = (v) => JSON.parse(JSON.stringify(v ?? null).replace('Máy này không chạy được bộ lọc AI: đang dùng bộ lọc của trình duyệt.', 'Bộ lọc có sẵn của trình duyệt: nhẹ, lọc được tiếng ồn đều (quạt, điều hoà).').replace('"Mạnh (AI)"', '"Cơ bản"'));
+      for (const k of ${JSON.stringify(KEYS)}) check('same as before React: ' + k, JSON.stringify(out[k]) === JSON.stringify(moved(old[k])), { new: out[k], old: old[k] });`,
   },
   {
     name: 'Voice in React stays joined on another page (the menu dot, the room)',

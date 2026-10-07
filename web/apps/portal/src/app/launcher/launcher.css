@@ -31,6 +31,9 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
   box-shadow: 0 0 0 1px rgba(52, 211, 153, .35), 0 6px 18px rgba(16, 185, 129, .22);
 }
 .lx .lx-brand-txt { display: flex; flex-direction: column; min-width: 0; }
+/* The server's logo where its name was (owner, 2026-10-07). */
+.lx .lx-logo-img { width: 40px; height: 40px; border-radius: 50%; display: block; flex: none; object-fit: cover; box-shadow: 0 0 0 1px rgba(255, 255, 255, .12); }
+.lx .lx-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .lx .lx-brand-txt b { font-size: 14px; font-weight: 800; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
 .lx .lx-brand-txt small { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 
@@ -117,6 +120,14 @@ html.app-idle .lx .lx-pages > .page-content { animation: none !important; }
 .lx .lx-foot b { color: var(--text-muted); }
 .lx .lx-foot-r { font-family: var(--lx-mono); font-size: 11px; color: var(--emerald-light); opacity: .8; }
 
+/* Trò chơi (owner, 2026-10-07): the side bar stays put, only the page scrolls. The window's height is the frame's:
+   the bar on top, the side bar and the footer fixed, the page scrolling inside .lx-pages. */
+.lx.lx-fixed { height: 100vh; min-height: 0; overflow: hidden; }
+.lx.lx-fixed .lx-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 14px; }
+.lx.lx-fixed .lx-main > .lx-play { flex: 1; min-height: 0; height: auto; }
+.lx.lx-fixed .lx-play > .lx-pages { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; }
+.lx.lx-fixed .lx-play > .lx-side { position: static; height: 100%; min-height: 0; overflow-y: auto; }
+
 /* Trò chơi's side bar (owner, 2026-10-07): a light list beside the page, the whole height, no empty space. */
 .lx .lx-play { display: grid; grid-template-columns: 228px minmax(0, 1fr); gap: 18px; align-items: start; }
 .lx .lx-pages { min-width: 0; }
@@ -164,8 +175,9 @@ html.app-idle .lx .lx-pages > .page-content { animation: none !important; }
 .lx .lx-count.warn { background: rgba(245, 158, 11, .16); color: var(--amber-light); }
 .lx .lx-side-btn .rel-badge { margin: 0; }
 @media (max-width: 900px) {
-  /* A narrow window: the list across the top, wrapping (never cut off); the foot left out. */
+  /* A narrow window: the list across the top, wrapping (never cut off); the foot left out; the page scrolls under it. */
   .lx .lx-play { grid-template-columns: minmax(0, 1fr); }
+  .lx.lx-fixed .lx-main > .lx-play { grid-template-rows: auto minmax(0, 1fr); }
   .lx .lx-side { position: static; height: auto; min-height: 0; padding: 8px; }
   .lx .lx-side-head, .lx .lx-side-foot { display: none; }
   .lx .lx-side-list { flex-direction: row; flex-wrap: wrap; }
@@ -421,3 +433,17 @@ html.app-idle .lx .lx-pages > .page-content { animation: none !important; }
   .lx .lx-me-txt { display: none; }
   .lx .lx-foot { flex-direction: column; }
 }
+
+/* Scroll bars in the launcher's colours (owner, 2026-10-07: "không dùng thanh mặc định"). Electron is Chromium: the
+   ::-webkit-scrollbar rules (scrollbar-color would switch them off, so it is not set). */
+html.lx-ui ::-webkit-scrollbar { width: 10px; height: 10px; }
+html.lx-ui ::-webkit-scrollbar-track { background: transparent; }
+html.lx-ui ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, .22); border-radius: 99px; border: 3px solid transparent; background-clip: padding-box;
+}
+html.lx-ui ::-webkit-scrollbar-thumb:hover { background: rgba(52, 211, 153, .55); border: 2px solid transparent; background-clip: padding-box; }
+html.lx-ui ::-webkit-scrollbar-thumb:active { background: rgba(52, 211, 153, .8); border: 2px solid transparent; background-clip: padding-box; }
+html.lx-ui ::-webkit-scrollbar-corner { background: transparent; }
+html.lx-ui ::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+/* A part of the site's stylesheet that sets scrollbar-width / -color would switch the bars above off there. */
+html.lx-ui * { scrollbar-width: auto !important; scrollbar-color: auto !important; }

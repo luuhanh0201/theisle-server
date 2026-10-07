@@ -85,6 +85,9 @@ export function normaliseCode(raw: unknown): string | null {
   return c;
 }
 
+/** BP_Tyrannosaurus_C (or a class path) → Tyrannosaurus, for a message. */
+const speciesName = (c: string): string => (c.split('.').pop() ?? c).replace(/^BP_/, '').replace(/_C$/, '');
+
 /** A growth share 0–1 → whole % for a message. */
 const pct = (g: number): number => Math.floor(g * 100 + 1e-6);
 /** At most `maxPct` (40 % allowed at 40). */
@@ -94,9 +97,14 @@ export const growthAllowed = (growth: number, maxPct: number): boolean => growth
  * Why B (`me`) cannot be moved to A (`target`) now, by what live.json shows, or null. A growth
  * the file does not have is let through: the mod reads the game's own.
  */
-export function teleRefusal(me: LivePlayer | null, target: LivePlayer | null, s: TeleSettings): string | null {
+export function teleRefusal(me: LivePlayer | null, target: LivePlayer | null, s: TeleSettings,
+  species: { me: string | null; target: string | null } = { me: null, target: null }): string | null {
   if (me === null) return 'Bạn cần đang trong game, điều khiển một con dino.';
   if (target === null) return 'Người đưa mã đang không ở trong game.';
+  // Only to a dino of the same species (owner, 2026-10-07); the mod checks the game's own classes again.
+  if (species.me && species.target && species.me !== species.target) {
+    return `Chỉ tele tới dino cùng loài (bạn: ${speciesName(species.me)}, người đưa mã: ${speciesName(species.target)}).`;
+  }
   if (me.growth !== null && !growthAllowed(me.growth, s.maxGrowthPct)) {
     return `Chỉ dino từ ${s.maxGrowthPct}% tăng trưởng trở xuống mới tele được (dino của bạn ${pct(me.growth)}%).`;
   }
