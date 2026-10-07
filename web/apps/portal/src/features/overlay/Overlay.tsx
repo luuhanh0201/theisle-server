@@ -214,14 +214,15 @@ function Editor({ L }: { L: OverlayApi }) {
       <p className="v-note" id="ov-stage-note">Kéo một khung để di chuyển · rê chuột vào mép hoặc góc khung rồi kéo để phóng to / thu nhỏ · thả ở đâu cũng được, kể cả màn hình khác. Overlay thật di chuyển theo ngay.</p>
     </>
   );
-  const settings = (
-    <>
-      <div className="ov-tabs" role="tablist" id="ov-tabs">
+  const tabs = (
+    <div className="ov-tabs" role="tablist" id="ov-tabs">
         {WIDGETS.map(([id, label]) => (
           <button key={id} type="button" role="tab" data-tab={id} aria-selected={id === current} onClick={() => setCurrent(id)}>
             <span className={`st${all.widgets[id].enabled ? ' on' : ''}`} title={all.widgets[id].enabled ? 'đang bật' : 'đang tắt'} />{label}</button>
         ))}
-      </div>
+    </div>
+  );
+  const panel = (
       <div id="ov-panel">
         <div className="ov-panel-head">
           <span className="ov-switch"><Checkbox checked={w.enabled} label={`Hiện khung ${WIDGETS.find(([id]) => id === current)?.[1] ?? ''}`} onChange={(v) => change({ enabled: v })} /></span>
@@ -257,21 +258,22 @@ function Editor({ L }: { L: OverlayApi }) {
             <Checkbox key={k} checked={Boolean(w.show[k])} label={label} onChange={(v) => change({ show: { [k]: v } })} />
           ))}</div>}
       </div>
-    </>
   );
-  // The launcher's look (app/launcher/): the settings on the left, the layout on the right; the web's: one column.
+  // The launcher's look (app/launcher/): game mode and the widgets on the left; the layout and the picked widget's
+  // settings on the right, so neither side is left empty (owner, 2026-10-07). The web's: one column, as before.
   return launcherUi() ? (
     <Card app top={top}>
       <div className="ov-lx">
-        <div className="ov-lx-l">{gmBlock}{settings}</div>
-        <div className="ov-lx-r">{stage}</div>
+        <div className="ov-lx-l">{gmBlock}{tabs}</div>
+        <div className="ov-lx-r"><div className="ov-stage-box">{stage}</div>{panel}</div>
       </div>
     </Card>
   ) : (
     <Card app top={top}>
       {gmBlock}
       {stage}
-      {settings}
+      {tabs}
+      {panel}
     </Card>
   );
 }

@@ -25,7 +25,7 @@ export function LauncherPromo() {
           <div className="lp-badge"><span className="lp-new">MỚI</span> Xóm Gáy Launcher <span id="lp-version">{typeof v?.version === 'string' ? `v${v.version}` : ''}</span></div>
           <h3 className="lp-title">Chơi trọn vẹn hơn với launcher của server</h3>
           <ul className="lp-feats">
-            <li>🎙️ Voice 3D: nói được cả khi đang tập trung ingame</li>
+            <li>🎙️ Voice: nói được cả khi đang tập trung ingame</li>
             <li>🗺️ Overlay mini map · 🦖 máu dino · 🏆 nhiệm vụ Prime</li>
             <li>🏡 Gara, bản đồ live, xếp hạng: một cú click</li>
           </ul>

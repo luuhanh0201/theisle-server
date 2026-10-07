@@ -100,6 +100,7 @@ writeFileSync(join(downloads, 'latest.yml'), 'version: 1.0.0\n');
 const bridge = {
   me: async (id) => { bridgeCalls.push(`me:${id}`); return { status: 200, body: { steamId: id, name: 'Me' } }; },
   leaderboard: async () => ({ status: 200, body: { kills: [] } }),
+  news: async () => { bridgeCalls.push('news'); return { status: 200, body: { items: [{ id: 'n_1', title: 'Bản 1.0', body: 'a', at: 1 }] } }; },
   server: async () => ({ status: 200, body: { online: 3, phase: 'running' } }),
   ai: async () => { bridgeCalls.push('ai'); return { status: 200, body: { t: 1, stale: false, count: 1, list: [{ s: 'Boar', x: 1, y: 2 }] } }; },
   aiZones: async () => ({ status: 200, body: { zones: [{ name: 'Đồng cỏ', x: 1, y: 2, radiusM: 300, species: ['Heo rừng'], count: 3 }] } }),
@@ -300,6 +301,13 @@ test('e2e only: with oldSiteDir the site before React is served at / (its own fi
     assert.match(await (await at('/tai.html')).text(), /old tai/, 'an old page of its own from there too');
     assert.equal((await at('/../package.json')).status, 404);
   } finally { srv.close(); }
+});
+
+test('Tin cập nhật: public (no login), from the bridge as it is', async () => {
+  const r = await get('/api/news');
+  assert.equal(r.status, 200);
+  assert.deepEqual((await r.json()).items.map((n) => n.title), ['Bản 1.0']);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], 'news');
 });
 
 test('writes to the API are not allowed', async () => {

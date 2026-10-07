@@ -11,11 +11,12 @@ export default [
       await h.until(() => h.$('.auth-name'));
       const labels = h.$$('.sidebar .nav-label').map((e) => e.textContent.trim());
       // Rex's bag is open, the shop shown (locked): local-portal.sh.
-      check('the menu entries', JSON.stringify(labels) === JSON.stringify(['Trang chủ', 'Dino Live Monitor', 'Bản đồ Gateway', 'Gara Khủng Long', 'Bảng Xếp Hạng', 'Skin Studio', 'Túi đồ', 'Cửa hàng', 'Voice 3D', 'Tải Launcher', 'Luật & Dinh Dưỡng']), labels);
+      check('the menu entries', JSON.stringify(labels) === JSON.stringify(['Trang chủ', 'Dino Live Monitor', 'Bản đồ Gateway', 'Gara Khủng Long', 'Bảng Xếp Hạng', 'Skin Studio', 'Túi đồ', 'Cửa hàng', 'Voice', 'Tải Launcher', 'Luật & Dinh Dưỡng']), labels);
       // The site before React has the same entries (less the overlay, launcher only, and the hidden tour button).
       const old = new DOMParser().parseFromString(await (await fetch('/')).text(), 'text/html');
-      const oldLabels = [...old.querySelectorAll('.sidebar .nav-btn:not(#nav-overlay):not(#sidebar-tour-btn) .nav-label')].map((e) => e.textContent.trim());
-      check('same entries as the site before React', JSON.stringify(labels) === JSON.stringify(oldLabels), oldLabels);
+      // "Voice 3D" is "Voice" since 2026-10-07 (owner): the one entry renamed on purpose.
+      const oldLabels = [...old.querySelectorAll('.sidebar .nav-btn:not(#nav-overlay):not(#sidebar-tour-btn) .nav-label')].map((e) => e.textContent.trim().replace(/^Voice 3D$/, 'Voice'));
+      check('same entries as the site before React (Voice renamed)', JSON.stringify(labels) === JSON.stringify(oldLabels), oldLabels);
       check('Trang chủ lit', h.$('.sidebar .nav-btn.active')?.dataset.nav === 'home');
       check('the garage badge (2 slots)', h.$('#nav-gara-badge')?.textContent === '2', h.$('#nav-gara-badge')?.textContent);
       check('LIVE dim (not in game)', !h.$('#nav-dino-badge').classList.contains('on'));

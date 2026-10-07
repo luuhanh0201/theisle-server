@@ -11,7 +11,7 @@ export const TOUR_STEPS: Array<{ badge: string; title: string; target: () => Ele
     tab: 'home',
     body: <>
       <p>Cổng thông tin &amp; Launcher tích hợp chuyên biệt cho The Isle Evrima Xóm Gáy.</p>
-      <p>Hệ thống hỗ trợ đầy đủ công cụ sinh tồn: Gara cất dino an toàn, Bản đồ Gateway Live với <b>Radar AI trực tiếp</b>, Voice 3D định hướng và Overlay HUD trong game.</p>
+      <p>Hệ thống hỗ trợ đầy đủ công cụ sinh tồn: Gara cất dino an toàn, Bản đồ Gateway Live với <b>Radar AI trực tiếp</b>, Voice định hướng và Overlay HUD trong game.</p>
       <p style={{ marginBottom: 0, color: 'var(--text-sub)', fontSize: 12 }}>💡 <i>Bạn có thể bấm <b>✕ Bỏ qua</b> ở góc bất kỳ lúc nào hoặc bấm phím <b>ESC</b> để đóng.</i></p>
     </>,
   },
@@ -41,8 +41,8 @@ export const TOUR_STEPS: Array<{ badge: string; title: string; target: () => Ele
     </>,
   },
   {
-    badge: 'Bước 4 / 5 · Voice 3D Không Gian',
-    title: '🎙️ Hệ Thống Voice 3D Không Gian',
+    badge: 'Bước 4 / 5 · Voice Không Gian',
+    title: '🎙️ Hệ Thống Voice Không Gian',
     target: () => document.querySelector('.nav-btn[data-nav="voice"]') || document.getElementById('lx-voice-chip'),
     tab: 'voice',
     body: <>

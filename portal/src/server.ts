@@ -23,6 +23,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   POST /auth/logout
  *   GET  /api/me                your dino, stats, lives, garage   (login)
  *   GET  /api/leaderboard       top players by name
+ *   GET  /api/news              the server's update notes, newest first (Tin cập nhật)
  *   GET  /api/server            online count, game up or not, name, slots, Discord
  *   GET  /api/ai                the AI alive on the server now          (login)
  *   GET  /api/heatmap           players per 500 m square, every 5 min   (login)
@@ -574,6 +575,8 @@ export function createPortal(opts: PortalOptions): Server {
         return;
       }
       if (path === '/api/leaderboard') { const r = await opts.bridge.leaderboard(); send(res, r.status, r.body); return; }
+      // Tin cập nhật on the launcher's Trang chủ: public, like the server's status.
+      if (path === '/api/news') { const r = await opts.bridge.news(); send(res, r.status, r.body); return; }
       if (path === '/api/server') { const r = await opts.bridge.server(); send(res, r.status, r.body); return; }
       send(res, 404, { error: 'not found' });
       return;

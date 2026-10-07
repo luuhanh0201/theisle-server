@@ -32,6 +32,7 @@ import { parseTrafficEvent, type Traffic } from './traffic.js';
 import { MUTATION_REFERENCE, findReference } from './mutation-reference.js';
 import { codeRefusal, normaliseCode, readTeleSettings, teleCodes, teleRefusal } from './tele.js';
 import { friendRef, friends, friendSpot, idOfRef, searchPlayers } from './friends.js';
+import { newsForPlayers, readNews } from './news.js';
 import { ACTIVE_SLOTS, DUPLICATE_UPGRADE, maxStacksOf, mutationPreview } from './mutation-tiers.js';
 
 /**
@@ -999,6 +1000,11 @@ export async function handlePlayerApi(
       // Who brought escaped inmates down (prison.ts).
       hunters: (ctx.prison?.hunters(20) ?? []).map((h) => ({ name: h.name, value: h.count })),
     });
+    return true;
+  }
+  if (path === '/player-api/news') {
+    // Tin cập nhật (news.ts): the newest notes the panel shows, for the launcher's Trang chủ.
+    send(res, 200, { items: newsForPlayers(await readNews()) });
     return true;
   }
   if (path === '/player-api/server') {

@@ -61,7 +61,7 @@ afterEach(() => { vi.unstubAllGlobals(); room = null; });
 const q = (c: HTMLElement, s: string) => c.querySelector(s) as HTMLElement;
 const shown = (c: HTMLElement, s: string) => !q(c, s).hidden;
 
-describe('Voice 3D', () => {
+describe('Voice', () => {
   it('a guest: the login card', async () => {
     resetVoiceForTests();
     api.me = 401;

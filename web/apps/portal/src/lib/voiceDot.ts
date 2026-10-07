@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * The dot beside Voice 3D in the menu (voice.js renderNav before React): green = working, amber =
+ * The dot beside Voice in the menu (voice.js renderNav before React): green = working, amber =
  * needs you, red = dropped; null = none. Set by the voice page, read by the menu.
  */
 export interface VoiceDot { kind: 'ok' | 'warn' | 'bad'; text: string }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import './launcher.css';
 import type { PlayerMe } from '@isle/api';
 import { RelBadge } from '../../components/RelBadge';
@@ -7,7 +7,6 @@ import { launcher, setLauncherUi, updateAction, updateLabel, useGameMode, useUpd
 import { useMe, useServer } from '../../lib/queries';
 import { useVoice } from '../../lib/voice';
 import { useVoiceDot } from '../../lib/voiceDot';
-import { Rules } from '../../features/home/Guide';
 import { Page } from '../../pages';
 import { CommandPalette } from '../CommandPalette';
 import { goTo } from '../router';
@@ -16,6 +15,7 @@ import { discordOk } from '../shell/Header';
 import { shopShown } from '../shell/Sidebar';
 import { DISCORD_PATH, Svg, type IconName } from '../shell/icons';
 import { Tour, useTour } from '../Tour';
+import { dinoCard } from '../../features/home/LauncherHub';
 import { LxHome } from './LxHome';
 import { firstPlay, goView, groupOf, useLxView, type LxGroup, type LxView } from './view';
 
@@ -24,17 +24,34 @@ function initials(name: string): string {
   return ((w[0]?.[0] ?? 'X') + (w[1]?.[0] ?? w[0]?.[1] ?? '')).toUpperCase();
 }
 
+/** The three parts on top; a light slides to the one picked (owner, 2026-10-07: "hiệu ứng chuyển menu"). */
 function TopNav({ group, me }: { group: LxGroup; me: PlayerMe | null | undefined }) {
   const playing = Boolean(me?.dino && me.online);
+  const nav = useRef<HTMLElement>(null);
+  const [glow, setGlow] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = nav.current;
+    if (!el) return undefined;
+    const place = (): void => {
+      const on = el.querySelector<HTMLElement>(`[data-lx-group="${group}"]`);
+      if (on) setGlow({ left: on.offsetLeft, width: on.offsetWidth });
+    };
+    place();
+    // The labels hide on a narrow window (the buttons change size): follow them.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [group]);
   const item = (g: LxGroup, icon: IconName, label: string, to: () => void, extra?: ReactNode) => (
-    <button type="button" className={`lx-tab${group === g ? ' on' : ''}`} data-lx-group={g} aria-current={group === g ? 'page' : undefined} onClick={to}>
-      <Svg name={icon} size={16} /><span>{label}</span>{extra}
+    <button type="button" className={`lx-tab${group === g ? ' on' : ''}`} data-lx-group={g} aria-current={group === g ? 'page' : undefined} title={label} onClick={to}>
+      <Svg name={icon} size={16} /><span className="lx-tab-txt">{label}</span>{extra}
     </button>
   );
   return (
-    <nav className="lx-tabs" aria-label="Phần chính">
+    <nav className="lx-tabs" aria-label="Phần chính" ref={nav}>
+      {glow && <span className="lx-tab-glow" aria-hidden="true" style={{ transform: `translateX(${glow.left}px)`, width: glow.width }} />}
       {item('home', 'home', 'Trang Chủ', () => goView('home'))}
-      {item('play', 'game', 'Trò Chơi', () => goView(firstPlay(me)),
+      {item('play', 'game', 'Trò Chơi', () => goView(firstPlay()),
         <span className={`lx-live-dot${playing ? ' on' : ''}`} id="nav-dino-badge" title={playing ? 'Đang chơi một con dino' : 'Chưa vào game'} />)}
       {item('overlay', 'overlay', 'Overlay', () => goView('overlay'), <span className="lx-pill">HUD</span>)}
     </nav>
@@ -46,8 +63,8 @@ function VoiceChip({ view }: { view: LxView }) {
   const v = useVoice();
   return (
     <button type="button" className={`lx-chip lx-voice-chip${v.connected ? ' on' : ''}${view === 'voice' ? ' here' : ''}`} id="lx-voice-chip"
-      title={dot?.text ?? 'Voice 3D: chưa vào phòng'} onClick={() => goView('voice')}>
-      <Svg name="voice" size={14} /><span>Voice 3D</span>
+      title={dot?.text ?? 'Voice: chưa vào phòng'} onClick={() => goView('voice')}>
+      <Svg name="voice" size={14} /><span className="lx-chip-txt">Voice</span>
       {dot && <span className={`nav-voice-dot ${dot.kind}`} id="nav-voice-dot" role="img" aria-label={dot.text} />}
     </button>
   );
@@ -59,7 +76,7 @@ function SlotsChip() {
   return (
     <span className={`lx-chip lx-slots${up && srv.phase === 'running' ? ' up' : ''}`} id="sidebar-slots" title="Người chơi trên server">
       <i className="lx-dot" />
-      <b className="tabular-nums">{srv === undefined ? 'Server Gateway Live' : up ? `${srv.online ?? 0}/${srv.maxPlayers ?? 100} slot` : '0/100 slot'}</b>
+      <b className="tabular-nums">{srv === undefined ? '-' : up ? `${srv.online ?? 0}/${srv.maxPlayers ?? 100}` : '0/100'}<span className="lx-slot-word"> slot</span></b>
       <span className="lx-ping">24ms</span>
     </span>
   );
@@ -136,37 +153,43 @@ function Account({ me, onTour }: { me: PlayerMe | null | undefined; onTour: () =
   );
 }
 
-/** Trò chơi's own bar: the bag, the garage, map and live, the shop, Skin Studio, the rankings, the rules. */
-function PlayBar({ view, me }: { view: LxView; me: PlayerMe | null | undefined }) {
+/**
+ * Trò chơi's side bar (owner, 2026-10-07): the pages of Trò chơi, a light list beside the page (the menu is the bar on top),
+ * in this order: Live Monitor, Live map & bạn bè, Gara, Skin, Bảng xếp hạng, Túi đồ, Cửa hàng; the whole height,
+ * the dino played now and the Hổ phách at its foot. No Luật & Dinh Dưỡng.
+ */
+function PlaySide({ view, me }: { view: LxView; me: PlayerMe | null | undefined }) {
   const rel = me?.releases ?? {};
   const items = Array.isArray(me?.items) ? me.items.length : 0;
   const friends = me?.friends && !me.friends.locked ? me.friends.incoming ?? 0 : 0;
-  const btn = (to: LxView, on: boolean, icon: IconName, label: string, extra?: ReactNode) => (
-    <button type="button" className={`lx-sub${on ? ' on' : ''}`} data-lx-nav={to} aria-current={on ? 'page' : undefined} onClick={() => goView(to)}>
-      <Svg name={icon} size={15} /><span>{label}</span>{extra}
+  const playing = Boolean(me?.dino && me.online);
+  const dino = dinoCard(me);
+  const btn = (to: LxView, icon: IconName, label: string, extra?: ReactNode) => (
+    <button type="button" className={`lx-side-btn${view === to ? ' on' : ''}`} data-lx-nav={to} aria-current={view === to ? 'page' : undefined} onClick={() => goView(to)}>
+      <Svg name={icon} size={16} /><span className="lx-side-txt">{label}</span>{extra}
     </button>
   );
   return (
-    <div className="lx-subbar" role="tablist" aria-label="Trò chơi">
-      {me?.bag && btn('bag', view === 'bag', 'bag', 'Túi Đồ', <><RelBadge b={rel['bag']} nav />{items > 0 && <span className="lx-count" id="nav-bag-badge">{items}</span>}</>)}
-      {btn('gara', view === 'gara', 'gara', 'Gara Khủng Long', <span className="lx-count" id="nav-gara-badge">{me?.garage.length ?? 0}</span>)}
-      {btn(view === 'game' ? 'game' : 'map', view === 'map' || view === 'game', 'map', 'Bản Đồ & Live Monitor',
-        <><span className="lx-live">Live</span>{friends > 0 && <span className="lx-count warn" id="nav-map-badge" title="Lời mời kết bạn">{friends}</span>}</>)}
-      {shopShown(me) && btn('shop', view === 'shop', 'shop', 'Cửa Hàng', <RelBadge b={rel['shop']} nav />)}
-      {btn('skin', view === 'skin', 'skin', 'Skin Studio', <span className="lx-new">Mới</span>)}
-      {btn('ranking', view === 'ranking', 'ranking', 'Bảng Xếp Hạng')}
-      {btn('rules', view === 'rules', 'book', 'Luật & Dinh Dưỡng')}
-    </div>
-  );
-}
-
-/** Bản đồ or Dino Live, the two halves of "Bản Đồ & Live Monitor". */
-function LiveSwitch({ view }: { view: LxView }) {
-  return (
-    <div className="lx-seg" role="tablist" aria-label="Bản đồ hoặc Dino Live">
-      <button type="button" className={view === 'map' ? 'on' : ''} data-lx-live="map" onClick={() => goView('map')}><Svg name="map" size={14} /> Bản đồ Gateway</button>
-      <button type="button" className={view === 'game' ? 'on' : ''} data-lx-live="game" onClick={() => goView('game')}><Svg name="game" size={14} /> Dino Live Monitor</button>
-    </div>
+    <aside className="lx-side">
+      <div className="lx-side-head">Trò chơi</div>
+      <nav className="lx-side-list" aria-label="Trò chơi">
+        {btn('game', 'game', 'Live Monitor', <span className={`lx-live${playing ? '' : ' off'}`} id="nav-dino-live">Live</span>)}
+        {btn('map', 'map', 'Live Map & Bạn Bè', friends > 0 ? <span className="lx-count warn" id="nav-map-badge" title="Lời mời kết bạn">{friends}</span> : undefined)}
+        {btn('gara', 'gara', 'Gara', <span className="lx-count" id="nav-gara-badge">{me?.garage.length ?? 0}</span>)}
+        {btn('skin', 'skin', 'Skin')}
+        {btn('ranking', 'ranking', 'Bảng Xếp Hạng')}
+        {me?.bag && btn('bag', 'bag', 'Túi Đồ', <><RelBadge b={rel['bag']} nav />{items > 0 && <span className="lx-count" id="nav-bag-badge">{items}</span>}</>)}
+        {shopShown(me) && btn('shop', 'shop', 'Cửa Hàng', <RelBadge b={rel['shop']} nav />)}
+      </nav>
+      <div className="lx-side-foot">
+        <button type="button" className={`lx-side-dino${playing ? ' on' : ''}`} id="lx-side-dino" onClick={() => goView('game')} title="Mở Live Monitor">
+          <span className="lx-side-dino-top"><b>{dino.species}</b><span className="lx-side-dino-pct">{playing ? dino.pct : ''}</span></span>
+          <span className="lx-bar thin"><i style={{ width: dino.width }} /></span>
+          <span className="lx-side-dino-st">{playing ? 'Đang chơi' : dino.badge.replace(/^[○●]\s*/, '')}</span>
+        </button>
+        {me?.economy && <div className="lx-side-amber"><span>Hổ phách</span><Amber n={me.economy.balance} /></div>}
+      </div>
+    </aside>
   );
 }
 
@@ -224,17 +247,20 @@ export function LauncherShell() {
         </header>
         <main className={`lx-main page-container lx-g-${group}`}>
           <div id="error" className="err" hidden={error === null}>{error}</div>
-          {group === 'play' && <PlayBar view={view} me={me} />}
-          {(view === 'map' || view === 'game') && <LiveSwitch view={view} />}
-          {pages.map((t) => (
-            <section key={t} id={`page-${t}`} className="page-content" hidden={t !== view}>
-              {t === 'home' ? <LxHome me={me} /> : t === 'rules' ? <Rules /> : <Page tab={t} />}
-            </section>
-          ))}
+          <div className={group === 'play' ? 'lx-play' : undefined}>
+            {group === 'play' && <PlaySide view={view} me={me} />}
+            <div className="lx-pages">
+              {pages.map((t) => (
+                <section key={t} id={`page-${t}`} className="page-content" hidden={t !== view}>
+                  {t === 'home' ? <LxHome me={me} /> : <Page tab={t} />}
+                </section>
+              ))}
+            </div>
+          </div>
         </main>
         <footer className="lx-foot">
           <span><b>{name}</b> · The Isle Evrima Dedicated Server</span>
-          <span className="lx-foot-r">Voice 3D · Unreal Engine 5.6 · 60 TPS</span>
+          <span className="lx-foot-r">Voice · Unreal Engine 5.6 · 60 TPS</span>
         </footer>
       </div>
       <CommandPalette onTour={tour.start} />

@@ -33,7 +33,7 @@ html.classList.toggle('lab', isLab());
 try { navigator.sendBeacon?.('/api/track/view', '{}'); } catch { /* not counted */ }
 
 // Proximity voice for the whole visit (voice.js before React loaded with the page): the keys, the launcher's
-// push-to-talk, window.isleVoice; the room is joined from Voice 3D and stays on every page.
+// push-to-talk, window.isleVoice; the room is joined from Voice and stays on every page.
 startVoice();
 // The launcher's overlay (its widgets' data, the mini map, the big map), whatever page is shown.
 startOverlay(queryClient);

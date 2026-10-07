@@ -73,7 +73,7 @@ export function Tai() {
           <div>
             <span className="hero-badge-pill">🚀 ỨNG DỤNG MÁY TÍNH CHÍNH THỨC</span>
             <h1>Xóm Gáy Launcher</h1>
-            <p>Trọn vẹn tính năng Cổng Người Chơi trong một ứng dụng: Tích hợp <b>Voice 3D cự ly</b>, <b>Overlay HUD</b> đè màn hình và tự động kết nối game.</p>
+            <p>Trọn vẹn tính năng Cổng Người Chơi trong một ứng dụng: Tích hợp <b>Voice cự ly</b>, <b>Overlay HUD</b> đè màn hình và tự động kết nối game.</p>
             <div><span id="version">{version}</span></div>
           </div>
         </section>
@@ -157,7 +157,7 @@ export function Tai() {
           <div className="card">
             <h3>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-              <span>Voice 3D Không Cần Discord</span>
+              <span>Voice Không Cần Discord</span>
             </h3>
             <p>Giữ phím nói (mặc định phím <b>V</b> hoặc gán nút chuột). Âm thanh định hướng 3D theo cự ly <b>15m / 30m / 60m / 90m</b>, hoạt động trơn tru ngay cả khi đang trong trận.</p>
           </div>

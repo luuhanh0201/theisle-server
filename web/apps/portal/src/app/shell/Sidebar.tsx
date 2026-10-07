@@ -103,7 +103,7 @@ export function Sidebar({ me }: { me: PlayerMe | null | undefined }) {
 
           <div className="nav-group">
             <div className="nav-group-title">Công cụ tiện ích</div>
-            <NavBtn tab="voice" icon="voice" label="Voice 3D" title="Voice 3D">
+            <NavBtn tab="voice" icon="voice" label="Voice" title="Voice">
               {voice && <span className={`nav-voice-dot ${voice.kind}`} id="nav-voice-dot" role="img" title={voice.text} aria-label={voice.text} />}
             </NavBtn>
             {/* The overlay is the launcher's: its page only shows there. */}

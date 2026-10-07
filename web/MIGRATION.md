@@ -19,7 +19,7 @@ this file, and push after each block.
 
 | Block | Sub-pages in React | Block page | e2e flow |
 |---|---|---|---|
-| Tính năng mod | Lệnh chat, Ptera gắp, Tele con non, Voice gần, Thông báo (all) | `pages/mods/ModsPage.tsx` | `e2e/flows/mods.mjs` (28 checks) |
+| Tính năng mod | Lệnh chat, Ptera gắp, Tele con non, Voice gần, Thông báo, Tin cập nhật (new 2026-10-07: the launcher's Trang chủ notes, bridge news.ts) (all) | `pages/mods/ModsPage.tsx` | `e2e/flows/mods.mjs` (29 checks) |
 | Thế giới | Tổng quan, Thực vật, Cá (all) | `pages/world/WorldPage.tsx` | `e2e/flows/world.mjs` (20) |
 | Gara | Dino & tạo dino, Cài đặt gara (all) | `pages/garage/GaragePage.tsx` | `e2e/flows/garage.mjs` (20) |
 | Thành viên | Admin, Phân quyền, Whitelist, VIP, SVip (all) | `pages/members/MembersPage.tsx` | `e2e/flows/members.mjs` (17) |

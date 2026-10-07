@@ -61,6 +61,7 @@ import { readFlora } from './flora.js';
 import { readFloraSettings, saveFloraSettings } from './flora-settings.js';
 import { FISH_SPECIES, currentDisallowed, readFishCensus, readFishSettings, saveFish } from './fish-settings.js';
 import { MESSAGES, currentMessages, renderMessage, saveMessages, type MessagesSettings } from './messages.js';
+import { NEWS_LIMITS, describeNewsChanges, readNews, saveNews } from './news.js';
 import { MUTATION_REFERENCE, REFERENCE_CHECKED, SOURCES, findReference } from './mutation-reference.js';
 import {
   listAll,
@@ -652,6 +653,7 @@ async function handlePanel(
       (path === '/api/ai-zones' && req.method === 'PUT') ||
       (path === '/api/ai-drop' && req.method === 'POST') ||
       (path === '/api/messages' && req.method === 'PUT') ||
+      (path === '/api/news' && req.method === 'PUT') ||
       (path === '/api/ptera-carry' && req.method === 'PUT') ||
       (path === '/api/tele-settings' && req.method === 'PUT') ||
       (path === '/api/zone-guard' && req.method === 'PUT') ||
@@ -841,6 +843,14 @@ async function handlePanel(
       const before = await readTeleSettings();
       const saved = await saveTeleSettings(await readJsonBody(req));
       await audit({ action: 'Tele settings saved', detail: describeChanges({ ...before }, { ...saved }) || 'không đổi gì', ok: true });
+      sendJson(res, 200, saved);
+      return;
+    }
+
+    if (path === '/api/news') {
+      const before = await readNews();
+      const saved = await saveNews(await readJsonBody(req));
+      await audit({ action: 'news saved', detail: describeNewsChanges(before, saved) || 'không đổi gì', ok: true });
       sendJson(res, 200, saved);
       return;
     }
@@ -1550,6 +1560,10 @@ async function handlePanel(
       sendJson(res, 200, { ...currentMessages(), catalog: MESSAGES });
       return;
     }
+    case '/api/news':
+      // Tin cập nhật (news.ts): every note, shown or hidden, and the limits the form keeps.
+      sendJson(res, 200, { ...(await readNews()), limits: NEWS_LIMITS });
+      return;
     case '/api/ai-drop': {
       // The mod's outcome for a drop (null while it has not run it yet).
       const id = Number(url.searchParams.get('id'));

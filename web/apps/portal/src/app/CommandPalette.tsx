@@ -22,8 +22,8 @@ export const PALETTE: Item[] = [
   page('gara', 'Gara Khủng Long', 'Kho lưu trữ an toàn, cất và lấy dino chơi', 'gara'),
   page('ranking', 'Bảng Xếp Hạng & Chiến Tích', 'Top hạ gục, kỷ lục sống lâu, lịch sử sinh tồn', 'ranking'),
   page('skin', 'Skin Studio', 'Phối màu 10 phân vùng khủng long, xuất mã màu ingame', 'skin'),
-  page('voice', 'Voice 3D', 'Đàm thoại định hướng 3D theo khoảng cách trong game', 'voice'),
-  { id: 'action-tour', cat: 'pages', catName: 'Hành động nhanh', title: 'Tour Hướng Dẫn Tính Năng & Bản Đồ AI', desc: 'Bắt đầu chuyến tham quan các tính năng Gara, Bản đồ AI trực tiếp, Voice 3D và Overlay', badge: 'Tour', run: { tour: true } },
+  page('voice', 'Voice', 'Đàm thoại định hướng 3D theo khoảng cách trong game', 'voice'),
+  { id: 'action-tour', cat: 'pages', catName: 'Hành động nhanh', title: 'Tour Hướng Dẫn Tính Năng & Bản Đồ AI', desc: 'Bắt đầu chuyến tham quan các tính năng Gara, Bản đồ AI trực tiếp, Voice và Overlay', badge: 'Tour', run: { tour: true } },
   page('overlay', 'Game Overlay HUD', 'Cấu hình khung đè mini map, vitals lên màn hình', 'overlay'),
   // 2. Tra cứu loài khủng long
   species('carno', 'Carnotaurus (Carno)', 'Ăn thịt · Tốc độ phi nước đại cực nhanh, cú húc sừng tàn khốc', 'Ăn thịt', 'Carnotaurus'),

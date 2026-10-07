@@ -353,3 +353,18 @@ session has no display); try both before telling players.
 
 The launcher's own local pages (`launcher/src/gate.html`, `splash.html`, `overlay.html` widgets) ship
 inside the launcher, not from the portal: a separate decision.
+
+## The launcher's look, owner's changes of 2026-10-07 (launcher 1.0.37)
+
+- The bar on top is always one line: on a narrower window the words go (Voice an icon from 1180 px, the account name and
+  "slot" from 1000, the parts' labels from 860, the slots and version chips from 600 unless an update is ready); a light
+  slides to the part picked; a page shown fades in (not while the window is unfocused: html.app-idle pauses animations).
+- "Voice 3D" is "Voice" everywhere players read it (the web look too; portal-frame.mjs maps the old label).
+- Trang chủ: no live dino card; Tin cập nhật (bridge news.ts, panel Tính năng mod → Tin cập nhật, GET /api/news); the
+  check-in in Hổ phách only; the two cards of each row as wide and as tall as each other (two columns down to 900 px).
+- Trò chơi: a light side bar the whole height (Live Monitor, Live Map & Bạn Bè, Gara, Skin, Bảng Xếp Hạng, Túi Đồ,
+  Cửa Hàng; the dino played now and the Hổ phách at its foot), no Luật & Dinh Dưỡng (#rules is no page there); Trò chơi
+  opens Live Monitor: tele and prime side by side (prime compact, two columns), the counts last; Gara without the chat
+  commands (portal-launcher-parity.mjs leaves those out in the launcher look; portal-gara.mjs still checks them on the web).
+- Overlay: game mode and the widgets on the left; the layout and the picked widget's settings on the right.
+- Checks: test/launcher-look.test.tsx (8), e2e portal-launcher.mjs (56), portal-launcher-parity.mjs (193), portal-frame.mjs.

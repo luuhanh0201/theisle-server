@@ -12,7 +12,7 @@ const HELP = `
   const txt = (s) => (typeof s === 'string' ? h.$(s) : s)?.innerText?.replace(/\\s+/g, ' ').trim() ?? '';
   const shown = (s) => !!h.$(s) && h.$(s).getClientRects().length > 0 && !h.$(s).closest('[hidden]');
   const toast = () => h.$('#global-toast')?.textContent ?? '';
-  const page = () => h.$$('main > section.page-content').filter((s) => !s.hidden).map((s) => s.id).join(',');
+  const page = () => h.$$('main section.page-content').filter((s) => !s.hidden).map((s) => s.id).join(',');
   const vis = (s) => !!h.$(s) && !h.$(s).hidden;`;
 
 export default [
@@ -55,27 +55,31 @@ export default [
     run: `${HELP}
       await h.until(() => h.$('.lx-me'), 8000);
       h.click('[data-lx-group=play]');
-      await h.until(() => location.hash === '#bag' && vis('#page-bag'), 12000);
-      check('Trò chơi opens the bag (Rex has one)', h.$('.lx-tab.on')?.dataset.lxGroup === 'play');
-      check('its bar', h.$$('.lx-sub').map((b) => b.dataset.lxNav).join(',') === 'bag,gara,map,shop,skin,ranking,rules', h.$$('.lx-sub').map((b) => b.dataset.lxNav));
-      const seen = [];
-      for (const to of ['gara', 'map', 'shop', 'skin', 'ranking', 'rules', 'bag']) {
-        h.click('[data-lx-nav=' + to + ']');
-        await h.until(() => location.hash === '#' + to && vis('#page-' + to), 12000);
-        seen.push([to, page(), h.$('.lx-sub.on')?.dataset.lxNav]);
-      }
-      check('each page shown alone, its tab lit', seen.every(([to, p, on]) => p === 'page-' + to && on === to), seen);
-      check('the rules page', !!h.$('#page-rules #server-rules-section'));
-      h.click('[data-lx-nav=map]'); await h.until(() => location.hash === '#map' && h.$('[data-lx-live=game]'));
-      h.click('[data-lx-live=game]');
       await h.until(() => location.hash === '#game' && vis('#page-game'), 12000);
-      check('Dino Live under Bản đồ & Live Monitor', h.$('.lx-sub.on')?.dataset.lxNav === 'game' && h.$('[data-lx-live=game]').className === 'on');
+      check('Trò chơi opens Live Monitor', h.$('.lx-tab.on')?.dataset.lxGroup === 'play');
+      // Its side bar (owner, 2026-10-07): the order asked, no Luật & Dinh Dưỡng; the light under the part picked.
+      check('its side bar, in order', h.$$('.lx-side-btn').map((b) => b.dataset.lxNav).join(',') === 'game,map,gara,skin,ranking,bag,shop', h.$$('.lx-side-btn').map((b) => b.dataset.lxNav));
+      check('no Luật & Dinh Dưỡng', !document.body.textContent.includes('Luật & Dinh Dưỡng'));
+      await h.sleep(500);
+      check('the light under Trò chơi (slid there)', (() => { const g = h.$('.lx-tab-glow').getBoundingClientRect(); const t = h.$('.lx-tab.on').getBoundingClientRect(); return Math.abs(g.left - t.left) < 2 && Math.abs(g.width - t.width) < 2; })());
+      check('Live Monitor: tele and prime in one row', !!h.$('#page-game .lx-cols-2 #game-prime-card') && !!h.$('#page-game .lx-cols-2 #game-tele-card'));
+      const seen = [];
+      for (const to of ['map', 'gara', 'skin', 'ranking', 'bag', 'shop', 'game']) {
+        h.click('.lx-side [data-lx-nav=' + to + ']');
+        await h.until(() => location.hash === '#' + to && vis('#page-' + to), 12000);
+        seen.push([to, page(), h.$('.lx-side-btn.on')?.dataset.lxNav]);
+      }
+      check('each page shown alone, its entry lit', seen.every(([to, p, on]) => p === 'page-' + to && on === to), seen);
+      check('Gara without the chat commands', !h.$('#page-gara').textContent.includes('Các Lệnh Chat Trực Tuyến'));
+      location.hash = 'rules'; await h.sleep(300);
+      check('the old #rules address: no page of its own', !h.$('#page-rules'));
+      location.hash = 'game'; await h.until(() => vis('#page-game'), 3000);
       h.click('[data-lx-group=overlay]');
       await h.until(() => location.hash === '#overlay' && vis('#page-overlay'), 12000);
       check('Overlay HUD', h.$('.lx-tab.on')?.dataset.lxGroup === 'overlay');
       h.click('#lx-voice-chip');
       await h.until(() => location.hash === '#voice' && vis('#page-voice'), 12000);
-      check('the voice chip opens Voice 3D (under Trang chủ)', h.$('.lx-tab.on')?.dataset.lxGroup === 'home' && h.$('#lx-voice-chip').classList.contains('here'));
+      check('the voice chip (Voice) opens Voice (under Trang chủ)', h.$('.lx-tab.on')?.dataset.lxGroup === 'home' && h.$('#lx-voice-chip').classList.contains('here') && txt('#lx-voice-chip') === 'Voice');
       // The tray's "Cài đặt overlay" and the old voice address: location.hash = 'overlay' / 'voice' (launcher main.js).
       location.hash = 'overlay'; await h.until(() => vis('#page-overlay'), 3000);
       location.hash = 'voice'; await h.until(() => vis('#page-voice'), 3000);
@@ -93,7 +97,7 @@ export default [
       h.type('#cmd-search-input', 'gara'); await h.sleep(80);
       h.click('.cmd-item[data-cmd-id="page-gara"]');
       await h.until(() => location.hash === '#gara' && vis('#page-gara'), 3000);
-      check('the palette goes to Gara', h.$('.lx-sub.on')?.dataset.lxNav === 'gara');
+      check('the palette goes to Gara', h.$('.lx-side-btn.on')?.dataset.lxNav === 'gara');
       h.click('.lx-me'); await h.sleep(80); h.click('#tour-btn');
       await h.until(() => !h.$('#tour-backdrop').hidden, 3000); await h.sleep(200);
       const steps = [];
@@ -107,7 +111,7 @@ export default [
       check('done', h.$('#tour-backdrop').hidden);`,
   },
   {
-    name: 'the voice bar: join, the range, the micro, the sound, leave (the same room as Voice 3D)',
+    name: 'the voice bar: join, the range, the micro, the sound, leave (the same room as Voice)',
     path: '/next/#home', init: `${UI} ${VOICE_STUB}`,
     run: `${HELP}
       await h.until(() => h.$('#lx-v-join'), 8000);
@@ -115,7 +119,7 @@ export default [
       h.click('#lx-v-join');
       await h.until(() => txt('#lx-v-state') === '● Đang trực tuyến', 8000);
       check('in the room', !!h.$('#lx-v-leave'));
-      check('the same room on Voice 3D', h.$('#v-leave') === null || true);
+      check('the same room on Voice', h.$('#v-leave') === null || true);
       const r0 = txt('#lx-v-range');
       h.click('#lx-v-range'); await h.sleep(300);
       check('the next range, sent to the server', txt('#lx-v-range') === 'Tầm nói: Nói to (60m)' && window.__voice.ranges.includes(60), [r0, txt('#lx-v-range'), window.__voice.ranges]);
@@ -138,7 +142,7 @@ export default [
       check('the sound off, then back', m0 === 0 && m1 === 100, [m0, m1]);
       h.click('#lx-v-settings');
       await h.until(() => location.hash === '#voice' && vis('#page-voice'), 3000);
-      check('Cài đặt mở rộng: Voice 3D, still joined', !h.$('#v-leave').hidden);
+      check('Cài đặt mở rộng: Voice, still joined', !h.$('#v-leave').hidden);
       h.click('#v-leave');
       await h.until(() => !h.$('#v-join').hidden, 12000);
       location.hash = 'home'; await h.until(() => h.$('#lx-v-join'), 3000);
@@ -157,8 +161,8 @@ export default [
       await h.until(() => h.$('.lx-guest'), 8000);
       check('Đăng nhập Steam', h.$('#auth-actions a')?.getAttribute('href') === '/auth/steam');
       h.click('[data-lx-group=play]');
-      await h.until(() => location.hash === '#gara', 3000);
-      check('no bag for a guest: Trò chơi opens Gara', !h.$('[data-lx-nav=bag]'));`,
+      await h.until(() => location.hash === '#game', 3000);
+      check('a guest: Trò chơi opens Live Monitor, no bag in its side bar', !h.$('[data-lx-nav=bag]'));`,
   },
   {
     name: 'Trang chủ: check-in, a quest, the starter gift, the quest tabs (Live Tester)',
@@ -190,6 +194,10 @@ export default [
       check('starter toast (as the web)', /^✅ Đã nhận .+, xem trong Túi đồ$/.test(toast()), toast());
       await h.until(() => !h.$('#home-starter'), 12000);
       check('the gift is gone', true);
-      check('the dino card and the server', /Tyrannosaurus/.test(txt('#hub-dino-card')) && /Trạng thái/.test(txt('#lx-server')), [txt('#hub-dino-card'), txt('#lx-server')]);`,
+      check('no live dino card; Tin cập nhật and the server', !h.$('#hub-dino-card') && !!h.$('#lx-news') && /Trạng thái/.test(txt('#lx-server')), txt('#lx-news'));
+      check('the check-in in Hổ phách only (no diamond)', !h.$('#home-checkin').textContent.includes('💎'));
+      // The two cards of a row as wide and as tall as each other (owner, 2026-10-07).
+      const [a, b] = ['#home-checkin', '#home-quests'].map((q) => h.$(q).getBoundingClientRect());
+      check('check-in and quests: same width and height', Math.abs(a.width - b.width) < 2 && Math.abs(a.height - b.height) < 2, [a.width, b.width, a.height, b.height]);`,
   },
 ];

@@ -1,0 +1,9 @@
+.bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.list > li { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2, transparent); }
+.list > li.off { opacity: .6; }
+.head { display: flex; align-items: center; gap: 10px; }
+.title { flex: 1; min-width: 0; font-weight: 600; }
+.body { width: 100%; resize: vertical; }
+.del { color: var(--kill); flex: none; }
+@media (max-width: 480px) { .head { flex-wrap: wrap; } .title { flex-basis: 100%; order: 3; } }

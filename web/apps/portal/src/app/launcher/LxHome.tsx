@@ -2,10 +2,8 @@ import { useRef, useState } from 'react';
 import type { Checkin, PlayerMe, Quest } from '@isle/api';
 import { RelBadge } from '../../components/RelBadge';
 import { useRewardActions } from '../../features/home/Rewards';
-import { HUB_VITALS, dinoCard } from '../../features/home/LauncherHub';
 import { Amber } from '../../lib/amber';
-import { heroTier, tierClasses } from '../../lib/dino';
-import { useServer } from '../../lib/queries';
+import { useNews, useServer } from '../../lib/queries';
 import { RANGES, RANGE_NAMES, join, leaveByUser, setMaster, setMode, setRange, useVoice, type Mode } from '../../lib/voice';
 import { Svg } from '../shell/icons';
 import { goView } from './view';
@@ -24,9 +22,9 @@ function CardHead({ icon, title, sub, children }: { icon: React.ReactNode; title
 }
 
 /**
- * The voice room in one bar (lib/voice.ts, the same room as Voice 3D): in or out, how far your voice carries (each
+ * The voice room in one bar (lib/voice.ts, the same room as Voice): in or out, how far your voice carries (each
  * click: the next range, as the range key), who speaks near you, the micro on / off (its mode kept), the sound on / off
- * (the volume kept), the full settings (Voice 3D).
+ * (the volume kept), the full settings (Voice).
  */
 function VoiceBar({ me }: { me: PlayerMe | null | undefined }) {
   const v = useVoice();
@@ -45,7 +43,7 @@ function VoiceBar({ me }: { me: PlayerMe | null | undefined }) {
     <section className="lx-card lx-voicebar" id="lx-voice">
       <span className="lx-ico lx-ico-lg"><svg {...ico} width="22" height="22"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg></span>
       <div className="lx-vb-main">
-        <div className="lx-eyebrow">VOICE 3D GATEWAY <span className={`lx-state${v.connected ? ' on' : ''}`} id="lx-v-state">● {status}</span></div>
+        <div className="lx-eyebrow">VOICE GATEWAY <span className={`lx-state${v.connected ? ' on' : ''}`} id="lx-v-state">● {status}</span></div>
         <button type="button" className="lx-vb-range" id="lx-v-range" title="Đổi tầm nói (như phím đổi tầm)" disabled={!v.connected} onClick={nextRange}>
           Tầm nói: {RANGE_NAMES[s.range]} ({s.range}m)
         </button>
@@ -110,8 +108,8 @@ function CheckinCard({ c, locked, rel, busy, onCheckin, gift }: {
             <div key={n} className={`lx-day hr-day ${cls}`} title={isGift ? c.bonusItem ?? '' : undefined}>
               {cls === 'done' && <span className="lx-tick">✓</span>}
               <span className="lx-day-n">Ngày {n}</span>
-              <span className="lx-day-ico">{isGift ? '🎁' : '💎'}</span>
-              <span className="lx-day-v">{r > 0 ? <Amber n={r} sign="+" /> : isGift ? 'Quà' : '-'}</span>
+              <span className="lx-day-ico">{isGift ? '🎁' : r > 0 ? <img src="/amber.svg" alt="" title="Hổ phách" /> : null}</span>
+              <span className="lx-day-v">{r > 0 ? `+${r.toLocaleString('vi-VN')}` : isGift ? 'Quà' : '-'}</span>
             </div>
           );
         })}
@@ -175,38 +173,32 @@ function QuestsCard({ me, busy, onClaim }: { me: PlayerMe; busy: boolean; onClai
   );
 }
 
-/** The dino played now (as the web's launcher hub): its growth, the four vitals, prime. */
-function DinoCard({ me }: { me: PlayerMe | null | undefined }) {
-  const c = dinoCard(me);
-  const d = me?.online ? me.dino : null;
-  const tier = me ? tierClasses(heroTier(me.online && me.dino ? me.dino : null)) : '';
+/** Tin cập nhật (owner, 2026-10-07): the server's update notes from the panel, newest first, the first open. */
+function NewsCard() {
+  const items = useNews();
+  const [open, setOpen] = useState<string | null>(null);
+  const first = items?.[0]?.id ?? null;
+  const isOpen = (id: string): boolean => (open === null ? id === first : open === id);
   return (
-    <section className={`lx-card lx-dino${tier ? ` ${tier}` : ''}`} id="hub-dino-card">
-      <CardHead icon={<Svg name="game" size={18} />} title={<span id="hub-dino-species">{c.species}</span>} sub={<span id="hub-dino-status">{c.status}</span>}>
-        <span className={`lx-badge ${c.online ? 'on' : ''}`} id="hub-dino-badge">{c.badge}</span>
-      </CardHead>
-      <div className="lx-prog-row"><span id="hub-dino-growth" title={c.growthTitle}>{c.growth}</span><span className="tabular-nums" id="hub-growth-pct">{c.pct}</span></div>
-      <div className="lx-bar"><i id="hub-growth-fill" style={{ width: c.width }} /></div>
-      <div className="lx-vitals">
-        {HUB_VITALS.map(([k, label, color]) => {
-          const cur = d?.vitals?.[k];
-          const m = d?.max?.[k];
-          const w = typeof cur === 'number' && typeof m === 'number' && m > 0 ? `${Math.min(100, Math.max(0, Math.round(cur / m * 100)))}%` : '0%';
-          return (
-            <div key={k} className="lx-vital" data-v={k}>
-              <div><span><i style={{ background: color }} />{label}</span><b id={`hub-val-${k}`}>{typeof cur === 'number' ? Math.round(cur) : '--'}</b></div>
-              <div className="lx-bar thin"><i style={{ background: color, width: w }} /></div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="lx-dino-foot">
-        <span className="lx-prime" id="hub-prime-text">{c.prime.startsWith('👑') ? c.prime : `👑 ${c.prime}`}</span>
-        <button type="button" className="lx-link" onClick={() => goView('game')}>Xem đầy đủ chỉ số GAS &amp; Prime →</button>
-      </div>
+    <section className="lx-card lx-news" id="lx-news">
+      <CardHead icon={<svg {...ico} width="18" height="18"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z" /></svg>}
+        title="Tin Cập Nhật" sub="Các bản cập nhật của server, mới nhất ở trên" />
+      {items === undefined ? <p className="lx-empty">Đang tải…</p>
+        : items.length === 0 ? <p className="lx-empty">Chưa có tin cập nhật nào. Bản cập nhật tới sẽ được báo ở đây.</p>
+          : <ul className="lx-news-list">
+            {items.map((n) => (
+              <li key={n.id} className={isOpen(n.id) ? 'open' : ''}>
+                <button type="button" className="lx-news-head" aria-expanded={isOpen(n.id)} onClick={() => setOpen(isOpen(n.id) ? '' : n.id)}>
+                  <b>{n.title}</b><span className="lx-news-date">{newsDate(n.at)}</span>
+                </button>
+                {isOpen(n.id) && n.body && <p className="lx-news-body">{n.body}</p>}
+              </li>
+            ))}
+          </ul>}
     </section>
   );
 }
+const newsDate = (t: number): string => new Date(t * 1000).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** The server (app.js renderServer's data), as rows. */
 function ServerCard() {
@@ -233,8 +225,8 @@ function ServerCard() {
 }
 
 /**
- * Trang chủ of the launcher's look: the voice bar, the check-in, the quests, the dino played now, the server. The
- * same data and claims as the web's Trang chủ (Rewards: useRewardActions; the launcher hub: dinoCard).
+ * Trang chủ of the launcher's look: the voice bar, the check-in, the quests, Tin cập nhật, the server. The same data
+ * and claims as the web's Trang chủ (Rewards: useRewardActions). No live dino card (owner, 2026-10-07: Live Monitor has it).
  */
 export function LxHome({ me }: { me: PlayerMe | null | undefined }) {
   const { busy, starter, quest, checkin } = useRewardActions();
@@ -262,7 +254,7 @@ export function LxHome({ me }: { me: PlayerMe | null | undefined }) {
         )}
       </div>
       <div className="lx-grid-2 wide-left">
-        <DinoCard me={me} />
+        <NewsCard />
         <ServerCard />
       </div>
     </div>

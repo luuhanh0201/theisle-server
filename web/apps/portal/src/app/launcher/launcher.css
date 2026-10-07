@@ -34,13 +34,19 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 .lx .lx-brand-txt b { font-size: 14px; font-weight: 800; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
 .lx .lx-brand-txt small { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 
-.lx .lx-tabs { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255, 255, 255, .02); }
+.lx .lx-tabs { position: relative; display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255, 255, 255, .02); }
 .lx .lx-tab {
-  display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid transparent; border-radius: 9px;
-  background: none; color: var(--text-muted); font-family: inherit; font-weight: 600; font-size: 13px; line-height: 1; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s;
+  position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid transparent; border-radius: 9px;
+  background: none; color: var(--text-muted); font-family: inherit; font-weight: 600; font-size: 13px; line-height: 1; cursor: pointer; white-space: nowrap; transition: color .25s;
 }
-.lx .lx-tab:hover { color: var(--text); background: rgba(255, 255, 255, .04); }
-.lx .lx-tab.on { background: var(--lx-green); color: var(--lx-green-ink); font-weight: 800; box-shadow: 0 0 0 1px rgba(255, 255, 255, .25) inset; }
+.lx .lx-tab:hover:not(.on) { color: var(--text); }
+.lx .lx-tab.on { color: var(--lx-green-ink); font-weight: 800; }
+/* The light under the part picked: it slides from one to the other (owner: "hiệu ứng chuyển menu"). */
+.lx .lx-tab-glow {
+  position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; border-radius: 9px; background: var(--lx-green);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .25) inset, 0 6px 18px rgba(16, 185, 129, .25);
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), width .32s cubic-bezier(.2, .8, .2, 1);
+}
 .lx .lx-pill { font: 700 9.5px/1 var(--lx-mono); padding: 3px 5px; border-radius: 5px; background: rgba(16, 185, 129, .16); color: var(--emerald-light); letter-spacing: .04em; }
 .lx .lx-tab.on .lx-pill { background: rgba(4, 38, 26, .2); color: var(--lx-green-ink); }
 .lx .lx-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #3b4658; }
@@ -93,7 +99,17 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 .lx .lx-login { padding: 8px 14px; font-size: 12.5px; }
 
 .lx .lx-main { flex: 1; width: 100%; max-width: 1440px; margin: 0 auto; padding: 20px 20px 28px; }
-.lx .lx-main > .page-content { animation: none; }
+.lx .lx-main .page-content { animation: none; }
+/* A page shown (hidden → shown restarts it): it fades and rises in. */
+.lx .lx-pages > .page-content:not([hidden]) { animation: lx-in .28s ease-out; }
+@keyframes lx-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* The window not focused (html.app-idle pauses every animation, main.tsx): no entrance at all, or the page would stay
+   see-through until the launcher is focused again (a page opened from the overlay or the tray). */
+html.app-idle .lx .lx-pages > .page-content { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .lx .lx-pages > .page-content:not([hidden]) { animation: none; }
+  .lx .lx-tab-glow { transition: none; }
+}
 .lx .lx-foot {
   display: flex; justify-content: space-between; gap: 16px; padding: 14px 22px; border-top: 1px solid var(--border);
   color: var(--text-sub); font-size: 12px; background: rgba(9, 14, 24, .9);
@@ -101,25 +117,80 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 .lx .lx-foot b { color: var(--text-muted); }
 .lx .lx-foot-r { font-family: var(--lx-mono); font-size: 11px; color: var(--emerald-light); opacity: .8; }
 
-/* Trò chơi's bar, the Bản đồ / Dino Live switch, small segmented controls. */
-.lx .lx-subbar {
-  display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; margin-bottom: 18px; border: 1px solid var(--border);
-  border-radius: 12px; background: var(--bg-card);
+/* Trò chơi's side bar (owner, 2026-10-07): a light list beside the page, the whole height, no empty space. */
+.lx .lx-play { display: grid; grid-template-columns: 228px minmax(0, 1fr); gap: 18px; align-items: start; }
+.lx .lx-pages { min-width: 0; }
+.lx .lx-side {
+  position: sticky; top: calc(var(--header-h) + 20px); height: calc(100vh - var(--header-h) - 40px); min-height: 420px;
+  display: flex; flex-direction: column; gap: 10px; padding: 14px 10px 12px;
+  border: 1px solid var(--border-subtle); border-radius: 14px; background: linear-gradient(180deg, rgba(255, 255, 255, .025), rgba(255, 255, 255, .01));
 }
-.lx .lx-sub {
-  display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border: 0; border-radius: 9px; background: none;
-  color: var(--text-muted); font-family: inherit; font-weight: 600; font-size: 12.5px; line-height: 1; cursor: pointer; white-space: nowrap;
+.lx .lx-side-head { padding: 0 10px 4px; font: 800 10.5px/1.2 var(--lx-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-sub); }
+.lx .lx-side-list { display: flex; flex-direction: column; gap: 2px; }
+.lx .lx-side-btn {
+  position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px; background: none;
+  color: var(--text-muted); font-family: inherit; font-weight: 600; font-size: 13px; line-height: 1.2; text-align: left; cursor: pointer;
+  transition: background .2s, color .2s;
 }
-.lx .lx-sub:hover { color: var(--text); background: rgba(255, 255, 255, .04); }
-.lx .lx-sub.on { background: var(--lx-green); color: var(--lx-green-ink); font-weight: 800; }
+.lx .lx-side-btn::before {
+  content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--emerald-light);
+  transform: scaleY(0); transition: transform .25s cubic-bezier(.2, .8, .2, 1);
+}
+.lx .lx-side-btn:hover { color: var(--text); background: rgba(255, 255, 255, .035); }
+.lx .lx-side-btn.on { color: var(--emerald-light); background: rgba(16, 185, 129, .09); }
+.lx .lx-side-btn.on::before { transform: scaleY(1); }
+.lx .lx-side-btn svg { flex: none; }
+.lx .lx-side-txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lx .lx-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+.lx .lx-side-dino {
+  display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 11px 12px; border-radius: 11px; text-align: left; cursor: pointer;
+  border: 1px solid var(--border); background: #0c1320; color: var(--text); font-family: inherit;
+}
+.lx .lx-side-dino.on { border-color: rgba(52, 211, 153, .35); }
+.lx .lx-side-dino-top { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.lx .lx-side-dino-top b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx .lx-side-dino-pct { font: 700 11px/1.4 var(--lx-mono); color: var(--emerald-light); }
+.lx .lx-side-dino-st { font-size: 11px; color: var(--text-sub); }
+.lx .lx-side-dino.on .lx-side-dino-st { color: var(--emerald-light); }
+.lx .lx-side-amber { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-muted); }
+.lx .lx-side-amber .amber-amt { font: 700 12px/1 var(--lx-mono); color: var(--amber-light); }
+.lx .lx-side-amber img { width: 13px; height: 13px; vertical-align: -2px; }
 .lx .lx-count, .lx .lx-live, .lx .lx-new {
-  font: 700 10px/1 var(--lx-mono); padding: 3px 6px; border-radius: 6px; background: rgba(255, 255, 255, .07); color: var(--text-muted);
+  font: 700 10px/1 var(--lx-mono); padding: 3px 6px; border-radius: 6px; background: rgba(255, 255, 255, .07); color: var(--text-muted); flex: none;
 }
 .lx .lx-live { background: rgba(16, 185, 129, .14); color: var(--emerald-light); }
+.lx .lx-live.off { background: rgba(255, 255, 255, .06); color: var(--text-sub); }
 .lx .lx-new { background: rgba(255, 255, 255, .07); color: var(--text); font-family: inherit; font-weight: 600; }
 .lx .lx-count.warn { background: rgba(245, 158, 11, .16); color: var(--amber-light); }
-.lx .lx-sub.on .lx-count, .lx .lx-sub.on .lx-live, .lx .lx-sub.on .lx-new { background: rgba(4, 38, 26, .18); color: var(--lx-green-ink); }
-.lx .lx-sub .rel-badge { margin: 0; }
+.lx .lx-side-btn .rel-badge { margin: 0; }
+@media (max-width: 900px) {
+  /* A narrow window: the list across the top, wrapping (never cut off); the foot left out. */
+  .lx .lx-play { grid-template-columns: minmax(0, 1fr); }
+  .lx .lx-side { position: static; height: auto; min-height: 0; padding: 8px; }
+  .lx .lx-side-head, .lx .lx-side-foot { display: none; }
+  .lx .lx-side-list { flex-direction: row; flex-wrap: wrap; }
+  .lx .lx-side-btn { width: auto; flex: 0 1 auto; }
+  .lx .lx-side-btn::before { left: 10px; right: 10px; top: auto; bottom: 2px; width: auto; height: 2px; transform: scaleX(0); }
+  .lx .lx-side-btn.on::before { transform: scaleX(1); }
+  .lx .lx-side-txt { flex: none; overflow: visible; }
+}
+
+/* Live Monitor in the launcher (GamePage): tele and prime side by side, the counts under them. */
+.lx .lx-cols-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 18px; align-items: stretch; margin-bottom: 24px; }
+.lx .lx-cols-2 > * { margin: 0 !important; min-width: 0; }
+/* Nhiệm vụ Prime, compact (owner: "làm gọn lại"): the ten conditions in two columns, smaller rows. */
+.lx #game-prime-card .prime-summary { padding: 10px 12px; margin-bottom: 10px; font-size: 12.5px; }
+.lx #game-prime-card .prime-deadline-track { height: 8px; margin: 8px 0 4px; }
+.lx #game-prime-card .quest-list { grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 6px; }
+.lx #game-prime-card .quest-item { gap: 8px; padding: 7px 9px; font-size: 11.5px; line-height: 1.35; border-radius: 8px; }
+.lx #game-prime-card .quest-item b { font-weight: 600; }
+.lx #game-prime-card .quest-item .muted { font-size: 10.5px !important; }
+.lx #game-prime-card .quest-check { width: 20px; height: 20px; font-size: 10.5px; border-radius: 6px; }
+.lx #game-prime-content > p:last-child { display: none; }
+/* Tele beside it: its two boxes one under the other, filling the card's height (no empty space under them). */
+.lx .lx-cols-2 > #game-tele-card { display: flex; flex-direction: column; }
+.lx .lx-cols-2 > #game-tele-card .tele-grid { flex: 1; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; }
+.lx .lx-cols-2 > #game-tele-card .tele-box { justify-content: center; }
 
 .lx .lx-seg { display: inline-flex; gap: 3px; padding: 3px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, .02); margin-bottom: 14px; }
 .lx .lx-seg button {
@@ -132,8 +203,12 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 
 /* --- the parts of Trang chủ ------------------------------------------------------------------------------- */
 .lx .lx-home { display: flex; flex-direction: column; gap: 18px; }
-.lx .lx-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 18px; align-items: start; }
-.lx .lx-grid-2.wide-left { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.lx .lx-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+/* The two cards of a row, as wide and as tall as each other (owner, 2026-10-07); their foot at the bottom. */
+.lx .lx-grid-2 > .lx-card { display: flex; flex-direction: column; }
+.lx .lx-grid-2 > .lx-card > .lx-checkin-foot, .lx .lx-grid-2 > .lx-card > .lx-fine:last-child { margin-top: auto; }
+.lx .lx-grid-2 > .lx-checkin > .lx-checkin-foot + .lx-fine { margin-top: 10px; }
+.lx .lx-grid-2 > .lx-news .lx-news-list { max-height: none; flex: 1; }
 .lx .lx-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; min-width: 0; }
 .lx .lx-card-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .lx .lx-ico {
@@ -168,7 +243,6 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 }
 .lx .lx-icon-btn.on { color: var(--emerald-light); border-color: rgba(52, 211, 153, .4); }
 .lx .lx-icon-btn.off { color: #fca5a5; border-color: rgba(239, 68, 68, .4); }
-.lx .lx-link { border: 0; background: none; color: var(--emerald-light); font-family: inherit; font-weight: 700; font-size: 12px; line-height: 1; cursor: pointer; padding: 0; }
 
 .lx .lx-bar { height: 7px; border-radius: 99px; background: rgba(255, 255, 255, .07); overflow: hidden; flex: 1; }
 .lx .lx-bar.thin { height: 5px; }
@@ -202,6 +276,7 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 }
 .lx .lx-day-n { font-size: 11px; font-weight: 700; color: var(--text-muted); line-height: 1.25; white-space: nowrap; }
 .lx .lx-day-ico { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; background: rgba(255, 255, 255, .04); }
+.lx .lx-day-ico img { width: 16px; height: 16px; }
 .lx .lx-day-v { font-size: 10.5px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .lx .lx-day-v img { width: 10px; height: 10px; }
 .lx .lx-day.done { border-color: rgba(52, 211, 153, .45); background: rgba(16, 185, 129, .06); }
@@ -229,16 +304,17 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 .lx .lx-q-st { font-size: 11.5px; color: var(--text-sub); }
 .lx .lx-q-st.done { color: var(--emerald-light); }
 
-/* The dino now, the server. */
-.lx .lx-badge { font: 700 10.5px/1 var(--lx-mono); padding: 5px 8px; border-radius: 6px; background: rgba(255, 255, 255, .06); color: var(--text-muted); white-space: nowrap; }
-.lx .lx-badge.on { background: rgba(16, 185, 129, .14); color: var(--emerald-light); }
-.lx .lx-vitals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-.lx .lx-vital { padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: #0c1320; }
-.lx .lx-vital > div:first-child { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted); margin-bottom: 7px; }
-.lx .lx-vital > div:first-child i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
-.lx .lx-vital b { font: 700 12px/1 var(--lx-mono); color: var(--text); }
-.lx .lx-dino-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-.lx .lx-prime { font-size: 12px; color: var(--amber-light); }
+/* Tin cập nhật (the panel's notes), the server. */
+.lx .lx-news-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+.lx .lx-news-list > li { border: 1px solid var(--border); border-radius: 10px; background: #0c1320; }
+.lx .lx-news-list > li.open { border-color: rgba(52, 211, 153, .4); }
+.lx .lx-news-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 11px 12px; border: 0; background: none;
+  color: var(--text); font-family: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+.lx .lx-news-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx .lx-news-date { flex: none; font: 600 11px/1 var(--lx-mono); color: var(--text-sub); }
+.lx .lx-news-body { margin: 0; padding: 0 12px 12px; color: var(--text-muted); font-size: 12.5px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
 .lx .lx-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .lx .lx-rows li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; border: 1px solid var(--border); background: #0c1320; font-size: 12px; color: var(--text-muted); }
 .lx .lx-rows b { font: 600 12px/1 var(--lx-mono); color: var(--text); display: inline-flex; align-items: center; gap: 7px; text-align: right; }
@@ -269,25 +345,45 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 .lx #page-bag .bag-grid > li .act .btn { border-radius: 9px; }
 .lx #page-bag .bag-sec { grid-column: 1 / -1; font: 800 11px/1 var(--lx-mono); letter-spacing: .04em; color: var(--text-muted); padding: 6px 2px 0; }
 
+/* The bar on top: always one line (owner, 2026-10-07); on a narrower window the words go, the icons stay. */
+.lx .lx-top { flex-wrap: nowrap; }
+.lx .lx-tabs { flex: none; }
+.lx .lx-right { flex-wrap: nowrap; }
+@media (max-width: 1280px) {
+  .lx .lx-chip .gm-text, .lx .lx-update .launcher-version, .lx .lx-brand-txt small, .lx .lx-ping { display: none; }
+}
+@media (max-width: 900px) {
+  .lx .lx-grid-2 { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 1180px) {
-  .lx .lx-chip .gm-text, .lx .lx-update .launcher-version, .lx .lx-brand-txt small { display: none; }
-  .lx .lx-grid-2, .lx .lx-grid-2.wide-left { grid-template-columns: minmax(0, 1fr); }
+  .lx .lx-chip .lx-chip-txt, .lx .lx-brand-txt { display: none; }
+  .lx .lx-voice-chip { padding: 0 10px; }
+}
+@media (max-width: 1000px) {
+  .lx .lx-me-txt, .lx .lx-slot-word { display: none; }
+  .lx .lx-me { padding: 0 4px; }
 }
 @media (max-width: 860px) {
-  .lx .lx-top { flex-wrap: wrap; height: auto; padding: 10px 14px; }
-  .lx .lx-right { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
-  .lx .lx-tab span:not(.lx-pill):not(.lx-live-dot) { display: none; }
-  .lx .lx-vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lx .lx-tab { padding: 8px 12px; }
+  .lx .lx-tab .lx-tab-txt { display: none; }
   .lx .lx-days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .lx .lx-top { gap: 8px; padding: 0 10px; }
+  .lx .lx-right { gap: 6px; }
+  .lx .lx-slots, .lx .lx-update:not(.ready), .lx .lx-tab .lx-pill { display: none; }
+  .lx .lx-tab { padding: 8px 10px; }
 }
 .lx .lx-update .launcher-update { border: 0; padding: 0; background: none; font-size: 12px; }
 
-/* Overlay HUD as the design: the settings on the left (each widget a row, its settings under it), the layout on the right. */
+/* Overlay HUD (owner, 2026-10-07: "không bị trống"): game mode and the widgets on the left, the layout and the picked
+   widget's settings on the right, both sides filled. */
 .lx #page-overlay .ov-top { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #0c1320; }
-.lx .ov-lx { display: grid; grid-template-columns: minmax(340px, 440px) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 14px; }
-.lx .ov-lx-l { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.lx .ov-lx-r { position: sticky; top: calc(var(--header-h) + 14px); min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #0c1320; }
-.lx .ov-lx-r .v-subhead { margin-top: 0; }
+.lx .ov-lx { display: grid; grid-template-columns: minmax(260px, 330px) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 14px; }
+.lx .ov-lx-l { position: sticky; top: calc(var(--header-h) + 14px); display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lx .ov-lx-r { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lx .ov-lx-r > .ov-stage-box { padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #0c1320; }
+.lx .ov-stage-box > .v-subhead:first-child { margin-top: 0; }
 .lx .ov-lx .ov-gm { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #0c1320; }
 .lx .ov-lx .ov-tabs { display: flex; flex-direction: column; gap: 8px; border: 0; padding: 0; margin: 0; }
 .lx .ov-lx .ov-tabs button {
@@ -296,14 +392,14 @@ html.lx-ui body::before, html.lx-ui body::after { display: none; }
 }
 .lx .ov-lx .ov-tabs button[aria-selected="true"] { border-color: rgba(52, 211, 153, .55); background: rgba(16, 185, 129, .07); }
 .lx .ov-lx #ov-panel { padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: #0c1320; }
-.lx .ov-lx .ov-grid { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 1100px) {
   .lx .ov-lx { grid-template-columns: minmax(0, 1fr); }
-  .lx .ov-lx-r { position: static; }
+  .lx .ov-lx-l { position: static; }
 }
+@media (max-width: 700px) { .lx .ov-lx .ov-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Titles on one line (AGENTS.md "Writing"); on a very narrow window they may wrap, balanced. */
-.lx .lx-eyebrow, .lx .lx-vb-range, .lx .lx-streak, .lx .lx-badge, .lx .lx-q-reward { white-space: nowrap; }
+.lx .lx-eyebrow, .lx .lx-vb-range, .lx .lx-streak, .lx .lx-q-reward { white-space: nowrap; }
 @media (max-width: 640px) {
   /* The card's own buttons under its title, so the title keeps the whole width (one line). */
   .lx .lx-card-head { flex-wrap: wrap; }

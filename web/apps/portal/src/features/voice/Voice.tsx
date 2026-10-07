@@ -45,7 +45,7 @@ function PeerRow({ p, nameMode }: { p: PeerView; nameMode: string }) {
 }
 
 /**
- * Voice 3D (#voice): join the proximity room, how far your voice carries, the micro (voice activation /
+ * Voice (#voice): join the proximity room, how far your voice carries, the micro (voice activation /
  * push-to-talk / off, noise filter, devices, a self test), who speaks near you. The room itself is the
  * engine's (lib/voice.ts): it stays joined on every page.
  */

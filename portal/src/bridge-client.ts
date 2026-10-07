@@ -39,6 +39,8 @@ export class BridgeClient {
   previewItem(steamId: string, uid: string) { return this.get(`/player-api/items/${steamId}/preview/${encodeURIComponent(uid)}`); }
   command(steamId: string, id: number) { return this.get(`/player-api/command/${steamId}/${id}`); }
   leaderboard() { return this.get('/player-api/leaderboard'); }
+  /** Tin cập nhật (bridge news.ts): the newest notes the panel shows. */
+  news() { return this.get('/player-api/news'); }
   server() { return this.get('/player-api/server'); }
   ai() { return this.get('/player-api/ai'); }
   aiZones() { return this.get('/player-api/ai-zones'); }

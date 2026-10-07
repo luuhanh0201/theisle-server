@@ -286,3 +286,10 @@ export interface DamageReachView {
     attackerName?: string; victimName?: string; attackerSpecies?: string; victimSpecies?: string; attackerGrowth?: number; victimGrowth?: number;
     loc?: { x: number; y: number; z?: number }; attackerLoc?: { x: number; y: number; z?: number }; reach: BiteReach }>;
 }
+
+/** A note of Tin cập nhật (bridge news.ts NewsItem); a new one has no id / at until saved. */
+export interface NewsItem { id?: string; title: string; body: string; at?: number; shown: boolean }
+/** GET /api/news (panel): every note and the form's limits. */
+export interface NewsSettings { items: NewsItem[]; limits?: { items: number; title: number; body: number } }
+/** GET /api/news (player site): the newest shown notes. */
+export interface NewsList { items: Array<{ id: string; title: string; body: string; at: number }> }

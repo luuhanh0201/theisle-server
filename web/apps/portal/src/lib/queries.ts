@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { PlayerMe, PortalServer } from '@isle/api';
+import type { NewsList, PlayerMe, PortalServer } from '@isle/api';
 import { portalGet } from './http';
 import { gameMode, inBackground, inLauncher } from './launcher';
 
@@ -17,6 +17,16 @@ export function useMeQuery() {
     queryKey: [ME], queryFn: () => portalGet<PlayerMe>(ME),
     refetchInterval: 1000, refetchIntervalInBackground: inLauncher(), staleTime: 500,
   });
+}
+
+/** Tin cập nhật (bridge news.ts): the newest notes for the launcher's Trang chủ; [] when the bridge does not answer. */
+export const NEWS = '/api/news';
+export function useNews(): NewsList['items'] | undefined {
+  return useQuery({
+    queryKey: [NEWS],
+    queryFn: async () => { try { return (await portalGet<NewsList>(NEWS))?.items ?? []; } catch { return []; } },
+    refetchInterval: 5 * 60_000, staleTime: 60_000,
+  }).data;
 }
 
 /** The server card and the menu's slots (name, Discord, online / max): undefined before the first answer, null when down. */

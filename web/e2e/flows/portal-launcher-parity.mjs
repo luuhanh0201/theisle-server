@@ -21,4 +21,8 @@ const inLook = (f) => (f.old ? f : {
 const relax = (run) => run.replace('"drag",', '').replace(/check\('the mini map got pictures'/, `check('drag: the box placed (its widget, its size)', /^overlayPlace \\["voice",\\{"x":\\d+,"y":\\d+,"scale":100\\}\\]$/.test(out.drag?.[1]?.[0] ?? ''), out.drag); check('the mini map got pictures'`);
 // Skin, the overlay, then Gara first: they need the in-game dino as local-portal.sh seeds it (a fresh stack; Gara stores it);
 // the bag before the shop (a buy changes what is in the bag).
-export default [...skin, ...overlay, ...gara, ...ranking, ...bag, ...shop].map(inLook);
+// Gara in the launcher's look has no chat commands (owner, 2026-10-07): their copy flow is left out, and the commands
+// row is not compared (the web look still checks both, portal-gara.mjs).
+const noCommands = (f) => (f.old ? f : { ...f, run: f.run.replace(',".commands-row"', '') });
+const garaInLook = gara.filter((f) => f.name !== 'Copy a chat command').map(noCommands);
+export default [...skin, ...overlay, ...garaInLook, ...ranking, ...bag, ...shop].map(inLook);

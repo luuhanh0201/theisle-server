@@ -759,7 +759,7 @@ export function toggleTest(): void {
   if (hearing) { stopHearing(); test = { ...test, note: 'Đã tắt thử âm thanh.' }; changed(); } else void startHearing();
 }
 
-/** The dot beside Voice 3D in the menu: green = working, amber = needs you, red = dropped. */
+/** The dot beside Voice in the menu: green = working, amber = needs you, red = dropped. */
 function renderNav(): void {
   if (reconnecting) setVoiceDot({ kind: 'warn', text: 'Voice: đang nối lại' });
   else if (joined && inGame) setVoiceDot({ kind: 'ok', text: 'Voice đang hoạt động' });

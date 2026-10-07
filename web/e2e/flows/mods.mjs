@@ -130,4 +130,26 @@ export default [
       check('trả lại như cũ', pick(back) === pick(before), pick(back).slice(0, 200));
     `,
   },
+  {
+    name: 'Tin cập nhật: viết một tin, lưu (có ngày, id), ẩn, xoá (những gì người chơi nhận: test bridge news / portal)',
+    path: '/#mods/news',
+    run: `
+      check('trang Tin cập nhật', !!h.byText('+ Viết tin mới', 'button'));
+      const before = (await h.api('/api/news')).items.length;
+      h.click(h.byText('+ Viết tin mới', 'button')); await h.sleep(200);
+      h.type(h.$$('input[aria-label="Tiêu đề tin"]')[0], 'Bản e2e'); await h.sleep(100);
+      h.type(h.$$('textarea[aria-label="Nội dung tin"]')[0], 'Dòng 1\\nDòng 2'); await h.sleep(100);
+      h.click(h.byText('Lưu tin cập nhật', 'button')); await h.sleep(1500);
+      const saved = (await h.api('/api/news')).items;
+      const n = saved.find((x) => x.title === 'Bản e2e');
+      check('đã lưu, có ngày và id', saved.length === before + 1 && n && n.at > 0 && /^n_/.test(n.id) && n.body === 'Dòng 1\\nDòng 2', n);
+      h.click(h.$$('[role=switch]')[0]); await h.sleep(100);
+      h.click(h.byText('Lưu tin cập nhật', 'button')); await h.sleep(1500);
+      check('ẩn: còn trong panel, tắt hiện', (await h.api('/api/news')).items.find((x) => x.title === 'Bản e2e')?.shown === false);
+      const li = h.$$('input[aria-label="Tiêu đề tin"]').find((i) => i.value === 'Bản e2e').closest('li');
+      [...li.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Xoá').click(); await h.sleep(150);
+      h.click(h.byText('Lưu tin cập nhật', 'button')); await h.sleep(1500);
+      check('xoá: trả lại như cũ', (await h.api('/api/news')).items.length === before);
+    `,
+  },
 ];
