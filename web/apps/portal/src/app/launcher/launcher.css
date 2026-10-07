@@ -206,6 +206,9 @@ html.app-idle .lx .lx-pages > .page-content { animation: none !important; }
 .lx .lx-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
 /* The two cards of a row, as wide and as tall as each other (owner, 2026-10-07); their foot at the bottom. */
 .lx .lx-grid-2 > .lx-card { display: flex; flex-direction: column; }
+/* A progress bar straight in such a card stays a thin bar (its flex: 1 is for the quests' rows): it grew into the
+   card's spare height, an empty oval under "Hôm nay đã chơi" (owner, 2026-10-07). */
+.lx .lx-card > .lx-bar { flex: none; }
 .lx .lx-grid-2 > .lx-card > .lx-checkin-foot, .lx .lx-grid-2 > .lx-card > .lx-fine:last-child { margin-top: auto; }
 .lx .lx-grid-2 > .lx-checkin > .lx-checkin-foot + .lx-fine { margin-top: 10px; }
 .lx .lx-grid-2 > .lx-news .lx-news-list { max-height: none; flex: 1; }

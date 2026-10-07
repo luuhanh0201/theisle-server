@@ -198,6 +198,8 @@ export default [
       check('the check-in in Hổ phách only (no diamond)', !h.$('#home-checkin').textContent.includes('💎'));
       // The two cards of a row as wide and as tall as each other (owner, 2026-10-07).
       const [a, b] = ['#home-checkin', '#home-quests'].map((q) => h.$(q).getBoundingClientRect());
-      check('check-in and quests: same width and height', Math.abs(a.width - b.width) < 2 && Math.abs(a.height - b.height) < 2, [a.width, b.width, a.height, b.height]);`,
+      check('check-in and quests: same width and height', Math.abs(a.width - b.width) < 2 && Math.abs(a.height - b.height) < 2, [a.width, b.width, a.height, b.height]);
+      // The minutes bar stays a thin bar in the stretched card (it grew into an empty oval, 2026-10-07).
+      check('the minutes bar is thin', h.$('#home-checkin > .lx-bar').getBoundingClientRect().height <= 10, h.$('#home-checkin > .lx-bar').getBoundingClientRect().height);`,
   },
 ];
