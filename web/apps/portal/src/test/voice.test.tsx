@@ -56,7 +56,8 @@ beforeEach(() => {
   resetVoiceForTests();
   startVoice();
 });
-afterEach(() => { vi.unstubAllGlobals(); room = null; });
+// Nothing of a room outlives its test (a poll after the last one ran with no window).
+afterEach(() => { resetVoiceForTests(); vi.unstubAllGlobals(); room = null; });
 
 const q = (c: HTMLElement, s: string) => c.querySelector(s) as HTMLElement;
 const shown = (c: HTMLElement, s: string) => !q(c, s).hidden;

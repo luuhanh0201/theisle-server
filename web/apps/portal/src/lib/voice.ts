@@ -770,6 +770,11 @@ function renderNav(): void {
 
 /** Tests only: back to a fresh visit. */
 export function resetVoiceForTests(): void {
+  // Every timer of a room left behind: a poll firing after the test environment is gone threw "window is not
+  // defined" and failed the run (the deploy's npm test, 2026-10-07).
+  for (const t of [pollTimer, overlayTimer, toastTimer]) if (t) clearTimeout(t);
+  if (meterTimer) clearInterval(meterTimer);
+  pollTimer = null; overlayTimer = null; toastTimer = null; meterTimer = null;
   started = false; room = null; joined = false; LKC = null; loggedIn = null; joining = false; lost = false; inGame = null; peers = new Map();
   conn = { kind: '', text: '○ Chưa vào kênh' }; capturing = null; captureError = null; sending = false; noiseActive = null;
   joinNote = 'Cần quyền dùng micro. Voice tiếp tục chạy khi bạn chuyển sang các tab khác.';
