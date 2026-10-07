@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { NumberInput } from './NumberInput';
 
 function Harness({ start = 5, min = 0, max = 10, step = 1 }: { start?: number; min?: number; max?: number; step?: number }) {
@@ -38,4 +39,33 @@ test('a decimal step keeps its decimals, a comma is read as a point', async () =
   await userEvent.clear(box);
   await userEvent.type(box, '0,5{Enter}');
   expect(document.querySelector('output')).toHaveTextContent('0.5');
+});
+
+test('a key right after the box is drawn is kept (nothing puts the first value back over it)', async () => {
+  // Drawn by an ordinary render (data that came back), a key as soon as the page changes, before React's
+  // effects run: what a busy machine gave Cửa hàng's test (2026-10-07, the old effect put "1" back over "2").
+  const host = document.body.appendChild(document.createElement('div'));
+  const root = createRoot(host);
+  const g = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const before = g.IS_REACT_ACT_ENVIRONMENT;
+  g.IS_REACT_ACT_ENVIRONMENT = false;
+  try {
+    const typed = new Promise<string>((done) => {
+      new MutationObserver((_, mo) => {
+        const box = host.querySelector('input');
+        if (!box) return;
+        mo.disconnect();
+        // A key, as the browser sends it.
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(box, '2');
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+        done(box.value);
+      }).observe(host, { childList: true, subtree: true });
+    });
+    root.render(<Harness start={1} />);
+    expect(await typed).toBe('2');
+  } finally {
+    root.unmount();
+    host.remove();
+    g.IS_REACT_ACT_ENVIRONMENT = before;
+  }
 });

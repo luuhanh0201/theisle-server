@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import styles from './NumberInput.module.css';
 
 /**
@@ -11,7 +11,11 @@ export function NumberInput({ id, value, onChange, min, max, step = 1, disabled 
   disabled?: boolean; 'aria-label'?: string;
 }) {
   const [text, setText] = useState(String(value));
-  useEffect(() => { setText(String(value)); }, [value]);
+  // A new value from outside (a step, a reload) replaces the text, worked out while rendering: an
+  // effect ran once more after the first render too and, when a key came before it, put the old
+  // value back over what was just typed (Cửa hàng's test, 1 run in 8 on a busy machine, 2026-10-07).
+  const [shown, setShown] = useState(value);
+  if (value !== shown) { setShown(value); setText(String(value)); }
   const clamp = (v: number): number => {
     let n = v;
     if (min !== undefined) n = Math.max(min, n);
