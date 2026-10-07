@@ -78,7 +78,7 @@ stop() {
         for _ in $(seq 1 30); do running || break; sleep 1; done
     fi
     # Only the test prefix's own wineserver: the live one is a different prefix.
-    WINEPREFIX="$ROOT/prefix" wineserver -k 2>/dev/null || true
+    WINEPREFIX="$ROOT/prefix" /home/isle/wine-ntsync/bin/wineserver -k 2>/dev/null || true
     rm -f "$PIDFILE"
     echo "stopped"
 }

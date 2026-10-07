@@ -7,10 +7,10 @@
 #   scripts/build-wine-ntsync.sh [version]      (default 11.0; Docker, on any machine; about an hour)
 #   -> ~/winebuild-out/wine-ntsync-<version>.tar.gz  (unpacks to home/isle/wine-ntsync)
 #
-# Install on the VPS (as isle, no root):  cd /home/isle && tar xzf wine-ntsync-<v>.tar.gz --strip-components=2
-# start.sh uses /home/isle/wine-ntsync/bin/wine unless /home/isle/wine-ntsync.off exists (touch it + restart the
-# game: back to the packaged Wine). The build runs in ubuntu:24.04 (the VPS's libraries), headless, WoW64, on
-# the home disk (not /tmp: a tmpfs, the build is ~6 GB).
+# Install on the VPS (as isle, no root), the game stopped or restarted after:
+#   cd /home/isle && mv wine-ntsync wine-ntsync.old && tar xzf wine-ntsync-<v>.tar.gz --strip-components=2
+# start.sh runs /home/isle/wine-ntsync/bin/wine, the server's only Wine. The build runs in ubuntu:24.04 (the VPS's
+# libraries), headless, WoW64, on the home disk (not /tmp: a tmpfs, the build is ~6 GB).
 set -euo pipefail
 V="${1:-11.0}"
 W="$HOME/winebuild"; OUT="$HOME/winebuild-out"

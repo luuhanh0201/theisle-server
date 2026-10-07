@@ -80,6 +80,8 @@ if ! id "$SERVICE_USER" >/dev/null 2>&1; then
 fi
 
 # --- 3. wine prefix -----------------------------------------------------
+# The prefix is made with the packaged Wine; the server itself runs a Wine built with ntsync
+# (scripts/build-wine-ntsync.sh, unpacked to /home/isle/wine-ntsync, the HWE kernel 7.x: AGENTS.md).
 
 say "creating wine prefix at $WINEPREFIX_DIR"
 sudo -u "$SERVICE_USER" env \

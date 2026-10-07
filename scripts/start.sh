@@ -38,21 +38,11 @@ for dll in dwmapi.dll UE4SS.dll; do
         echo "start.sh: warning, $dll missing, UE4SS will NOT load" >&2
 done
 
-# The Wine launcher. `wine` runs a 64-bit .exe with the 64-bit loader on every
-# packaging we know of. `wine64` is NOT on PATH with Ubuntu 24.04's own wine
-# (it lives in /usr/lib/wine/), and calling it made every start exit 127.
-WINE_BIN="${WINE_BIN:-}"
-# Wine 11.0 built with ntsync (2026-10-07: WineHQ's Ubuntu 24.04 package has none; the kernel needs 6.14+,
-# /dev/ntsync). Used when it is installed, unless /home/isle/wine-ntsync.off exists (touch it, restart the
-# game: back to the packaged Wine, no root needed). On a kernel without ntsync it falls back by itself.
-NTSYNC_WINE=/home/isle/wine-ntsync/bin/wine
-if [[ -z "$WINE_BIN" && -x "$NTSYNC_WINE" && ! -e /home/isle/wine-ntsync.off ]]; then WINE_BIN="$NTSYNC_WINE"; fi
-if [[ -z "$WINE_BIN" ]]; then
-    for candidate in wine wine64 /usr/lib/wine/wine64; do
-        if command -v "$candidate" >/dev/null 2>&1; then WINE_BIN="$candidate"; break; fi
-    done
-fi
-[[ -n "$WINE_BIN" ]] || { echo "start.sh: no Wine found (tried wine, wine64, /usr/lib/wine/wine64)" >&2; exit 1; }
+# The Wine: 11.0 built with ntsync, the server's only one (2026-10-07: WineHQ's Ubuntu 24.04 package has no
+# ntsync and was removed; the kernel is the HWE 7.x, /dev/ntsync). Built by scripts/build-wine-ntsync.sh,
+# unpacked to /home/isle/wine-ntsync. WINE_BIN still overrides it (a test).
+WINE_BIN="${WINE_BIN:-/home/isle/wine-ntsync/bin/wine}"
+[[ -x "$WINE_BIN" ]] || { echo "start.sh: no Wine at $WINE_BIN (build it: scripts/build-wine-ntsync.sh, unpack it in /home/isle)" >&2; exit 1; }
 echo "start.sh: launching $EXE with $(command -v "$WINE_BIN") ($("$WINE_BIN" --version 2>/dev/null || echo 'version unknown'))"
 
 cd "$BIN_DIR"
