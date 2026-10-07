@@ -107,7 +107,8 @@ describe('Skin Studio', () => {
   it('the 3D preview follows the dino played now; the menu marks it', async () => {
     const { container, rerender } = wrap(<SkinStudio me={me({ online: true, dino: dino('BP_Stegosaurus_C', { ...SKIN, female: true }) })} />);
     await waitFor(() => expect(calls).toContain('show Stegosaurus'));
-    expect(calls).toContain('female true');
+    // The viewer starts as a male and is told the dino's sex once read: wait for it (failed 1 run in 6 when read at once).
+    await waitFor(() => expect(calls).toContain('female true'));
     await waitFor(() => expect((container.querySelector('#skin-3d') as HTMLElement).hidden).toBe(false));
     expect((container.querySelector('#skin-flat') as HTMLElement).hidden).toBe(true);
     expect(container.querySelector('[data-g="f"]')?.getAttribute('aria-checked')).toBe('true');
