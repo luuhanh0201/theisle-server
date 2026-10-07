@@ -161,3 +161,25 @@ test('clicks go through the widgets to the game: set again after every show, mov
   assert.equal(dino().ignore, true, 'editing done: through again');
   clearTimeout(o.graceTimer);
 });
+
+test('the voice state goes to the voice widget and to the dino card (its mic: in the room, how loud, the range)', () => {
+  const { Overlay } = require('../src/overlay.js');
+  class FakeWindow {
+    constructor() { this.visible = false; this.destroyed = false; this.sent = []; this.webContents = { on() {}, send: (ch, v) => this.sent.push([ch, v]) }; }
+    setAlwaysOnTop() {} setVisibleOnAllWorkspaces() {} setIgnoreMouseEvents() {} setFocusable() {} on() {} loadFile() {}
+    isDestroyed() { return this.destroyed; } destroy() { this.destroyed = true; }
+    isVisible() { return this.visible; } showInactive() { this.visible = true; } hide() { this.visible = false; }
+    setBounds() {} setOpacity() {} blur() {} getPosition() { return [0, 0]; }
+  }
+  const disp = { id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, size: { width: 1920, height: 1080 } };
+  const screen = { getPrimaryDisplay: () => disp, getAllDisplays: () => [disp], getDisplayNearestPoint: () => disp };
+  const o = new Overlay({ electron: { BrowserWindow: FakeWindow, screen }, preload: '', file: '', load: () => ({ widgets: { dino: { enabled: true } } }), save: () => {} });
+  o.create();
+  const st = { connected: true, talking: true, level: 60, range: 30, rangeName: 'Nói thường' };
+  o.setVoice(st);
+  const got = (id) => o.wins[id]?.sent.filter(([ch]) => ch === 'overlay:state').map(([, v]) => v) ?? [];
+  assert.deepEqual(got('voice').at(-1), st);
+  assert.deepEqual(got('dino').at(-1), st, 'the dino card gets it too');
+  assert.equal(got('map').length, 0, 'not the map');
+  clearTimeout(o.graceTimer);
+});

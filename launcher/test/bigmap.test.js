@@ -2,7 +2,7 @@
 // The big map key (M): opens over the game, closes again; typing never opens it. npm test.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { pickBigMapDisplay, ChatGuard, bigMapKeyAction, CHAT_MAX_MS, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE, DEFAULT_BIGMAP_KEY } = require('../src/bigmap.js');
+const { pickBigMapDisplay, bigMapBlurCloses, BLUR_GRACE_MS, ChatGuard, bigMapKeyAction, CHAT_MAX_MS, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE, DEFAULT_BIGMAP_KEY } = require('../src/bigmap.js');
 
 const closed = { open: false, typing: false, chatOpen: false, launcherFocused: false };
 
@@ -51,4 +51,12 @@ test('the screen: the one with the mouse (the game\'s), or the one chosen while 
   assert.equal(pickBigMapDisplay(both, 'auto', null, laptop), laptop, 'no pointer known: the primary');
   assert.equal(pickBigMapDisplay(both, '11', { x: 2500, y: 100 }, laptop), hdmi, 'chosen: that one, wherever the mouse is');
   assert.equal(pickBigMapDisplay([laptop], '11', { x: 2500, y: 100 }, laptop), laptop, 'the chosen one unplugged: back to the mouse');
+});
+
+test('a click outside closes it: focus left after it had it, past its first moments; never while closed', () => {
+  const t = 100_000;
+  assert.equal(bigMapBlurCloses({ open: true, focused: true, openedAt: t - 2000, now: t }), true, 'clicked the game: closed');
+  assert.equal(bigMapBlurCloses({ open: true, focused: false, openedAt: t - 2000, now: t }), false, 'never had the focus (the desktop kept it): stays');
+  assert.equal(bigMapBlurCloses({ open: true, focused: true, openedAt: t - BLUR_GRACE_MS + 100, now: t }), false, 'while opening: stays');
+  assert.equal(bigMapBlurCloses({ open: false, focused: true, openedAt: t - 2000, now: t }), false, 'already closed');
 });

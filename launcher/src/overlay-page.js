@@ -18,7 +18,7 @@
 
   // --- sample data for "Xem thử" -------------------------------------------------------
   const SAMPLE_VOICE = {
-    connected: true, inGame: true, talking: true, mode: 'ptt', pttLabel: 'V', range: 30, rangeName: 'Nói thường', nameMode: 'name',
+    connected: true, inGame: true, talking: true, level: 60, mode: 'ptt', pttLabel: 'V', range: 30, rangeName: 'Nói thường', nameMode: 'name',
     speakers: [
       { name: 'Rex Già', speaking: true, gain: 0.9, pan: 0.8 },
       { name: 'Troodon Nhỏ', speaking: true, gain: 0.45, pan: -0.7 },
@@ -385,7 +385,12 @@
     dinoEl.species = document.createElement('span'); dinoEl.species.className = 'sp-name';
     dinoEl.growth = document.createElement('span'); dinoEl.growth.className = 'sub';
     dinoEl.prime = document.createElement('span'); dinoEl.prime.className = 'prime';
-    head.append(dinoEl.species, dinoEl.growth, dinoEl.prime);
+    // In the voice room: a mic, lit and pulsing with how loud you talk, and how far your voice carries.
+    dinoEl.mic = document.createElement('span'); dinoEl.mic.className = 'vmic'; dinoEl.mic.hidden = true;
+    dinoEl.micIcon = document.createElement('span'); dinoEl.micIcon.className = 'vmic-i';
+    dinoEl.micRange = document.createElement('span'); dinoEl.micRange.className = 'vmic-r';
+    dinoEl.mic.append(dinoEl.micIcon, dinoEl.micRange);
+    head.append(dinoEl.species, dinoEl.growth, dinoEl.prime, dinoEl.mic);
     dinoEl.none = document.createElement('div'); dinoEl.none.className = 'sub'; dinoEl.none.textContent = 'Chưa có dino trong game';
     dinoEl.rows = {};
     const rows = VITALS.map(([k, label, color]) => {
@@ -448,6 +453,7 @@
       if (dinoEl.prime.className !== cls) dinoEl.prime.className = cls;
       setText(dinoEl.prime, `F${tierLevel}`);
     }
+    renderDinoMic();
     for (const [k] of VITALS) {
       const r = dinoEl.rows[k];
       const v = d.vitals?.[k]; const m = d.max?.[k];
@@ -461,6 +467,26 @@
       else setText(r.n, fmtHp(v));
       setText(r.v, pct === null ? '' : `${Math.round(pct * 100)}%`);
     }
+  }
+
+  /** The dino card's mic: shown in the voice room; off (micro tắt) crossed out; while talking it pulses with the level. */
+  function renderDinoMic() {
+    if (!dinoEl.mic) return;
+    const st = preview() ? SAMPLE_VOICE : voice;
+    const on = Boolean(st && st.connected);
+    dinoEl.mic.hidden = !on;
+    if (!on) return;
+    const muted = st.mode === 'off' || st.inGame === false;
+    const icon = muted ? 'muted' : 'mic';
+    if (dinoEl.micIcon.dataset.icon !== icon) { dinoEl.micIcon.dataset.icon = icon; dinoEl.micIcon.innerHTML = muted ? ICON_MUTED : ICON_MIC; }
+    const talking = Boolean(st.talking) && !muted;
+    const cls = `vmic${talking ? ' talking' : ''}${muted ? ' muted' : ''}`;
+    if (dinoEl.mic.className !== cls) dinoEl.mic.className = cls;
+    const lvl = talking ? String(Math.max(20, Math.min(100, Number(st.level) || 60)) / 100) : '0';
+    if (dinoEl.mic.style.getPropertyValue('--lvl') !== lvl) dinoEl.mic.style.setProperty('--lvl', lvl);
+    setText(dinoEl.micRange, typeof st.range === 'number' ? `${st.range} m` : '');
+    const title = `Voice: ${muted ? 'micro tắt' : talking ? 'đang nói' : 'đang nghe'}${st.rangeName ? `, tầm ${st.rangeName}` : ''}`;
+    if (dinoEl.mic.title !== title) dinoEl.mic.title = title;
   }
 
   /**
@@ -576,7 +602,7 @@
   }
 
   window.overlay.onSettings((s) => { settings = s; render(); });
-  window.overlay.onState((s) => { voice = s; if (W === 'voice') render(); });
+  window.overlay.onState((s) => { voice = s; if (W === 'voice') render(); else if (W === 'dino' && settings) renderDinoMic(); });
   window.overlay.onGame((g) => {
     game = g;
     if (W === 'dino' && !preview()) onHealth(g && g.dino);

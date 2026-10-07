@@ -48,6 +48,12 @@ function bigMapKeyAction(s) {
   return 'open';
 }
 
+/** The map lost the focus: close it? Open, it had the focus, and past its first moments (GRACE). */
+const BLUR_GRACE_MS = 600;
+function bigMapBlurCloses({ open, focused, openedAt, now }) {
+  return Boolean(open && focused && now - openedAt >= BLUR_GRACE_MS);
+}
+
 /**
  * The screen the big map opens on. 'auto' (the default): the one with the mouse pointer, in game the
  * pointer is the game's, so the game's screen (the owner's two screens, 2026-10-04: "the primary" was
@@ -64,4 +70,4 @@ function pickBigMapDisplay(displays, setting, cursor, primary) {
   return displays.find(inside) ?? primary ?? displays[0];
 }
 
-module.exports = { pickBigMapDisplay, DEFAULT_BIGMAP_KEY, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE, CHAT_MAX_MS, ChatGuard, bigMapKeyAction };
+module.exports = { pickBigMapDisplay, bigMapBlurCloses, BLUR_GRACE_MS, DEFAULT_BIGMAP_KEY, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE, CHAT_MAX_MS, ChatGuard, bigMapKeyAction };

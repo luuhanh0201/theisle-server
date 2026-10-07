@@ -206,7 +206,8 @@ class Overlay {
     });
     win.webContents.on('did-finish-load', () => {
       this.#sendSettings(id);
-      if (id === 'voice' && this.voice) win.webContents.send('overlay:state', this.voice);
+      // The voice state: the voice widget, and the dino card's mic (in the room, how loud, the range).
+      if ((id === 'voice' || id === 'dino') && this.voice) win.webContents.send('overlay:state', this.voice);
       if (id !== 'voice' && this.game) win.webContents.send('overlay:game', this.game);
       if (id === 'map' && this.mapData) win.webContents.send('overlay:map', this.mapData);
       this.apply();
@@ -342,6 +343,7 @@ class Overlay {
   setVoice(state) {
     this.voice = state;
     this.#send('voice', 'overlay:state', state);
+    this.#send('dino', 'overlay:state', state);
     this.apply();
   }
 

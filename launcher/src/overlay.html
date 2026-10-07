@@ -71,6 +71,17 @@
   .dino .head .sub { flex: none; font-variant-numeric: tabular-nums; }
   .dino .head .prime { flex: none; }
   .dino .prime { font-size: 1.05em; line-height: 1; }
+  /* The voice mic on the dino card: in the room; pulsing with how loud you talk (--lvl 0..1); the range beside it. */
+  .dino .vmic { flex: none; display: inline-flex; align-items: center; gap: calc(4px * var(--scale)); margin-left: auto; color: #34d399; font-size: .82em; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .dino .vmic[hidden] { display: none; }
+  .dino .vmic-i { position: relative; display: inline-grid; place-items: center; width: calc(18px * var(--scale)); height: calc(18px * var(--scale)); border-radius: 50%; background: rgba(16,185,129,.16); }
+  .dino .vmic-i svg { width: 64%; height: 64%; position: relative; z-index: 1; }
+  .dino .vmic-i::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgba(52,211,153,.45); transform: scale(calc(1 + var(--lvl, 0) * .9)); opacity: calc(var(--lvl, 0) * .9); transition: transform .12s, opacity .12s; }
+  .dino .vmic.talking .vmic-i { background: #10b981; color: #04261a; animation: vmic-pulse .7s ease-in-out infinite alternate; }
+  .dino .vmic.muted { color: #f87171; }
+  .dino .vmic.muted .vmic-i { background: rgba(239,68,68,.16); }
+  .dino .vmic-r { color: rgba(255,255,255,.75); }
+  @keyframes vmic-pulse { from { box-shadow: 0 0 0 0 rgba(52,211,153,.55); } to { box-shadow: 0 0 0 calc(4px * var(--scale)) rgba(52,211,153,0); } }
   /* F0–F4, as the portal's .ftag; over the game: no scaling (the numbers must stay readable) */
   .ftag { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; padding: 1px 7px; border-radius: 6px;
     font-size: .9em; font-weight: 900; letter-spacing: .06em; border: 1px solid; font-variant-numeric: tabular-nums; }

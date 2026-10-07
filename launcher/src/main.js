@@ -21,7 +21,7 @@ const { join } = require('node:path');
 const { clashOf, distinctBindings, label, PushToTalk, DEFAULT_PTT, DEFAULT_RANGE } = require('./ptt.js');
 const { Overlay, normaliseKeep } = require('./overlay.js');
 const { LoginFlow } = require('./login.js');
-const { pickBigMapDisplay, DEFAULT_BIGMAP_KEY, ChatGuard, bigMapKeyAction, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE } = require('./bigmap.js');
+const { pickBigMapDisplay, DEFAULT_BIGMAP_KEY, ChatGuard, bigMapKeyAction, bigMapBlurCloses, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE } = require('./bigmap.js');
 
 const BASE = (process.env.XOMGAY_URL || 'https://xomgay.online').replace(/\/+$/, '');
 const ORIGIN = new URL(BASE).origin;
@@ -451,7 +451,7 @@ async function startLogin() {
 // --- the big map (bigmap.js): the whole map full screen over the game, on its key ----------------------
 
 let bigMapWin = null;
-const bigMap = { open: false, typing: false };
+const bigMap = { open: false, typing: false, focused: false, openedAt: 0 };
 const chat = new ChatGuard();
 /** The latest { dino, ai, fish… } from the player page, for the big map when it opens. */
 let lastGame = null;
@@ -478,7 +478,17 @@ function onDisplay(win, d) {
 }
 function placeBigMap(then) {
   const d = bigMapDisplay();
-  const show = () => { bigMapWin.show(); bigMapWin.setFullScreen(true); bigMapWin.focus(); then?.(); };
+  const show = () => {
+    bigMapWin.show(); bigMapWin.setFullScreen(true); bigMapWin.focus(); then?.();
+    // A window manager that will not make it full screen (seen on some Linux desktops): it still covers the
+    // whole screen, never a small window left beside the game (owner, 2026-10-07).
+    setTimeout(() => {
+      if (bigMap.open && bigMapWin && !bigMapWin.isDestroyed() && !bigMapWin.isFullScreen()) {
+        console.info('[bigmap] not full screen: covering the screen');
+        bigMapWin.setBounds(d.bounds);
+      }
+    }, 500);
+  };
   if (bigMapWin.isFullScreen() && onDisplay(bigMapWin, d)) { show(); return; }
   if (bigMapWin.isFullScreen()) {
     bigMapWin.setFullScreen(false);
@@ -504,6 +514,16 @@ function createBigMap() {
   guard(bigMapWin);
   bigMapWin.on('page-title-updated', (e) => e.preventDefault());
   bigMapWin.on('closed', () => { bigMapWin = null; bigMap.open = false; bigMap.typing = false; });
+  // A click outside it (the game, another window, another screen): the map closes, it does not stay up behind
+  // (owner, 2026-10-07). Only once it had the focus, and not in its first moments (a desktop may take the focus
+  // back while it opens).
+  bigMapWin.on('focus', () => { bigMap.focused = true; });
+  bigMapWin.on('blur', () => {
+    if (bigMapBlurCloses({ open: bigMap.open, focused: bigMap.focused, openedAt: bigMap.openedAt, now: Date.now() })) {
+      console.info('[bigmap] focus left it: closed');
+      closeBigMap();
+    }
+  });
   bigMapWin.loadURL(`${BASE}/bigmap.html`);
 }
 
@@ -511,6 +531,8 @@ function openBigMap() {
   if (!bigMapWin || bigMapWin.isDestroyed()) createBigMap();
   bigMap.open = true;
   bigMap.typing = false;
+  bigMap.focused = false;
+  bigMap.openedAt = Date.now();
   placeBigMap(() => console.info(`[bigmap] open on ${JSON.stringify(bigMapDisplay().bounds)}`));
   if (lastGame) bigMapWin.webContents.send('overlay:game', lastGame);
   bigMapWin.webContents.send('bigmap:state', true);
