@@ -48,6 +48,10 @@ test('lines: what each event says; player text cannot format or ping', () => {
   assert.match(phaseLine('running', 'starting', 1, false).text, /bất ngờ/);
   assert.match(phaseLine('running', 'stopping', 1, true).text, /đang tắt/);
   assert.match(phaseLine('starting', 'running', 1, false).text, /Server đã hoạt động/);
+  // A planned restart killed on its way down (wineserver first, SIGKILL): "đã tắt", not a crash; an unplanned one still is.
+  assert.equal(phaseLine('stopping', 'failed', 1, true).text, '⏹️ Server đã tắt');
+  assert.match(phaseLine('stopping', 'failed', 1, false).text, /gặp lỗi và dừng/);
+  assert.match(phaseLine('running', 'failed', 1, false).text, /bất ngờ/);
 });
 
 function fakeDiscord() {

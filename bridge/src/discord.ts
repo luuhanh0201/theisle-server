@@ -277,9 +277,13 @@ const PHASE_TEXT: Record<string, string> = {
 /** A change of the game server's state (null when it says nothing new). */
 export function phaseLine(from: string | null, to: string, t: number, planned: boolean): LogLine | null {
   if (from === to || to === 'unknown' || !PHASE_TEXT[to]) return null;
-  const text = from === 'running' && !planned && (to === 'stopped' || to === 'starting' || to === 'failed')
-    ? '⚠️ Server dừng bất ngờ (crash?), đang chờ nó chạy lại'
-    : PHASE_TEXT[to] as string;
+  // A planned stop or restart that ends "failed" is no crash: systemd stops every process of the unit at once, and
+  // when wineserver goes first it takes the game down with SIGKILL (code=killed, status=9/KILL, "Failed with result
+  // 'signal'", 2026-10-08 12:00:06; the 06:00 one the same day ended clean). The game had saved (RCON Save) before.
+  const text = planned && to === 'failed' ? PHASE_TEXT['stopped'] as string
+    : from === 'running' && !planned && (to === 'stopped' || to === 'starting' || to === 'failed')
+      ? '⚠️ Server dừng bất ngờ (crash?), đang chờ nó chạy lại'
+      : PHASE_TEXT[to] as string;
   return { kind: 'server', t, text };
 }
 
