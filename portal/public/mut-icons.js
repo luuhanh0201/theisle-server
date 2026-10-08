@@ -26,9 +26,18 @@
     if (root.matches?.('img[data-mut-icon]')) fill(root);
     root.querySelectorAll?.('img[data-mut-icon]').forEach(fill);
   };
-  const ready = fetch('/img/mutations/icons.json', { credentials: 'same-origin' })
-    .then((r) => (r.ok ? r.json() : {}))
-    .catch(() => ({}))
+  // A failed fetch (the proxy, the player's network) is tried again after 1, 2, 4… up to 30 s, at once when the
+  // network comes back (owner, 2026-10-08: icons must show once they can load); the icons fill in when it comes.
+  const RETRY_MS = [1000, 2000, 4000, 8000, 15000, 30000];
+  const get = (n) => fetch('/img/mutations/icons.json', { credentials: 'same-origin' })
+    .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .catch(() => new Promise((resolve) => {
+      let timer = null;
+      const again = () => { clearTimeout(timer); window.removeEventListener('online', again); resolve(get(n + 1)); };
+      timer = setTimeout(again, RETRY_MS[Math.min(n, RETRY_MS.length - 1)]);
+      window.addEventListener('online', again);
+    }));
+  const ready = get(0)
     .then((svgs) => {
       uris = {};
       for (const [k, svg] of Object.entries(svgs)) uris[k] = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

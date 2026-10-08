@@ -23,3 +23,4 @@ export { Table } from './components/Table/Table';
 export { TextArea } from './components/TextArea/TextArea';
 export { TextInput } from './components/TextInput/TextInput';
 export { ToastProvider, useToast } from './components/Toast/Toast';
+export { retryImages } from './components/imgRetry';
