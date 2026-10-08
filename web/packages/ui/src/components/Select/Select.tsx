@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { popupHost } from '../popupHost';
 import styles from './Select.module.css';
 
 export interface SelectOption<V extends string = string> { value: V; label: string; sub?: string; group?: string; disabled?: boolean }
@@ -116,7 +117,7 @@ export function Select<V extends string>({ id, value, options, onChange, placeho
               );
             })}
           </div>
-        </div>, document.body)}
+        </div>, popupHost(btn.current))}
     </>
   );
 }

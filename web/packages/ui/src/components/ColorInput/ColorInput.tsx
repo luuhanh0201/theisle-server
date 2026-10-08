@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { popupHost } from '../popupHost';
 import styles from './ColorInput.module.css';
 
 const hexToRgb = (h: string): [number, number, number] | null => {
@@ -114,7 +115,7 @@ export function ColorInput({ id, value, onChange, disabled = false, 'aria-label'
             <button type="button" className={styles.ok} onClick={() => setOpen(false)}>Xong</button>
           </div>
         </div>,
-        document.body,
+        popupHost(btn.current),
       )}
     </>
   );

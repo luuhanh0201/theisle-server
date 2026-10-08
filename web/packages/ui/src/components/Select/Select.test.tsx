@@ -33,3 +33,23 @@ test('keys: arrows move, Enter picks, Esc closes without a change', async () => 
   expect(seen).toEqual(['b']);
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 });
+
+test('inside an open <dialog> (a modal box, drawn above the page): the list opens in the box, not under it', async () => {
+  const seen: string[] = [];
+  render(<dialog open><Box seen={seen} /></dialog>);
+  const btn = screen.getByRole('button', { name: 'Chọn' });
+  await userEvent.click(btn);
+  const pop = document.getElementById(btn.getAttribute('aria-controls') ?? '');
+  expect(pop?.parentElement?.tagName).toBe('DIALOG');
+  await userEvent.click(screen.getByRole('option', { name: 'Hai' }));
+  expect(seen).toEqual(['b']);
+});
+
+test('outside a dialog: the list goes in <body>, as before', async () => {
+  render(<div data-testid="page"><Box seen={[]} /></div>);
+  const btn = screen.getByRole('button', { name: 'Chọn' });
+  await userEvent.click(btn);
+  const pop = document.getElementById(btn.getAttribute('aria-controls') ?? '');
+  expect(pop?.parentElement).toBe(document.body);
+  expect(screen.getByTestId('page').contains(screen.getByRole('listbox'))).toBe(false);
+});

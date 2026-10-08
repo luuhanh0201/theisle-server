@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { createPortal } from 'react-dom';
+import { popupHost } from '../popupHost';
 import styles from './SuggestInput.module.css';
 
 export interface Suggestion { value: string; label?: string }
@@ -46,7 +47,7 @@ export function SuggestInput({ value, onChange, suggestions, className, ...rest 
               <span>{s.value}</span>{s.label && <small>{s.label}</small>}
             </div>
           ))}
-        </div>, document.body)}
+        </div>, popupHost(box.current))}
     </>
   );
 }
