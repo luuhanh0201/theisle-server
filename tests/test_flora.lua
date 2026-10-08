@@ -75,7 +75,7 @@ check("a plant: nutrients, α/β/γ, its spawner", p and p.n == true and p.cp ==
 check("a fruit: no nutrients", d and d.fruits[1].n == false and d.fruits[1].c == "BP_FruitMangoStatic_C")
 check("never off the game thread", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
 
--- Many plants: CHUNK (150) a tick, never all at once; spawners again at 2 min, plants at 10.
+-- Many plants: CHUNK (75) a tick, never all at once; spawners again at 2 min, plants at 10.
 local many = {}
 for i = 1, 400 do many[i] = obj("BP_Fiddlehead_C", { K2_GetActorLocation = at(i, i), bCanGiveNutrients = false }) end
 local reads = 0
@@ -90,12 +90,12 @@ check("at 2 min: the spawners again, no plant read", reads == 0)
 step.fn()
 check("the plants not before 10 min", reads == 0)
 clock = clock + 600
-for _ = 1, 8 do step.fn() end   -- 3 plant chunks, the fruits, the export; then nothing due
+for _ = 1, 10 do step.fn() end   -- 6 plant chunks, the fruits, the export; then nothing due
 writer.fn()
 f = io.open(OUT, "r")
 d = f and json.decode(f:read("*a"))
 if f then f:close() end
-check("400 plants read in 3 ticks of at most 150, each counted once", reads == 3 and d and #d.plants == 400,
+check("400 plants read in 6 ticks of at most 75, each counted once", reads == 6 and d and #d.plants == 400,
   "reads " .. reads .. ", plants " .. tostring(d and #d.plants))
 -- The panel's "Tải lại": a request file, the plants read again now, not at 10 min; not twice in 30 s.
 local REQ = "Mods/Flora/Saved/refresh.request"
@@ -103,19 +103,19 @@ local function ask() local rf = io.open(REQ, "w"); rf:write("1"); rf:close() end
 clock = clock + 10
 ask()
 step.fn()
-check("a request within 30 s of the last read: dropped, nothing read", reads == 3 and io.open(REQ, "r") == nil)
+check("a request within 30 s of the last read: dropped, nothing read", reads == 6 and io.open(REQ, "r") == nil)
 clock = clock + 50
 step.fn()
-check("…and no read without one before 10 min", reads == 3)
+check("…and no read without one before 10 min", reads == 6)
 ask()
 step.fn()
-check("a request: the plants read at once, the file gone", reads == 4 and io.open(REQ, "r") == nil)
-for _ = 1, 6 do step.fn() end
+check("a request: the plants read at once, the file gone", reads == 7 and io.open(REQ, "r") == nil)
+for _ = 1, 8 do step.fn() end
 writer.fn()
 f = io.open(OUT, "r")
 d = f and json.decode(f:read("*a"))
 if f then f:close() end
-check("…then exported with the new read's time", reads == 6 and d and d.plantsT == clock and #d.plants == 400,
+check("…then exported with the new read's time", reads == 12 and d and d.plantsT == clock and #d.plants == 400,
   "reads " .. reads .. ", plantsT " .. tostring(d and d.plantsT) .. " clock " .. clock)
 _G.FindAllOf = prevFind
 -- A start after a crash in the middle of an export: exports stay off.
@@ -149,9 +149,10 @@ end
 settings({ control = true, migrationNutrientPct = 100, migrationMultiplier = 2, massNutrientPct = 100, massMultiplier = 3, outsideAmountPct = 30 })
 dofile(RUN .. "/Mods/Flora/Scripts/main.lua")
 local control
-for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then control = l end end
+for _, l in ipairs(H.gameLoops) do if l.ms == 1000 then control = l end end
 check("a control loop on the game thread", control ~= nil)
-local function round() for _ = 1, 3 do control.fn() end end
+-- A round is a few ticks now (spawners, plants, fruits in pieces); the extra ticks find it done and wait.
+local function round() for _ = 1, 30 do control.fn() end end
 round()
 check("in an active migration area: nutrients kept", inZone.bCanGiveNutrients == true)
 check("in a plain area: leaves only", leaf.bCanGiveNutrients == false)
@@ -210,6 +211,77 @@ check("the trim flag cleared", io.open("Mods/Flora/Saved/trim.running", "r") == 
 clock = clock + 20
 round()
 check("at the cap: nothing more removed", H.countCalls("DestroyPlant") == 4)
+
+say("\n-- step 2c: a round in pieces: at most 150 plants or fruits a tick, extras removed 20 a tick, the counts published whole --")
+crowd = {}
+for i = 1, 400 do plantAt(i, nutri) end
+local fruits = {}
+for i = 1, 200 do fruits[i] = nutri(obj("BP_FruitMangoStatic_C", { K2_GetActorLocation = at(30000 + i, 30000), bCanGiveNutri = true }), "bCanGiveNutri") end
+_G.FindAllOf = function(c)
+  if c == "TIEdibleSpawner" then return { mz, plain } end
+  if c == "TIEdiblePlant" then
+    local alive = {}
+    for _, o in ipairs(crowd) do if not o.destroyed then alive[#alive + 1] = o end end
+    return alive
+  end
+  if c == "TIFruitBase" then return fruits end
+  return {}
+end
+local exportStep
+for _, l in ipairs(H.gameLoops) do if l.ms == 2000 then exportStep = l end end
+local writer2 = H.loops[#H.loops]
+local function exported() exportStep.fn(); writer2.fn(); local ef = io.open(OUT, "r"); local ed = ef and json.decode(ef:read("*a")); if ef then ef:close() end; return ed and ed.control end
+settings({ control = true, migrationNutrientPct = 0, migrationMultiplier = 1, massNutrientPct = 100, massMultiplier = 3,
+  outsideAmountPct = 30, migrationMaxPerArea = 100, massMaxPerArea = 40, outsideMaxPerArea = 1 })
+H.calls = {}
+H.log = {}
+local maxSet, maxGone, ticks, before = 0, 0, 0, nil
+for _ = 1, 30 do
+  local s0, d0 = H.countCalls("SetCanGiveNutrients"), H.countCalls("DestroyPlant")
+  control.fn()
+  ticks = ticks + 1
+  maxSet = math.max(maxSet, H.countCalls("SetCanGiveNutrients") - s0)
+  maxGone = math.max(maxGone, H.countCalls("DestroyPlant") - d0)
+  if ticks == 3 then before = exported() end
+  if table.concat(H.log, "\n"):find("cap removed", 1, true) then break end
+end
+check("never more than 150 plants or fruits changed in one tick", maxSet > 0 and maxSet <= 150, tostring(maxSet))
+check("all of them changed in the round (400 plants, 200 fruits)", H.countCalls("SetCanGiveNutrients") == 600, tostring(H.countCalls("SetCanGiveNutrients")))
+check("the extras removed 20 a tick, 60 a round", maxGone == 20 and H.countCalls("DestroyPlant") == 60, maxGone .. ", " .. H.countCalls("DestroyPlant"))
+check("the round in 9 ticks (spawners, 3 plant pieces, 3 removals, 2 fruit pieces)", ticks == 9, tostring(ticks))
+check("mid-round, the export still has the last whole round", before and before.plants == 2, before and json.encode(before) or "nil")
+clock = clock + 121
+local after = exported()
+check("…and the new one when it is complete", after and after.plants == 400 and after.fruits == 200 and after.trimmed == 60
+  and after.plantsNutri == 0, after and json.encode(after) or "nil")
+local gone = 0
+for _, o in ipairs(crowd) do if o.destroyed then gone = gone + 1 end end
+check("a plant removed is one noted in this round, still in its area", gone == 60)
+check("never off the game thread (round in pieces)", H.offThreadAccess == 0, table.concat(H.offThreadWhat, ","))
+
+say("\n-- step 2d: the spawning areas in pieces too, 40 a tick --")
+local areas = {}
+for i = 1, 100 do
+  areas[i] = obj("BP_EdiblePlantsSpawnable_C", { K2_GetActorLocation = at(i * 100, 0), bShouldUseMigration = false, AmountToBeSpawned = 10,
+    GetIsMigrationActive = function() H.record("GetIsMigrationActive"); return false end })
+end
+_G.FindAllOf = function(c)
+  if c == "TIEdibleSpawner" then return areas end
+  return {}
+end
+clock = clock + 20
+H.calls = {}
+local most, areaTicks = 0, 0
+for _ = 1, 10 do
+  local a0 = H.countCalls("GetIsMigrationActive")
+  control.fn()
+  local n = H.countCalls("GetIsMigrationActive") - a0
+  if n > 0 then areaTicks = areaTicks + 1 end
+  most = math.max(most, n)
+end
+check("100 areas in 3 ticks of at most 40", most == 40 and areaTicks == 3 and H.countCalls("GetIsMigrationActive") == 100,
+  most .. ", " .. areaTicks .. ", " .. H.countCalls("GetIsMigrationActive"))
+check("…each capped as a plain area (1 plant)", areas[1].AmountToBeSpawned == 1 and areas[100].AmountToBeSpawned == 1)
 os.remove(SET); os.remove(CFLAG)
 say(string.format("=== Flora: %d passed, %d failed ===", pass, fail))
 io.flush()

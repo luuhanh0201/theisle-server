@@ -23,8 +23,10 @@
 --     nutrients first, TRIM_PER_ROUND a round; `outsideAmountPct` of the fruit
 --     trees' fruit counts
 --   * the game's own values are remembered and put back when it is turned off
---   * checked every CONTROL_MS (plants keep growing back), one family per tick;
---     numbers and booleans only; a flag against a crash loop, as for exports
+--   * checked every CONTROL_MS (plants keep growing back), a round in small
+--     pieces, CONTROL_CHUNK plants or fruits a tick (whole families in one
+--     tick held the game thread 35 to 51 ms, 2026-10-08); numbers and
+--     booleans only; a flag against a crash loop, as for exports
 --
 -- Every EXPORT_MS this writes Mods/Flora/Saved/flora.json: each spawner (where,
 -- its shape, whether it is a migration zone and active / mass now) and every
@@ -33,7 +35,8 @@
 -- spawners for the prime zone tasks (zone-credit.ts), so they stay fresh.
 -- The plants and fruits are for the map only: read every PLANTS_EVERY_MS,
 -- CHUNK a tick (all ~1,200 plants in one tick held the game thread up to
--- 275 ms, 2026-09-27); each export carries the last complete read.
+-- 275 ms, 2026-09-27; 150 a tick still up to 39 ms, 2026-10-08); each
+-- export carries the last complete read.
 --
 -- Read-only, and careful (lessons of 2026-09-24 and 2026-09-26):
 --   * only numbers and booleans are read from these actors, plus the
@@ -60,13 +63,13 @@ local OUT = DIR .. "flora.json"
 local FLAG = DIR .. "export.running"
 local EXPORT_MS = 120000     -- the spawners every two minutes…
 local PLANTS_EVERY_MS = 600000   -- …the plants and fruits every ten…
-local CHUNK = 150            -- …this many a tick
+local CHUNK = 75             -- …this many a tick (~20 ms; 150 took up to 39)
 -- The panel's map "Tải lại" (bridge: POST /api/map/flora/refresh) leaves this
 -- file: the plants are read again now, not at the next ten minutes; at most
--- once in REFRESH_GAP_S (a full read is ~10 ticks).
+-- once in REFRESH_GAP_S (a full read of ~1,600 is ~21 ticks, ~40 s).
 local REFRESH = DIR .. "refresh.request"
 local REFRESH_GAP_S = 30
-local STEP_MS = 3000         -- ticks three seconds apart
+local STEP_MS = 2000         -- ticks two seconds apart (a whole read in ~40 s, as with 150 a tick every 3 s)
 local WRITE_MS = 5000
 local SPLINE_POINTS = 64     -- at most, per spline area
 
@@ -356,7 +359,6 @@ local orig = { multiplier = {}, amount = {}, minAmount = {}, fruitsMin = {}, fru
 local zones = {}          -- spawner address -> { active, mass, ring } (this control round)
 local activeRings = {}    -- rings of the active / mass areas, for fruits and plants without a spawner
 local applied = false     -- the control has changed something that needs putting back
-local controlStage = 0
 local controlFirst = true
 local trimFirst = true       -- the first DestroyPlant round runs under its own crash flag
 
@@ -399,158 +401,224 @@ local function pctAt(x, y, s)
 end
 local function chosen(a, pct) return pct >= 100 or (pct > 0 and a % 100 < pct) end
 
-local function controlSpawners(s, on)
-    zones, activeRings = {}, {}
-    local okA, all = pcall(function() return FindAllOf("TIEdibleSpawner") or {} end)
-    for _, sp in ipairs(okA and all or {}) do
-        local a = H.isValid(sp) and addressOf(sp)
-        if a then
-            local okM, active = pcall(function() return sp:GetIsMigrationActive() end)
-            local z = { active = okM and active == true, mass = bool(sp, "bBecameMassMigration") == true,
-                migration = bool(sp, "bShouldUseMigration") == true }
-            zones[a] = z
-            if shapes[a] == nil then shapes[a] = shapeOf(sp) end
-            if (z.active or z.mass) and shapes[a].spline then
-                local ring = shapes[a].spline
-                local bx0, by0, bx1, by1 = math.huge, math.huge, -math.huge, -math.huge
-                for _, q in ipairs(ring) do
-                    bx0, by0, bx1, by1 = math.min(bx0, q[1]), math.min(by0, q[2]), math.max(bx1, q[1]), math.max(by1, q[2])
-                end
-                activeRings[#activeRings + 1] = { ring = ring, mass = z.mass, box = { bx0, by0, bx1, by1 } }
-            end
-            remember(orig.multiplier, a, num(sp, "MigrationSpawnMultiplier"))
-            remember(orig.amount, a, num(sp, "AmountToBeSpawned"))
-            remember(orig.minAmount, a, num(sp, "MinimumZoneAmountToBeSpawned"))
-            if on then
-                if z.mass then setInt(sp, "MigrationSpawnMultiplier", s.massMultiplier)
-                elseif z.active then setInt(sp, "MigrationSpawnMultiplier", s.migrationMultiplier)
-                elseif orig.multiplier[a] then setInt(sp, "MigrationSpawnMultiplier", orig.multiplier[a]) end
-                -- The most plants this area may hold now.
-                z.cap = z.mass and s.massMaxPerArea or z.active and s.migrationMaxPerArea
-                    or (not z.migration) and s.outsideMaxPerArea or nil
-                if z.cap ~= nil then
-                    if orig.amount[a] then setInt(sp, "AmountToBeSpawned", math.min(orig.amount[a], z.cap)) end
-                    if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", math.min(orig.minAmount[a], z.cap)) end
-                else
-                    if orig.amount[a] then setInt(sp, "AmountToBeSpawned", orig.amount[a]) end
-                    if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", orig.minAmount[a]) end
-                end
-            else
-                if orig.multiplier[a] then setInt(sp, "MigrationSpawnMultiplier", orig.multiplier[a]) end
-                if orig.amount[a] then setInt(sp, "AmountToBeSpawned", orig.amount[a]) end
-                if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", orig.minAmount[a]) end
-            end
+--- One spawning area: its migration state (for the plants and fruits after
+--- it) and the game's numbers for it. `zones` / `activeRings` start empty
+--- each round.
+local function controlSpawner(r, sp, a)
+    local s, on = r.s, r.on
+    local okM, active = pcall(function() return sp:GetIsMigrationActive() end)
+    local z = { active = okM and active == true, mass = bool(sp, "bBecameMassMigration") == true,
+        migration = bool(sp, "bShouldUseMigration") == true }
+    zones[a] = z
+    if shapes[a] == nil then shapes[a] = shapeOf(sp) end
+    if (z.active or z.mass) and shapes[a].spline then
+        local ring = shapes[a].spline
+        local bx0, by0, bx1, by1 = math.huge, math.huge, -math.huge, -math.huge
+        for _, q in ipairs(ring) do
+            bx0, by0, bx1, by1 = math.min(bx0, q[1]), math.min(by0, q[2]), math.max(bx1, q[1]), math.max(by1, q[2])
         end
+        activeRings[#activeRings + 1] = { ring = ring, mass = z.mass, box = { bx0, by0, bx1, by1 } }
+    end
+    remember(orig.multiplier, a, num(sp, "MigrationSpawnMultiplier"))
+    remember(orig.amount, a, num(sp, "AmountToBeSpawned"))
+    remember(orig.minAmount, a, num(sp, "MinimumZoneAmountToBeSpawned"))
+    if on then
+        if z.mass then setInt(sp, "MigrationSpawnMultiplier", s.massMultiplier)
+        elseif z.active then setInt(sp, "MigrationSpawnMultiplier", s.migrationMultiplier)
+        elseif orig.multiplier[a] then setInt(sp, "MigrationSpawnMultiplier", orig.multiplier[a]) end
+        -- The most plants this area may hold now.
+        z.cap = z.mass and s.massMaxPerArea or z.active and s.migrationMaxPerArea
+            or (not z.migration) and s.outsideMaxPerArea or nil
+        if z.cap ~= nil then
+            if orig.amount[a] then setInt(sp, "AmountToBeSpawned", math.min(orig.amount[a], z.cap)) end
+            if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", math.min(orig.minAmount[a], z.cap)) end
+        else
+            if orig.amount[a] then setInt(sp, "AmountToBeSpawned", orig.amount[a]) end
+            if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", orig.minAmount[a]) end
+        end
+    else
+        if orig.multiplier[a] then setInt(sp, "MigrationSpawnMultiplier", orig.multiplier[a]) end
+        if orig.amount[a] then setInt(sp, "AmountToBeSpawned", orig.amount[a]) end
+        if orig.minAmount[a] then setInt(sp, "MinimumZoneAmountToBeSpawned", orig.minAmount[a]) end
     end
 end
 
-local function controlPlants(s, on)
-    local okA, all = pcall(function() return FindAllOf("TIEdiblePlant") or {} end)
-    local st = { plants = 0, plantsNutri = 0, trimmed = 0 }
-    local byArea = {}      -- area address -> { plants of this tick, nutrient-less first when trimmed }
-    for _, p in ipairs(okA and all or {}) do
-        local a = H.isValid(p) and addressOf(p)
-        if a then
-            st.plants = st.plants + 1
-            local want, entry = true, nil
-            if on then
-                local zone, za = nil, nil
-                pcall(function() local sp = p.Spawner; if sp ~= nil and H.isValid(sp) then za = addressOf(sp); zone = zones[za] end end)
-                if zone ~= nil and zone.cap ~= nil and not bool(p, "bWasConsumed") then
-                    local list = byArea[za] or { cap = zone.cap }
-                    byArea[za] = list
-                    entry = { p = p, a = a }
-                    list[#list + 1] = entry
-                end
-                local pct
-                if zone ~= nil then pct = pctFor(zone, s)
-                else local x, y = where(p); pct = x and pctAt(x, y, s) or 0 end
-                want = chosen(a, pct)
-            end
-            setNutrients(p, want, bool(p, "bCanGiveNutrients"))
-            if want then st.plantsNutri = st.plantsNutri + 1 end
-            if entry then entry.nutri = want end
-            -- Fruit trees: fewer fruits outside the migration areas.
-            if bool(p, "bIsStaticSpawner") then
-                remember(orig.fruitsMin, a, num(p, "MinAmountOfFruits"))
-                remember(orig.fruitsMax, a, num(p, "MaxAmountOfFruits"))
-                local x, y = where(p)
-                local inside = x and pctAt(x, y, s) > 0
-                local k = (on and not inside) and s.outsideAmountPct / 100 or 1
-                if orig.fruitsMin[a] then setInt(p, "MinAmountOfFruits", math.floor(orig.fruitsMin[a] * k + 0.5)) end
-                if orig.fruitsMax[a] then setInt(p, "MaxAmountOfFruits", math.max(orig.fruitsMin[a] and math.floor(orig.fruitsMin[a] * k + 0.5) or 0, math.floor(orig.fruitsMax[a] * k + 0.5))) end
-            end
+-- A control round, one piece per CONTROL_TICK_MS tick (2026-10-08: the
+-- plants, ~600, then the fruits, ~1,000, each in one tick held the game
+-- thread 35 to 51 ms, more than a frame at 30 FPS, in most 5-minute
+-- windows; the 80 spawners alone took 20 to 27 ms): SPAWNER_CHUNK spawners,
+-- then CONTROL_CHUNK plants or fruits a tick, found fresh by FindAllOf each
+-- tick and gone on from an index (an
+-- actor seen twice, the list having moved, counted once by its address).
+-- Plants over an area's cap are only noted (addresses, numbers), and removed
+-- after the plants are all seen, at most TRIM_PER_TICK a tick, each found
+-- again by its address and its area. The round's counts reach the export
+-- when the round is complete.
+local CONTROL_TICK_MS = 1000
+local CONTROL_CHUNK = 150
+local SPAWNER_CHUNK = 40
+local TRIM_PER_TICK = 20
+
+--- One plant: its nutrients and, for a fruit tree, its fruits. Notes it in
+--- `r.byArea` when its area has a cap (to be trimmed after the last chunk).
+local function controlPlant(r, p, a)
+    local s, on, st = r.s, r.on, r.st
+    st.plants = st.plants + 1
+    local want, entry = true, nil
+    if on then
+        local zone, za = nil, nil
+        pcall(function() local sp = p.Spawner; if sp ~= nil and H.isValid(sp) then za = addressOf(sp); zone = zones[za] end end)
+        if zone ~= nil and zone.cap ~= nil and not bool(p, "bWasConsumed") then
+            local list = r.byArea[za] or { cap = zone.cap }
+            r.byArea[za] = list
+            entry = { a = a }
+            list[#list + 1] = entry
         end
+        local pct
+        if zone ~= nil then pct = pctFor(zone, s)
+        else local x, y = where(p); pct = x and pctAt(x, y, s) or 0 end
+        want = chosen(a, pct)
     end
-    -- Areas above their cap: remove the extra plants with the game's own
-    -- DestroyPlant, on plants found in this very tick; those without nutrients
-    -- go first, so the nutrient share stays as set.
-    local budget = TRIM_PER_ROUND
-    for _, list in pairs(byArea) do
+    setNutrients(p, want, bool(p, "bCanGiveNutrients"))
+    if want then st.plantsNutri = st.plantsNutri + 1 end
+    if entry then entry.nutri = want end
+    -- Fruit trees: fewer fruits outside the migration areas.
+    if bool(p, "bIsStaticSpawner") then
+        remember(orig.fruitsMin, a, num(p, "MinAmountOfFruits"))
+        remember(orig.fruitsMax, a, num(p, "MaxAmountOfFruits"))
+        local x, y = where(p)
+        local inside = x and pctAt(x, y, s) > 0
+        local k = (on and not inside) and s.outsideAmountPct / 100 or 1
+        if orig.fruitsMin[a] then setInt(p, "MinAmountOfFruits", math.floor(orig.fruitsMin[a] * k + 0.5)) end
+        if orig.fruitsMax[a] then setInt(p, "MaxAmountOfFruits", math.max(orig.fruitsMin[a] and math.floor(orig.fruitsMin[a] * k + 0.5) or 0, math.floor(orig.fruitsMax[a] * k + 0.5))) end
+    end
+end
+
+local function controlFruit(r, f, a)
+    local st = r.st
+    st.fruits = st.fruits + 1
+    local want = true
+    if r.on then local x, y = where(f); want = chosen(a, x and pctAt(x, y, r.s) or 0) end
+    setNutrients(f, want, bool(f, "bCanGiveNutri"))
+    if want then st.fruitsNutri = st.fruitsNutri + 1 end
+end
+
+local CONTROL_FAMILIES = {
+    spawners = { cls = "TIEdibleSpawner", fn = controlSpawner, chunk = SPAWNER_CHUNK },
+    plants = { cls = "TIEdiblePlant", fn = controlPlant, chunk = CONTROL_CHUNK },
+    fruits = { cls = "TIFruitBase", fn = controlFruit, chunk = CONTROL_CHUNK },
+}
+
+--- The next chunk of the round's family; true when the family is done.
+local function controlChunk(r)
+    local fam = CONTROL_FAMILIES[r.family]
+    local okA, all = pcall(function() return FindAllOf(fam.cls) or {} end)
+    all = okA and all or {}
+    local done, i = 0, r.from
+    while i <= #all and done < fam.chunk do
+        local o = all[i]
+        local a = H.isValid(o) and addressOf(o)
+        if a and not r.seen[a] then
+            r.seen[a] = true
+            fam.fn(r, o, a)
+            done = done + 1
+        end
+        i = i + 1
+    end
+    r.from = i
+    return i > #all
+end
+
+--- The plants over their area's cap, without nutrients first, at most
+--- TRIM_PER_ROUND: address -> its area's address.
+local function trimList(byArea)
+    local out, n = {}, 0
+    for za, list in pairs(byArea) do
         local extra = #list - list.cap
-        if extra > 0 and budget > 0 then
+        if extra > 0 and n < TRIM_PER_ROUND then
             table.sort(list, function(x, y) return (x.nutri and 1 or 0) < (y.nutri and 1 or 0) end)
-            if trimFirst then markRunning(true, TRIM_FLAG) end
-            for i = 1, math.min(extra, budget) do
-                local e = list[i]
-                if H.isValid(e.p) and pcall(function() e.p:DestroyPlant() end) then
-                    st.trimmed = st.trimmed + 1
-                    if e.nutri then st.plantsNutri = st.plantsNutri - 1 end
-                end
-            end
-            budget = budget - math.min(extra, budget)
-            if trimFirst then trimFirst = false; markRunning(false, TRIM_FLAG) end
+            for k = 1, math.min(extra, TRIM_PER_ROUND - n) do out[list[k].a] = { area = za, nutri = list[k].nutri }; n = n + 1 end
         end
     end
-    return st
+    return out, n
 end
 
-local function controlFruits(s, on, st)
-    local okA, all = pcall(function() return FindAllOf("TIFruitBase") or {} end)
-    st.fruits, st.fruitsNutri = 0, 0
-    for _, f in ipairs(okA and all or {}) do
-        local a = H.isValid(f) and addressOf(f)
-        if a then
-            st.fruits = st.fruits + 1
-            local want = true
-            if on then local x, y = where(f); want = chosen(a, x and pctAt(x, y, s) or 0) end
-            setNutrients(f, want, bool(f, "bCanGiveNutri"))
-            if want then st.fruitsNutri = st.fruitsNutri + 1 end
+--- Removes up to TRIM_PER_TICK of the noted plants, each found again by its
+--- address, still in the same area and not eaten; true when none is left.
+local function trimChunk(r)
+    local okA, all = pcall(function() return FindAllOf("TIEdiblePlant") or {} end)
+    local removed = 0
+    for _, p in ipairs(okA and all or {}) do
+        if removed >= TRIM_PER_TICK then break end
+        local a = H.isValid(p) and addressOf(p)
+        local t = a and r.trim[a]
+        if t then
+            r.trim[a], r.trimLeft = nil, r.trimLeft - 1
+            local za = nil
+            pcall(function() local sp = p.Spawner; if sp ~= nil and H.isValid(sp) then za = addressOf(sp) end end)
+            if za == t.area and not bool(p, "bWasConsumed") then
+                if trimFirst then markRunning(true, TRIM_FLAG) end
+                if pcall(function() p:DestroyPlant() end) then
+                    r.st.trimmed = r.st.trimmed + 1
+                    if t.nutri then r.st.plantsNutri = r.st.plantsNutri - 1 end
+                end
+                if trimFirst then trimFirst = false; markRunning(false, TRIM_FLAG) end
+                removed = removed + 1
+            end
         end
     end
+    -- Not found in a whole pass (eaten, despawned): no longer ours to remove.
+    if removed < TRIM_PER_TICK then r.trim, r.trimLeft = {}, 0 end
+    return r.trimLeft <= 0
 end
 
 local controlNext = 0
+local round = nil          -- the round under way: { stage, s, on, st, family, from, seen, byArea, trim, trimLeft }
 local function controlStep()
     if disabled then return end
-    local s = readSettings()
-    local on = s.control
-    if not on and not applied then return end          -- off, and nothing of ours to put back
     local now = os.time() * 1000
-    if controlStage == 0 then
+    if round == nil then
         if now < controlNext then return end
+        local s = readSettings()
+        if not s.control and not applied then return end      -- off, and nothing of ours to put back
+        round = { stage = "family", family = "spawners", from = 1, seen = {}, s = s, on = s.control,
+            st = { plants = 0, plantsNutri = 0, trimmed = 0, fruits = 0, fruitsNutri = 0 } }
+        zones, activeRings = {}, {}
         if controlFirst then markRunning(true, CONTROL_FLAG) end
-        controlSpawners(s, on)
-        controlStage = 1
-    elseif controlStage == 1 then
-        stats = controlPlants(s, on)
-        controlStage = 2
-    else
-        controlFruits(s, on, stats)
-        stats.on, stats.t, stats.active = on, os.time(), #activeRings
-        controlStage = 0
-        controlNext = now + CONTROL_MS
-        if controlFirst then
-            controlFirst = false
-            markRunning(false, CONTROL_FLAG)
-            H.log(string.format("%s: control %s, %d/%d plants and %d/%d fruits give nutrients, %d active areas", MOD,
-                on and "on" or "off (game values put back)", stats.plantsNutri, stats.plants, stats.fruitsNutri, stats.fruits, #activeRings))
-        end
-        if stats.trimmed > 0 then
-            H.log(string.format("%s: %d plants over their area's cap removed (DestroyPlant)", MOD, stats.trimmed))
-        end
-        applied = on
     end
+    local r = round
+    if r.stage == "family" then
+        if not controlChunk(r) then return end
+        if r.family == "spawners" then
+            r.family, r.from, r.seen, r.byArea = "plants", 1, {}, {}
+            return
+        end
+        if r.family == "plants" then
+            r.trim, r.trimLeft = trimList(r.byArea)
+            r.byArea = nil
+            if r.trimLeft > 0 then r.stage = "trim" else r.family, r.from, r.seen = "fruits", 1, {} end
+            return
+        end
+    elseif r.stage == "trim" then
+        if trimChunk(r) then r.stage, r.family, r.from, r.seen = "family", "fruits", 1, {} end
+        return
+    end
+    -- The fruits done: the round is complete.
+    local st = r.st
+    st.on, st.t, st.active = r.on, os.time(), #activeRings
+    stats = st
+    round = nil
+    controlNext = now + CONTROL_MS
+    if controlFirst then
+        controlFirst = false
+        markRunning(false, CONTROL_FLAG)
+        H.log(string.format("%s: control %s, %d/%d plants and %d/%d fruits give nutrients, %d active areas", MOD,
+            r.on and "on" or "off (game values put back)", st.plantsNutri, st.plants, st.fruitsNutri, st.fruits, #activeRings))
+    end
+    if st.trimmed > 0 then
+        H.log(string.format("%s: %d plants over their area's cap removed (DestroyPlant)", MOD, st.trimmed))
+    end
+    applied = r.on
 end
 
 local crashed = io.open(FLAG, "r")
@@ -573,7 +641,7 @@ else
         H.logError(MOD .. ": the last control round did not finish (the server stopped during it), control is off. "
             .. "Delete " .. CONTROL_FLAG .. " to try again.")
     else
-        H.every(CONTROL_MS // 3, MOD .. " control", controlStep)
+        H.every(CONTROL_TICK_MS, MOD .. " control", controlStep)
     end
     H.every(STEP_MS, MOD .. " export", step)
     LoopAsync(WRITE_MS, function() write(); return false end)

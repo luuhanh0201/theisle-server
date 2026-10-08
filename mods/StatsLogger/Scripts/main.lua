@@ -697,6 +697,7 @@ end
 
 local LIVE_FILE      = "live.json"
 local LIVE_EVERY_MS  = 1000
+local SNAPSHOT_EVERY_LIVES = math.floor(SNAPSHOT_SECONDS * 1000 / LIVE_EVERY_MS)   -- 5: a player's snapshot every 5th read
 local AI_EVERY_LIVES = 2      -- AI list every 2nd live read (2 s)
 local AI_MAX         = 500
 -- The game's ambient fish (TIAIWorldSpawner.AIAmbientFishClasses, FishProbe
@@ -816,57 +817,121 @@ local function liveOnce()
     readyLive = { t = now, players = players, ai = lastAi, fps = gameStateNumber("ServerFPS") }
 end
 
-local function snapshotOnce()
+-- Each player's snapshot is still every SNAPSHOT_SECONDS, but not all of
+-- them in the same second (2026-10-08): a snapshot reads 60 to 100 things of
+-- a dino (vitals, maxima, skin, prime, mutations, ping…), so seven players at
+-- once, with the AI scan of that second, held the game thread far longer
+-- than one frame. A player gets one of the SNAPSHOT_EVERY_LIVES seconds, the
+-- least taken among the players here now (the current one first, so a lone
+-- newcomer is read at once), and keeps it; in second 0, after the leavers,
+-- a second with 2 more than another gives one player away (that player's
+-- next snapshot comes once a little early or late, 1 to 9 s).
+local slots = {}             -- steamId -> 0 .. SNAPSHOT_EVERY_LIVES - 1
+local function loadsOf(here)
+    local load = {}
+    for k = 0, SNAPSHOT_EVERY_LIVES - 1 do load[k] = 0 end
+    for _, p in ipairs(here) do local sl = slots[p.id]; if sl ~= nil then load[sl] = load[sl] + 1 end end
+    return load
+end
+local function slotFor(phase, load)
+    local best = phase
+    for k = 1, SNAPSHOT_EVERY_LIVES - 1 do
+        local sl = (phase + k) % SNAPSHOT_EVERY_LIVES
+        if load[sl] < load[best] then best = sl end
+    end
+    return best
+end
+local function rebalance(here)
+    local load = loadsOf(here)
+    for _ = 1, #here do
+        local hi, lo = 0, 0
+        for k = 1, SNAPSHOT_EVERY_LIVES - 1 do
+            if load[k] > load[hi] then hi = k end
+            if load[k] < load[lo] then lo = k end
+        end
+        if load[hi] - load[lo] <= 1 then return end
+        for _, p in ipairs(here) do
+            if slots[p.id] == hi then slots[p.id] = lo; break end
+        end
+        load[hi], load[lo] = load[hi] - 1, load[lo] + 1
+    end
+end
+
+--- One player's snapshot, and what it reveals (spawn, death, growth…).
+local function snapshotOf(id, ctrl, snaps)
+    local name = playerNameOf(ctrl) or names[id]
+    names[id] = name
+
+    -- No pawn: in the spawn menu, or between death and respawn.
+    local pawn = H.livePawnFromCtrl(ctrl)
+    if not pawn then
+        lostPawn(id, name)
+        return
+    end
+    local snap = {
+        type    = "snapshot",
+        steamId = id,
+        name    = name,
+        species = speciesOf(pawn),
+        health  = vital(pawn, "health"),
+        stamina = vital(pawn, "stamina"),
+        hunger  = vital(pawn, "hunger"),
+        thirst  = vital(pawn, "thirst"),
+        oxygen  = vital(pawn, "oxygen"),
+        blood   = vital(pawn, "blood"),
+        growth  = vital(pawn, "growth"),
+        max     = maxima(pawn),
+        loc     = locationOf(pawn),
+        yaw     = yawOf(pawn),
+        ping    = pingOf(ctrl),
+    }
+    snaps[#snaps + 1] = snap
+
+    checkLife(id, name, pawn, snap)
+end
+
+--- The snapshots of the players whose second this is (`phase`); a newcomer's
+--- session opens the second they are seen, a leaver's closes in second 0,
+--- every SNAPSHOT_SECONDS as before.
+local function snapshotOnce(phase)
     local now   = os.time()
     local seen  = {}
     local snaps = {}
 
+    -- Who is here (this tick only: the controllers are not kept past it).
+    local here = {}
     H.forEachPlayer(function(ctrl)
-        -- H.forEachPlayer pcalls this callback, so one bad player cannot
-        -- kill the whole loop.
         local id = H.safeSteamId(ctrl)
-        if not id then return end
-        seen[id] = true
-
-        local name = playerNameOf(ctrl) or names[id]
-        names[id] = name
-
-        if sessions[id] == nil then
-            sessions[id] = { start = now }
-            queue({ type = "session_start", steamId = id, name = name })
+        if id and not seen[id] then
+            seen[id] = true
+            here[#here + 1] = { id = id, ctrl = ctrl }
         end
-
-        -- No pawn: in the spawn menu, or between death and respawn.
-        local pawn = H.livePawnFromCtrl(ctrl)
-        if not pawn then
-            lostPawn(id, name)
-            return
-        end
-        local snap = {
-            type    = "snapshot",
-            steamId = id,
-            name    = name,
-            species = speciesOf(pawn),
-            health  = vital(pawn, "health"),
-            stamina = vital(pawn, "stamina"),
-            hunger  = vital(pawn, "hunger"),
-            thirst  = vital(pawn, "thirst"),
-            oxygen  = vital(pawn, "oxygen"),
-            blood   = vital(pawn, "blood"),
-            growth  = vital(pawn, "growth"),
-            max     = maxima(pawn),
-            loc     = locationOf(pawn),
-            yaw     = yawOf(pawn),
-            ping    = pingOf(ctrl),
-        }
-        snaps[#snaps + 1] = snap
-
-        checkLife(id, name, pawn, snap)
     end)
 
+    -- Newcomers: their session, and a second of their own.
+    local load = loadsOf(here)
+    for _, p in ipairs(here) do
+        local id = p.id
+        if sessions[id] == nil then
+            local first = playerNameOf(p.ctrl) or names[id]
+            names[id] = first
+            sessions[id] = { start = now }
+            queue({ type = "session_start", steamId = id, name = first })
+        end
+        if slots[id] == nil then
+            slots[id] = slotFor(phase, load)
+            load[slots[id]] = load[slots[id]] + 1
+        end
+    end
+
+    for _, p in ipairs(here) do
+        -- One player's error does not stop the others (as forEachPlayer did).
+        if slots[p.id] == phase then H.try(MOD .. ": snapshot", snapshotOf, p.id, p.ctrl, snaps) end
+    end
+
     -- Players who left: close the session and forget them, so the tables do
-    -- not grow without bound.
-    for id, s in pairs(sessions) do
+    -- not grow without bound. Once every SNAPSHOT_SECONDS, as before.
+    for id, s in pairs(phase == 0 and sessions or {}) do
         if not seen[id] then
             queue({
                 type     = "session_end",
@@ -875,9 +940,10 @@ local function snapshotOnce()
                 species  = life[id] and life[id].species or nil,
                 duration = now - s.start,
             })
-            sessions[id], life[id], recentHits[id], names[id] = nil, nil, nil, nil
+            sessions[id], life[id], recentHits[id], names[id], slots[id] = nil, nil, nil, nil, nil
         end
     end
+    if phase == 0 then rebalance(here) end
 
     -- No file I/O here: this runs on the game thread. Hand the snapshots to
     -- the async tick, which writes them after the events queued above.
@@ -903,7 +969,6 @@ end
 -- for good, the map lost everyone while they were still playing.
 
 local TICK_MS = 500
-local SNAPSHOT_EVERY_LIVES = math.floor(SNAPSHOT_SECONDS * 1000 / LIVE_EVERY_MS)
 local lives = 0
 
 local function writeQueued()
@@ -928,11 +993,8 @@ LoopAsync(TICK_MS, function()
 end)
 
 H.every(LIVE_EVERY_MS, MOD .. ": read", function()
-    lives = lives + 1
-    if lives >= SNAPSHOT_EVERY_LIVES then
-        lives = 0
-        H.try(MOD .. ": snapshot", snapshotOnce)
-    end
+    lives = (lives + 1) % SNAPSHOT_EVERY_LIVES   -- the second of 5: 1, 2, 3, 4, 0
+    H.try(MOD .. ": snapshot", snapshotOnce, lives)
     H.try(MOD .. ": live", liveOnce)
 end)
 

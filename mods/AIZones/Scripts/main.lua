@@ -54,6 +54,12 @@ local TICK_BUDGET = 10       -- …nor more than this many spawns in one tick, a
 local TRIES       = 3        -- spawn points tried per AI before giving up this turn
 local KEEP_OFF_CM = 4000     -- spots this close to a player are used last (no AI popping in your face)
 local RETRY_S     = 30       -- a zone whose top-up made nothing waits this long
+-- A turn plans its spawns and queues them; they are made one per SPAWN_MS
+-- callback (2026-10-08: ten in one turn held the game thread 301 ms, about
+-- 9 frames; one spawn is ~30 ms, about a frame). Ten take two seconds, well
+-- inside a turn; the next turn plans nothing while any is still queued.
+local SPAWN_MS    = 200
+local QUEUE_MAX_S = 30       -- a queue older than this is dropped (a stuck loop must not stop the zones)
 
 -- Pawns are spawned through GameplayStatics' deferred spawn with
 -- AdjustIfPossibleButAlwaysSpawn, not world:SpawnActor: that one keeps the
@@ -333,10 +339,98 @@ local function spawnOne(world, zone, sp, nextSpot)
 end
 
 --------------------------------------------------------------------------
+-- The spawn queue (game thread): planned by the turn, made one at a time
+--------------------------------------------------------------------------
+-- An entry is plain data, never an engine object: the zone (as read from
+-- zones.json), the turn's batch it belongs to and the batch's spot picker
+-- (points and taken spots, numbers). The world is found again for each spawn.
+
+local queue = {}             -- { batch, ... }: one entry per AI to make
+
+--- The world to spawn in, found now: the game state's, else a player's.
+local function findWorld()
+    local okW, w = pcall(function()
+        local gs = FindFirstOf("TIGameStateBase")
+        if gs == nil or not H.isValid(gs) then return nil end
+        return gs:GetWorld()
+    end)
+    if okW and w ~= nil and H.isValid(w) then return w end
+    local found = nil
+    H.forEachPlayer(function(ctrl)
+        if found ~= nil then return end
+        local pawn = H.livePawnFromCtrl(ctrl)
+        if not pawn then return end
+        local okP, pw = pcall(function() return pawn:GetWorld() end)
+        if okP and pw ~= nil and H.isValid(pw) then found = pw end
+    end)
+    return found
+end
+
+--- The panel's status follows each spawn (the turn built it before them).
+local function statusAdd(b, ok)
+    local zs = status and status.zones and status.zones[tostring(b.z.id)]
+    local stats = zoneStats[b.z.id]
+    if zs then
+        if ok then zs.count = (zs.count or 0) + 1 end
+        zs.spawned, zs.failed, zs.lastSpawn, zs.lastError = stats.spawned, stats.failed, stats.lastSpawn, stats.lastError
+    end
+    if ok and status then
+        status.alive = (status.alive or 0) + 1
+        if status.total then status.total = status.total + 1 end
+    end
+end
+
+--- A batch is over (all made, failed, or no spot left): its log line, and a
+--- top-up that made nothing waits RETRY_S, as before.
+local function finishBatch(b)
+    if #b.made == 0 then retryAt[b.z.id] = os.time() + RETRY_S; return end
+    H.log(string.format("%s: zone '%s' +%d (%s, %s), %d in the zone (min %d, max %d, %s), %d/%d AI on the server",
+        MOD, tostring(b.z.name), #b.made, table.concat(b.made, ", "), b.why == "min" and "keeping the minimum" or "a turn",
+        b.count + #b.made, b.min, b.max, b.occupied and "a player is in it" or "empty", b.total + #b.made, b.cap))
+end
+
+--- One queued AI, made now.
+local function spawnNext()
+    local b = queue[1]
+    if b == nil then return end
+    if os.time() - b.at > QUEUE_MAX_S then
+        H.logError(MOD .. ": " .. #queue .. " queued spawns not made in " .. QUEUE_MAX_S .. " s, dropped")
+        queue = {}
+        return
+    end
+    table.remove(queue, 1)
+    b.left = b.left - 1
+    local stats = zoneStats[b.z.id]
+    local world = findWorld()
+    local sp = b.z.species[math.random(#b.z.species)]
+    local ok, err, noSpot = false, "no world to spawn in", nil
+    if world ~= nil then ok, err, noSpot = spawnOne(world, b.z, sp, b.nextSpot) end
+    if noSpot then
+        -- Spacing leaves no room: thinner than asked, not crowded. Not a failure; the rest of the batch is dropped.
+        stats.lastError = err
+        local keep = {}
+        for _, e in ipairs(queue) do if e ~= b then keep[#keep + 1] = e end end
+        queue, b.left = keep, 0
+    elseif ok then
+        stats.spawned = stats.spawned + 1
+        stats.lastSpawn = os.time()
+        b.made[#b.made + 1] = tostring(sp.key)
+    else
+        stats.failed = stats.failed + 1
+        stats.lastError = err
+        H.logError(MOD .. ": zone '" .. tostring(b.z.name) .. "': " .. tostring(err))
+    end
+    statusAdd(b, ok == true)
+    if b.left == 0 then finishBatch(b) end
+end
+
+--------------------------------------------------------------------------
 -- The turn
 --------------------------------------------------------------------------
 
 local function tick()
+    -- The last turn's AI still being made: counting now would count them as missing.
+    if #queue > 0 then return end
     local cfg = config
     local now = os.time()
     local zones = (cfg and type(cfg.zones) == "table") and cfg.zones or {}
@@ -415,6 +509,7 @@ local function tick()
     local total = ai and #ai or 0
     local cap = math.floor(num(cfg and cfg.globalMax, 0, 5000, 150))
     local budget = TICK_BUDGET
+    local queued = 0
 
     for _, z in ipairs(ai and active or {}) do
         local zs = st.zones[tostring(z.id)]
@@ -443,38 +538,20 @@ local function tick()
             local n = math.random(lo, hi)
             if n > want then want, why = n, "turn" end
         end
-        local room = math.min(want, max - count, cap - total, HARD_MAX - alive, budget)
+        -- `queued`: planned this turn in the zones before, counted against the caps already.
+        local room = math.min(want, max - count, cap - total - queued, HARD_MAX - alive - queued, budget)
         if room > 0 and world == nil then
             stats.lastError = "no world to spawn in"
             room = 0
         end
-        local made = {}
-        local nextSpot = room > 0 and spotsFor(z, players, ai, num(z.spacing, 0, 30000, 0)) or nil
-        for _ = 1, room do
-            local sp = z.species[math.random(#z.species)]
-            local ok, err, noSpot = spawnOne(world, z, sp, nextSpot)
-            if noSpot then
-                -- Spacing leaves no room: thinner than asked, not crowded. Not a failure.
-                stats.lastError = err
-                break
-            elseif ok then
-                count, alive, total = count + 1, alive + 1, total + 1
-                stats.spawned = stats.spawned + 1
-                stats.lastSpawn = now
-                made[#made + 1] = tostring(sp.key)
-            else
-                stats.failed = stats.failed + 1
-                stats.lastError = err
-                H.logError(MOD .. ": zone '" .. tostring(z.name) .. "': " .. tostring(err))
-            end
-        end
-        budget = budget - #made
-        -- A top-up that made nothing (no class, no free spot) is not retried every tick.
-        if room > 0 and #made == 0 then retryAt[z.id] = now + RETRY_S end
-        if #made > 0 then
-            H.log(string.format("%s: zone '%s' +%d (%s, %s), %d in the zone (min %d, max %d, %s), %d/%d AI on the server",
-                MOD, tostring(z.name), #made, table.concat(made, ", "), why == "min" and "keeping the minimum" or "a turn",
-                count, min, max, zs.occupied and "a player is in it" or "empty", total, cap))
+        if room > 0 then
+            -- Made one per SPAWN_MS by spawnNext, each at the batch's next free spot.
+            local batch = { z = z, why = why, left = room, made = {}, count = count, min = min, max = max,
+                occupied = zs.occupied, total = total + queued, cap = cap, at = now,
+                nextSpot = spotsFor(z, players, ai, num(z.spacing, 0, 30000, 0)) }
+            for _ = 1, room do queue[#queue + 1] = batch end
+            queued = queued + room
+            budget = budget - room
         end
         zs.count, zs.min, zs.max = count, min, max
         zs.limit = zs.occupied and max or min
@@ -728,5 +805,6 @@ LoopAsync(READ_MS, function()
     return false
 end)
 H.every(TICK_MS, MOD .. " turn", tick)
+H.every(SPAWN_MS, MOD .. " spawn", spawnNext)
 H.every(DROP_MS, MOD .. " drops", pollDrops)
 H.log(MOD .. ": loaded, zones from " .. ZONES_PATH .. " (off until the panel turns them on)")

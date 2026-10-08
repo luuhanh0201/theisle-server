@@ -515,6 +515,68 @@ end
 check("no engine setters called by the loop", #writes == 0, table.concat(writes, ","))
 
 say("")
+say("-- 15. snapshots spread over the 5 seconds: each player every 5 s, never all in the same second --")
+local function endsOf(id) local n = 0; for _, e in ipairs(ofType("session_end")) do if e.steamId == id then n = n + 1 end end; return n end
+-- Someone already playing, who leaves when the five come.
+local pwL = H.makePawn({})
+local leaver = H.makeCtrl("76561198000000100", pwL, "L")
+H.attachController(pwL, leaver)
+online = { leaver }
+_G.FindAllOf = function(cls) H.touch("FindAllOf"); if cls == "Pawn" or cls == "TIAmbientFish" then return {} end; return online end
+for _ = 1, 5 do reads.fn() end
+loop.fn()
+local endsBefore = endsOf("76561198000000100")
+local five = {}
+for i = 1, 5 do
+  local pw = H.makePawn({})
+  five[i] = H.makeCtrl("7656119800000010" .. i, pw, "P" .. i)
+  H.attachController(pw, five[i])
+end
+online = { five[1], five[2], five[3], five[4], five[5] }
+_G.FindAllOf = function(cls) H.touch("FindAllOf"); if cls == "Pawn" or cls == "TIAmbientFish" then return {} end; return online end
+local starts0 = count("session_start")
+local perRead, at = {}, {}
+local function oneRead(r)
+  local before = count("snapshot", SNAPSHOTS)
+  reads.fn(); loop.fn()
+  local got = ofType("snapshot", SNAPSHOTS)
+  perRead[r] = #got - before
+  for k = before + 1, #got do local id = got[k].steamId; at[id] = at[id] or {}; table.insert(at[id], r) end
+end
+oneRead(1)
+check("five newcomers: five sessions open in the second they are seen", count("session_start") - starts0 == 5,
+      tostring(count("session_start") - starts0))
+for r = 2, 10 do oneRead(r) end
+check("one snapshot a second, never the five at once", (function() for r = 1, 10 do if perRead[r] ~= 1 then return false end end; return true end)(),
+      table.concat(perRead, ","))
+check("each player every 5 seconds (twice in 10, 5 apart)", (function()
+  for i = 1, 5 do local t = at["7656119800000010" .. i]; if not t or #t ~= 2 or t[2] - t[1] ~= 5 then return false end end
+  return true end)())
+check("the player who left: the session closed once, within the 5 seconds", endsOf("76561198000000100") == endsBefore + 1,
+      endsBefore .. " -> " .. endsOf("76561198000000100"))
+local pw6 = H.makePawn({})
+local six = H.makeCtrl("76561198000000106", pw6, "P6")
+H.attachController(pw6, six)
+online[#online + 1] = six
+oneRead(11)
+check("a newcomer alone is read at once (session and first snapshot in the same second)",
+      at["76561198000000106"] and at["76561198000000106"][1] == 11 and last("session_start").steamId == "76561198000000106")
+check("…the others keep their second", perRead[11] == 2, tostring(perRead[11]))
+-- P6 came in P1's second; P2..P5 leave: P1 and P6 would share one second, the others empty.
+online = { five[1], six }
+for r = 12, 25 do oneRead(r) end
+check("two left in one second: one moved away in second 0, then one a second", (function()
+  for r = 16, 25 do if perRead[r] > 1 then return false end end
+  return true end)(), table.concat(perRead, ",", 12, 25))
+check("…both still read every 5 s after it", (function()
+  for _, id in ipairs({ "76561198000000101", "76561198000000106" }) do
+    local n = 0
+    for _, r in ipairs(at[id]) do if r >= 16 and r <= 25 then n = n + 1 end end
+    if n ~= 2 then return false end
+  end
+  return true end)())
+
+say("")
 say(string.format("=== StatsLogger: %d passed, %d failed ===", pass, fail))
 io.flush()
 os.exit(fail == 0 and 0 or 1, true)

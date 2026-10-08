@@ -113,15 +113,17 @@ local function fresh() H.calls = {}; aiPawns = {} end
 
 writeZones({ enabled = false, globalMax = 60, zones = { zone() } })
 dofile(RUN .. "/Mods/AIZones/Scripts/main.lua")
-local turn = nil
-for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then turn = l end end
+local turn, spawnLoop = nil, nil
+for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then turn = l elseif l.ms == 200 then spawnLoop = l end end
 local reader = H.loops[1]
-check("a 5 s game-thread turn and an async file loop", turn ~= nil and reader ~= nil)
+check("a 5 s game-thread turn, a 200 ms spawn loop and an async file loop", turn ~= nil and spawnLoop ~= nil and reader ~= nil)
 
 local function spawns() return H.countCalls("SpawnActor") / 2 end   -- pawn + controller
 local clock = 1000
 os.time = function() return clock end
-local function step(seconds) clock = clock + (seconds or 60); turn.fn() end
+-- A turn queues its AI; the 200 ms loop makes them one at a time. step(): the turn, then the loop until none is left.
+local function drain() for _ = 1, 50 do spawnLoop.fn() end end
+local function step(seconds) clock = clock + (seconds or 60); turn.fn(); drain() end
 
 say("\n-- 1. off until the panel turns it on --")
 playerAt(50000)
@@ -189,6 +191,44 @@ local kinds = 0
 for _ in pairs(seen) do kinds = kinds + 1 end
 check("every turn 2–4", inRange)
 check("…and not always the same number", kinds >= 2)
+
+say("\n-- 3c. a turn only plans: its AI are made one per 200 ms callback, never several in one --")
+fresh()
+playerAt(500000)
+writeZones({ enabled = true, globalMax = 5000, zones = { zone({ id = "zq", min = 5, max = 5 }) } })
+reader.fn()
+clock = clock + 12
+turn.fn()
+check("the turn itself spawns nothing, it queues", spawns() == 0, tostring(spawns()))
+local most = 0
+for _ = 1, 10 do
+  local b0 = spawns()
+  spawnLoop.fn()
+  most = math.max(most, spawns() - b0)
+end
+check("one AI per callback, all 5 made", most == 1 and spawns() == 5, most .. ", " .. spawns())
+check("one log line for the turn's 5, as before", logged("zone 'Test' +5 (Boar, Boar, Boar, Boar, Boar, keeping the minimum), 5 in the zone"))
+fresh()
+writeZones({ enabled = true, globalMax = 5000, zones = { zone({ id = "zq2", min = 3, max = 3 }) } })
+reader.fn()
+clock = clock + 12
+turn.fn()
+spawnLoop.fn()
+clock = clock + 12
+turn.fn()                                          -- 1 made, 2 still queued: counting now would ask 2 more
+drain()
+check("a turn while AI are still queued plans nothing (3 made, not 5)", spawns() == 3, tostring(spawns()))
+fresh()
+writeZones({ enabled = true, globalMax = 5000, zones = { zone({ id = "zq3", min = 2, max = 2 }) } })
+reader.fn()
+clock = clock + 12
+turn.fn()
+clock = clock + 31
+spawnLoop.fn()
+check("a queue not made within 30 s is dropped, and said", spawns() == 0 and logged("queued spawns not made in 30 s"), tostring(spawns()))
+step(5)
+check("…and the next turn plans again", spawns() == 2, tostring(spawns()))
+playerAt(50000)                                    -- back in the zone, as the sections below expect
 
 say("\n-- 4. the server-wide cap counts ALL living AI, the game's own too --")
 fresh()
@@ -465,7 +505,7 @@ local ff = assert(io.open(FLAG, "w")); ff:write("1"); ff:close()
 H.reset()
 aiPawns = {}
 dofile(RUN .. "/Mods/AIZones/Scripts/main.lua")
-for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then turn = l end end
+for _, l in ipairs(H.gameLoops) do if l.ms == 5000 then turn = l elseif l.ms == 200 then spawnLoop = l end end
 reader = H.loops[1]
 check("told at load", logged("last run stopped during a deferred spawn"))
 reader.fn()
