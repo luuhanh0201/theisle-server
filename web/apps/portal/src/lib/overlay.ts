@@ -20,10 +20,14 @@ interface OverlaySettings { enabled?: boolean; widgets?: { map?: OverlayWidgetMa
 interface OverlayLauncher {
   overlayGet?: () => { settings?: OverlaySettings; sizes?: { map?: [number, number] } } | null;
   overlayGame?: (g: unknown) => void;
-  overlayMiniFrame?: (f: { image: Uint8Array; type: string }) => Promise<unknown> | unknown;
+  overlayMiniFrame?: (f: { image: Uint8Array; type: string; meta?: MiniMeta }) => Promise<unknown> | unknown;
+  /** 1.0.39+: the widget moves and turns a v2 picture after your dino itself (launcher/src/minimap.js). */
+  overlayMiniV2?: boolean;
   onOverlayChanged?: (cb: (s: OverlaySettings | null) => void) => void;
   onBigMap?: (cb: (open: boolean) => void) => void;
 }
+/** A v2 mini map picture: where its middle is in the world (cm), its scale, its size, the friends layer on. */
+interface MiniMeta { v: 2; cx: number; cy: number; pxPerM: number; w: number; h: number; friends: boolean }
 const L = (): OverlayLauncher | null => (launcher() as OverlayLauncher | undefined) ?? null;
 
 let me: PlayerMe | null = null;
@@ -71,12 +75,20 @@ export function pushOverlayGame(p: PlayerMe | null): void {
 
 // The launcher's mini map widget: this page's map (map.js paintMini), the very layers, target and trail set on
 // the map page or the big map, drawn at the widget's size and sent as a picture each second.
+// Launcher 1.0.39+ (overlayMiniV2): a v2 picture instead, north up and wider than the widget (MINI_V2_ROOM), without
+// your arrow, with its middle in the world; the widget moves and turns it after your dino between two positions
+// (owner, 2026-10-08: the mini map jumped once a second). It is made again only when something on it changed, or
+// your dino got near its edge (half its spare room): no more pictures encoded than before.
 let miniCanvas: HTMLCanvasElement | null = null;
 let miniBusy = false;
 // Standing still, nothing new around: the picture sent is still right, drawn again only every MINI_SAME_MS.
+// Below the widget's MINI_FRESH_MS (4 s, launcher 1.0.38): with 5 s it gave up the picture for its own drawing
+// for a second, every 5 s, the mini map flashing between two looks while you stood still.
 let miniKey = '';
 let miniSentAt = 0;
-const MINI_SAME_MS = 5000;
+const MINI_SAME_MS = 3000;
+/** How much wider than the widget a v2 picture is: north up, turned by the widget, its corners must still fill it. */
+const MINI_V2_ROOM = { heading: 1.5, north: 1.2 } as const;
 function sendMiniFrame(): void {
   const l = L();
   const m = overlaySettings?.widgets?.map;
@@ -85,24 +97,35 @@ function sendMiniFrame(): void {
   const [width, height] = miniSize ?? [260 * (m.scale ?? 100) / 100, 260 * (m.scale ?? 100) / 100];
   const p = me?.dino?.position;
   const d = mapData();
+  const v2 = l.overlayMiniV2 === true;
+  const radiusM = m.radius ?? 500;
+  const room = m.rotate === 'heading' ? MINI_V2_ROOM.heading : MINI_V2_ROOM.north;
+  // v2: a new picture once your dino is half the spare room from its middle (the widget turns it: no heading here).
+  const spareCm = radiusM * 100 * (room - (m.rotate === 'heading' ? Math.SQRT2 : 1));
+  const where = !p ? null : v2 ? [Math.round(p.x / (spareCm / 2)), Math.round(p.y / (spareCm / 2))]
+    : [Math.round(p.x / 50), Math.round(p.y / 50), Math.round((p.yaw ?? 0) / 2)];
   const round = (list: unknown[] | null | undefined): number[][] => ((list ?? []) as Array<{ x: number; y: number }>).map((a) => [Math.round(a.x / 100), Math.round(a.y / 100)]);
   let layers = '';
   try { layers = localStorage.getItem('portalMapLayers.v2') ?? ''; } catch { /* defaults */ }
-  const key = JSON.stringify([width, height, m.radius, m.rotate, layers, map.getTarget(),
-    p ? [Math.round(p.x / 50), Math.round(p.y / 50), Math.round((p.yaw ?? 0) / 2)] : null,
+  const key = JSON.stringify([v2, width, height, m.radius, m.rotate, layers, map.getTarget(), where,
     round(d.ai), round(d.fish), round(d.escapees), round(d.friends as unknown[] | null), d.aiZones?.length ?? 0,
     (d.heat as { t?: number } | null)?.t ?? 0, me?.dino?.trail?.length ?? 0]);
   if (key === miniKey && Date.now() - miniSentAt < MINI_SAME_MS) return;
   miniKey = key;
   miniSentAt = Date.now();
   miniCanvas ??= document.createElement('canvas');
-  const drawn = map.paintMini(miniCanvas, { width, height, dpr: window.devicePixelRatio || 1, radiusM: m.radius ?? 500, rotate: m.rotate ?? 'north', shape: m.shape ?? 'circle' });
+  const k = v2 ? room : 1;
+  const drawn = map.paintMini(miniCanvas, { width: width * k, height: height * k, dpr: window.devicePixelRatio || 1, radiusM: radiusM * k,
+    rotate: m.rotate ?? 'north', shape: m.shape ?? 'circle', plain: v2, room: k }) as boolean | { cx: number; cy: number; friends: boolean };
   if (!drawn) return;
+  const meta: MiniMeta | undefined = v2 && typeof drawn === 'object'
+    ? { v: 2, cx: drawn.cx, cy: drawn.cy, pxPerM: (Math.min(width, height) / 2) / radiusM, w: width * k, h: height * k, friends: drawn.friends }
+    : undefined;
   miniBusy = true;
   miniCanvas.toBlob((blob) => {
     if (!blob) { miniBusy = false; return; }
     void blob.arrayBuffer()
-      .then((buf) => l.overlayMiniFrame?.({ image: new Uint8Array(buf), type: blob.type }))
+      .then((buf) => l.overlayMiniFrame?.({ image: new Uint8Array(buf), type: blob.type, ...(meta ? { meta } : {}) }))
       .catch(() => undefined)
       .finally(() => { miniBusy = false; });
   }, 'image/webp', 0.85);

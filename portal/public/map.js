@@ -447,7 +447,7 @@ export function createMap(root, opts = {}) {
         g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
       }
-      if (cw >= 360) heatLegend(ctx, ch);
+      if (cw >= 360 && !st.plainMini) heatLegend(ctx, ch);
     }
 
     // AI zones the admins drew: where the server keeps AI (name, which kinds).
@@ -561,7 +561,8 @@ export function createMap(root, opts = {}) {
         ctx.strokeStyle = COLOR; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
       }
       const [x, y] = scr(pos);
-      if (typeof me.position.yaw === 'number') {
+      // A v2 mini map picture: the launcher's widget draws your arrow itself, where your dino is shown then.
+      if (st.plainMini) { /* no arrow */ } else if (typeof me.position.yaw === 'number') {
         // Navigation triangle pointing along world forward (cos yaw, sin yaw).
         // World X is right and world Y down on screen; centroid is centered at (x, y).
         const a = me.position.yaw * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
@@ -598,8 +599,13 @@ export function createMap(root, opts = {}) {
    * The launcher's mini map: this map as it is, its layers, target, trail, AI…, around your dino,
    * radiusM metres to the edge, north up or turned with the dino, onto `c` (width × height CSS px at
    * dpr). False when there is nothing to draw yet (no map, no position).
+   * `plain` (launcher 1.0.39+, a v2 picture): north up, without your arrow and the friends' rim arrows,
+   * the widget moving and turning it after your dino and drawing those itself; then the answer is
+   * { cx, cy } (world units, the picture's middle) and whether the friends layer is on; `room`: how much
+   * wider than the widget it is (its labels shown as at the widget's size).
    */
-  function paintMini(c, { width, height, dpr = 1, radiusM = 500, rotate = 'north', shape = 'square' }) {
+  function paintMini(c, { width, height, dpr = 1, radiusM = 500, rotate = 'north', shape = 'square', plain = false, room = 1 }) {
+    if (plain) rotate = 'north';
     const pos = shown();
     if (!st.data || !pos || !(width > 0) || !(height > 0)) return false;
     const w = Math.round(width * dpr), h = Math.round(height * dpr);
@@ -616,10 +622,12 @@ export function createMap(root, opts = {}) {
     }
     const kept = st.view;
     st.view = { s, ox: width / 2 - ix * s, oy: height / 2 - iy * s };
+    st.plainMini = plain;
     try {
-      paintScene(ctx, width, height, pos, Math.min(width / st.img.naturalWidth, height / st.img.naturalHeight));
+      // `room`: how much wider than the widget the picture is (v2): its labels as at the widget's own size.
+      paintScene(ctx, width, height, pos, Math.min(width / room / st.img.naturalWidth, height / room / st.img.naturalHeight));
       // A friend beyond the edge: an arrow on the rim pointing their way, their name and distance (upright).
-      if (st.on.has('friends') && st.friends?.length) {
+      if (!plain && st.on.has('friends') && st.friends?.length) {
         const turn = rotate === 'heading' && typeof yaw === 'number' ? -Math.PI / 2 - yaw * Math.PI / 180 : 0;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const cx = width / 2, cy = height / 2, pad = 13;
@@ -646,8 +654,10 @@ export function createMap(root, opts = {}) {
       }
     } finally {
       st.view = kept;
+      st.plainMini = false;
     }
-    return true;
+    // Map units are [world Y, world X] / 1000 (unitsOf).
+    return plain ? { cx: pos[1] * 1000, cy: pos[0] * 1000, friends: st.on.has('friends') } : true;
   }
 
   /** A friend's mark: a violet dot, a white ring, a notch toward where they face. */

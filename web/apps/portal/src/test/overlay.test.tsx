@@ -104,4 +104,27 @@ describe('the overlay service', () => {
     await qc.fetchQuery({ queryKey: ['/api/me'], queryFn: async () => null });
     expect(games.at(-1)).toMatchObject({ player: null, dino: null });
   });
+
+  it('launcher 1.0.39+: the mini map as a v2 picture (north up, wider, no arrow); before: as it was', async () => {
+    const send = async (v2: boolean, rotate: string) => {
+      painted.length = 0;
+      const settings = { ...SETTINGS, widgets: { ...SETTINGS.widgets, map: W({ radius: 500, shape: 'circle', rotate }) } };
+      (window as unknown as { isleLauncher: unknown }).isleLauncher = {
+        overlayGame: () => undefined, overlayMiniFrame: () => undefined, ...(v2 ? { overlayMiniV2: true } : {}),
+        overlayGet: () => ({ settings, sizes: { map: [200, 200] } }), onOverlayChanged: () => undefined,
+        gameModeGet: () => ({ on: false, keep: {} }), onGameMode: () => undefined, onBigMap: () => undefined,
+      };
+      const { startOverlay, resetOverlayForTests } = await import('../lib/overlay');
+      resetOverlayForTests();
+      const qc = new QueryClient();
+      startOverlay(qc);
+      const me = { name: 'Live', online: true, dino: { species: 'Tyrannosaurus', growth: 0.35, vitals: {}, max: {}, position: { x: 1, y: 2, z: 0, yaw: 0 }, trail: [], prime: null } };
+      await qc.fetchQuery({ queryKey: ['/api/me'], queryFn: async () => me });
+      return painted.at(-1);
+    };
+    expect(await send(false, 'heading')).toMatchObject({ width: 200, height: 200, radiusM: 500, rotate: 'heading', plain: false, room: 1 });
+    // Turned by the widget: wide enough for its corners when turned (1.5), the same scale (750 m over 300 px).
+    expect(await send(true, 'heading')).toMatchObject({ width: 300, height: 300, radiusM: 750, plain: true, room: 1.5 });
+    expect(await send(true, 'north')).toMatchObject({ width: 240, height: 240, radiusM: 600, plain: true, room: 1.2 });
+  });
 });

@@ -21,6 +21,7 @@ const { join } = require('node:path');
 const { clashOf, distinctBindings, label, PushToTalk, DEFAULT_MUTE, DEFAULT_PTT, DEFAULT_RANGE } = require('./ptt.js');
 const { Overlay, normaliseKeep } = require('./overlay.js');
 const { LoginFlow } = require('./login.js');
+const { miniMeta } = require('./minimap.js');
 const { pickBigMapDisplay, DEFAULT_BIGMAP_KEY, ChatGuard, bigMapKeyAction, bigMapBlurCloses, KEY_ENTER, KEY_NUMPAD_ENTER, KEY_ESCAPE } = require('./bigmap.js');
 
 const BASE = (process.env.XOMGAY_URL || 'https://xomgay.online').replace(/\/+$/, '');
@@ -683,7 +684,8 @@ function wireIpc() {
     if (!fromUs(e) || !overlay || !frame || typeof frame !== 'object') return;
     const bytes = frame.image;
     if (!(bytes instanceof Uint8Array || bytes instanceof ArrayBuffer) || bytes.byteLength > MINI_FRAME_MAX) return;
-    overlay.setMiniFrame({ image: bytes, type: typeof frame.type === 'string' ? frame.type : 'image/webp' });
+    // v2 (1.0.39): where the picture is in the world, for the widget to move and turn it after your dino (minimap.js).
+    overlay.setMiniFrame({ image: bytes, type: typeof frame.type === 'string' ? frame.type : 'image/webp', meta: miniMeta(frame.meta) });
   });
   ipcMain.on('overlay:get', (e) => {
     e.returnValue = fromUs(e) && overlay ? { settings: overlay.settings, displays: overlay.displays(), editing: overlay.editing, sizes: { map: overlay.size('map') } } : null;

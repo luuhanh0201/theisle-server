@@ -133,7 +133,113 @@
   // about once a second. While one is fresh it is shown; without (an older portal, the player page
   // not sending) the widget draws its own as before.
   const MINI_FRESH_MS = 4000;
-  let mini = null;            // { bitmap, at }
+  let mini = null;            // { bitmap, at, meta }
+  // v2 pictures (1.0.39, minimap.js): north up, wider than the widget, their world centre in meta; moved and turned
+  // here after your dino between two positions, your arrow drawn here. Sent again at least every few seconds and
+  // whenever something on them changes, so one stays good longer than an older picture.
+  const MM = window.IsleMinimap;
+  const MINI_V2_FRESH_MS = 12000;
+  // At most 20 a second while the dino moves, nothing drawn when it stands (2026-10-08, the widget drawn without the
+  // GPU, its worst case: 30 a second with the best smoothing took 5.4 % of a core while moving, 20 with the plain
+  // smoothing 2.5 %; the picture is drawn at its own scale, only turned, so the plain smoothing looks the same).
+  const MINI_V2_FRAME_MS = 50;
+  const tween = MM ? new MM.PoseTween() : null;
+  let animFrame = 0;
+  let animLast = 0;
+  const v2Fresh = () => Boolean(MM && tween && mini && mini.meta && Date.now() - mini.at < MINI_V2_FRESH_MS);
+
+  /** Your arrow in the middle (as the portal's map draws it), pointing `a` on the widget. */
+  function drawYou(ctx, x, y, a) {
+    if (a === null) {
+      ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fillStyle = '#34d399'; ctx.fill();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+      return;
+    }
+    const dx = Math.cos(a); const dy = Math.sin(a); const nx = -dy; const ny = dx;
+    const tip = 18; const back = 9; const half = 10;
+    const tri = () => {
+      ctx.beginPath();
+      ctx.moveTo(x + dx * tip, y + dy * tip);
+      ctx.lineTo(x - dx * back + nx * half, y - dy * back + ny * half);
+      ctx.lineTo(x - dx * back - nx * half, y - dy * back - ny * half);
+      ctx.closePath();
+    };
+    ctx.lineJoin = 'round';
+    tri(); ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
+    tri(); ctx.lineWidth = 2.8; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    const grad = ctx.createLinearGradient(x - dx * back, y - dy * back, x + dx * tip, y + dy * tip);
+    grad.addColorStop(0, '#059669'); grad.addColorStop(1, '#34d399');
+    ctx.fillStyle = grad; tri(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  }
+
+  /** A friend beyond the map: an arrow on the rim their way, their name and distance, upright (map.js paintMini). */
+  function drawFriendArrows(ctx, cw, ch, pose, pxPerM, turn) {
+    const friends = Array.isArray(game && game.friends) ? game.friends : [];
+    for (const f of friends) {
+      if (!f || typeof f.x !== 'number' || typeof f.y !== 'number') continue;
+      const edge = MM.edgeArrow((f.x - pose.x) / 100 * pxPerM, (f.y - pose.y) / 100 * pxPerM, cw, ch, settings.shape, turn, 13);
+      if (edge === null) continue;   // on the map: drawn in the picture
+      const ax = cw / 2 + edge.x; const ay = ch / 2 + edge.y; const a = edge.angle;
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(a);
+      ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, -7); ctx.lineTo(-3, 0); ctx.lineTo(-6, 7); ctx.closePath();
+      ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(2,6,23,.85)'; ctx.stroke();
+      ctx.fillStyle = '#a78bfa'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.restore();
+      const m = Math.hypot(f.x - pose.x, f.y - pose.y) / 100;
+      const dist = m >= 1000 ? `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km` : `${Math.round(m)} m`;
+      const label = `${f.name || 'Bạn'} · ${dist}`;
+      ctx.font = '800 10.5px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      const half = Math.min(cw / 2 - 2, ctx.measureText(label).width / 2 + 3);
+      const tx = Math.min(cw - half - 2, Math.max(half + 2, ax - Math.cos(a) * (half + 14)));
+      const ty = Math.min(ch - 9, Math.max(9, ay - Math.sin(a) * 16));
+      ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(2,6,23,.78)'; ctx.strokeText(label, tx, ty);
+      ctx.fillStyle = '#ede9fe'; ctx.fillText(label, tx, ty);
+    }
+  }
+
+  /** A v2 picture, moved and turned to where your dino is shown now, your arrow on it. */
+  function drawMiniV2(now) {
+    const canvas = $('map-canvas');
+    const cw = canvas.clientWidth; const ch = canvas.clientHeight;
+    const pose = tween.at(now);
+    if (!pose || !(cw > 0) || !(ch > 0)) return false;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
+      canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+    }
+    const heading = settings.rotate === 'heading';
+    const p = MM.placePicture(mini.meta, pose, cw, ch, settings.radius, heading);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, cw, ch);   // beyond the picture's edge (as the portal's)
+    ctx.save();
+    ctx.translate(cw / 2, ch / 2); ctx.rotate(p.turn);
+    ctx.imageSmoothingQuality = 'low';
+    ctx.drawImage(mini.bitmap, p.x, p.y, p.w, p.h);
+    ctx.restore();
+    if (mini.meta.friends) drawFriendArrows(ctx, cw, ch, pose, p.pxPerM, p.turn);
+    const yaw = typeof pose.yaw === 'number' ? pose.yaw * Math.PI / 180 : null;
+    drawYou(ctx, cw / 2, ch / 2, yaw === null ? null : yaw + p.turn);
+    // Its target line, distance and labels are in the picture.
+    for (const id of ['map-none', 'map-tgt', 'map-north', 'map-coords']) $(id).hidden = true;
+    return true;
+  }
+
+  /** Drawn again (at most every MINI_V2_FRAME_MS) while the dino glides; stops when it stands. */
+  function animateMini() {
+    if (animFrame) return;
+    const step = (t) => {
+      animFrame = 0;
+      if (W !== 'map' || preview() || !settings || !settings.enabled || !v2Fresh()) return;
+      if (t - animLast >= MINI_V2_FRAME_MS) { animLast = t; drawMiniV2(performance.now()); }
+      if (tween.moving(performance.now())) animFrame = requestAnimationFrame(step);
+      else drawMiniV2(performance.now());   // the last frame, exactly where it stopped
+    };
+    animFrame = requestAnimationFrame(step);
+  }
+
   function renderMap() {
     const box = $('w-map');
     const cls = `map ${settings.shape}`;
@@ -143,7 +249,13 @@
     const g = preview() ? SAMPLE_GAME : game;
     const dino = g && g.dino;
     const pos = dino && dino.position;
-    if (!preview() && mini && Date.now() - mini.at < MINI_FRESH_MS && pos) {
+    if (!preview() && pos && v2Fresh()) {
+      drawMiniV2(performance.now());
+      animateMini();
+      mapKey = '';
+      return;
+    }
+    if (!preview() && mini && !mini.meta && Date.now() - mini.at < MINI_FRESH_MS && pos) {
       const dpr = window.devicePixelRatio || 1;
       if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
         canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
@@ -605,6 +717,8 @@
   window.overlay.onState((s) => { voice = s; if (W === 'voice') render(); else if (W === 'dino' && settings) renderDinoMic(); });
   window.overlay.onGame((g) => {
     game = g;
+    // Where your dino is, for the mini map to glide after it (v2 pictures).
+    if (W === 'map' && tween) tween.update(g && g.dino && g.dino.position, performance.now());
     if (W === 'dino' && !preview()) onHealth(g && g.dino);
     if (W !== 'voice') render();
   });
@@ -612,7 +726,7 @@
     if (W !== 'map' || !f || !f.image) return;
     createImageBitmap(new Blob([f.image], { type: f.type || 'image/webp' })).then((bitmap) => {
       if (mini) mini.bitmap.close();
-      mini = { bitmap, at: Date.now() };
+      mini = { bitmap, at: Date.now(), meta: f.meta || null };
       render();
     }).catch(() => undefined);
   });

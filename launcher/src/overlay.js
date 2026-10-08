@@ -356,7 +356,8 @@ class Overlay {
 
   /**
    * The mini map as the portal draws it (map.js: the big map's layers, target, trail), an encoded
-   * image { image, type } about once a second: the map widget shows it instead of drawing its own.
+   * image { image, type, meta } about once a second: the map widget shows it instead of drawing its own
+   * (meta, v2: north up and wider, moved and turned after your dino by the widget, minimap.js).
    */
   setMiniFrame(frame) {
     this.#send('map', 'overlay:mini-frame', frame);

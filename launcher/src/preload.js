@@ -61,8 +61,10 @@ if (ORIGIN !== '' && location.origin === ORIGIN) {
     /** Your dino, its position and quests, and the AI near (app.js), for the map / dino / quest widgets. */
     overlayGame: (game) => ipcRenderer.send('overlay:game', game),
     onOverlayChanged: (cb) => { if (typeof cb === 'function') ipcRenderer.on('overlay:changed', (_e, s) => cb(s)); },
-    /** The mini map the portal draws (map.js) for the overlay's map widget: { image: bytes, type }. */
+    /** The mini map the portal draws (map.js) for the overlay's map widget: { image: bytes, type, meta? }. */
     overlayMiniFrame: (frame) => ipcRenderer.send('overlay:mini-frame', frame),
+    /** 1.0.39+: the widget moves and turns a v2 picture (north up, wider, its world centre in meta) after your dino. */
+    overlayMiniV2: true,
 
     /** The big map (bigmap.html, its key, M): the game data as it comes, the latest at once, closing it. */
     onOverlayGame: (cb) => { if (typeof cb === 'function') ipcRenderer.on('overlay:game', (_e, g) => cb(g)); },
