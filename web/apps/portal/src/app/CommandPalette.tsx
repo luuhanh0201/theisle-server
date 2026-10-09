@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { goTo } from './router';
+import { launcher } from '../lib/launcher';
 import { copyText, useToast } from './toast';
 
 /** One entry of the palette: a page, a quick action, a chat command to copy, a place on the map (app.js PALETTE_DATA). */
 interface Item { id: string; cat: 'pages' | 'species' | 'commands' | 'locations'; catName: string; title: string; desc: string; badge: string; run: Act }
-type Act = { go: Parameters<typeof goTo>[0]; toast?: string } | { copy: string } | { href: string; toast: string } | { tour: true };
+type Act = { go: Parameters<typeof goTo>[0]; toast?: string } | { copy: string } | { play: true } | { tour: true };
 
 const page = (id: string, title: string, desc: string, tab: Parameters<typeof goTo>[0]): Item => ({ id: `page-${id}`, cat: 'pages', catName: 'Chuyển trang nhanh', title, desc, badge: 'Trang', run: { go: tab } });
 const species = (id: string, title: string, desc: string, badge: string, sp: string, name = sp): Item => ({
@@ -15,7 +16,7 @@ const loc = (id: string, title: string, desc: string, toast: string): Item => ({
 
 export const PALETTE: Item[] = [
   // 1. Chuyển trang & Hành động nhanh
-  { id: 'action-join-direct', cat: 'pages', catName: 'Hành động nhanh', title: 'Bắt Đầu Chuyến Sinh Tồn (Steam Direct)', desc: 'Tự động mở The Isle Evrima và kết nối thẳng vào máy chủ Xóm Gáy', badge: 'Chơi ngay', run: { href: 'steam://connect/play.xomgay.online:7777', toast: 'Đang kết nối vào game qua Steam...' } },
+  { id: 'action-join-direct', cat: 'pages', catName: 'Hành động nhanh', title: 'Bắt Đầu Chuyến Sinh Tồn', desc: 'Mở The Isle Evrima, tên máy chủ Xóm Gáy được chép sẵn để dán vào ô tìm server', badge: 'Chơi ngay', run: { play: true } },
   page('home', 'Trang chủ', 'Bảng tin máy chủ Xóm Gáy, thông số và hướng dẫn', 'home'),
   page('game', 'Dino Live Monitor (Game HUD)', 'Theo dõi sinh tồn GAS realtime: Máu, đói, khát, Prime Elder', 'game'),
   page('map', 'Bản đồ Gateway Live', 'Bản đồ vệ tinh thời gian thực, waypoint và radar định vị', 'map'),
@@ -76,7 +77,26 @@ const ICON: Record<Item['cat'], React.ReactNode> = {
 };
 
 /** The command palette (Ctrl+K / ⌘K; Esc closes): pages, quick actions, species, chat commands to copy, places. */
-export function CommandPalette({ onTour }: { onTour: () => void }) {
+/** The Isle on Steam (launcher/src/main.js STEAM_APP_ID). */
+const STEAM_APP_ID = '376210';
+
+/**
+ * "Chơi ngay": the game opened, the server's name copied for the game's server search (Unofficial). Evrima lists its
+ * servers itself (Epic Online Services), no address to join by: the old steam://connect/play.xomgay.online link
+ * pointed at a name with no DNS record, and one would have shown the server's IP, which the site's proxy hides.
+ * In the launcher its own Chơi (game mode on, as its tray menu); in a browser Steam's link.
+ */
+export async function playOnServer(name: string | null, toast: (m: string) => void): Promise<void> {
+  const term = name?.trim() || 'Xóm Gáy';
+  let copied = false;
+  try { await navigator.clipboard.writeText(term); copied = true; } catch { /* the toast names it instead */ }
+  const l = launcher();
+  if (l?.playGame) l.playGame();
+  else window.location.href = `steam://rungameid/${STEAM_APP_ID}`;
+  toast(copied ? `Đang mở The Isle. Chọn Unofficial, dán tên server (đã chép) vào ô tìm.` : `Đang mở The Isle. Chọn Unofficial, tìm server: ${term}`);
+}
+
+export function CommandPalette({ onTour, serverName = null }: { onTour: () => void; serverName?: string | null }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -119,7 +139,7 @@ export function CommandPalette({ onTour }: { onTour: () => void }) {
     const a = item.run;
     if ('tour' in a) onTour();
     else if ('copy' in a) void copyText(a.copy, toast);
-    else if ('href' in a) { window.location.href = a.href; toast(a.toast); }
+    else if ('play' in a) void playOnServer(serverName, toast);
     else { goTo(a.go); if (a.toast) toast(a.toast); }
   };
 

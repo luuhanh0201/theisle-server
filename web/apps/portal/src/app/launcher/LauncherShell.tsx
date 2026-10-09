@@ -264,7 +264,7 @@ export function LauncherShell() {
           <span className="lx-foot-r">Voice · Unreal Engine 5.6 · 60 TPS</span>
         </footer>
       </div>
-      <CommandPalette onTour={tour.start} />
+      <CommandPalette onTour={tour.start} serverName={srv?.name ?? null} />
       <Tour step={tour.step} setStep={tour.setStep} />
     </DrawerProvider>
   );

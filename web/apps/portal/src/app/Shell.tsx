@@ -53,7 +53,7 @@ export function Shell() {
         </div>
         <ThumbBar />
       </div>
-      <CommandPalette onTour={tour.start} />
+      <CommandPalette onTour={tour.start} serverName={srv?.name ?? null} />
       <Tour step={tour.step} setStep={tour.setStep} />
     </DrawerProvider>
   );

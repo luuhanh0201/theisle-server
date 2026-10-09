@@ -1,5 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react';
-import { CommandPalette, PALETTE, paletteResults } from '../app/CommandPalette';
+import { CommandPalette, PALETTE, paletteResults, playOnServer } from '../app/CommandPalette';
 import { TOUR_KEY, TOUR_STEPS, Tour, useTour } from '../app/Tour';
 import { ToastProvider } from '../app/toast';
 
@@ -38,6 +38,24 @@ describe('command palette', () => {
     fireEvent.change(input, { target: { value: 'tour' } });
     fireEvent.click(container.querySelector('[data-cmd-id="action-tour"]') as HTMLElement);
     expect(onTour).toHaveBeenCalled();
+  });
+  it('Chơi ngay: the game opened by the launcher, the server name copied for the search; no address to join', async () => {
+    const playGame = vi.fn();
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal('isleLauncher', { playGame });
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { container } = render(<ToastProvider><CommandPalette onTour={() => undefined} serverName="[VN] XG EVO | HIGH AI" /></ToastProvider>);
+    key('k', { ctrlKey: true });
+    await act(async () => { fireEvent.click(container.querySelector('[data-cmd-id="action-join-direct"]') as HTMLElement); });
+    expect(writeText).toHaveBeenCalledWith('[VN] XG EVO | HIGH AI');
+    expect(playGame).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(PALETTE)).not.toMatch(/steam:\/\/connect|play\.xomgay/);
+    // The clipboard refused: the toast names the server instead.
+    const toast = vi.fn();
+    writeText.mockRejectedValueOnce(new Error('denied'));
+    await playOnServer(null, toast);
+    expect(toast).toHaveBeenCalledWith('Đang mở The Isle. Chọn Unofficial, tìm server: Xóm Gáy');
+    expect(playGame).toHaveBeenCalledTimes(2);
   });
   it('a species: Skin Studio and a toast; a place: the map', () => {
     const { container } = render(<ToastProvider><CommandPalette onTour={() => undefined} /></ToastProvider>);

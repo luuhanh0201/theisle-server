@@ -796,7 +796,7 @@ function initHuntStage() {
   const doConnectSteam = () => {
     if (isSteamConnecting) return;
     isSteamConnecting = true;
-    window.location.href = 'steam://connect/play.xomgay.online:7777';
+    window.location.href = 'steam://rungameid/376210';   // The Isle (Evrima lists its servers itself: no address to join)
   };
 
   btnAction.addEventListener('click', (e) => {
