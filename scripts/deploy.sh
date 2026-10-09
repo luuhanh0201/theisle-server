@@ -285,6 +285,9 @@ ENV
         fi
     fi
 
+    # The hourly player data copies (cron: backup-players.sh cron, once).
+    "${RSYNC[@]}" --chmod=F755 scripts/backup-players.sh "$DEPLOY_HOST:/home/isle/bin/backup-players.sh"
+
     if (( ! DRY_RUN )); then
         ssh "$DEPLOY_HOST" "cd '$BRIDGE_DIR' && chmod 600 .env && npm ci --omit=dev --silent"
         # Restarting the bridge does not touch the game server or disconnect
