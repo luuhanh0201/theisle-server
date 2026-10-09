@@ -8,7 +8,7 @@
 #   backup-players.sh cron      add the hourly line to isle's crontab (once)
 #   backup-players.sh list      the copies there are
 # On the owner's machine (DEPLOY_HOST in .env):
-#   scripts/backup-players.sh pull      fetch the daily copies to ~/theisle-backups
+#   scripts/backup-players.sh pull      fetch the newest copy to ~/theisle-backups
 #   scripts/backup-players.sh timer     pull once a day with a systemd user timer
 #
 # What a copy holds (one .tar.gz, paths from /home/isle): the game's PlayerData
@@ -17,8 +17,10 @@
 # (amber, bag, shop, quests, SVip…). Never its .env. Only READ: nothing under
 # Saved/ is ever written, moved or deleted (AGENTS.md).
 #
-# Kept: the last 48 hourly copies, and the first copy of each day for 30 days
-# (a hard link, no extra space). Log: backups/players/backup.log.
+# Kept: the newest KEEP copies (5), on the VPS and on the owner's machine alike,
+# older ones deleted after each new one (owner, 2026-10-09: keep it light). So
+# the VPS holds the last 5 hours, the owner's machine the last 5 pulls (days).
+# Log: backups/players/backup.log.
 #
 # Restoring is by hand, the owner's call, nobody online, the game stopped:
 # unpack into a scratch folder (tar -xzf <copy> -C /tmp/restore), look, then
@@ -29,8 +31,7 @@ set -euo pipefail
 
 HOME_ISLE="${ISLE_HOME:-/home/isle}"
 OUT="${BACKUP_DIR:-$HOME_ISLE/backups/players}"
-KEEP_HOURLY=48
-KEEP_DAILY_DAYS=30
+KEEP=5
 MODS=server/TheIsle/Binaries/Win64/Mods
 
 PLAYERS=server/TheIsle/Saved/PlayerData
@@ -69,8 +70,13 @@ pack() {
     (( rc <= 1 )) && gzip -t "$out"
 }
 
+# Names sort by time (players-<UTC stamp>.tar.gz), so oldest first.
+prune() {
+    ls -1 "$1"/players-*.tar.gz 2>/dev/null | head -n -"$KEEP" | xargs -r rm -f
+}
+
 run() {
-    mkdir -p "$OUT/hourly" "$OUT/daily"
+    mkdir -p "$OUT/hourly"
     local stamp tmp file stage="$OUT/.stage" steady=1
     stamp="$(date -u +%Y%m%dT%H%M%SZ)"
     file="$OUT/hourly/players-$stamp.tar.gz"
@@ -82,12 +88,9 @@ run() {
     fi
     rm -rf "$stage"
     mv "$tmp" "$file"
-    # The day's first steady copy is also the daily one.
-    local day="$OUT/daily/players-${stamp:0:8}.tar.gz"
-    (( steady )) && [[ ! -e "$day" ]] && ln "$file" "$day"
-    # Oldest first: past the newest KEEP_HOURLY, and daily copies older than KEEP_DAILY_DAYS.
-    ls -1 "$OUT"/hourly/players-*.tar.gz | head -n -"$KEEP_HOURLY" | xargs -r rm -f
-    find "$OUT/daily" -name 'players-*.tar.gz' -mtime +"$KEEP_DAILY_DAYS" -delete
+    # Only once the new copy is in place: the oldest, past the newest KEEP.
+    prune "$OUT/hourly"
+    rm -rf "$OUT/daily"   # the daily copies of before 2026-10-09 (KEEP replaced them)
     if (( steady )); then
         echo "$(date -Is) ok $(du -h "$file" | cut -f1) $file"
     else
@@ -107,8 +110,7 @@ cron() {
 }
 
 list() {
-    echo "hourly:"; ls -1sh "$OUT"/hourly/ 2>/dev/null | tail -n +2
-    echo "daily:";  ls -1sh "$OUT"/daily/ 2>/dev/null | tail -n +2
+    ls -1sh "$OUT"/hourly/ 2>/dev/null | tail -n +2
     du -sh "$OUT" 2>/dev/null
 }
 
@@ -124,8 +126,11 @@ pull() {
     local_env
     local dest="${PULL_DIR:-$HOME/theisle-backups}"
     mkdir -p "$dest"
-    # The daily copies only; none deleted here (the VPS keeps 30 days, this machine all).
-    rsync -a "$DEPLOY_HOST:$OUT/daily/" "$dest/"
+    local newest
+    newest="$(ssh "$DEPLOY_HOST" "ls -1 $OUT/hourly/players-*.tar.gz | tail -n 1")"
+    [[ -n "$newest" ]] || { echo "no copy on the VPS" >&2; exit 1; }
+    rsync -a "$DEPLOY_HOST:$newest" "$dest/"
+    prune "$dest"
     echo "$(date -Is) pulled to $dest: $(ls -1 "$dest" | wc -l) copies, $(du -sh "$dest" | cut -f1)"
 }
 
@@ -165,5 +170,5 @@ case "${1:-}" in
     list) list ;;
     pull) pull ;;
     timer) timer ;;
-    *) sed -n '2,26p' "$0"; exit 2 ;;
+    *) sed -n '2,28p' "$0"; exit 2 ;;
 esac
