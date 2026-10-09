@@ -301,12 +301,14 @@ build at `/` and `/next/`; `/old` goes to `/` (the browser keeps the #page). Rem
 `app.js`, `voice.js`, `overlay-settings.js` (the owner keeps a copy; everything is in git tag
 `old-sites-20261007`), `pages/LegacyPage.tsx` and `app/old.ts` (every page is in React). Kept, still used:
 `map.js` (the Bản đồ page, the launcher's big map), `skin-editor.js` and `skin3d.js` (Skin Studio, the
-panel), `mut-icons.js`, `ui-select.js` / `ui-inputs.js` (the plain pages of step 3), `amber.svg`, `img/`,
+panel), `mut-icons.js`, `amber.svg`, `img/`,
 `vendor/`, `dino3d/`, `map/`. The launcher loads `${BASE}/`: the React site, checked inside it by
 `portal-frame.mjs` and `portal-overlay.mjs`. The flows still compare with the old site: `local-portal.sh`
 takes the four files out of the tag into `<dir>/old-site` and the local portal serves them at `/`
 (`PORTAL_OLD_SITE_DIR`, the e2e only; `portal/test/portal.test.mjs` checks both ways).
 The html.in-launcher decision (above) is unchanged: `main.tsx MARK_IN_LAUNCHER = false`.
+`ui-select.js` / `ui-inputs.js` stay in `portal/public/` (served, same look as `@isle/ui`) but no page
+loads them any more: the pages of their own (`tai`, `mutations`, `bigmap`, `launcher-done`) are React too.
 
 ## 5. The launcher's own look (owner's design, 2026-10-07)
 

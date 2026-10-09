@@ -52,24 +52,21 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   `white-space: nowrap`, with `text-wrap: balance` on very narrow screens).
 - Never the browser's own select box, number spinner, date / time picker,
   checkbox, slider or colour picker, on the player site, the launcher's pages
-  and the panel alike: every page loads the shared controls, before its own
-  code, `<script src="/ui-select.js"></script>` and `<script src="/ui-inputs.js"></script>`
-  (files in `portal/public/`; the bridge serves them to the panel). They
-  turn every `<select>`, `input[type=number|date|time|datetime-local|range|color|checkbox]`
-  into the system's own (the native element stays as the value and fires
-  its input / change events; the colour picker never opens the OS dialog).
-  Write plain `<select>` / `<input>`; never a one-off dropdown, picker or
-  slider. `data-plain` opts one element out (only with a reason in a comment);
-  a panel on/off switch is `input[type=checkbox].switch`.
-- CSS around them: the number box is `span.nf` (a `> input` selector no longer
-  matches), the date box `button.dt-btn`, the select `button.cs-btn`, the
-  colour swatch `button.cp-btn` (its picker `.cp-pop`); a slider's fill is the
-  CSS variable `--pct`. A text input with `list="<datalist id>"` gets the
-  system's suggestion list (`.sg-pop`, read from the datalist each time, so a
-  page may refill the datalist while it is open).
-- Panel refresh: a list page redraws every 2 s but never while the admin is at
-  it (a popup open, typing, a dialog, text selected); a settings page loads once
-  per visit and only shows the "Có thay đổi mới" bar when its data changes on
+  and the panel alike: the pages are React (web/) and use the shared controls of
+  `@isle/ui` (`web/packages/ui`): `Select`, `NumberInput`, `DateTimeInput`,
+  `Checkbox` / `CheckGrid`, `Switch` (on / off), `Slider`, `ColorInput` (never
+  the OS colour dialog), `SuggestInput` (a suggestion list). Never a one-off
+  dropdown, picker or slider, never a plain `<select>` / `<input type=number…>`.
+- Their CSS is CSS Modules (hashed class names): style them through their own
+  props / module, not global selectors; a slider's fill is the CSS variable
+  `--pct`. Their popups open in the `<dialog>` that is open, else in `<body>`
+  (`popupHost`). `portal/public/ui-select.js` / `ui-inputs.js` (the controls of
+  the sites before React, same look) are still served by the portal and the
+  bridge, but no page loads them any more.
+- Panel refresh: a list page asks again every 2 s (TanStack Query
+  `refetchInterval`); React redraws only what changed, so a popup open, typing,
+  a dialog or selected text is never lost; a settings page never overwrites the
+  admin's form and only shows the "Có thay đổi mới" bar when its data changes on
   the server (`useSettingsForm`, below).
 - The skin colour editor is shared too (`portal/public/skin-editor.js`).
 - Mutation icons: `<img data-mut-icon="Name">` (filled by `portal/public/mut-icons.js`
@@ -117,11 +114,13 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 - No inline script (the portal's CSP). Launcher rules unchanged: no download element inside it.
 
 ## Launcher
-- Inside Xóm Gáy Launcher (`window.isleLauncher`, `html.in-launcher`) nothing about
-  downloading the launcher shows: no download page, link, button, badge or promo.
-  Every such element carries class `web-only` (hidden in the launcher); `/tai.html`
-  opened there goes back home (`tai.js`). A new download link without `web-only`
-  is a bug.
+- Inside Xóm Gáy Launcher (`window.isleLauncher`, `inLauncher()` in
+  `web/apps/portal/src/lib/launcher.ts`) nothing about downloading the launcher
+  shows: no download page, link, button, badge or promo. Such an element is not
+  drawn when `inLauncher()` and also carries class `web-only` (portal.css hides it
+  under `html.in-launcher`, a class main.tsx leaves off for now: `MARK_IN_LAUNCHER`);
+  `/tai.html` opened there goes back home (`tai.main.tsx`). A new download link
+  drawn in the launcher is a bug.
 
 ## Test server
 - `scripts/test-server.sh` (on the VPS: /home/isle/bin/test-server.sh, run as
@@ -133,7 +132,7 @@ Game binaries are NOT in this repo (installed via SteamCMD).
 Before calling a fix or a feature done:
 1. List every caller of what you changed (grep the function, field, event,
    file name, API route, log line or setting) across mods/, bridge/, portal/,
-   launcher/, not only the file you edited.
+   web/, launcher/, not only the file you edited.
 2. For each flow that goes through it (e.g. a garage change: player store,
    player redeem, admin-made slot, prime slot, prime fixes, unlock heal), say
    whether its behaviour changes, and why that is fine.

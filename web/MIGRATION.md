@@ -15,7 +15,7 @@ main: the code got mixed and main stopped building (113 type errors). It was rep
 one version (the one `Routes.tsx` used, with the e2e flows). Before starting: `git pull`, read
 this file, and push after each block.
 
-## Done (served at /next/)
+## Done (served at `/`, and `/next/`)
 
 | Block | Sub-pages in React | Block page | e2e flow |
 |---|---|---|---|
@@ -35,9 +35,9 @@ this file, and push after each block.
 Routing: `app/Routes.tsx` sends a tab to its block page; a sub-page may carry a part after a colon
 (`#server/cfg:spawn`): `pickSub` keeps it, `BlockPage` shows the sub-page before the colon and the
 page reads the rest from `useHashRoute()`; each block page is a `app/BlockPage.tsx`
-with `pages={{ <sub>: Component }}`. A sub-page not listed there shows a link to the old panel
-(`LegacyPage`). The old pages in `bridge/public/index.html` stay: the panel at `/` is still the one
-admins use, until every block is moved and `/` switches to the React build.
+with `pages={{ <sub>: Component }}`. An address with no page shows `MissingPage`. (While blocks were
+being moved a sub-page not listed showed a link to the old panel, `LegacyPage`; both went on
+2026-10-07 with the old panel.)
 
 ## Not moved yet (next steps, in this order)
 
@@ -110,8 +110,9 @@ text selected); see how Gara → Dino and Nhật ký admin do it.
   React twin of `ui-inputs.js`'s date / time picker.
 - `test/fakeBridge.tsx`: `fakeBridge(url, get, put)` for a settings page, `fakeApi({ 'GET /api/x': …,
   'POST /api/y': (body) => … })` for a page of many routes (with the confirm dialog).
-- `node web/scripts/shots.mjs` also shoots a running local bridge (`PANEL_URL` + `PANEL_COOKIE`);
-  with `OLD=1` too it shoots the old panel at `/` (files `old-<tab>-<sub>-…png`) for the comparison.
+- `node web/scripts/shots.mjs` also shoots a running local bridge (`PANEL_URL` + `PANEL_COOKIE`).
+  `OLD=1` (files `old-…png`) now only works for the player site (`SITE=portal` on
+  `e2e/local-portal.sh`, the site before React out of the git tag): the old panel is gone (2026-10-07).
 - `components/list/List.tsx`: `ListTools` (search + filters), `Seg`, `SortTh`, `Pager` ("Hiển thị a-b /
   n … · trang x/y"), `pageOf`, `Pill`, and `List.module.css` `.table` (the old `.table-wrap table`:
   numbers right, first column left), `.rowLink`, `.notice`, `.hideSm`.

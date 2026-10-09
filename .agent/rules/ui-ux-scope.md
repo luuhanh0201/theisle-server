@@ -27,8 +27,9 @@ việc. Chỗ nào ba file khác nhau thì áp dụng rule **chặt hơn**.
 
 | Phần | File |
 |---|---|
-| Panel admin | `bridge/public/index.html`, `bridge/public/img/*` |
-| Portal người chơi | `portal/public/*.html`, `portal/public/app.js`, `map.js`, `overlay-settings.js`, `skin3d.js`, `tai.js`, `voice.js`, `launcher-done.js`, `portal/public/img/*` |
+| Panel admin (React) | `web/apps/panel/src/**/*.tsx` (phần JSX), `web/apps/panel/src/**/*.module.css`, `bridge/public/img/*` |
+| Portal người chơi (React) | `web/apps/portal/src/**/*.tsx` (phần JSX), `web/apps/portal/src/**/*.css`, `web/apps/portal/*.html`, `portal/public/map.js`, `skin3d.js`, `portal/public/img/*` |
+| Control dùng chung | `web/packages/ui/src/components/**` (`*.tsx` phần JSX, `*.module.css`), `web/packages/ui/src/tokens.css` |
 | Launcher (trang hiển thị) | `launcher/src/*.html`, `launcher/src/gate-page.js`, `splash-page.js`, `overlay-page.js`, ảnh trong `launcher/src/` |
 
 Trong các file trên, chỉ được sửa phần **trình bày**:
@@ -52,11 +53,17 @@ Trong các file trên, chỉ được sửa phần **trình bày**:
 - Nới Content-Security-Policy trong `launcher/src/*.html`.
 - Thêm thư viện, CDN, font/script/stylesheet từ bên ngoài. Không sửa `portal/public/vendor/`.
 - Xoá hoặc đổi tên `id` / `class` / hàm mà JavaScript hoặc test đang dùng (grep trước khi đổi).
-- Chèn dữ liệu vào `innerHTML` mà không qua helper `esc` có sẵn (hoặc dùng `textContent`).
+- Chèn dữ liệu vào `innerHTML` mà không qua helper `esc` có sẵn (hoặc dùng `textContent`); trong
+  React không dùng `dangerouslySetInnerHTML`.
+- Trong file React: đổi lời gọi dữ liệu (`useQuery`, `getJson`, `adminFetch`, `portalGet`, `withToken`),
+  `queryKey`, mutation, hook dữ liệu, quyền trong `nav.ts`, `session.tsx`. Chỉ sửa JSX, CSS, chữ hiển thị.
 
 ### 2c. File CẤM sửa hoàn toàn
 
 - `bridge/src/**`, `portal/src/**`, `relay/**` (backend, API, auth).
+- `web/packages/api/**`, `web/packages/types/**`, `web/apps/*/src/lib/**`, `web/apps/panel/src/app/{nav.ts,session.tsx,router.ts}`,
+  `web/*.config.ts`, `web/apps/*/vite.config.ts`, `web/aliases.ts` (dữ liệu, đăng nhập, định tuyến, build).
+- `bridge/public/next/**`, `portal/public/next/**` (bản build, sinh ra từ `web/`).
 - `launcher/src/main.js`, `preload.js`, `*-preload.js`, `overlay.js`, `login.js`, `ptt.js`.
 - `mods/**`, `ue4ss/**`, `config/**` (mod Lua và cấu hình game).
 - `scripts/**`, `tests/**`, `*/test/**`.
@@ -84,11 +91,14 @@ vì sao. Để người dùng quyết định.
 ## 4. Quy ước giao diện
 
 - Chữ hiển thị bằng tiếng Việt **có dấu**, ngắn, đúng giọng văn hiện có.
-- Dùng biến CSS (`--bg`, `--border`, `--accent`…) đã khai báo trong `:root` của từng trang;
-  không hard-code màu mới khi đã có biến phù hợp. Mỗi trang (panel, portal, launcher) có bộ
-  biến riêng, không trộn.
-- Giữ cấu trúc hiện có: panel là một file `index.html` viết thẳng JS; portal là HTML + JS thuần;
-  không đưa framework hay bước build mới vào.
+- Dùng biến CSS (`--bg`, `--border`, `--accent`…) đã khai báo: panel `web/packages/ui/src/tokens.css`,
+  portal `web/apps/portal/src/styles/{portal.css,tokens.css}`, launcher `:root` của từng trang;
+  không hard-code màu mới khi đã có biến phù hợp. Mỗi phần có bộ biến riêng, không trộn.
+- Giữ cấu trúc hiện có: panel và portal là React (`web/`, React 19 + Vite + CSS Modules), ô chọn /
+  số / ngày / màu / tick / thanh trượt luôn là control của `@isle/ui` (không dùng control của trình
+  duyệt); launcher là HTML + JS thuần. Không thêm thư viện, framework hay bước build mới.
+- Trang người chơi có 2 giao diện (web và trong launcher, `web/apps/portal/src/app/launcher/`):
+  sửa một trang phải đúng ở cả hai.
 - Portal phải dùng được trên điện thoại (không cuộn ngang). Overlay launcher trong suốt, nhỏ,
   chỉ cập nhật DOM khi dữ liệu thật sự đổi (xem `setText` trong `overlay-page.js`).
 - Không được xuống dòng vô lý trong UI và văn bản: cùng một tiêu đề (title, heading, card title)
@@ -101,7 +111,7 @@ vì sao. Để người dùng quyết định.
 
 Trước khi báo xong:
 1. Grep mọi nơi đang dùng thứ vừa sửa (`id`, `class`, hàm, key `localStorage`, nút,
-   endpoint mà trang gọi) trong cả `bridge/public`, `portal/public`, `launcher/src`,
+   endpoint mà trang gọi) trong cả `web/apps`, `web/packages`, `portal/public`, `launcher/src`,
    không chỉ file vừa sửa.
 2. Với từng luồng đi qua chỗ đó (ví dụ một nút gara: cất, lấy ra, slot admin, dino prime;
    trên điện thoại và máy tính; trong launcher và trình duyệt), nói rõ hành vi có đổi
@@ -115,17 +125,11 @@ Chạy các lệnh phù hợp (chỉ đọc/kiểm tra, không deploy):
 
 ```bash
 # JS rời
-node --check portal/public/app.js          # và từng file JS đã sửa
-
-# JS viết thẳng trong panel
-python3 -c "
-import re; s = open('bridge/public/index.html', encoding='utf8').read()
-open('/tmp/panel.mjs', 'w').write('\n'.join(re.findall(r'<script(?![^>]*src)[^>]*>(.*?)</script>', s, re.S)))"
-node --check /tmp/panel.mjs && echo OK
+node --check portal/public/map.js          # và từng file JS đã sửa
 
 # Test (không cần mạng, không đụng server)
+(cd web && npm test && npm run build)  # nếu sửa web/ (panel, portal React): test + typecheck + build
 (cd portal && npm test)        # nếu sửa portal/public
-(cd bridge && npm test)        # nếu sửa bridge/public
 (cd launcher && npm test)      # nếu sửa launcher/src
 ```
 

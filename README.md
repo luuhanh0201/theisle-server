@@ -19,8 +19,14 @@ docs/      how the stack works, VPS paths, Lua safety rules, deploy, garage
 config/    Game.ini / Engine.ini / GameUserSettings.ini (templated)
 ue4ss/     UE4SS settings + the list of enabled mods
 mods/      Lua mods (_shared holds common helpers)
-bridge/    Node service: tails the event stream, serves the admin panel
-scripts/   start / deploy / logs / install
+bridge/    Node service: tails the event stream, the admin API, serves the panel
+portal/    Node service: the player site (Steam login), serves its pages
+web/       React 19 + Vite: the admin panel (apps/panel) and the player site
+           (apps/portal), shared controls (packages/ui); built into
+           bridge/public/next/ and portal/public/next/ by deploy.sh
+launcher/  Xóm Gáy Launcher (Electron): the player site in a window + overlay
+relay/     Cloudflare Worker: Discord alerts when the VPS goes quiet
+scripts/   start / deploy / logs / install / release-launcher / backups
 ```
 
 ## How the pieces talk
@@ -85,12 +91,11 @@ ssh -N -L 8181:127.0.0.1:8080 isle@<vps>     # then http://127.0.0.1:8181
 It binds to localhost. **Put it behind a reverse proxy with authentication**,
 it serves player data, chat and live positions, and has no auth of its own.
 
-Tabs: server (start/stop/restart with player countdown, daily restarts, live
-RCON settings, panel-managed Game.ini keys, admin audit log), overview
-(players + filterable event feed), killfeed, leaderboards
-(kills, K/D, damage, playtime, longest life, largest prey per species), live
-map (raw game coordinates, no map image yet), chat, garage. Click any player
-for their full stats and personal log.
+The panel is React (`web/apps/panel`, since 2026-10-06; the one before React is
+in git tag `old-sites-20261007`). Its pages and the permission each needs:
+`web/apps/panel/src/app/nav.ts` (Tổng quan, Người chơi, Bản đồ, Thế giới, Gara,
+Vật phẩm, Nhiệm vụ, Tính năng mod, Server, Thành viên, Truy cập, Quản trị).
+Click any player for their full stats and personal log.
 
 What StatsLogger records, in `events.ndjson`: session start/end, spawn, death
 (killer, species, growth, position, life length, last hit), damage (both sides,
@@ -107,6 +112,9 @@ inferred from a 5-second vitals poll. See `docs/reference/EVRIMA_KillFeed_Design
 ```bash
 ./tests/run.sh          # syntax + functional tests, no game needed
 cd bridge && npm test   # typecheck + store tests
+cd portal && npm test   # typecheck + portal tests
+cd web && npm test && npm run build   # React panel + player site (vitest, typecheck, build)
+cd launcher && npm test
 ```
 
 `tests/` runs the mods against a mock UE4SS (`tests/harness.lua`). It drives a
