@@ -52,11 +52,10 @@ export const API = {
       c: { queued: 0, lastOkAt: now() - 300, lastError: null, waitUntil: 0, webhook: { name: 'Admin', channelId: '99990003', error: null, at: 0 } },
     } },
   }),
-  // Server → Giới hạn loài (species-cap.ts): T-Rex at its 5 (and 2 SVip / admin apart), one player waiting to be removed.
+  // Server → Giới hạn loài (species-cap.ts): T-Rex at its 5 (and 2 SVip / admin apart), off the picker.
   '/api/species-cap': () => ({
-    settings: { enabled: true, graceS: 30, species: { Tyrannosaurus: { cap: 5 }, Allosaurus: { cap: 6 } } },
-    counts: [{ species: 'Allosaurus', alive: 3, free: 0, cap: 6 }, { species: 'Tyrannosaurus', alive: 5, free: 2, cap: 5 }],
-    over: [{ steamId: '76561198000000002', name: 'Dã Tượng', species: 'Tyrannosaurus', killAt: now() + 18 }],
+    settings: { enabled: true, species: { Tyrannosaurus: { cap: 5 }, Allosaurus: { cap: 6 } } },
+    counts: [{ species: 'Allosaurus', alive: 3, free: 0, cap: 6, hidden: false }, { species: 'Tyrannosaurus', alive: 5, free: 2, cap: 5, hidden: true }], rcon: true,
     species: ['Allosaurus', 'Carnotaurus', 'Deinosuchus', 'Pteranodon', 'Stegosaurus', 'Triceratops', 'Tyrannosaurus'],
     allowed: ['Allosaurus', 'Carnotaurus', 'Deinosuchus', 'Pteranodon', 'Stegosaurus', 'Triceratops', 'Tyrannosaurus'],
   }),

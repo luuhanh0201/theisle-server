@@ -321,23 +321,6 @@ do
   jailed(false)
 end
 
-print("\n-- 6g. species limit (garage/speciescap.lua): listed past a species' limit, no redeem; the slot stays --")
-do
-  local Cap = require("garage.speciescap")
-  local cf = assert(io.open(Cap.PATH, "w"))
-  cf:write('{"over":[{"id":1,"steamId":"' .. STEAM .. '","species":"Tyrannosaurus","killAt":' .. (clock + 30) .. '}]}')
-  cf:close()
-  Cap.reset()
-  Storage.put(STEAM, "1", { classPath = "X", growth = 1 })
-  local idC = send("redeem", { slot = "1" })
-  check("a listed player's redeem is refused", started(idC) and started(idC).ok == false
-    and (started(idC).messages[1] or ""):find("đủ số lượng", 1, true) ~= nil, started(idC) and json.encode(started(idC)))
-  check("…and the slot stays in the garage", Storage.get(STEAM, "1") ~= nil)
-  os.remove(Cap.PATH)
-  Cap.reset()
-  Storage.discard(STEAM, "1")
-end
-
 print("\n-- 7. slots are numbered; a slot name sent along is ignored; bad names never reach a redeem --")
 Storage.put(STEAM, "1", { classPath = "X", growth = 1 })
 local c7 = H.makeCtrl(STEAM, H.makePawn({ growth = 0.7 }))

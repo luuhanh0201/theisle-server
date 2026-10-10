@@ -6,7 +6,6 @@ export const MSG_GROUPS: ReadonlyArray<readonly [string, string]> = [
   ['ptera', 'Ptera gắp'], ['guard', 'Vùng chỉ dino nhỏ / ong đốt khu tù'], ['garage', 'Gara, cất dino'],
   ['redeem', 'Gara, lấy dino ra'], ['commands', 'Lệnh chat (!slay, !unstuck, !prime, !status)'],
   ['admin', 'Admin'], ['hello', 'Chào mừng'], ['prime', 'Nhiệm vụ prime'], ['skin', 'Đổi màu dino (web)'], ['tele', 'Tele con non (web)'],
-  ['cap', 'Giới hạn loài'],
 ];
 
 /** 600 → "10p", 30 → "30s". */

@@ -1,6 +1,6 @@
-// The species limit (species-cap.ts): a player who counts (not SVip / admin) past a species' limit
-// listed for DinoGarage to remove; relogs, rebirths, garage dinos and grown dinos never; the store's
-// alive dinos (aliveDinos) and the removal not counted as a death. npm test.
+// The species limit (species-cap.ts): a species at its limit (plain players, VIP included; SVip and
+// admins not counted) off the game's picker by RCON, back once there is room; nothing removed; the
+// store's alive dinos (aliveDinos). npm test.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { join } from 'node:path';
 const root = mkdtempSync(join(tmpdir(), 'species-cap-'));
 process.env.DATA_DIR = join(root, 'data');
 process.env.GARAGE_ROOT = join(root, 'garage');
-const { SpeciesCaps, validateSpeciesCap, saveSpeciesCap, readSpeciesCap, JUDGE_AFTER_S } = await import('../dist/species-cap.js');
+const { SpeciesCaps, validateSpeciesCap, saveSpeciesCap, readSpeciesCap } = await import('../dist/species-cap.js');
 const { Store } = await import('../dist/store.js');
 const { parseEvent } = await import('../dist/events.js');
 after(() => rmSync(root, { recursive: true, force: true }));
@@ -18,126 +18,126 @@ after(() => rmSync(root, { recursive: true, force: true }));
 const ids = (n) => `7656119800000${String(n).padStart(4, '0')}`;
 const REX = 'BP_Tyrannosaurus_C';
 
-/** A SpeciesCaps on fakes: the clock, the dinos alive, who is free of the limit (SVip / admins). */
-function rig(settings, { exempt = [] } = {}) {
-  const w = { now: 1_000_000, dinos: [], over: [], state: { seq: 0 }, settings, exempt: new Set(exempt) };
+/** A SpeciesCaps on fakes: the dinos alive, who is not counted (SVip / admins), Game.ini's list, RCON calls. */
+function rig(settings, { exempt = [], allowed = ['Tyrannosaurus', 'Allosaurus'] } = {}) {
+  const w = { now: 1_000_000, dinos: [], calls: [], state: { hidden: [] }, settings, exempt: new Set(exempt), listed: null };
   const caps = new SpeciesCaps({
     aliveDinos: () => w.dinos,
     exempt: async () => w.exempt,
+    allowed: async () => (allowed === null ? null : new Set(allowed)),
+    rcon: {
+      enabled: true,
+      run: async (name, arg) => {
+        w.calls.push(arg === undefined ? name : `${name} ${arg}`);
+        return name === 'getPlayables' ? `[x] Playables\n${(w.listed ?? []).join(',')},` : 'ok';
+      },
+    },
     settings: async () => w.settings,
     saveState: async (st) => { w.state = st; },
     loadState: async () => w.state,
-    writeOver: async (over) => { w.over = over; },
     now: () => w.now,
     log: () => undefined,
   });
-  /** A dino alive now (spawned `ago` s before), and its spawn event fed. */
-  w.spawn = (n, { species = REX, ago = 0, fresh = true, growth = 0.25, event = true } = {}) => {
-    const d = { steamId: ids(n), species, spawnedAt: w.now - ago, fresh, growth };
-    w.dinos.push(d);
-    if (event) caps.onEvent({ t: d.spawnedAt, type: 'spawn', steamId: d.steamId });
-    return d;
-  };
+  w.add = (n, species = REX) => { w.dinos.push({ steamId: ids(n), species }); };
   w.gone = (n) => { w.dinos = w.dinos.filter((d) => d.steamId !== ids(n)); };
-  w.later = async (s = JUDGE_AFTER_S) => { w.now += s; await caps.tick(); };
+  w.later = async (s = 5) => { w.now += s; await caps.tick(); };
   w.caps = caps;
+  w.off = (sp = 'Tyrannosaurus') => w.calls.filter((c) => c === `removePlayable ${sp}`).length;
+  w.on = (sp = 'Tyrannosaurus') => w.calls.filter((c) => c === `addPlayable ${sp}`).length;
   return w;
 }
-const REX_RULE = (cap, extra = {}) => ({ enabled: true, graceS: 30, species: { Tyrannosaurus: { cap } }, ...extra });
+const REX_RULE = (cap) => ({ enabled: true, species: { Tyrannosaurus: { cap } } });
 
 test('validate: names, whole numbers in range, 0 = no limit, off by default', () => {
-  assert.deepEqual(validateSpeciesCap({}), { enabled: false, graceS: 30, species: {} });
-  assert.deepEqual(validateSpeciesCap({ enabled: true, graceS: 60, species: { Tyrannosaurus: { cap: 5 }, Allosaurus: { cap: 0 } } }),
-    { enabled: true, graceS: 60, species: { Tyrannosaurus: { cap: 5 } } });
+  assert.deepEqual(validateSpeciesCap({}), { enabled: false, species: {} });
+  assert.deepEqual(validateSpeciesCap({ enabled: true, species: { Tyrannosaurus: { cap: 5 }, Allosaurus: { cap: 0 } } }),
+    { enabled: true, species: { Tyrannosaurus: { cap: 5 } } });
   assert.throws(() => validateSpeciesCap({ species: { 'Rex!': { cap: 1 } } }), /not a species/);
   assert.throws(() => validateSpeciesCap({ species: { Tyrannosaurus: { cap: -1 } } }), /cap must be/);
   assert.throws(() => validateSpeciesCap({ species: { Tyrannosaurus: { cap: 2.5 } } }), /cap must be/);
-  assert.throws(() => validateSpeciesCap({ graceS: 2 }), /graceS/);
 });
 
 test('saved and read back', async () => {
-  await saveSpeciesCap({ enabled: true, graceS: 20, species: { Allosaurus: { cap: 3 } } });
-  assert.deepEqual(await readSpeciesCap(), { enabled: true, graceS: 20, species: { Allosaurus: { cap: 3 } } });
+  await saveSpeciesCap({ enabled: true, species: { Allosaurus: { cap: 3 } } });
+  assert.deepEqual(await readSpeciesCap(), { enabled: true, species: { Allosaurus: { cap: 3 } } });
   await assert.rejects(() => saveSpeciesCap({ species: { Allosaurus: { cap: 'x' } } }));
 });
 
-test('T-Rex 2: the 3rd player who counts is listed to be removed after graceS; its dino gone, the entry with it', async () => {
+test('T-Rex 2: off the picker at the 2nd plain player\'s T-Rex, once; back when one goes; nothing else done', async () => {
   const w = rig(REX_RULE(2));
-  w.spawn(1, { ago: 100, event: false });
-  w.spawn(2, { ago: 50, event: false });
-  const c = w.spawn(3);
-  await w.later(JUDGE_AFTER_S - 1);
-  assert.equal(w.over.length, 0, 'judged only after a few seconds (a rebirth / garage mark comes with the next events)');
-  await w.later(1);
-  assert.deepEqual(w.over.map((o) => [o.steamId, o.species]), [[c.steamId, 'Tyrannosaurus']]);
-  assert.equal(w.over[0].killAt, w.now + 30);
-  assert.equal(w.state.seq, 1);
-  assert.deepEqual(w.caps.counts(), [{ species: 'Tyrannosaurus', alive: 2, free: 0, cap: 2 }], 'the one over does not count');
-  w.gone(3);
-  await w.later(1);
-  assert.equal(w.over.length, 0);
+  w.add(1);
+  await w.later();
+  assert.equal(w.off(), 0, '1 of 2: still on the picker');
+  w.add(2);
+  await w.later();
+  assert.equal(w.off(), 1, '2 of 2: off');
+  assert.deepEqual(w.state.hidden, ['Tyrannosaurus']);
+  w.add(3);   // came back on a dino they had (a relog): plays as ever, nothing removed
+  await w.later();
+  assert.equal(w.off(), 1, 'taken off once, not again every tick');
+  assert.deepEqual(w.caps.counts(), [{ species: 'Tyrannosaurus', alive: 3, free: 0, cap: 2, hidden: true }]);
+  w.gone(3); await w.later();
+  assert.equal(w.on(), 0, 'still 2: stays off');
+  w.gone(1); await w.later();
+  assert.equal(w.on(), 1, '1 of 2: back on the picker');
+  assert.deepEqual(w.state.hidden, []);
 });
 
-test('SVip and admins: never listed, never counted; VIP counts like anyone', async () => {
-  const SVIP = 10, ADMIN = 11, VIP = 12;
+test('SVip and admins are not counted; VIP is', async () => {
+  const SVIP = 10, ADMIN = 11;
   const w = rig(REX_RULE(1), { exempt: [ids(SVIP), ids(ADMIN)] });
-  w.spawn(SVIP, { ago: 100, event: false });
-  w.spawn(ADMIN, { ago: 90, event: false });
-  w.spawn(1, { ago: 2 });   // the first that counts: room
+  w.add(SVIP); w.add(ADMIN);
   await w.later();
-  assert.equal(w.over.length, 0, 'SVip and admin dinos take no place');
-  w.spawn(SVIP + 100, { ago: 0 });
-  w.exempt.add(ids(SVIP + 100));
-  w.spawn(VIP);
+  assert.equal(w.off(), 0);
+  assert.deepEqual(w.caps.counts(), [{ species: 'Tyrannosaurus', alive: 0, free: 2, cap: 1, hidden: false }]);
+  w.add(12);   // a VIP: a plain player for the limit
   await w.later();
-  assert.deepEqual(w.over.map((o) => o.steamId), [ids(VIP)], 'the limit full: a VIP is over, a SVip is not');
-  assert.deepEqual(w.caps.counts(), [{ species: 'Tyrannosaurus', alive: 1, free: 3, cap: 1 }]);
+  assert.equal(w.off(), 1);
 });
 
-test('who came first keeps the place: two at once, the later one is over', async () => {
-  const w = rig(REX_RULE(2));
-  w.spawn(1, { ago: 100, event: false });
-  w.spawn(2, { ago: 3 });
-  w.spawn(3, { ago: 1 });
-  await w.later();
-  assert.deepEqual(w.over.map((o) => o.steamId), [ids(3)]);
-});
-
-test('never touched: a relog, a rebirth / garage dino (not fresh), a grown dino, another species, a species with no limit', async () => {
+test('another species, a species with no limit: left alone; off: every species this took off put back', async () => {
   const w = rig(REX_RULE(1));
-  w.spawn(1, { ago: 100, event: false });
-  w.spawn(2, { fresh: false });
-  w.spawn(3, { growth: 0.6 });
-  w.spawn(4, { growth: null });
-  w.spawn(5, { species: 'BP_Allosaurus_C' });
+  w.add(1, 'BP_Allosaurus_C'); w.add(2, 'BP_Allosaurus_C');
   await w.later();
-  assert.equal(w.over.length, 0);
-});
-
-test('only what happens now: events read again at a bridge start are not judged', async () => {
-  const w = rig(REX_RULE(1));
-  w.spawn(1, { ago: 100, event: false });
-  w.caps.onEvent({ t: w.now - 3600, type: 'spawn', steamId: ids(2) });
-  w.dinos.push({ steamId: ids(2), species: REX, spawnedAt: w.now - 3600, fresh: true, growth: 0.25 });
+  assert.deepEqual(w.calls, []);
+  w.add(3);
   await w.later();
-  assert.equal(w.over.length, 0);
-});
-
-test('off: nobody over, nothing judged', async () => {
-  const w = rig(REX_RULE(1));
-  w.spawn(1, { ago: 100, event: false });
-  w.spawn(2);
-  await w.later();
-  assert.equal(w.over.length, 1);
+  assert.equal(w.off(), 1);
   w.settings = { ...w.settings, enabled: false };
-  await w.later(1);
-  assert.equal(w.over.length, 0);
-  w.spawn(3);
   await w.later();
-  assert.equal(w.over.length, 0);
+  assert.equal(w.on(), 1);
+  assert.equal(w.calls.filter((c) => c.includes('Allosaurus')).length, 0);
 });
 
-test('the store: alive dinos, fresh or not; a removal by the limit is not a death', () => {
+test('a species Game.ini does not allow is never put back; Game.ini unreadable: nothing put back yet', async () => {
+  const w = rig(REX_RULE(1), { allowed: ['Allosaurus'] });
+  w.add(1); await w.later();
+  w.gone(1); await w.later();
+  assert.equal(w.on(), 0);
+  assert.equal(w.caps.counts()[0].hidden, false, 'no longer ours');
+  const w2 = rig(REX_RULE(1), { allowed: null });
+  w2.add(1); await w2.later();
+  w2.gone(1); await w2.later();
+  assert.equal(w2.on(), 0);
+  assert.equal(w2.caps.counts()[0].hidden, true, 'kept off until Game.ini can be read');
+});
+
+test('the game restarted (every species back): taken off again; one the game lists again is taken off again', async () => {
+  const w = rig(REX_RULE(1));
+  w.add(1); await w.later();
+  assert.equal(w.off(), 1);
+  w.caps.onEvent({ t: w.now, type: 'mod_loaded', mod: 'StatsLogger' });
+  await w.later();
+  assert.equal(w.off(), 2, 'after a server start');
+  w.caps.onEvent({ t: w.now - 3600, type: 'mod_loaded', mod: 'StatsLogger' });
+  await w.later();
+  assert.equal(w.off(), 2, 'an old start read again at a bridge start: nothing');
+  w.listed = ['Allosaurus', 'Tyrannosaurus'];   // the bridge was down through a restart
+  await w.later(31);
+  assert.equal(w.off(), 3);
+});
+
+test('the store: one alive dino per online player; the admin camera is not a dino', () => {
   const s = new Store();
   const t = Math.floor(Date.now() / 1000);
   const A = ids(1), B = ids(2), C = ids(3);
@@ -156,14 +156,5 @@ test('the store: alive dinos, fresh or not; a removal by the limit is not a deat
     { t: t - 1, type: 'snapshot', steamId: B, species: REX, growth: 0.7 },
   ]);
   const alive = s.aliveDinos().sort((a, b) => a.steamId.localeCompare(b.steamId));
-  assert.deepEqual(alive.map((d) => [d.steamId, d.species, d.fresh, d.growth]), [[A, REX, true, 0.25], [B, REX, false, 0.7]],
-    'B relogged on the dino they had; the admin camera is not a dino');
-  feed([
-    { t, type: 'species_cap_kill', steamId: A, species: 'Tyrannosaurus', capId: 1 },
-    { t: t + 2, type: 'death', steamId: A, species: REX, growth: 0.25 },
-  ]);
-  const a = s.player(A);
-  assert.equal(a.player.deaths, 0, 'not a death');
-  assert.equal(a.lives[0].end, 'admin');
-  assert.ok(!s.aliveDinos().some((d) => d.steamId === A));
+  assert.deepEqual(alive, [{ steamId: A, species: REX }, { steamId: B, species: REX }], 'B relogged: counted as any other; the admin camera is not a dino');
 });

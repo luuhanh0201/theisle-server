@@ -1,9 +1,8 @@
 /* Giới hạn loài: one small card per species, its limit always there (0 = none). */
 .muted { color: var(--muted); }
 .hint { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
-.fields { display: grid; grid-template-columns: minmax(0, 260px); }
-.fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; }
-.over { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--kill); border-radius: 10px; }
+.warn { margin: 0; font-size: 13px; color: var(--kill); }
+.hidden { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 8px; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) 130px; grid-template-areas: "name num" "live num"; gap: 2px 10px; align-items: center;
   padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); }

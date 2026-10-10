@@ -112,7 +112,7 @@ export async function lifeDetails(steamId: string, limit = 40): Promise<LifeDeta
     }
     if (type === 'death') { cur.endedAt = t; cur.end = 'death'; }
     if (type === 'garage_store' || type === 'garage_store_result') { if (e['ok'] !== false) { cur.endedAt = t; cur.end = 'garage'; } }
-    if ((type === 'admin_kill' && e['ok'] === true) || type === 'species_cap_kill') { cur.endedAt = t; cur.end = 'admin'; }
+    if (type === 'admin_kill' && e['ok'] === true) { cur.endedAt = t; cur.end = 'admin'; }
   }
   return lives.reverse().slice(0, limit);
 }
