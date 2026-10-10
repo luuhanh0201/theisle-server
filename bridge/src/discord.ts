@@ -1,3 +1,4 @@
+import type { RelayState } from './relay.js';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -315,7 +316,7 @@ export class DiscordLog {
   #dropped = 0;
   readonly #info = new Map<string, WebhookInfo>();
   /** The relay's heartbeat: last sent, last error (relay.ts). */
-  readonly relayState: { lastOkAt: number | null; lastError: string | null } = { lastOkAt: null, lastError: null };
+  readonly relayState: RelayState = { lastOkAt: null, lastError: null, failingSince: null };
   #saveTimer: NodeJS.Timeout | null = null;
   #sending = false;
   readonly #since: number;
@@ -362,7 +363,7 @@ export class DiscordLog {
     this.#persistSoon();
   }
 
-  status(): { queued: number; dropped: number; relay: { lastOkAt: number | null; lastError: string | null }; channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> } {
+  status(): { queued: number; dropped: number; relay: RelayState; channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> } {
     const channels: Record<string, ChannelState & { webhook: WebhookInfo | null }> = {};
     for (const c of this.#settings.channels) {
       const st = this.#state.get(c.id);

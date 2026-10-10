@@ -1,7 +1,7 @@
 // The bridge's side of the relay (relay.ts) and its settings (discord.ts).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-const { alertWebhookOf, sendHeartbeat, registerCommands, COMMANDS } = await import('../dist/relay.js');
+const { alertWebhookOf, sendHeartbeat, registerCommands, COMMANDS, HEARTBEAT_RETRY_MS } = await import('../dist/relay.js');
 const { validateDiscord, publicView } = await import('../dist/discord.js');
 
 const URL1 = 'https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz0123456789ABCD';
@@ -38,6 +38,22 @@ test('heartbeat: sent with the secret; a refusal says why', async () => {
   assert.match(state.lastError, /mã bí mật/);
   await sendHeartbeat({ url: 'https://relay', secret: SECRET }, hb, state, async () => { throw new Error('ECONNRESET'); });
   assert.match(state.lastError, /ECONNRESET/);
+});
+
+test('heartbeat: a row of failures begins once, ends with how long it lasted (2026-10-10 the way out came and went)', async () => {
+  const hb = { serverName: 'X', phase: 'running', online: 0, maxPlayers: 100, players: [], fps: 30, ai: null, alertWebhook: null, attack: null };
+  const state = { lastOkAt: null, lastError: null, failingSince: null };
+  const down = async () => { throw new Error('The operation was aborted due to timeout'); };
+  const up = async () => ({ status: 200, text: async () => '' });
+  assert.deepEqual(await sendHeartbeat({ url: 'https://relay', secret: SECRET }, hb, state, up, () => 100), { ok: true, downS: null });
+  assert.deepEqual(await sendHeartbeat({ url: 'https://relay', secret: SECRET }, hb, state, down, () => 200), { ok: false, first: true });
+  assert.equal(state.failingSince, 200);
+  assert.deepEqual(await sendHeartbeat({ url: 'https://relay', secret: SECRET }, hb, state, down, () => 220), { ok: false, first: false }, 'logged once');
+  assert.equal(state.failingSince, 200, 'kept from the first');
+  assert.deepEqual(await sendHeartbeat({ url: 'https://relay', secret: SECRET }, hb, state, up, () => 260), { ok: true, downS: 60 });
+  assert.equal(state.failingSince, null);
+  assert.equal(state.lastOkAt, 260);
+  assert.ok(HEARTBEAT_RETRY_MS < 300_000 / 3, 'several tries before the relay tells (5 minutes)');
 });
 
 test('slash commands: checked, PUT on the application with the bot token', async () => {

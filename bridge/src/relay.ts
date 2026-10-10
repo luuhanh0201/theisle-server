@@ -25,7 +25,22 @@ export interface Heartbeat {
   attack: { since: number; peakPps: number; peakMbps: number } | null;
 }
 
-export interface RelayState { lastOkAt: number | null; lastError: string | null }
+export interface RelayState {
+  lastOkAt: number | null;
+  lastError: string | null;
+  /** The first heartbeat that failed in a row of failures, null while they go through. */
+  failingSince?: number | null;
+}
+
+/** What a heartbeat changed: it went through or not, a row of failures begun, or one ended (`downS` long). */
+export type HeartbeatOutcome = { ok: true; downS: number | null } | { ok: false; first: boolean };
+
+/**
+ * After a failed heartbeat, the next one this soon, not 2 minutes later (2026-10-10: the VPS's way out to
+ * Cloudflare came and went from 17:35 to 20:14, the relay said "unreachable" at 18:47 while the game ran
+ * on): the relay tells after 5 minutes without one, so a blip of a minute is no longer an outage.
+ */
+export const HEARTBEAT_RETRY_MS = 20_000;
 
 type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal }) =>
   Promise<{ status: number; text(): Promise<string> }>;
@@ -37,17 +52,25 @@ export function alertWebhookOf(s: DiscordSettings): string | null {
 }
 
 export async function sendHeartbeat(relay: { url: string; secret: string }, hb: Heartbeat, state: RelayState,
-  fetchFn: FetchLike = (u, i) => fetch(u, i), now = () => Math.floor(Date.now() / 1000)): Promise<void> {
+  fetchFn: FetchLike = (u, i) => fetch(u, i), now = () => Math.floor(Date.now() / 1000)): Promise<HeartbeatOutcome> {
   try {
     const res = await fetchFn(`${relay.url}/heartbeat`, {
       method: 'POST', headers: { authorization: `Bearer ${relay.secret}`, 'content-type': 'application/json' },
       body: JSON.stringify(hb), signal: AbortSignal.timeout(10_000),
     });
-    if (res.status >= 200 && res.status < 300) { state.lastOkAt = now(); state.lastError = null; return; }
+    if (res.status >= 200 && res.status < 300) {
+      const t = now();
+      const since = state.failingSince ?? null;
+      state.lastOkAt = t; state.lastError = null; state.failingSince = null;
+      return { ok: true, downS: since === null ? null : t - since };
+    }
     state.lastError = res.status === 401 ? 'trạm từ chối mã bí mật (khác với mã đã đặt trên Cloudflare?)' : `trạm trả ${res.status}`;
   } catch (error) {
     state.lastError = `không gửi được: ${(error as Error).message}`;
   }
+  const first = (state.failingSince ?? null) === null;
+  if (first) state.failingSince = now();
+  return { ok: false, first };
 }
 
 export const COMMANDS = [

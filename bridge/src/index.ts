@@ -35,7 +35,7 @@ import { AiReset } from './ai-reset.js';
 import { dropResult, enqueueAiCommand } from './ai-drop.js';
 import { DiscordLog, auditLine, banLine, lineOf, phaseLine, plain } from './discord.js';
 import { BanWatcher, banVars } from './bans.js';
-import { alertWebhookOf, sendHeartbeat } from './relay.js';
+import { HEARTBEAT_RETRY_MS, alertWebhookOf, sendHeartbeat } from './relay.js';
 import { readLive } from './gameini.js';
 import { DdosWatch, SAMPLE_S, defaultIface, endText, parseNetDev, readDdos, startText } from './ddos.js';
 import { readFile } from 'node:fs/promises';
@@ -352,7 +352,9 @@ setInterval(() => {
   }).catch((error: unknown) => console.error('[ddos] read failed:', error));
 }, SAMPLE_S * 1000);
 
-// The relay off the VPS (relay/): a heartbeat every 2 minutes (relay.ts).
+// The relay off the VPS (relay/): a heartbeat every 2 minutes (relay.ts); a failed one tried again
+// after HEARTBEAT_RETRY_MS, and a row of failures logged when it begins and when it ends.
+let heartbeatRetry: NodeJS.Timeout | null = null;
 async function heartbeat(): Promise<void> {
   const relay = discord.settings.relay;
   if (!relay) return;
@@ -360,7 +362,7 @@ async function heartbeat(): Promise<void> {
   const fresh = live !== null && !live.stale;
   const setting = (k: string): unknown => cfg?.settings[k] ?? cfg?.effective[k];
   const online = store.online();
-  await sendHeartbeat(relay, {
+  const out = await sendHeartbeat(relay, {
     serverName: typeof setting('ServerName') === 'string' ? setting('ServerName') as string : 'Server',
     phase: st.phase,
     online: online.length,
@@ -371,6 +373,17 @@ async function heartbeat(): Promise<void> {
     alertWebhook: alertWebhookOf(discord.settings),
     attack: ddos.watch.attack ? { since: ddos.watch.attack.since, peakPps: ddos.watch.attack.peakPps, peakMbps: ddos.watch.attack.peakMbps } : null,
   }, discord.relayState);
+  if (out.ok) {
+    if (out.downS !== null) console.info(`[relay] heartbeat through again after ${out.downS} s`);
+    return;
+  }
+  if (out.first) console.warn(`[relay] heartbeat failed (${discord.relayState.lastError ?? '?'}), trying again every ${HEARTBEAT_RETRY_MS / 1000} s`);
+  if (heartbeatRetry === null) {
+    heartbeatRetry = setTimeout(() => {
+      heartbeatRetry = null;
+      heartbeat().catch((error: unknown) => console.error('[relay] heartbeat failed:', error));
+    }, HEARTBEAT_RETRY_MS);
+  }
 }
 setInterval(() => { heartbeat().catch((error: unknown) => console.error('[relay] heartbeat failed:', error)); }, 120_000);
 setTimeout(() => { heartbeat().catch(() => undefined); }, 15_000);
