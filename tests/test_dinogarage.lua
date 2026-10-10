@@ -321,7 +321,7 @@ do
   jailed(false)
 end
 
-print("\n-- 6g. species limit (garage/speciescap.lua): listed past the common slots, no redeem; the slot stays --")
+print("\n-- 6g. species limit (garage/speciescap.lua): listed past a species' limit, no redeem; the slot stays --")
 do
   local Cap = require("garage.speciescap")
   local cf = assert(io.open(Cap.PATH, "w"))
@@ -331,7 +331,7 @@ do
   Storage.put(STEAM, "1", { classPath = "X", growth = 1 })
   local idC = send("redeem", { slot = "1" })
   check("a listed player's redeem is refused", started(idC) and started(idC).ok == false
-    and (started(idC).messages[1] or ""):find("đủ suất", 1, true) ~= nil, started(idC) and json.encode(started(idC)))
+    and (started(idC).messages[1] or ""):find("đủ số lượng", 1, true) ~= nil, started(idC) and json.encode(started(idC)))
   check("…and the slot stays in the garage", Storage.get(STEAM, "1") ~= nil)
   os.remove(Cap.PATH)
   Cap.reset()

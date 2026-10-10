@@ -52,13 +52,13 @@ export const API = {
       c: { queued: 0, lastOkAt: now() - 300, lastError: null, waitUntil: 0, webhook: { name: 'Admin', channelId: '99990003', error: null, at: 0 } },
     } },
   }),
-  // Server → Giới hạn loài (species-cap.ts): a full T-Rex hidden from the picker, one player waiting to be removed.
+  // Server → Giới hạn loài (species-cap.ts): T-Rex at its 5 (and 2 SVip / admin apart), one player waiting to be removed.
   '/api/species-cap': () => ({
-    settings: { enabled: true, graceS: 30, species: { Tyrannosaurus: { cap: 8, reserve: 2 }, Allosaurus: { cap: 6, reserve: 0 } } },
-    counts: [{ species: 'Allosaurus', alive: 3, cap: 6, reserve: 0, hidden: false }, { species: 'Tyrannosaurus', alive: 10, cap: 8, reserve: 2, hidden: true }],
+    settings: { enabled: true, graceS: 30, species: { Tyrannosaurus: { cap: 5 }, Allosaurus: { cap: 6 } } },
+    counts: [{ species: 'Allosaurus', alive: 3, free: 0, cap: 6 }, { species: 'Tyrannosaurus', alive: 5, free: 2, cap: 5 }],
     over: [{ steamId: '76561198000000002', name: 'Dã Tượng', species: 'Tyrannosaurus', killAt: now() + 18 }],
     species: ['Allosaurus', 'Carnotaurus', 'Deinosuchus', 'Pteranodon', 'Stegosaurus', 'Triceratops', 'Tyrannosaurus'],
-    allowed: ['Allosaurus', 'Carnotaurus', 'Deinosuchus', 'Pteranodon', 'Stegosaurus', 'Triceratops', 'Tyrannosaurus'], rcon: true,
+    allowed: ['Allosaurus', 'Carnotaurus', 'Deinosuchus', 'Pteranodon', 'Stegosaurus', 'Triceratops', 'Tyrannosaurus'],
   }),
   // Nhiệm vụ (economy.ts, shop.ts, quests.ts, milestones.ts).
   '/api/economy': { currency: 'Hổ phách', settings: { checkinMinutes: 30, checkinRewards: [10, 20, 30, 40, 50, 60, 100], checkinBonusItem: null },

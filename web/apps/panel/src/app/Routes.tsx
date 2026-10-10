@@ -49,7 +49,7 @@ export function Routes() {
   if (tab === 'server' && sub !== null) return <ServerPage sub={sub} />;
   if (tab === 'players' && sub !== null) return <PlayersPage sub={sub} />;
   if (tab === 'items' && sub !== null) return <ItemsPage sub={sub} />;
-  if (tab === 'quests') return <QuestsPage />;
+  if (tab === 'quests' && sub !== null) return <QuestsPage sub={sub} />;
   if (tab === 'traffic') return <TrafficPage />;
   if (tab === 'overview') return <OverviewPage />;
   if (tab === 'map') return <MapPage />;

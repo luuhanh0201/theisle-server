@@ -44,25 +44,22 @@ export function moved<T>(list: T[], i: number, dir: -1 | 1): T[] {
 export const adjustError = (steamId: string, delta: number, reason: string): string | null => (!/^7656\d{13}$/.test(steamId) ? 'SteamID: 17 chữ số, bắt đầu bằng 7656…'
   : !Number.isInteger(delta) || delta === 0 ? 'Nhập số Hổ phách cộng (+) hoặc trừ (−), khác 0' : !reason ? 'Cần ghi lý do' : null);
 
-/** Nhiệm vụ: Hổ phách, the daily check-in, the shop, the ledger, the daily / weekly quests, the server's online milestones. */
-export function Quests() {
-  return (
-    <>
-      <Checkin />
-      <Amber />
-      <Shop />
-      <Ledger />
-      <DailyQuests />
-      <Milestones />
-    </>
-  );
+/**
+ * Nhiệm vụ, one sub-page each (owner, 2026-10-10: each feature's settings on its own tab, not one long
+ * page): the daily check-in, Hổ phách (+ / − and the ledger), the shop, the daily / weekly quests, the
+ * server's online milestones (Milestones.tsx).
+ */
+export const QUEST_PAGES = { checkin: Checkin, amber: AmberPage, shop: Shop, daily: DailyQuests, milestones: Milestones };
+
+function AmberPage() {
+  return <><Amber /><Ledger /></>;
 }
 
 function Checkin() {
   const { access } = useSession();
   const edit = can(access, 'economy.edit');
   const f = useSettingsForm<EconomyView, EconomySettings>('/api/economy', {
-    label: 'Điểm danh', href: '#quests', select: (r) => r.settings, putUrl: '/api/economy/settings', saved: 'Đã lưu điểm danh.',
+    label: 'Điểm danh', href: '#quests/checkin', select: (r) => r.settings, putUrl: '/api/economy/settings', saved: 'Đã lưu điểm danh.',
   });
   const items = useQuery({ queryKey: ['/api/items'], queryFn: () => getJson<{ items: ItemLite[] }>('/api/items'), enabled: can(access, 'items.view'), staleTime: 30_000 }).data?.items ?? [];
   const cur = f.latest?.currency ?? 'Hổ phách';
@@ -118,7 +115,7 @@ function Amber() {
   };
   const sum = eco?.summary;
   return (
-    <Card className={s.gap}>
+    <Card>
       <CardHead title={<>Hổ phách <img src="/amber.svg" alt="" aria-hidden="true" className={s.amber} /></>}
         sub={sum ? `${sum.players} người đang có · tổng ${vn(sum.total)} ${cur}` : ''} />
       <CardBody stack>
@@ -177,14 +174,14 @@ function Shop() {
   const { access } = useSession();
   const edit = can(access, 'economy.edit');
   const f = useSettingsForm<ShopView, { listings: Listing[] }>('/api/shop', {
-    label: 'Cửa hàng Hổ phách', href: '#quests', select: (r) => ({ listings: r.listings }), saved: 'Đã lưu cửa hàng.',
+    label: 'Cửa hàng Hổ phách', href: '#quests/shop', select: (r) => ({ listings: r.listings }), saved: 'Đã lưu cửa hàng.',
   });
   const items = f.latest?.items ?? [];
   const list = f.draft?.listings ?? null;
   const set = (fn: (l: Listing[]) => Listing[]): void => f.update((x) => ({ listings: fn(x.listings) }));
   const setOne = (i: number, p: Partial<Listing>): void => set((l) => l.map((x, j) => (j === i ? { ...x, ...p } : x)));
   return (
-    <Card className={s.gap}>
+    <Card>
       <CardHead title="🏪 Cửa hàng Hổ phách" sub="người chơi mua ở trang Cửa hàng, vật phẩm vào Túi đồ; giới hạn tính theo người, mỗi ngày (00:00 giờ VN); 0 = không giới hạn" />
       <CardBody stack>
         <p className={s.hint}>Thứ tự ở đây là thứ tự trong cửa hàng (trong từng nhóm). Món tắt hoặc vật phẩm ngừng phát hành thì không hiện. Mỗi lần mua ghi vào Sổ giao dịch ("Mua N × tên"). Ai dùng được: <b>Thành viên → SVip → Mức phát hành chức năng</b> (Cửa hàng).</p>
@@ -226,13 +223,13 @@ function Shop() {
 function DailyQuests() {
   const { access } = useSession();
   const edit = can(access, 'economy.edit');
-  const f = useSettingsForm<QuestsView, QuestsView['settings']>('/api/quests', { label: 'Nhiệm vụ', href: '#quests', select: (r) => r.settings, saved: 'Đã lưu nhiệm vụ.' });
+  const f = useSettingsForm<QuestsView, QuestsView['settings']>('/api/quests', { label: 'Nhiệm vụ', href: '#quests/daily', select: (r) => r.settings, saved: 'Đã lưu nhiệm vụ.' });
   const kinds = f.latest?.kinds ?? {};
   const d = f.draft;
   const setOne = (i: number, p: Partial<QuestDef>): void => f.update((x) => ({ ...x, defs: x.defs.map((q, j) => (j === i ? { ...q, ...p } : q)) }));
   const kindOptions = Object.entries(kinds).map(([k, v]) => ({ value: k, label: `${v.label} (${v.unit})` }));
   return (
-    <Card className={s.gap}>
+    <Card>
       <CardHead title="🎯 Nhiệm vụ hằng ngày / tuần" sub="mỗi người nhận ngẫu nhiên N nhiệm vụ ngày (đúng chế độ ăn của loài đang chơi) + 1 nhiệm vụ tuần; nhận thưởng trên trang chủ" />
       <CardBody stack>
         {d === null ? <span className={s.muted}>{f.error ? `Không tải được: ${f.error.message}` : 'Đang tải…'}</span> : <>

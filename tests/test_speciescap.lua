@@ -1,5 +1,5 @@
--- DinoGarage speciescap: a player the bridge lists past the common slots of a
--- full species is told once, and at killAt the same dino (still alive, same
+-- DinoGarage speciescap: a player the bridge lists past a species' limit is
+-- told once, and at killAt the same dino (still alive, same
 -- species, same pawn) is removed; another dino since is left alone; the garage
 -- refuses them a redeem while listed; all on the game thread.
 local function say(s) io.write(tostring(s)) io.write(string.char(10)) end

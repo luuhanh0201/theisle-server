@@ -18,7 +18,7 @@ export default [
   },
   {
     name: 'Lịch khởi động lại: thêm giờ, lưu, trả lại',
-    path: '/#server/ops',
+    path: '/#server/schedule',
     run: `
       const before = (await h.api('/api/server/status')).schedule;
       h.click(h.$('button[aria-label="Giờ"]')); await h.sleep(200);
@@ -37,7 +37,7 @@ export default [
   },
   {
     name: 'Sự kiện tốc độ lớn: thêm (cuối tuần tới, ×2), hiện trong danh sách, xoá',
-    path: '/#server/ops',
+    path: '/#server/schedule',
     run: `
       const n0 = (await h.api('/api/server/growth-events')).events.length;
       h.type(h.$('input[placeholder="vd: Cuối tuần x2"]'), 'e2e x2'); await h.sleep(100);
@@ -54,7 +54,7 @@ export default [
   },
   {
     name: 'Cảnh báo DDoS: đổi ngưỡng, lưu, trả lại',
-    path: '/#server/ops',
+    path: '/#server/ddos',
     run: `
       const before = await h.api('/api/ddos');
       h.click(h.$('input[aria-label="Từ (gói/giây)"]').parentElement.querySelector('[aria-label="Tăng"]')); await h.sleep(200);

@@ -63,6 +63,10 @@ Game binaries are NOT in this repo (installed via SteamCMD).
   (`popupHost`). `portal/public/ui-select.js` / `ui-inputs.js` (the controls of
   the sites before React, same look) are still served by the portal and the
   bridge, but no page loads them any more.
+- One feature's settings per sub-tab (owner, 2026-10-10: "cấu hình chức năng khác nhau thì để ở tab khác
+  nhau, không phải kéo xuống quá nhiều"): a new feature gets its own sub-page in `nav.ts` SUBS (e.g.
+  Nhiệm vụ → Điểm danh / Hổ phách / Cửa hàng / Nhiệm vụ ngày / Mốc online; Server → Vận hành / Lịch &
+  sự kiện / DDoS / RCON…), never one more card at the bottom of another feature's page.
 - Panel refresh: a list page asks again every 2 s (TanStack Query
   `refetchInterval`); React redraws only what changed, so a popup open, typing,
   a dialog or selected text is never lost; a settings page never overwrites the

@@ -1,12 +1,10 @@
 --[[
     DinoGarage/speciescap.lua
 
-    The species limit (owner, 2026-10-10: "server chỉ cho 8 T-Rex thì người thứ
-    9 không thấy T-Rex trên bảng chọn dino"). The bridge (species-cap.ts) counts
-    the dinos alive, takes a full species off the game's picker (RCON) and, for
-    a player with no priority slot (not VIP / SVip / admin) who still came in
-    as one past the common slots (picked a moment before it went off, or into
-    a priority slot), writes them here:
+    The species limit (owner, 2026-10-10: "T-Rex 5 thì cả server chỉ được
+    chọn 5 con", SVip and admins free of it). The bridge (species-cap.ts)
+    counts the dinos alive and, for a player who counts and came in as a new
+    dino of a species already at its limit, writes them here:
 
         Mods/DinoGarage/Saved/species-cap.json
         { "over": [ { "id": 12, "steamId": "7656…", "species": "Tyrannosaurus", "killAt": <unix s> } ] }
@@ -108,7 +106,7 @@ function M.guard()
         if seen[e.id] == nil then
             seen[e.id] = addr
             Msg.notify(ctrl, "cap.over",
-                "{species} đã đủ suất cho người chơi thường. Dino này sẽ bị xoá sau {seconds} giây, hãy chọn loài khác.",
+                "{species} trên server đã đủ số lượng cho phép. Dino này sẽ bị xoá sau {seconds} giây, hãy chọn loài khác.",
                 { species = e.species, seconds = math.max(0, math.floor(e.killAt - now)) })
             H.log(string.format("speciescap: %s came in as a %s past the limit, removed at %d", id, e.species, e.killAt))
         elseif seen[e.id] ~= addr then
@@ -121,7 +119,7 @@ function M.guard()
             H.logError("speciescap: SetHealth(0) failed for " .. id)
             return
         end
-        Msg.notify(ctrl, "cap.killed", "{species} đã đủ suất: dino đã được xoá, hãy chọn loài khác.", { species = e.species })
+        Msg.notify(ctrl, "cap.killed", "{species} đã đủ số lượng: dino đã được xoá, hãy chọn loài khác.", { species = e.species })
         Events.emit({ type = "species_cap_kill", steamId = id, species = e.species, capId = e.id })
         H.log(string.format("speciescap: %s's %s removed (over the limit)", id, e.species))
     end)

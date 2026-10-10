@@ -7,30 +7,28 @@ import { useSettingsForm } from '../../settings-form/useSettingsForm';
 import s from './SpeciesCaps.module.css';
 
 /** bridge/src/species-cap.ts as the panel reads it. */
-export interface SpeciesRule { cap: number; reserve: number }
+export interface SpeciesRule { cap: number }
 export interface SpeciesCapSettings { enabled: boolean; graceS: number; species: Record<string, SpeciesRule> }
 interface SpeciesCapView {
   settings: SpeciesCapSettings;
-  counts: Array<{ species: string; alive: number; cap: number; reserve: number; hidden: boolean }>;
+  counts: Array<{ species: string; alive: number; free: number; cap: number }>;
   over: Array<{ steamId: string; name: string | null; species: string; killAt: number }>;
-  species: string[]; allowed: string[]; rcon: boolean;
+  species: string[]; allowed: string[];
 }
 
 const URL = '/api/species-cap';
-/** A limit switched on: 8 common slots, no priority one, as the owner's example. */
-export const DEFAULT_RULE: SpeciesRule = { cap: 8, reserve: 0 };
 
-/** The rules with one species' limit set, or taken away (null). */
-export function withRule(all: Record<string, SpeciesRule>, species: string, rule: SpeciesRule | null): Record<string, SpeciesRule> {
+/** The rules with one species' limit set; 0 = no limit (taken away). */
+export function withCap(all: Record<string, SpeciesRule>, species: string, cap: number): Record<string, SpeciesRule> {
   const out = { ...all };
-  if (rule === null) delete out[species]; else out[species] = rule;
+  if (cap > 0) out[species] = { cap }; else delete out[species];
   return out;
 }
 
 /**
- * Server → Giới hạn loài (owner, 2026-10-10): at most N of a species alive at once, + priority slots for
- * VIP / SVip / admins. Full: off the game's picker for everyone; a plain player who still came in past
- * the common slots has that new dino removed after a few seconds.
+ * Server → Giới hạn loài (owner, 2026-10-10): at most N of a species alive at once on the whole server,
+ * the SVip and the admins free of it. Every species free by default (0). The game's picker is left as
+ * it is; a player past the limit has that new dino removed after a few seconds.
  */
 export function SpeciesCaps() {
   const { access } = useSession();
@@ -39,49 +37,39 @@ export function SpeciesCaps() {
   const d = f.draft;
   const v = f.latest;
   const now = Math.floor(Date.now() / 1000);
-  const setRule = (sp: string, rule: SpeciesRule | null): void => f.update((x) => ({ ...x, species: withRule(x.species, sp, rule) }));
+  const setCap = (sp: string, cap: number): void => f.update((x) => ({ ...x, species: withCap(x.species, sp, cap) }));
   const list = v ? [...new Set([...v.species, ...Object.keys(d?.species ?? {})])].sort() : [];
   const count = (sp: string) => v?.counts.find((c) => c.species === sp);
   return (
     <Card>
-      <CardHead title="🦖 Giới hạn loài" sub="số con mỗi loài được chơi cùng lúc trên toàn server" />
+      <CardHead title="🦖 Giới hạn loài" sub="số con tối đa mỗi loài được chơi cùng lúc trên toàn server" />
       <CardBody stack>
         {d === null || v === undefined ? <span className={s.muted}>{f.error ? `Không tải được: ${f.error.message}` : 'Đang tải…'}</span> : <>
-          {!v.rcon && <p className={s.warn}>RCON chưa cấu hình: không ẩn / hiện loài trên bảng chọn được.</p>}
-          <Switch checked={d.enabled} disabled={!edit} onChange={(on) => f.set('enabled', on)} label="Bật giới hạn loài (tắt: mọi loài hiện lại, không xoá dino nào)" />
+          <Switch checked={d.enabled} disabled={!edit} onChange={(on) => f.set('enabled', on)} label="Bật giới hạn loài (tắt: chọn thoải mái, không xoá dino nào)" />
           <div className={s.fields}>
-            <label>Xoá dino vượt suất sau (giây)<NumberInput aria-label="Xoá dino vượt suất sau (giây)" min={5} max={300} value={d.graceS} disabled={!edit} onChange={(x) => f.set('graceS', Math.round(x))} /></label>
+            <label>Xoá dino vượt số lượng sau (giây)<NumberInput aria-label="Xoá dino vượt số lượng sau (giây)" min={5} max={300} value={d.graceS} disabled={!edit} onChange={(x) => f.set('graceS', Math.round(x))} /></label>
           </div>
           <p className={s.hint}>
-            <b>Suất chung</b>: ai cũng chơi được. <b>Suất ưu tiên</b>: thêm cho VIP, SVip và admin. Đủ <b>chung + ưu tiên</b> con đang sống thì loài <b>biến khỏi bảng chọn dino</b> của cả server; có con chết, thoát game hoặc cất gara là hiện lại.
-            Mọi con đều được đếm, kể cả của VIP / SVip / admin. Người thường vào làm con vượt suất chung (vào suất ưu tiên, hoặc chọn đúng lúc loài vừa đủ) thì được báo và <b>dino mới đó bị xoá</b> sau số giây trên để chọn loài khác; trong lúc chờ không lấy dino từ gara được.
-            Không bao giờ xoá: dino đang chơi sẵn (vào lại game, chuyển sinh, lấy từ gara) và dino không phải vừa chọn ở bảng (lớn hơn 25%). Hạ giới hạn thì ai đang chơi vẫn giữ. Loài đã tắt trong Cấu hình game không bao giờ được bật lại ở đây.
+            <b>0 = không giới hạn</b> (mặc định mọi loài). Ví dụ T-Rex 5: cả server chỉ được 5 con T-Rex của người chơi thường (kể cả VIP) cùng lúc. <b>SVip và admin không tính</b> vào số đó và chọn thoải mái.
+            Bảng chọn dino của game vẫn hiện đủ loài; ai chọn khi loài đã đủ thì được báo trong game và <b>dino mới đó bị xoá</b> sau số giây trên để chọn loài khác, trong lúc chờ không lấy dino từ gara được.
+            Không bao giờ xoá: dino đang chơi sẵn (vào lại game, chuyển sinh, lấy từ gara) và dino không phải vừa chọn ở bảng (lớn hơn 25%). Hạ giới hạn thì ai đang chơi vẫn giữ.
           </p>
           {v.over.length > 0 && (
             <div className={s.over}>
-              <b>Đang chờ xoá (vượt suất):</b>
+              <b>Đang chờ xoá (vượt số lượng):</b>
               {v.over.map((o) => <span key={o.steamId}>{o.name ?? o.steamId} ({dinoName(o.species)}) còn {Math.max(0, o.killAt - now)} giây</span>)}
             </div>
           )}
-          <div className={s.table} role="table" aria-label="Giới hạn từng loài">
-            <div className={`${s.row} ${s.headRow}`} role="row">
-              <span role="columnheader">Loài</span><span role="columnheader">Giới hạn</span><span role="columnheader">Suất chung</span>
-              <span role="columnheader">Suất ưu tiên</span><span role="columnheader">Đang có</span>
-            </div>
+          <div className={s.grid} role="list" aria-label="Giới hạn từng loài">
             {list.map((sp) => {
-              const rule = d.species[sp];
+              const cap = d.species[sp]?.cap ?? 0;
               const c = count(sp);
-              const off = !v.allowed.includes(sp);
               return (
-                <div key={sp} className={`${s.row}${rule ? '' : ` ${s.free}`}`} role="row">
-                  <span className={s.name} role="cell">{dinoName(sp)}{off && <small className={s.muted}> (đã tắt trong Game.ini)</small>}</span>
-                  <span role="cell"><Switch checked={rule !== undefined} disabled={!edit} aria-label={`Giới hạn ${dinoName(sp)}`}
-                    onChange={(on) => setRule(sp, on ? DEFAULT_RULE : null)} /></span>
-                  <span role="cell" className={s.cell}>{rule ? <><span className={s.narrow}>Suất chung</span><NumberInput aria-label={`Suất chung ${dinoName(sp)}`} min={0} max={500} value={rule.cap} disabled={!edit}
-                    onChange={(x) => setRule(sp, { ...rule, cap: Math.round(x) })} /></> : <span className={s.muted}>không giới hạn</span>}</span>
-                  <span role="cell" className={s.cell}>{rule ? <><span className={s.narrow}>Suất ưu tiên</span><NumberInput aria-label={`Suất ưu tiên ${dinoName(sp)}`} min={0} max={100} value={rule.reserve} disabled={!edit}
-                    onChange={(x) => setRule(sp, { ...rule, reserve: Math.round(x) })} /></> : null}</span>
-                  <span role="cell" className={s.live}>{c ? <>{c.alive} / {c.cap + c.reserve}{c.hidden && <span className={s.hidden}>đã ẩn khỏi bảng chọn</span>}</> : rule ? <span className={s.muted}>lưu để đếm</span> : null}</span>
+                <div key={sp} className={`${s.row}${cap > 0 ? ` ${s.limited}` : ''}`} role="listitem">
+                  <span className={s.name}>{dinoName(sp)}{!v.allowed.includes(sp) && <small className={s.muted}> (đã tắt trong Game.ini)</small>}</span>
+                  <NumberInput aria-label={`Tối đa ${dinoName(sp)}`} min={0} max={500} value={cap} disabled={!edit} onChange={(x) => setCap(sp, Math.round(x))} />
+                  <span className={s.live}>{cap === 0 ? <span className={s.muted}>không giới hạn</span>
+                    : c ? <>đang có <b>{c.alive}</b> / {c.cap}{c.free > 0 && <> <span className={`${s.muted} ${s.nowrap}`}>(+{c.free} SVip / admin)</span></>}</> : <span className={s.muted}>lưu để đếm</span>}</span>
                 </div>
               );
             })}

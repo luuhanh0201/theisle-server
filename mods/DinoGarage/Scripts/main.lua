@@ -415,7 +415,7 @@ local function doRedeem(ctrl, steamId, slot, where, say)
     -- Came in as a full species (garage/speciescap.lua): that young dino is about to be removed, a
     -- stored one taken out into it would go with it.
     if SpeciesCap.blocked(steamId) then
-        Msg.say(say, "cap.redeem", "Loài này đã đủ suất: không lấy dino từ gara được lúc này, hãy chọn loài khác.")
+        Msg.say(say, "cap.redeem", "Loài này đã đủ số lượng: không lấy dino từ gara được lúc này, hãy chọn loài khác.")
         return false
     end
     -- "!redeem cu" = most recent slot, at the stored spot.
@@ -726,7 +726,7 @@ H.every(3000, MOD .. ": kept skins", KeepSkin.poll)
 H.every(15000, MOD .. ": unlock heal", UnlockHeal.poll)
 -- A stomach above its species' share of the max health (a vomit waiting) put back (garage/stomach.lua).
 H.every(7000, MOD .. ": stomach guard", Stomach.guard)
--- The species limit (garage/speciescap.lua): who the bridge lists past the common slots.
+-- The species limit (garage/speciescap.lua): who the bridge lists past a species' limit.
 H.every(SpeciesCap.TICK_MS, MOD .. ": species limit", SpeciesCap.guard)
 
 H.log(MOD .. ": loaded")

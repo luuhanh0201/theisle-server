@@ -610,8 +610,7 @@ async function handlePanel(
     const allowed = Array.isArray(listed) ? listed : [];
     sendJson(res, 200, { settings: await readSpeciesCap(), counts: ctx.speciesCaps?.counts() ?? [],
       species: [...new Set([...KNOWN_PLAYABLES, ...allowed])].sort(), allowed,
-      over: (ctx.speciesCaps?.over() ?? []).map((o) => ({ steamId: o.steamId, name: names(o.steamId), species: o.species, killAt: o.killAt })),
-      rcon: ctx.rcon.enabled });
+      over: (ctx.speciesCaps?.over() ?? []).map((o) => ({ steamId: o.steamId, name: names(o.steamId), species: o.species, killAt: o.killAt })) });
     return;
   }
   if (path === '/api/economy/ledger' && req.method === 'GET') {
@@ -1166,7 +1165,7 @@ async function handlePanel(
       const before = await readSpeciesCap();
       const saved = await saveSpeciesCap(await readJsonBody(req));
       const sum = (c: typeof saved): Record<string, string> => ({ enabled: c.enabled ? 'bật' : 'tắt', graceS: String(c.graceS),
-        ...Object.fromEntries(Object.entries(c.species).map(([sp, r]) => [sp, `${r.cap} + ${r.reserve} ưu tiên`])) });
+        ...Object.fromEntries(Object.entries(c.species).map(([sp, r]) => [sp, `tối đa ${r.cap}`])) });
       await audit({ action: 'species limit settings', detail: describeChanges(sum(before), sum(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, { settings: saved });
       return;

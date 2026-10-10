@@ -170,17 +170,11 @@ try { places = placesOf(JSON.parse(readFileSync(join(process.cwd(), 'public', 'm
 }
 const questProgress = new QuestProgress(playDays, () => places, (id) => store.isAdmin(id));
 
-// The species limit (species-cap.ts): a full species off the game's picker, a player with no priority
-// slot past the common ones removed by DinoGarage (garage/speciescap.lua).
+// The species limit (species-cap.ts): a player past a species' limit has that new dino removed by
+// DinoGarage (garage/speciescap.lua); the SVip and the admins are free of it (VIP counts).
 const speciesCaps = new SpeciesCaps({
   aliveDinos: () => store.aliveDinos(),
-  priority: async () => new Set(Object.keys(await memberTiers())),
-  allowed: async () => {
-    const live = await readLive();
-    const list = live.effective['AllowedClasses'];
-    return live.error === undefined && Array.isArray(list) ? new Set(list) : null;
-  },
-  rcon: { get enabled() { return rcon.enabled; }, run: (name, arg) => rcon.run(name, arg) },
+  exempt: async () => new Set(Object.entries(await memberTiers()).filter(([, tier]) => tier === 'svip' || tier === 'admin').map(([id]) => id)),
 });
 // The server's online milestones (milestones.ts): held N minutes at once, then everyone's to take.
 const milestoneWatch = new MilestoneWatch(() => store.online().length, (d, n) => {

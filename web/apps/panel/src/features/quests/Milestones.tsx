@@ -42,7 +42,7 @@ export function Milestones() {
   const toast = useToast();
   const confirm = useConfirm();
   const qc = useQueryClient();
-  const f = useSettingsForm<MilestonesView, MilestoneSettings>(URL, { label: 'Mốc online toàn server', href: '#quests', select: (r) => r.settings, saved: 'Đã lưu mốc online.' });
+  const f = useSettingsForm<MilestonesView, MilestoneSettings>(URL, { label: 'Mốc online toàn server', href: '#quests/milestones', select: (r) => r.settings, saved: 'Đã lưu mốc online.' });
   const items = useQuery({ queryKey: ['/api/items'], queryFn: () => getJson<{ items: ItemLite[] }>('/api/items'), enabled: can(access, 'items.view'), staleTime: 30_000 }).data?.items ?? [];
   const d = f.draft;
   const v = f.latest;
@@ -72,7 +72,7 @@ export function Milestones() {
     return held !== undefined ? <span className={m.held}>Đang giữ {mmss(held)} / {d?.holdMinutes ?? 0} phút</span> : <span className={s.muted}>Chưa đạt</span>;
   };
   return (
-    <Card className={s.gap}>
+    <Card>
       <CardHead title="🏆 Mốc online toàn server" sub={`server đạt N người online cùng lúc, giữ liên tục vài phút: mọi người chơi đủ số phút nhận quà trên trang chủ, mỗi mốc 1 lần${v ? ` · đang online ${v.online}` : ''}`} />
       <CardBody stack>
         {d === null ? <span className={s.muted}>{f.error ? `Không tải được: ${f.error.message}` : 'Đang tải…'}</span> : <>

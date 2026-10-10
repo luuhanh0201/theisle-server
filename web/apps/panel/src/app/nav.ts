@@ -31,8 +31,9 @@ export const SUBS: Partial<Record<TabId, ReadonlyArray<readonly [string, string]
   world: [['overview', 'Tổng quan'], ['flora', 'Thực vật'], ['fish', 'Cá']],
   garage: [['stored', 'Dino & tạo dino'], ['settings', 'Cài đặt gara']],
   items: [['skins', 'Skin dino'], ['mutations', 'Mutation'], ['tickets', 'Phiếu & hộp']],
+  quests: [['checkin', 'Điểm danh'], ['amber', 'Hổ phách'], ['shop', 'Cửa hàng'], ['daily', 'Nhiệm vụ ngày / tuần'], ['milestones', 'Mốc online']],
   mods: [['commands', 'Lệnh chat'], ['ptera', 'Ptera gắp'], ['tele', 'Tele con non'], ['voice', 'Voice gần'], ['messages', 'Thông báo'], ['news', 'Tin cập nhật']],
-  server: [['ops', 'Vận hành'], ['cfg', 'Cấu hình game'], ['caps', 'Giới hạn loài'], ['data', 'Dữ liệu']],
+  server: [['ops', 'Vận hành'], ['schedule', 'Lịch & sự kiện'], ['ddos', 'DDoS'], ['rcon', 'RCON'], ['cfg', 'Cấu hình game'], ['caps', 'Giới hạn loài'], ['data', 'Dữ liệu']],
   admin: [['access', 'Truy cập panel'], ['audit', 'Nhật ký admin'], ['discord', 'Discord']],
   members: [['admins', 'Admin'], ['perms', 'Phân quyền'], ['whitelist', 'Whitelist'], ['vips', 'VIP'], ['svip', 'SVip']],
 };
@@ -43,8 +44,9 @@ const SUB_NEED: Partial<Record<TabId, Record<string, string>>> = {
   world: { overview: 'world.view', flora: 'world.view', fish: 'world.view' },
   garage: { stored: 'garage.view', settings: 'garage.view' },
   items: { skins: 'items.view', mutations: 'items.view', tickets: 'items.view' },
+  quests: { checkin: 'economy.view', amber: 'economy.view', shop: 'economy.view', daily: 'economy.view', milestones: 'economy.view' },
   mods: { commands: 'mods.view', ptera: 'mods.view', tele: 'mods.view', voice: 'mods.view', messages: 'mods.view', news: 'mods.view' },
-  server: { ops: 'server.view', cfg: 'config.view', caps: 'config.view', data: 'backups.view' },
+  server: { ops: 'server.view', schedule: 'server.view', ddos: 'server.view', rcon: 'server.view', cfg: 'config.view', caps: 'config.view', data: 'backups.view' },
   admin: { access: 'access.edit', audit: 'audit.view', discord: 'discord.view' },
   members: { admins: 'config.view', perms: '*', whitelist: 'config.view', vips: 'config.view', svip: 'svip.edit' },
 };

@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ServerStatusFull } from '@isle/api';
 import { fakeApi } from '../../../test/fakeBridge';
-import { ServerOps } from './ServerOps';
+import { ServerOps, ServerRcon, ServerSchedule } from './ServerOps';
 
 const NOW = Date.now();
 const status = (over: Partial<ServerStatusFull> = {}): ServerStatusFull => ({
@@ -49,7 +49,7 @@ test('an operation counting down: its steps and Huỷ', async () => {
 
 test('the schedule: a time removed and one added, saved with the warning', async () => {
   const { calls, show } = fakeApi({ ...base(status()), 'PUT /api/server/schedule': { ok: true } });
-  show(<ServerOps />);
+  show(<ServerSchedule />);
   await userEvent.click(await screen.findByRole('button', { name: 'Bỏ 04:00' }));
   expect(screen.getByText('Chưa có giờ nào.')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Giờ' }));
@@ -62,7 +62,7 @@ test('the schedule: a time removed and one added, saved with the warning', async
 
 test('RCON: a box left empty is refused; a toggle asks first; the answer shown', async () => {
   const { calls, show } = fakeApi({ ...base(status()), 'POST /api/rcon/toggleAi': { response: 'AI: off' }, 'POST /api/rcon/announce': { response: '' } });
-  show(<ServerOps />);
+  show(<ServerRcon />);
   await userEvent.click(await screen.findByRole('button', { name: 'Gửi' }));
   expect(await screen.findByText('Nhập giá trị trước.')).toBeInTheDocument();
   await userEvent.type(screen.getByLabelText('Thông báo toàn server'), 'Chào');

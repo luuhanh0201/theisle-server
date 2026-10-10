@@ -88,9 +88,9 @@ export const MESSAGES: readonly MessageDef[] = [
   { key: 'guard.warn', group: 'guard', label: 'Dino quá lớn vào vùng chỉ dino nhỏ (cảnh báo)', default: 'Dino của bạn quá lớn cho “{zone}” ({growth}%, tối đa {max}%). Rời khỏi trong {seconds} giây, nếu không sẽ bị ong đốt!', vars: ['zone', 'growth', 'max', 'seconds'] },
   { key: 'guard.sting', group: 'guard', label: 'Bắt đầu bị ong đốt', default: 'Bạn đang bị ong đốt ở “{zone}”, mất {pct}% máu mỗi {every} giây cho tới khi rời đi.', vars: ['zone', 'pct', 'every'] },
   // --- the species limit (mods/DinoGarage garage/speciescap.lua, species-cap.ts) ---
-  { key: 'cap.over', group: 'cap', label: 'Vào bằng loài đã đủ suất (cảnh báo)', default: '{species} đã đủ suất cho người chơi thường. Dino này sẽ bị xoá sau {seconds} giây, hãy chọn loài khác.', vars: ['species', 'seconds'] },
-  { key: 'cap.killed', group: 'cap', label: 'Dino vượt suất đã bị xoá', default: '{species} đã đủ suất: dino đã được xoá, hãy chọn loài khác.', vars: ['species'] },
-  { key: 'cap.redeem', group: 'cap', label: 'Lấy dino từ gara khi loài đã đủ suất (bị chặn)', default: 'Loài này đã đủ suất: không lấy dino từ gara được lúc này, hãy chọn loài khác.', vars: [] },
+  { key: 'cap.over', group: 'cap', label: 'Vào bằng loài đã đủ số lượng (cảnh báo)', default: '{species} trên server đã đủ số lượng cho phép. Dino này sẽ bị xoá sau {seconds} giây, hãy chọn loài khác.', vars: ['species', 'seconds'] },
+  { key: 'cap.killed', group: 'cap', label: 'Dino vượt số lượng đã bị xoá', default: '{species} đã đủ số lượng: dino đã được xoá, hãy chọn loài khác.', vars: ['species'] },
+  { key: 'cap.redeem', group: 'cap', label: 'Lấy dino từ gara khi loài đã đủ số lượng (bị chặn)', default: 'Loài này đã đủ số lượng: không lấy dino từ gara được lúc này, hãy chọn loài khác.', vars: [] },
   { key: 'ptera.carry.nothing', group: 'ptera', label: '!drop khi không gắp gì', default: 'Bạn không gắp con nào.', vars: [] },
   { key: 'ptera.carry.inmate', group: 'ptera', label: 'Gắp tù nhân (bị chặn)', default: 'Không gắp được tù nhân.', vars: [], offByDefault: true },
   // --- prison: outsiders in the prison zone (mods/Prison) ---
