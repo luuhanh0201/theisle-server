@@ -13,6 +13,7 @@ import { boxOptions, dinoItemOptions, openDinoBox, speciesOptions, useDinoItem }
 import { audit } from './audit.js';
 import { CURRENCY, balanceOf, checkinStatus, claimCheckin, type PlayDays } from './economy.js';
 import { claimQuest, questsOf, type QuestProgress } from './quests.js';
+import { claimMilestone, milestonesOf, type MilestoneWatch } from './milestones.js';
 import { SLOT_MIN_GROWTH, queueMutationUse, queuePlayerCommand, type MutationUse, queueSkin, queueTele, SKIN_CHANNEL_MAX, TooSoonError } from './commands.js';
 import { type Item, type Rarity, dietRefusal, getItem, inventoryOf, isPendingUse, listItems, markPendingUse, resolveSkin, speciesKey } from './items.js';
 import { keptSkinsOf, setKeptSkin } from './kept-skins.js';
@@ -104,6 +105,7 @@ export async function bagUnlimited(steamId: string): Promise<boolean> {
  *        tele con non (tele.ts): a code for others to come to them; moved next to a code's owner
  *   GET /player-api/friends/<steamId>          their friends (name, online, where now), requests in / out (friends.ts)
  *   POST /player-api/friends/<steamId>         { action: search, q } | { action: request|accept|decline|cancel|remove, ref }
+ *   POST /player-api/milestones/<steamId>/claim  { milestone } a server milestone's reward, once (milestones.ts)
  *        a player is named by `ref` (a keyed hash), never by SteamID; positions only of accepted friends
  *
  * The only writes a player can make, and only for the SteamID the portal
@@ -530,6 +532,7 @@ export async function handlePlayerApi(
     traffic?: Traffic;
     playDays?: PlayDays;
     questProgress?: QuestProgress;
+    milestoneWatch?: MilestoneWatch;
   },
 ): Promise<boolean> {
   if (!path.startsWith('/player-api/')) return false;
@@ -850,6 +853,25 @@ export async function handlePlayerApi(
     }
     return true;
   }
+  // A server milestone's reward (milestones.ts): reached, enough minutes in game in all, not taken yet.
+  const milestoneClaim = /^\/player-api\/milestones\/(\d{17})\/claim$/.exec(path);
+  if (milestoneClaim !== null) {
+    if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return true; }
+    const who = milestoneClaim[1] as string;
+    const body = await readSmallJson(req);
+    if (body === null || typeof body['milestone'] !== 'string') { send(res, 400, { error: 'expected { milestone }' }); return true; }
+    try {
+      const out = await claimMilestone(who, body['milestone'], ctx.store.player(who)?.player.playtime ?? 0);
+      const name = ctx.store.player(who)?.player.name ?? null;
+      const got = [out.amber > 0 ? `${out.amber} ${CURRENCY}` : '', ...out.items].filter(Boolean).join(', ');
+      await audit({ action: 'milestone claim', ok: true, detail: `${name ?? who} nhận quà mốc ${out.players} người: ${got || 'không có gì'}${out.skipped.length ? ` (bỏ qua, đã có: ${out.skipped.join(', ')})` : ''}` }, { steamId: who, name });
+      send(res, 200, out);
+    } catch (err) {
+      if (err instanceof ValidationError) send(res, 409, { error: err.message });
+      else throw err;
+    }
+    return true;
+  }
   // The daily check-in (economy.ts): today's Hổ phách, once, after enough minutes in game.
   const checkin = /^\/player-api\/checkin\/(\d{17})$/.exec(path);
   if (checkin !== null) {
@@ -981,6 +1003,9 @@ export async function handlePlayerApi(
       quests: ctx.questProgress
         ? shown(await featureAccess('quests', steamId), await questsOf(steamId, detail?.player.online ? detail.player.species ?? null : null, ctx.questProgress))
         : null,
+      // The server's online milestones (milestones.ts): everyone's, not a feature being tried; null when off.
+      milestones: await milestonesOf(steamId, detail?.player.playtime ?? 0, ctx.store.online().length,
+        ctx.milestoneWatch?.held(Math.floor(Date.now() / 1000)) ?? {}),
       bagUnlimited: await bagUnlimited(steamId),
       // Serving a prison sentence (prison.ts), or null.
       prison: ctx.prison?.playerView(steamId) ?? null,

@@ -45,6 +45,7 @@ import { OncePerDay, installerOs, isLauncherUa, visitorId } from './traffic.js';
  *   POST /api/shop/buy          { listing, qty } buy with Hổ phách, into the bag (login, same-origin, JSON)
  *   POST /api/checkin           today's check-in: Hổ phách once a day after enough minutes in game (login, same-origin)
  *   POST /api/quests/claim      { quest } a done quest's Hổ phách, once (login, same-origin, JSON)
+ *   POST /api/milestones/claim  { milestone } a server milestone's reward, once (login, same-origin, JSON)
  *   POST /api/items/dino        { uid, female, mutations: { 1–4: name } } use a dino item: the dino into your garage (login, same-origin, JSON)
  *   GET  /api/command/<id>      the outcome of one of your commands      (login)
  *   POST /api/voice/token       join the proximity voice room (voice.html) (login, same-origin)
@@ -395,6 +396,18 @@ export function createPortal(opts: PortalOptions): Server {
         const body = await readSmallJson(req);
         if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
         const r = await opts.bridge.claimQuest(me, body['quest']);
+        send(res, r.status, r.body);
+        return;
+      }
+      if (path === '/api/milestones/claim') {
+        if (req.method !== 'POST') { send(res, 405, { error: 'method not allowed' }); return; }
+        if (me === null) { send(res, 401, { error: 'not logged in' }); return; }
+        if (!sameOrigin(req)) { send(res, 403, { error: 'cross-site request refused' }); return; }
+        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) { send(res, 415, { error: 'JSON only' }); return; }
+        if (!writeLimit.allow(me)) { send(res, 429, { error: 'too many requests' }); return; }
+        const body = await readSmallJson(req);
+        if (body === null) { send(res, 400, { error: 'expected a small JSON object' }); return; }
+        const r = await opts.bridge.claimMilestone(me, body['milestone']);
         send(res, r.status, r.body);
         return;
       }

@@ -585,6 +585,14 @@ export class Store {
         break;
       }
 
+      // The species limit removed the dino (species-cap.ts): ended as an admin's removal, not a death.
+      case 'species_cap_kill': {
+        const p = this.#player(event.steamId, event.t);
+        this.#recentRemoval.set(event.steamId, { t: event.t, cause: 'admin' });
+        this.#push(p.name === null ? event : { ...event, name: p.name }, [event.steamId]);
+        break;
+      }
+
       case 'mod_loaded':
         console.info(`[store] ${event.mod} loaded on the server`);
         // StatsLogger is the mod the whole panel depends on; its "loaded" is
@@ -607,6 +615,27 @@ export class Store {
 
   online(): PlayerStats[] {
     return this.players().filter((p) => p.online);
+  }
+
+  /**
+   * The dinos alive now, one per online player (the species limit, species-cap.ts): its species
+   * (raw class name), when it spawned, and whether it is a new dino: not a relog on one they had,
+   * a rebirth, or a dino taken out of the garage (those carry an older dino's chain on); `growth`
+   * its growth at the spawn (a dino picked on the game's list starts at 0.25). The admin camera is
+   * not a dino.
+   */
+  aliveDinos(): Array<{ steamId: string; species: string; spawnedAt: number; fresh: boolean; growth: number | null }> {
+    const now = this.#nowSeconds();
+    const out: Array<{ steamId: string; species: string; spawnedAt: number; fresh: boolean; growth: number | null }> = [];
+    for (const p of this.#players.values()) {
+      if (!this.#view(p, now).online) continue;
+      const open = this.#openLife(p.steamId);
+      if (open === null || open.pausedAt !== null || /AdminPawn/i.test(open.species)) continue;
+      const lives = this.#lives.get(p.steamId) ?? [];
+      const older = lives.slice(0, -1).some((l) => l.chain === open.chain);
+      out.push({ steamId: p.steamId, species: open.species, spawnedAt: open.spawnedAt, fresh: !older && open.redeemedFrom === null, growth: open.growthStart });
+    }
+    return out;
   }
 
   player(

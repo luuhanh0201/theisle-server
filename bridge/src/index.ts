@@ -50,11 +50,13 @@ import { Prison } from './prison.js';
 import { KillScenes } from './kill-scene.js';
 import { GameAdminLog } from './game-admin-log.js';
 import { fillBags, settleUse } from './items.js';
-import { syncGarageMembers } from './member-tier.js';
+import { memberTiers, syncGarageMembers } from './member-tier.js';
 import { syncAdminGuard } from './permissions.js';
 import { bagUnlimited, publicServerInfo, shortSpecies } from './player-api.js';
 import { adminIds } from './panel-auth.js';
 import { Traffic } from './traffic.js';
+import { SpeciesCaps } from './species-cap.js';
+import { MilestoneWatch } from './milestones.js';
 
 const store = new Store();
 // Admins count for nothing on the players' side (kills, deaths, boards: store.ts):
@@ -168,6 +170,24 @@ try { places = placesOf(JSON.parse(readFileSync(join(process.cwd(), 'public', 'm
 }
 const questProgress = new QuestProgress(playDays, () => places, (id) => store.isAdmin(id));
 
+// The species limit (species-cap.ts): a full species off the game's picker, a player with no priority
+// slot past the common ones removed by DinoGarage (garage/speciescap.lua).
+const speciesCaps = new SpeciesCaps({
+  aliveDinos: () => store.aliveDinos(),
+  priority: async () => new Set(Object.keys(await memberTiers())),
+  allowed: async () => {
+    const live = await readLive();
+    const list = live.effective['AllowedClasses'];
+    return live.error === undefined && Array.isArray(list) ? new Set(list) : null;
+  },
+  rcon: { get enabled() { return rcon.enabled; }, run: (name, arg) => rcon.run(name, arg) },
+});
+// The server's online milestones (milestones.ts): held N minutes at once, then everyone's to take.
+const milestoneWatch = new MilestoneWatch(() => store.online().length, (d, n) => {
+  console.info(`[milestones] ${d.players} online at once reached (${n} online)`);
+  void audit({ action: 'milestone reached', ok: true, detail: `Server đạt mốc ${d.players} người online cùng lúc (${n} người)` });
+});
+
 // The starter gift (starter.ts): offered once to everyone who has played, then to each new account;
 // taken on the home page.
 // First 30 s in (the events are read by then), then every minute.
@@ -196,6 +216,7 @@ const tails = [config.eventsPath, config.snapshotsPath].map(
     store.apply(event);
     playDays.onEvent(event);
     questProgress.onEvent(event);
+    speciesCaps.onEvent(event);
     for (const action of garageGuard.onEvent(event)) settleGuard(action);
     void notifier.handle(event);
     void primeNotifier.handle(event);
@@ -419,7 +440,16 @@ setInterval(() => {
 // Site / launcher traffic (traffic.ts), counted by the portal: the panel's "Truy cập".
 const traffic = new Traffic();
 await traffic.load();
-startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, traffic, playDays, questProgress, onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
+startServer({ store, power, rcon, metrics, aiReset, discord, bans, ddos, prison, killScenes, traffic, playDays, questProgress, speciesCaps, milestoneWatch,
+  onAdminsChanged: writeAdminGuard, ...(voice ? { voice } : {}) });
+
+// The species limit every 5 s; the milestones every 10 s.
+setInterval(() => {
+  speciesCaps.tick().catch((error: unknown) => console.error('[species-cap] tick failed:', error));
+}, 5_000);
+setInterval(() => {
+  milestoneWatch.tick().catch((error: unknown) => console.error('[milestones] tick failed:', error));
+}, 10_000);
 
 // The prison: the mod's state, finished sentences, escape reminders, the mod's files (prison.ts).
 setInterval(() => {

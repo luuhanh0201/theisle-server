@@ -1,4 +1,6 @@
 import { QUEST_KINDS, readQuestSettings, saveQuestSettings, type QuestProgress } from './quests.js';
+import { readSpeciesCap, saveSpeciesCap, type SpeciesCaps } from './species-cap.js';
+import { milestonesAdminView, readMilestones, reopenMilestone, saveMilestones, type MilestoneWatch } from './milestones.js';
 import { CURRENCY, credit, economySummary, readEconomySettings, readLedger, saveEconomySettings, type PlayDays } from './economy.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { access, readFile } from 'node:fs/promises';
@@ -237,6 +239,10 @@ export interface Ctx {
   playDays?: PlayDays;
   /** The daily quests' progress (quests.ts). */
   questProgress?: QuestProgress;
+  /** The species limit (species-cap.ts): counts for the panel. */
+  speciesCaps?: SpeciesCaps;
+  /** The server's online milestones (milestones.ts): the clock of each held now. */
+  milestoneWatch?: MilestoneWatch;
   /** An admin's rights in the game were switched on / off: the AdminGuard mod's file is written again. */
   onAdminsChanged?: () => Promise<void>;
 }
@@ -322,7 +328,7 @@ async function handle(
     serverInfo: async () => publicServerInfo((await readLive()).effective),
     ...(ctx.voice ? { voice: ctx.voice } : {}), ...(ctx.prison ? { prison: ctx.prison } : {}),
     ...(ctx.traffic ? { traffic: ctx.traffic } : {}), ...(ctx.playDays ? { playDays: ctx.playDays } : {}),
-    ...(ctx.questProgress ? { questProgress: ctx.questProgress } : {}) })) return;
+    ...(ctx.questProgress ? { questProgress: ctx.questProgress } : {}), ...(ctx.milestoneWatch ? { milestoneWatch: ctx.milestoneWatch } : {}) })) return;
 
   // Everything else is the admin panel: allowed address + admin login (panel-gate.ts).
   const login = await panelGate(req, res, url, (name) => sendFile(res, name), (id) => store.player(id)?.player.name ?? null);
@@ -589,6 +595,25 @@ async function handlePanel(
     sendJson(res, 200, { settings: await readQuestSettings(), kinds: QUEST_KINDS });
     return;
   }
+  // The server's online milestones (milestones.ts): the settings, each one reached when, how many took it.
+  if (path === '/api/milestones' && req.method === 'GET') {
+    const now = Math.floor(Date.now() / 1000);
+    sendJson(res, 200, { settings: await readMilestones(), ...(await milestonesAdminView()), online: store.online().length,
+      held: ctx.milestoneWatch?.held(now) ?? {} });
+    return;
+  }
+  // The species limit (species-cap.ts): the settings, how many of each alive, who is over now.
+  if (path === '/api/species-cap' && req.method === 'GET') {
+    const names = (id: string): string | null => store.player(id)?.player.name ?? null;
+    // The species the page lists: the known roster, what Game.ini allows (a later patch's too); `allowed` marks them.
+    const listed = (await readLive()).effective['AllowedClasses'];
+    const allowed = Array.isArray(listed) ? listed : [];
+    sendJson(res, 200, { settings: await readSpeciesCap(), counts: ctx.speciesCaps?.counts() ?? [],
+      species: [...new Set([...KNOWN_PLAYABLES, ...allowed])].sort(), allowed,
+      over: (ctx.speciesCaps?.over() ?? []).map((o) => ({ steamId: o.steamId, name: names(o.steamId), species: o.species, killAt: o.killAt })),
+      rcon: ctx.rcon.enabled });
+    return;
+  }
   if (path === '/api/economy/ledger' && req.method === 'GET') {
     const id = url.searchParams.get('steamId');
     const lines = await readLedger(id !== null && /^\d{17}$/.test(id) ? id : null, 300);
@@ -648,6 +673,9 @@ async function handlePanel(
       (path === '/api/svip' && req.method === 'PUT') ||
       (path === '/api/economy/settings' && req.method === 'PUT') ||
       (path === '/api/quests' && req.method === 'PUT') ||
+      (path === '/api/milestones' && req.method === 'PUT') ||
+      (path === '/api/milestones/reopen' && req.method === 'POST') ||
+      (path === '/api/species-cap' && req.method === 'PUT') ||
       (path === '/api/shop' && req.method === 'PUT') ||
       (path === '/api/economy/adjust' && req.method === 'POST') ||
       (path === '/api/ai-zones' && req.method === 'PUT') ||
@@ -1112,6 +1140,34 @@ async function handlePanel(
       const sum = (q: typeof saved): Record<string, string> => ({ perDay: String(q.perDay),
         ...Object.fromEntries(q.defs.map((d) => [d.id, `${d.enabled ? '' : '(tắt) '}${d.label} ${d.target} → ${d.reward}`])) });
       await audit({ action: 'quests settings', detail: describeChanges(sum(before), sum(saved)) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { settings: saved });
+      return;
+    }
+    if (path === '/api/milestones') {
+      const before = await readMilestones();
+      const saved = await saveMilestones(await readJsonBody(req));
+      const sum = (m: typeof saved): Record<string, string> => ({ enabled: m.enabled ? 'bật' : 'tắt', holdMinutes: String(m.holdMinutes), minPlayMinutes: String(m.minPlayMinutes),
+        ...Object.fromEntries(m.defs.map((d) => [`mốc ${d.players}`, `${d.amber} Hổ phách${d.items.map((x) => `, ${x.qty} × ${x.itemId}`).join('')}`])) });
+      await audit({ action: 'milestones settings', detail: describeChanges(sum(before), sum(saved)) || 'không đổi gì', ok: true });
+      sendJson(res, 200, { settings: saved });
+      return;
+    }
+    if (path === '/api/milestones/reopen') {
+      const body = await readJsonBody(req) as Record<string, unknown> | null;
+      const id = body?.['id'];
+      const def = (await readMilestones()).defs.find((d) => d.id === id);
+      if (def === undefined) { sendJson(res, 400, { error: 'no such milestone' }); return; }
+      const out = await reopenMilestone(def.id);
+      await audit({ action: 'milestone reopened', detail: `Mở lại mốc ${def.players} người (${out.claimed} người đã nhận trước đó, nhận lại được)`, ok: true });
+      sendJson(res, 200, out);
+      return;
+    }
+    if (path === '/api/species-cap') {
+      const before = await readSpeciesCap();
+      const saved = await saveSpeciesCap(await readJsonBody(req));
+      const sum = (c: typeof saved): Record<string, string> => ({ enabled: c.enabled ? 'bật' : 'tắt', graceS: String(c.graceS),
+        ...Object.fromEntries(Object.entries(c.species).map(([sp, r]) => [sp, `${r.cap} + ${r.reserve} ưu tiên`])) });
+      await audit({ action: 'species limit settings', detail: describeChanges(sum(before), sum(saved)) || 'không đổi gì', ok: true });
       sendJson(res, 200, { settings: saved });
       return;
     }

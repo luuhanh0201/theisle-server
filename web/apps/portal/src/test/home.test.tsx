@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { PlayerMe } from '@isle/api';
+import type { Milestone, Milestones, PlayerMe } from '@isle/api';
 import { ToastProvider } from '../app/toast';
 import { Rewards } from '../features/home/Rewards';
 import { LauncherHub } from '../features/home/LauncherHub';
@@ -88,6 +88,33 @@ describe('Trang chủ rewards', () => {
     expect(container.textContent).toContain('2,5/10 phút');
     rerender(<QueryClientProvider client={new QueryClient()}><ToastProvider><Rewards me={me({ quests: { daily: [q('a', true)], weekly: null, locked: 'x' } })} /></ToastProvider></QueryClientProvider>);
     expect((container.querySelector('[data-quest=a]') as HTMLButtonElement).disabled).toBe(true);
+  });
+  it('server milestones: off = no card; reached = Nhận (a click posts the id only), held, not yet, taken, not enough minutes', async () => {
+    const d = (id: string, players: number, x: Partial<Milestone> = {}): Milestone =>
+      ({ id, players, amber: 100, items: [], reached: false, reachedAt: null, claimed: false, heldS: null, ...x });
+    const M: Milestones = { online: 37, holdMinutes: 5, minPlayMinutes: 60, playMinutes: 90, eligible: true,
+      defs: [d('m10', 10, { reached: true, claimed: true }), d('m20', 20, { reached: true, items: [{ name: 'Phiếu Prime', qty: 2 }] }), d('m30', 30, { heldS: 125 }), d('m50', 50)] };
+    expect(wrap(<Rewards me={me({ milestones: null })} />).container.querySelector('#home-milestones')).toBeNull();
+    const bodies: unknown[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (u: string, init?: RequestInit) => {
+      if (u === '/api/milestones/claim') { bodies.push(JSON.parse(String(init?.body))); return new Response('{"players":20,"amber":100,"items":["Phiếu Prime","Phiếu Prime"],"skipped":[]}', { status: 200 }); }
+      return new Response('{}', { status: 200 });
+    }));
+    const { container } = wrap(<Rewards me={me({ milestones: M })} />);
+    const card = container.querySelector('#home-milestones') as HTMLElement;
+    expect(card.textContent).toContain('Đang online 37 / 30 người'); // the bar runs to the next one not reached (held now)
+    expect(card.textContent).toContain('✓ Đã nhận');
+    expect(card.textContent).toContain('Đang giữ 2:05 / 5 phút');
+    expect(card.textContent).toContain('Chưa đạt');
+    expect(card.textContent).toContain('2 × Phiếu Prime');
+    expect(container.querySelector('[data-milestone=m10]')).toBeNull();
+    fireEvent.click(container.querySelector('[data-milestone=m20]') as HTMLElement);
+    await waitFor(() => expect(container.querySelector('#global-toast')?.textContent).toBe('✅ Mốc 20 người: +100 Hổ phách và 🎁 Phiếu Prime, Phiếu Prime, xem trong Túi đồ'));
+    expect(bodies).toEqual([{ milestone: 'm20' }]);
+    const short = wrap(<Rewards me={me({ milestones: { ...M, playMinutes: 12, eligible: false } })} />).container;
+    expect(short.querySelector('[data-milestone=m20]')).toBeNull();
+    expect(short.textContent).toContain('Cần chơi đủ 60 phút');
+    expect(short.textContent).toContain('Bạn đã chơi 12/60 phút');
   });
 });
 

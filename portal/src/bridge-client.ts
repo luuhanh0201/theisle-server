@@ -54,6 +54,7 @@ export class BridgeClient {
   claimStarter(steamId: string) { return this.post(`/player-api/starter/${steamId}/claim`, {}); }
   /** A quest's reward (bridge quests.ts). */
   claimQuest(steamId: string, quest: unknown) { return this.post(`/player-api/quests/${steamId}/claim`, { quest }); }
+  claimMilestone(steamId: string, milestone: unknown) { return this.post(`/player-api/milestones/${steamId}/claim`, { milestone }); }
   /** The dino boxes (bridge dino-box.ts): what a box / a dino item offers; a box opened; a dino item used. */
   itemOptions(steamId: string, kind: 'box' | 'dino', uid: string) { return this.get(`/player-api/items/${steamId}/${kind}-options/${encodeURIComponent(uid)}`); }
   openBox(steamId: string, body: { uid: unknown; species: unknown }) { return this.post(`/player-api/items/${steamId}/open`, body); }

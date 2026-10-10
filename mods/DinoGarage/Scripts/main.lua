@@ -47,6 +47,7 @@ local Light   = require("garage.light")
 local Admin   = require("garage.admin")
 local MutationItem = require("garage.mutation")
 local Tele    = require("garage.tele")
+local SpeciesCap = require("garage.speciescap")
 
 local MOD = "DinoGarage"
 
@@ -411,6 +412,12 @@ local function doRedeem(ctrl, steamId, slot, where, say)
         Msg.say(say, "garage.prison", "Bạn đang ở tù: không dùng được gara.")
         return false
     end
+    -- Came in as a full species (garage/speciescap.lua): that young dino is about to be removed, a
+    -- stored one taken out into it would go with it.
+    if SpeciesCap.blocked(steamId) then
+        Msg.say(say, "cap.redeem", "Loài này đã đủ suất: không lấy dino từ gara được lúc này, hãy chọn loài khác.")
+        return false
+    end
     -- "!redeem cu" = most recent slot, at the stored spot.
     if where == nil and slot ~= nil and (WHERE_STORED[slot] or WHERE_HERE[slot]) then
         slot, where = nil, slot
@@ -719,6 +726,8 @@ H.every(3000, MOD .. ": kept skins", KeepSkin.poll)
 H.every(15000, MOD .. ": unlock heal", UnlockHeal.poll)
 -- A stomach above its species' share of the max health (a vomit waiting) put back (garage/stomach.lua).
 H.every(7000, MOD .. ": stomach guard", Stomach.guard)
+-- The species limit (garage/speciescap.lua): who the bridge lists past the common slots.
+H.every(SpeciesCap.TICK_MS, MOD .. ": species limit", SpeciesCap.guard)
 
 H.log(MOD .. ": loaded")
 Events.emit({ type = "mod_loaded", mod = MOD })

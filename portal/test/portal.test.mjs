@@ -106,6 +106,7 @@ const bridge = {
   aiZones: async () => ({ status: 200, body: { zones: [{ name: 'Đồng cỏ', x: 1, y: 2, radiusM: 300, species: ['Heo rừng'], count: 3 }] } }),
   heatmap: async () => ({ status: 200, body: { t: 1, next: 300, cell: 50000, players: 2, cells: [{ x: 25000, y: 25000, n: 2 }] } }),
   claimQuest: async (steamId, quest) => { bridgeCalls.push(`quest:${steamId}:${quest}`); return { status: 200, body: { reward: 100, balance: 100, label: 'Hạ 1 dino' } }; },
+  claimMilestone: async (steamId, milestone) => { bridgeCalls.push(`milestone:${steamId}:${milestone}`); return { status: 200, body: { players: 20, amber: 100, balance: 100, items: [], skipped: [] } }; },
   claimStarter: async (steamId) => { bridgeCalls.push(`starter:${steamId}`); return { status: 200, body: { item: 'Phiếu chọn dino' } }; },
   shop: async (steamId) => { bridgeCalls.push(`shop:${steamId}`); return { status: 200, body: { listings: [] } }; },
   shopBuy: async (steamId, body) => { bridgeCalls.push({ shopBuy: steamId, body }); return { status: 200, body: { item: 'Hộp food nhỏ', qty: 2, spent: 100, balance: 0, left: 1 } }; },
@@ -405,6 +406,20 @@ test('after the Steam login: back to the voice page when it asked, never to a UR
   assert.match(back.headers.get('set-cookie'), /isle_next=; Path=\/auth; HttpOnly; SameSite=Lax; Max-Age=0/);
   const other = await get(`/auth/steam/return?${steamReturn().toString()}`, { cookie: 'isle_next=//evil.example' });
   assert.equal(other.headers.get('location'), '/');
+});
+
+test('a server milestone: login, same-origin, JSON; the session\'s player, the milestone only', async () => {
+  // A player of its own: the write limit (12 a minute) is per player and the tests above used ME's.
+  const MS = '76561198000000078';
+  const cookie = `${COOKIE}=${sign(SECRET, MS, Math.floor(Date.now() / 1000) + 600)}`;
+  const origin = new URL(BASE).origin;
+  const post = (headers, body) => fetch(`http://127.0.0.1:${port}/api/milestones/claim`, { method: 'POST', headers, body });
+  const json = { 'content-type': 'application/json' };
+  assert.equal((await post({ ...json, origin }, '{"milestone":"m20"}')).status, 401, 'no login');
+  assert.equal((await post({ ...json, cookie, origin: 'https://evil.example' }, '{"milestone":"m20"}')).status, 403, 'another site');
+  assert.equal((await post({ cookie, origin, 'content-type': 'text/plain' }, '{"milestone":"m20"}')).status, 415, 'JSON only');
+  assert.equal((await post({ ...json, cookie, origin }, '{"milestone":"m20","steamId":"76561198000000002"}')).status, 200);
+  assert.equal(bridgeCalls[bridgeCalls.length - 1], `milestone:${MS}:m20`, 'the session SteamID, the milestone only');
 });
 
 test('voice range: login, same-origin, JSON; the session\'s player', async () => {

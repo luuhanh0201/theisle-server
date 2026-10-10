@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import type { Checkin, PlayerMe, Quest } from '@isle/api';
+import type { Checkin, Milestones, PlayerMe, Quest } from '@isle/api';
 import { RelBadge } from '../../components/RelBadge';
 import { useRewardActions } from '../../features/home/Rewards';
+import { MilestoneReward, milestoneRule, milestoneStatus, nextMilestone } from '../../features/home/Milestones';
 import { Amber } from '../../lib/amber';
 import { useNews, useServer } from '../../lib/queries';
 import { RANGES, RANGE_NAMES, join, leaveByUser, setMaster, setRange, toggleMic, useVoice } from '../../lib/voice';
@@ -171,6 +172,37 @@ function QuestsCard({ me, busy, onClaim }: { me: PlayerMe; busy: boolean; onClai
   );
 }
 
+/** The server's online milestones (bridge milestones.ts): the same data and claim as the web's card. */
+function MilestonesCard({ m, busy, onClaim }: { m: Milestones; busy: boolean; onClaim: (id: string) => void }) {
+  const next = nextMilestone(m);
+  const p = next ? Math.min(100, Math.round(m.online / next.players * 100)) : 100;
+  return (
+    <section className="lx-card lx-quests lx-milestones" id="home-milestones">
+      <CardHead icon={<svg {...ico} width="18" height="18"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>}
+        title="Mốc Online Toàn Server" sub={milestoneRule(m)} />
+      <div className="lx-prog-row"><span>Đang online <b>{m.online}</b>{next ? <> / {next.players} người</> : ' người · đã đạt mọi mốc'}</span><span className="tabular-nums">{p}%</span></div>
+      <div className="lx-bar"><i style={{ width: `${p}%` }} /></div>
+      <ul className="lx-q-list">
+        {m.defs.map((d) => {
+          const st = milestoneStatus(m, d);
+          return (
+            <li key={d.id} className={`lx-quest hq-item${d.claimed ? ' claimed' : d.reached ? ' done' : ''}`}>
+              <div className="lx-q-main"><b>{d.players} người online cùng lúc</b></div>
+              <div className="lx-q-side">
+                <span className="lx-q-reward"><MilestoneReward d={d} /></span>
+                {st.kind === 'claim'
+                  ? <button type="button" className="lx-btn primary sm" data-milestone={d.id} disabled={busy} onClick={() => onClaim(d.id)}>{st.text}</button>
+                  : <span className={`lx-q-st${st.kind === 'claimed' ? ' done' : ''}`}>{st.text}</span>}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {!m.eligible && <p className="lx-fine">Bạn đã chơi {m.playMinutes}/{m.minPlayMinutes} phút. Chơi đủ là nhận được quà mọi mốc đã đạt, không có hạn.</p>}
+    </section>
+  );
+}
+
 /** Tin cập nhật (owner, 2026-10-07): the server's update notes from the panel, newest first, the first open. */
 function NewsCard() {
   const items = useNews();
@@ -223,11 +255,11 @@ function ServerCard() {
 }
 
 /**
- * Trang chủ of the launcher's look: the voice bar, the check-in, the quests, Tin cập nhật, the server. The same data
+ * Trang chủ of the launcher's look: the voice bar, the check-in, the quests, the server's online milestones, Tin cập nhật, the server. The same data
  * and claims as the web's Trang chủ (Rewards: useRewardActions). No live dino card (owner, 2026-10-07: Live Monitor has it).
  */
 export function LxHome({ me }: { me: PlayerMe | null | undefined }) {
-  const { busy, starter, quest, checkin } = useRewardActions();
+  const { busy, starter, quest, checkin, milestone } = useRewardActions();
   const eco = me?.economy ?? null;
   const gift = me?.starter ?? null;
   const rel = me?.releases ?? {};
@@ -251,6 +283,7 @@ export function LxHome({ me }: { me: PlayerMe | null | undefined }) {
           </section>
         )}
       </div>
+      {me?.milestones && <MilestonesCard m={me.milestones} busy={busy} onClaim={milestone} />}
       <div className="lx-grid-2 wide-left">
         <NewsCard />
         <ServerCard />

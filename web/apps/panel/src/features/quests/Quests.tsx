@@ -8,6 +8,7 @@ import { PlayerLink } from '../../components/dino/Identity';
 import { FreshBar } from '../settings-form/FreshBar';
 import { useSettingsForm } from '../settings-form/useSettingsForm';
 import { TYPE_ICON } from '../items/tickets/Tickets';
+import { Milestones } from './Milestones';
 import s from './Quests.module.css';
 
 /** bridge/src/economy.ts, quests.ts, shop.ts as the panel reads them. */
@@ -43,7 +44,7 @@ export function moved<T>(list: T[], i: number, dir: -1 | 1): T[] {
 export const adjustError = (steamId: string, delta: number, reason: string): string | null => (!/^7656\d{13}$/.test(steamId) ? 'SteamID: 17 chữ số, bắt đầu bằng 7656…'
   : !Number.isInteger(delta) || delta === 0 ? 'Nhập số Hổ phách cộng (+) hoặc trừ (−), khác 0' : !reason ? 'Cần ghi lý do' : null);
 
-/** Nhiệm vụ: Hổ phách, the daily check-in, the shop, the ledger, the daily / weekly quests. */
+/** Nhiệm vụ: Hổ phách, the daily check-in, the shop, the ledger, the daily / weekly quests, the server's online milestones. */
 export function Quests() {
   return (
     <>
@@ -52,6 +53,7 @@ export function Quests() {
       <Shop />
       <Ledger />
       <DailyQuests />
+      <Milestones />
     </>
   );
 }

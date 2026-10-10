@@ -102,4 +102,17 @@ describe("the launcher's look, 2026-10-07", () => {
     wrap(<LxHome me={me()} />);
     expect(await screen.findByText('Chưa có tin cập nhật nào. Bản cập nhật tới sẽ được báo ở đây.')).toBeInTheDocument();
   });
+  it('Trang chủ: the server milestones, as on the web (off: none)', () => {
+    inLauncher();
+    expect(wrap(<LxHome me={me()} />).container.querySelector('#home-milestones')).toBeNull();
+    const milestones = { online: 12, holdMinutes: 5, minPlayMinutes: 60, playMinutes: 70, eligible: true, defs: [
+      { id: 'm10', players: 10, amber: 50, items: [], reached: true, reachedAt: 1, claimed: false, heldS: null },
+      { id: 'm20', players: 20, amber: 100, items: [], reached: false, reachedAt: null, claimed: false, heldS: null }] };
+    const { container } = wrap(<LxHome me={me({ milestones })} />);
+    const card = container.querySelector('#home-milestones') as HTMLElement;
+    expect(card.textContent).toContain('Đang online 12 / 20 người');
+    expect(card.querySelector('[data-milestone=m10]')?.textContent).toBe('Nhận quà');
+    expect(card.querySelector('[data-milestone=m20]')).toBeNull();
+    expect(card.textContent).toContain('Chưa đạt');
+  });
 });

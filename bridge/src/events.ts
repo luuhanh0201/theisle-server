@@ -291,6 +291,18 @@ export interface AdminKillEvent extends BaseEvent {
   growth?: number;
 }
 
+/**
+ * A dino the species limit removed (DinoGarage garage/speciescap.lua, species-cap.ts): a player with
+ * no priority slot who came in as a full species. Not a death: the player picks another species.
+ */
+export interface SpeciesCapKillEvent extends BaseEvent {
+  type: 'species_cap_kill';
+  steamId: string;
+  name?: string;
+  species?: string;
+  capId?: number;
+}
+
 /** Outcome of a player's own store / redeem from the web garage (DinoGarage inbox). */
 export interface PortalCommandEvent extends BaseEvent {
   type: 'portal_command';
@@ -368,6 +380,7 @@ export type GameEvent =
   | GrowthSetEvent
   | MutationEvent
   | AdminKillEvent
+  | SpeciesCapKillEvent
   | PortalCommandEvent
   | GarageStoreResultEvent
   | TeleResultEvent
@@ -402,6 +415,7 @@ const required: Record<GameEvent['type'], (e: Record<string, unknown>) => boolea
   growth_set: (e) => isString(e['steamId']) && isNumber(e['from']) && isNumber(e['to']),
   mutation: (e) => isString(e['steamId']) && isString(e['slot']),
   admin_kill: (e) => isString(e['steamId']) && typeof e['ok'] === 'boolean',
+  species_cap_kill: (e) => isString(e['steamId']),
   portal_command: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean'
     && ['store', 'redeem', 'skin', 'light', 'admin', 'mutation', 'tele'].includes(e['action'] as string),
   garage_store_result: (e) => isString(e['steamId']) && isNumber(e['id']) && typeof e['ok'] === 'boolean',

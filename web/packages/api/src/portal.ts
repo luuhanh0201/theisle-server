@@ -70,6 +70,18 @@ export interface Quest {
 /** The quests of today and this week (bridge quests.ts questsOf). */
 export interface Quests { daily: Quest[]; weekly: Quest | null }
 
+/** One of the server's online milestones (bridge milestones.ts MilestoneView). */
+export interface Milestone {
+  id: string; players: number; amber: number; items: Array<{ name: string; qty: number }>;
+  reached: boolean; reachedAt: number | null; claimed: boolean;
+  /** Seconds it has been held so far (not reached yet), null when the server is below it. */
+  heldS: number | null;
+}
+/** The server's online milestones: everyone's, taken on Trang chủ (null when the admins turned them off). */
+export interface Milestones {
+  online: number; holdMinutes: number; minPlayMinutes: number; playMinutes: number; eligible: boolean; defs: Milestone[];
+}
+
 /** GET /api/me: the logged-in player (401 when not logged in). */
 export interface PlayerMe {
   steamId: string;
@@ -92,6 +104,7 @@ export interface PlayerMe {
   releases?: Partial<Record<'bag' | 'shop' | 'amber' | 'quests' | 'starter' | string, ReleaseBadge>>;
   economy?: Shown<{ currency: string; balance: number; checkin: Checkin }>;
   quests?: Shown<Quests>;
+  milestones?: Milestones | null;
   bagUnlimited?: boolean;
   prison?: PrisonView | null;
   tele?: Shown<TeleView>;

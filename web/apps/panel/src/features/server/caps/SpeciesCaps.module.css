@@ -1,0 +1,25 @@
+/* Giới hạn loài: one row per species. */
+.muted { color: var(--muted); }
+.hint { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.warn { margin: 0; font-size: 13px; color: var(--kill); }
+.fields { display: grid; grid-template-columns: minmax(0, 240px); }
+.fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 650; }
+.over { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--kill); border-radius: 10px; }
+.table { display: flex; flex-direction: column; gap: 4px; }
+.row { display: grid; grid-template-columns: minmax(130px, 1.4fr) 70px minmax(90px, 1fr) minmax(90px, 1fr) minmax(120px, 1.2fr); gap: 8px; align-items: center;
+  padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); }
+.headRow { border: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding-bottom: 0; }
+.free { opacity: .75; }
+.name { font-weight: 650; min-width: 0; }
+.live { font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.hidden { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+.cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.narrow { display: none; font-size: 11px; color: var(--muted); font-weight: 650; }
+.foot { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; align-items: center; }
+.dirty { margin-right: auto; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 640px) {
+  .headRow { display: none; }
+  .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .narrow { display: block; }
+  .live { grid-column: 1 / -1; }
+}

@@ -7,6 +7,7 @@ import { RelBadge } from '../../components/RelBadge';
 import { Amber, fmtAmber } from '../../lib/amber';
 import { portalPost } from '../../lib/http';
 import { ME } from '../../lib/queries';
+import { MilestonesCard } from './Milestones';
 
 /** 3 or 2,5 (one decimal, Vietnamese), a quest's progress. */
 const qnum = (v: number): string => (Number.isInteger(v) ? String(v) : Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 1 }));
@@ -68,9 +69,10 @@ function CheckinCard({ c, locked, rel, busy, onCheckin }: { c: Checkin; locked: 
  */
 /**
  * The rewards' claims (the web's Trang chủ and the launcher's): one at a time, the toast, then /me read again at once.
- * starter: the starter gift (bridge starter.ts); quest: a daily / weekly quest (quests.ts); checkin: today's (economy.ts).
+ * starter: the starter gift (bridge starter.ts); quest: a daily / weekly quest (quests.ts); checkin: today's (economy.ts);
+ * milestone: a server online milestone's reward (milestones.ts).
  */
-export function useRewardActions(): { busy: boolean; starter: () => void; quest: (id: string) => void; checkin: () => void } {
+export function useRewardActions(): { busy: boolean; starter: () => void; quest: (id: string) => void; checkin: () => void; milestone: (id: string) => void } {
   const toast = useToast();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -94,14 +96,20 @@ export function useRewardActions(): { busy: boolean; starter: () => void; quest:
     const got = [(b['reward'] as number) > 0 ? `+${fmtAmber(b['reward'] as number)} Hổ phách` : '', b['item'] ? `🎁 ${String(b['item'])}` : ''].filter(Boolean).join(' và ');
     return `✅ Điểm danh ngày ${String(b['day'])}${got ? `: ${got}` : ''}`;
   }, 'Không điểm danh được.');
-  return { busy, starter, quest, checkin };
+  const milestone = (id: string): void => void claim('/api/milestones/claim', { milestone: id }, (b) => {
+    const items = Array.isArray(b['items']) ? (b['items'] as string[]) : [];
+    const got = [(b['amber'] as number) > 0 ? `+${fmtAmber(b['amber'] as number)} Hổ phách` : '', items.length ? `🎁 ${items.join(', ')}` : ''].filter(Boolean).join(' và ');
+    return `✅ Mốc ${String(b['players'])} người${got ? `: ${got}` : ''}${items.length ? ', xem trong Túi đồ' : ''}`;
+  }, 'Không nhận được quà mốc.');
+  return { busy, starter, quest, checkin, milestone };
 }
 
 export function Rewards({ me }: { me: PlayerMe | null | undefined }) {
-  const { busy, starter, quest, checkin } = useRewardActions();
+  const { busy, starter, quest, checkin, milestone } = useRewardActions();
   const eco = me?.economy ?? null;
   const gift = me?.starter ?? null;
   const quests = me?.quests ?? null;
+  const milestones = me?.milestones ?? null;
   const rel = me?.releases ?? {};
 
   return (
@@ -134,6 +142,7 @@ export function Rewards({ me }: { me: PlayerMe | null | undefined }) {
             <p style={{ fontSize: 12.5 }}>Nhiệm vụ mới mỗi ngày lúc 00:00 (tuần: thứ Hai), theo loài bạn đang chơi lúc mở trang lần đầu trong ngày.</p>
           </section>
         )}
+        {milestones && <MilestonesCard m={milestones} busy={busy} onClaim={milestone} />}
       </div>
     </div>
   );

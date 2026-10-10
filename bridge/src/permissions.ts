@@ -216,7 +216,7 @@ export function permissionFor(method: string, path: string): string | null {
       || /^\/api\/garage\/[^/]+(\/[^/]+)?$/.test(path)) return 'garage.view';
     if (['/api/commands-settings', '/api/ptera-carry', '/api/tele-settings', '/api/voice-settings', '/api/messages', '/api/news'].includes(path)) return 'mods.view';
     if (['/api/server/status', '/api/server/readiness', '/api/metrics', '/api/ddos', '/api/rcon/commands', '/api/server/growth-events'].includes(path)) return 'server.view';
-    if (path === '/api/game-config' || path === '/api/members') return 'config.view';
+    if (path === '/api/game-config' || path === '/api/members' || path === '/api/species-cap') return 'config.view';
     if (path === '/api/backups' || /^\/api\/backups\/file\/[^/]+$/.test(path)) return 'backups.view';
     if (path === '/api/server/audit') return 'audit.view';
     if (path === '/api/items' || /^\/api\/items\/[^/]+\/owners$/.test(path)) return 'items.view';
@@ -224,7 +224,7 @@ export function permissionFor(method: string, path: string): string | null {
     if (path === '/api/svip') return 'svip.edit';
     if (path === '/api/discord') return 'discord.view';
     if (path === '/api/traffic') return 'traffic.view';
-    if (path === '/api/economy' || path === '/api/economy/ledger' || path === '/api/quests' || path === '/api/shop') return 'economy.view';
+    if (path === '/api/economy' || path === '/api/economy/ledger' || path === '/api/quests' || path === '/api/shop' || path === '/api/milestones') return 'economy.view';
     if (path === '/api/discord/url') return 'discord.edit';   // shows a webhook's secret URL
     return '*';
   }
@@ -244,7 +244,7 @@ export function permissionFor(method: string, path: string): string | null {
   if (['/api/commands-settings', '/api/ptera-carry', '/api/tele-settings', '/api/voice-settings', '/api/messages', '/api/news'].includes(path)) return 'mods.edit';
   if (/^\/api\/server\/(start|stop|restart|cancel)$/.test(path)) return 'server.power';
   if (path === '/api/server/schedule' || path === '/api/server/growth-events' || /^\/api\/server\/growth-events\/[\w-]+$/.test(path)) return 'server.schedule';
-  if (path === '/api/game-config') return 'config.edit';
+  if (path === '/api/game-config' || path === '/api/species-cap') return 'config.edit';
   if (path === '/api/rcon/announce') return 'rcon.announce';
   if (/^\/api\/rcon\/[A-Za-z]+$/.test(path)) return 'rcon.run';
   if (path === '/api/ddos') return 'ddos.edit';
@@ -252,7 +252,8 @@ export function permissionFor(method: string, path: string): string | null {
   if (['/api/backups', '/api/backup-settings', '/api/backups/export-settings'].includes(path) || /^\/api\/backups\/file\/[^/]+$/.test(path)) return 'backups.edit';
   if (path === '/api/panel-access') return 'access.edit';
   if (path === '/api/svip') return 'svip.edit';
-  if (path === '/api/economy/settings' || path === '/api/economy/adjust' || path === '/api/quests' || path === '/api/shop') return 'economy.edit';
+  if (path === '/api/economy/settings' || path === '/api/economy/adjust' || path === '/api/quests' || path === '/api/shop'
+    || path === '/api/milestones' || path === '/api/milestones/reopen') return 'economy.edit';
   if (path === '/api/items' || /^\/api\/items\/[^/]+$/.test(path)) return 'items.edit';
   if (/^\/api\/items\/[^/]+\/(grant|apply)$/.test(path) || /^\/api\/items\/[^/]+\/grant\/\d{17}$/.test(path)) return 'items.grant';
   if (['/api/discord', '/api/discord/test', '/api/discord/register-commands'].includes(path)) return 'discord.edit';

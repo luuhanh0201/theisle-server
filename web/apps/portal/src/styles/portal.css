@@ -2491,6 +2491,8 @@
   .home-rewards .hr-day.done { border-color: rgba(52,211,153,.5); background: rgba(16,185,129,.12); }
   .home-rewards .hr-day.today { border-color: #f59e0b; background: rgba(245,158,11,.14); box-shadow: 0 0 0 1px rgba(245,158,11,.4); }
   .home-rewards .hr-quests { border-color: rgba(96,165,250,.45); }
+  .home-rewards .hr-milestones { border-color: rgba(251,191,36,.45); }
+  .home-rewards .hr-milestones .hq-item > .hq-meta { white-space: nowrap; }
   .home-rewards .hq-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
   .home-rewards .hq-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border); }
   .home-rewards .hq-item.done { border-color: rgba(52,211,153,.5); }

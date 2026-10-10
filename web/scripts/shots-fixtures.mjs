@@ -52,6 +52,27 @@ export const API = {
       c: { queued: 0, lastOkAt: now() - 300, lastError: null, waitUntil: 0, webhook: { name: 'Admin', channelId: '99990003', error: null, at: 0 } },
     } },
   }),
+  // Server → Giới hạn loài (species-cap.ts): a full T-Rex hidden from the picker, one player waiting to be removed.
+  '/api/species-cap': () => ({
+    settings: { enabled: true, graceS: 30, species: { Tyrannosaurus: { cap: 8, reserve: 2 }, Allosaurus: { cap: 6, reserve: 0 } } },
+    counts: [{ species: 'Allosaurus', alive: 3, cap: 6, reserve: 0, hidden: false }, { species: 'Tyrannosaurus', alive: 10, cap: 8, reserve: 2, hidden: true }],
+    over: [{ steamId: '76561198000000002', name: 'Dã Tượng', species: 'Tyrannosaurus', killAt: now() + 18 }],
+    species: ['Allosaurus', 'Carnotaurus', 'Deinosuchus', 'Pteranodon', 'Stegosaurus', 'Triceratops', 'Tyrannosaurus'],
+    allowed: ['Allosaurus', 'Carnotaurus', 'Deinosuchus', 'Pteranodon', 'Stegosaurus', 'Triceratops', 'Tyrannosaurus'], rcon: true,
+  }),
+  // Nhiệm vụ (economy.ts, shop.ts, quests.ts, milestones.ts).
+  '/api/economy': { currency: 'Hổ phách', settings: { checkinMinutes: 30, checkinRewards: [10, 20, 30, 40, 50, 60, 100], checkinBonusItem: null },
+    summary: { players: 2, total: 1500, top: [{ steamId: '76561198000000002', name: 'Dã Tượng', balance: 1200 }] } },
+  '/api/economy/ledger': { lines: [] },
+  '/api/shop': { listings: [], items: [] },
+  '/api/quests': { settings: { perDay: 3, defs: [] }, kinds: { play: { label: 'Chơi trong game', unit: 'phút' } } },
+  '/api/items': { items: [{ id: 'it_prime', type: 'prime_ticket', name: 'Phiếu Prime', rarity: 'epic' }, { id: 'it_box', type: 'loot_box', name: 'Hòm cổ đại', rarity: 'legendary' }] },
+  '/api/milestones': () => ({
+    settings: { enabled: true, holdMinutes: 5, minPlayMinutes: 60, defs: [
+      { id: 'm20', players: 20, amber: 100, items: [] }, { id: 'm50', players: 50, amber: 300, items: [{ itemId: 'it_prime', qty: 1 }] },
+      { id: 'm100', players: 100, amber: 700, items: [{ itemId: 'it_prime', qty: 2 }, { itemId: 'it_box', qty: 1 }] }, { id: 'm200', players: 200, amber: 1500, items: [] }] },
+    reached: { m20: { at: now() - 86400, online: 23 } }, claimedCount: { m20: 41 }, online: 57, held: { m50: 125 },
+  }),
   '/api/svip': {
     players: [{ steamId: '76561198000000002', note: 'tester túi đồ', addedAt: now() - 86400, by: 'Dev', name: 'Dã Tượng' }, { steamId: '76561198000000003', note: '', addedAt: now() - 3600, by: 'Dev', name: null }],
     features: [{ key: 'shop', label: 'Cửa hàng Hổ phách', mode: 'testing' }, { key: 'quests', label: 'Nhiệm vụ hằng ngày / tuần', mode: 'all' }, { key: 'tele', label: 'Tele con non', mode: 'admin' }],
